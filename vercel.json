@@ -1,0 +1,32 @@
+{
+  "functions": {
+    "src/app/api/verify/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/proof/upload/route.ts": {
+      "maxDuration": 30
+    },
+    "src/app/api/escrow/create/route.ts": {
+      "maxDuration": 30
+    },
+    "src/app/api/escrow/finish/route.ts": {
+      "maxDuration": 30
+    },
+    "src/app/api/escrow/cancel/route.ts": {
+      "maxDuration": 30
+    },
+    "src/app/api/escrow/webhook/route.ts": {
+      "maxDuration": 30
+    }
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type" }
+      ]
+    }
+  ]
+}

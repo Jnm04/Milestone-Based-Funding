@@ -1,13 +1,66 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model User {
+  id               String     @id @default(cuid())
+  walletAddress    String     @unique
+  role             Role
+  contracts        Contract[] @relation("investor")
+  startupContracts Contract[] @relation("startup")
+  createdAt        DateTime   @default(now())
+}
+
+enum Role {
+  INVESTOR
+  STARTUP
+}
+
+model Contract {
+  id                  String         @id @default(cuid())
+  investorId          String
+  investor            User           @relation("investor", fields: [investorId], references: [id])
+  startupId           String?
+  startup             User?          @relation("startup", fields: [startupId], references: [id])
+  milestone           String
+  amountUSD           Decimal
+  amountRLUSD         String?
+  status              ContractStatus @default(DRAFT)
+  escrowSequence      Int?
+  escrowCondition     String?
+  escrowFulfillment   String?
+  cancelAfter         DateTime
+  inviteLink          String?        @unique
+  proofs              Proof[]
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+}
+
+enum ContractStatus {
+  DRAFT
+  AWAITING_ESCROW
+  FUNDED
+  PROOF_SUBMITTED
+  VERIFIED
+  REJECTED
+  EXPIRED
+  COMPLETED
+}
+
+model Proof {
+  id            String   @id @default(cuid())
+  contractId    String
+  contract      Contract @relation(fields: [contractId], references: [id])
+  fileUrl       String
+  fileName      String
+  extractedText String?  @db.Text
+  aiDecision    String?
+  aiReasoning   String?  @db.Text
+  aiConfidence  Int?
+  createdAt     DateTime @default(now())
 }

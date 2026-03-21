@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // pdf-parse and xrpl use Node.js APIs — keep them server-side only.
+  // Turbopack (default in Next.js 16) respects this without a webpack shim.
+  serverExternalPackages: ["pdf-parse", "xrpl", "pg"],
 };
 
 export default nextConfig;
