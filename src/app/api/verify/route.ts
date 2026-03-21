@@ -64,8 +64,8 @@ export async function POST(request: NextRequest) {
       ) {
         try {
           const finishTx = buildEscrowFinishTx({
-            signerAddress: contract.startup?.walletAddress ?? contract.investor.walletAddress,
-            investorAddress: contract.investor.walletAddress,
+            signerAddress: (contract.startup?.walletAddress ?? contract.investor.walletAddress) as string,
+            investorAddress: contract.investor.walletAddress as string,
             escrowSequence: contract.escrowSequence,
             fulfillment: contract.escrowFulfillment,
             condition: contract.escrowCondition,

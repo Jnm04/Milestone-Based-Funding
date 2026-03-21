@@ -51,8 +51,8 @@ export async function POST(request: NextRequest) {
     // Startup signs EscrowFinish (any account can submit, they pay the fee)
     const finishTx = {
       ...buildEscrowFinishTx({
-        signerAddress: contract.startup.walletAddress,
-        investorAddress: contract.investor.walletAddress,
+        signerAddress: contract.startup.walletAddress as string,
+        investorAddress: contract.investor.walletAddress as string,
         escrowSequence: contract.escrowSequence,
         fulfillment: contract.escrowFulfillment,
         condition: contract.escrowCondition,

@@ -50,8 +50,8 @@ export async function POST(request: NextRequest) {
     });
 
     const escrowTx = buildEscrowCreateTx({
-      investorAddress: contract.investor.walletAddress,
-      startupAddress: contract.startup.walletAddress,
+      investorAddress: contract.investor.walletAddress!,
+      startupAddress: contract.startup.walletAddress!,
       amountRLUSD: contract.amountUSD.toString(),
       condition,
       cancelAfterDate: contract.cancelAfter,

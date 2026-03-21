@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     // Verify escrow still exists on-chain before sending cancel
     const { exists } = await getEscrowState(
-      contract.investor.walletAddress,
+      contract.investor.walletAddress!,
       contract.escrowSequence
     );
 
@@ -64,8 +64,8 @@ export async function POST(request: NextRequest) {
     }
 
     const cancelTx = buildEscrowCancelTx({
-      callerAddress: contract.investor.walletAddress,
-      investorAddress: contract.investor.walletAddress,
+      callerAddress: contract.investor.walletAddress!,
+      investorAddress: contract.investor.walletAddress!,
       escrowSequence: contract.escrowSequence,
     });
 

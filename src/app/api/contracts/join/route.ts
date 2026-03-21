@@ -1,14 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
   try {
-    const { inviteCode, startupAddress } = await request.json();
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
 
-    if (!inviteCode || !startupAddress) {
+    const { inviteCode } = await request.json();
+
+    if (!inviteCode) {
+      return NextResponse.json({ error: "inviteCode is required" }, { status: 400 });
+    }
+
+    if (!session.user.walletAddress) {
       return NextResponse.json(
-        { error: "inviteCode and startupAddress are required" },
-        { status: 400 }
+        { error: "Connect your XRPL wallet before joining a contract" },
+        { status: 422 }
       );
     }
 
@@ -27,18 +38,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upsert startup user
-    const startup = await prisma.user.upsert({
-      where: { walletAddress: startupAddress },
-      update: {},
-      create: { walletAddress: startupAddress, role: "STARTUP" },
-    });
-
-    // Link startup to contract
     const updated = await prisma.contract.update({
       where: { id: contract.id },
       data: {
-        startupId: startup.id,
+        startupId: session.user.id,
         status: "AWAITING_ESCROW",
       },
     });

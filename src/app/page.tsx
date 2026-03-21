@@ -9,11 +9,11 @@ export default function LandingPage() {
       <nav className="border-b px-6 py-4 flex items-center justify-between max-w-6xl mx-auto w-full">
         <span className="font-bold text-xl tracking-tight">MilestoneFund</span>
         <div className="flex gap-3">
-          <Link href="/dashboard/investor">
-            <Button variant="outline" size="sm">Investor Login</Button>
+          <Link href="/login">
+            <Button variant="outline" size="sm">Sign in</Button>
           </Link>
-          <Link href="/dashboard/startup">
-            <Button size="sm">Startup Login</Button>
+          <Link href="/register">
+            <Button size="sm">Get started</Button>
           </Link>
         </div>
       </nav>
@@ -31,11 +31,11 @@ export default function LandingPage() {
           confirms your milestone is met. No middlemen, no volatility, instant settlement.
         </p>
         <div className="flex gap-4 mt-4">
-          <Link href="/dashboard/investor">
-            <Button size="lg">I&apos;m an Investor</Button>
+          <Link href="/register">
+            <Button size="lg">Get started</Button>
           </Link>
-          <Link href="/dashboard/startup">
-            <Button size="lg" variant="outline">I&apos;m a Startup</Button>
+          <Link href="/login">
+            <Button size="lg" variant="outline">Sign in</Button>
           </Link>
         </div>
       </section>
@@ -49,7 +49,7 @@ export default function LandingPage() {
               {
                 step: "1",
                 title: "Create Contract",
-                desc: "Investor defines the milestone and locks RLUSD in native XRPL escrow via Xumm wallet.",
+                desc: "Investor defines the milestone and locks RLUSD in native XRPL escrow via Xaman wallet.",
               },
               {
                 step: "2",
@@ -74,7 +74,7 @@ export default function LandingPage() {
 
       {/* Tech badges */}
       <section className="py-12 px-6 flex flex-wrap gap-3 justify-center border-t">
-        {["XRPL Native Escrow", "XLS-85 Amendment", "RLUSD Stablecoin", "Claude AI", "Xumm Wallet", "No Smart Contracts"].map(
+        {["XRPL Native Escrow", "XLS-85 Amendment", "RLUSD Stablecoin", "Claude AI", "Xaman Wallet", "No Smart Contracts"].map(
           (tag) => (
             <Badge key={tag} variant="outline" className="text-sm px-4 py-1.5">
               {tag}

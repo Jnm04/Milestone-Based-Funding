@@ -100,7 +100,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
         <ContractActions
           contractId={contract.id}
           status={contract.status as ContractStatus}
-          investorAddress={contract.investor.walletAddress}
+          investorAddress={contract.investor.walletAddress ?? ""}
           startupAddress={contract.startup?.walletAddress ?? null}
           escrowSequence={contract.escrowSequence}
           escrowCondition={contract.escrowCondition}
