@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { buildEscrowFinishTx, submitSignedTransaction } from "@/services/xrpl/escrow.service";
+import { buildEscrowFinishTx } from "@/services/xrpl/escrow.service";
+import { getXRPLClient } from "@/services/xrpl/client";
 import { createXummSignRequest } from "@/services/xrpl/xumm.service";
 
-/**
- * POST /api/escrow/finish
- * Triggers EscrowFinish after AI approval.
- *
- * MVP approach: returns Xumm sign request for the investor.
- * The investor must sign EscrowFinish (their account is the Owner).
- *
- * Note: In production, a funded platform hot-wallet would auto-submit this.
- */
 export async function POST(request: NextRequest) {
   try {
     const { contractId } = await request.json();
@@ -22,7 +14,7 @@ export async function POST(request: NextRequest) {
 
     const contract = await prisma.contract.findUnique({
       where: { id: contractId },
-      include: { investor: true },
+      include: { investor: true, startup: true },
     });
 
     if (!contract) {
@@ -43,12 +35,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const finishTx = buildEscrowFinishTx({
-      investorAddress: contract.investor.walletAddress,
-      escrowSequence: contract.escrowSequence,
-      fulfillment: contract.escrowFulfillment,
-      condition: contract.escrowCondition,
-    });
+    if (!contract.startup) {
+      return NextResponse.json({ error: "No startup has joined this contract" }, { status: 422 });
+    }
+
+    // Get current ledger to set a fresh LastLedgerSequence
+    const xrplClient = await getXRPLClient();
+    const serverInfo = await xrplClient.request({ command: "server_info" });
+    const currentLedger = serverInfo.result.info.validated_ledger?.seq ?? 0;
+
+    // EscrowFinish fee = 12 drops base + 10 drops per byte of fulfillment
+    const fulfillmentBytes = Math.ceil(contract.escrowFulfillment.length / 2);
+    const fee = String(12 + fulfillmentBytes * 10);
+
+    // Startup signs EscrowFinish (any account can submit, they pay the fee)
+    const finishTx = {
+      ...buildEscrowFinishTx({
+        signerAddress: contract.startup.walletAddress,
+        investorAddress: contract.investor.walletAddress,
+        escrowSequence: contract.escrowSequence,
+        fulfillment: contract.escrowFulfillment,
+        condition: contract.escrowCondition,
+      }),
+      Fee: fee,
+      LastLedgerSequence: currentLedger + 1000,
+    };
 
     const returnUrl = `${process.env.NEXTAUTH_URL ?? "http://localhost:3000"}/contract/${contractId}`;
     const payload = await createXummSignRequest(

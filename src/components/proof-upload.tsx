@@ -12,6 +12,7 @@ interface ProofUploadProps {
 export function ProofUpload({ contractId, onUploaded }: ProofUploadProps) {
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [uploaded, setUploaded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -47,6 +48,7 @@ export function ProofUpload({ contractId, onUploaded }: ProofUploadProps) {
       }
 
       const { proofId } = await res.json();
+      setUploaded(true);
       toast.success("Proof uploaded! AI verification is starting…");
       onUploaded(proofId);
     } catch (err) {
@@ -95,9 +97,22 @@ export function ProofUpload({ contractId, onUploaded }: ProofUploadProps) {
         </Button>
       )}
 
-      {file && (
+      {file && !uploaded && (
         <Button onClick={handleUpload} disabled={loading}>
           {loading ? "Uploading…" : "Upload & Trigger AI Verification"}
+        </Button>
+      )}
+
+      {uploaded && (
+        <Button
+          variant="outline"
+          onClick={() => {
+            setFile(null);
+            setUploaded(false);
+            if (inputRef.current) inputRef.current.value = "";
+          }}
+        >
+          Upload a different document
         </Button>
       )}
     </div>

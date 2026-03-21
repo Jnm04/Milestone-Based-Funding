@@ -39,6 +39,8 @@ export function ContractActions({
   const [loadingCancel, setLoadingCancel] = useState(false);
   const [loadingResubmit, setLoadingResubmit] = useState(false);
   const [verifyDone, setVerifyDone] = useState(false);
+  const [finishStep, setFinishStep] = useState<"idle" | "qr" | "polling" | "done">("idle");
+  const [finishQr, setFinishQr] = useState<string | null>(null);
 
   async function handleFundEscrow() {
     setEscrowStep("qr");
@@ -135,7 +137,7 @@ export function ContractActions({
   }
 
   async function handleFinishEscrow() {
-    setLoadingFinish(true);
+    setFinishStep("qr");
     try {
       const res = await fetch("/api/escrow/finish", {
         method: "POST",
@@ -146,13 +148,63 @@ export function ContractActions({
         const err = await res.json();
         throw new Error(err.error ?? "EscrowFinish failed");
       }
-      const { xummUrl } = await res.json();
-      toast.info("Opening Xumm — sign the EscrowFinish to release funds.");
-      window.open(xummUrl, "_blank");
+      const { qrPng, payloadUuid } = await res.json();
+      setFinishQr(qrPng);
+      setFinishStep("polling");
+      toast.info("Scan the QR code with Xaman to release funds.");
+
+      // Poll until signed (max 10 min)
+      const deadline = Date.now() + 10 * 60 * 1000;
+      const interval = setInterval(async () => {
+        if (Date.now() > deadline) {
+          clearInterval(interval);
+          setFinishStep("idle");
+          setFinishQr(null);
+          toast.error("Sign request expired.");
+          return;
+        }
+        try {
+          const poll = await fetch(`/api/auth/xumm-result?uuid=${payloadUuid}`);
+          if (!poll.ok) return;
+          const data = await poll.json();
+
+          if (data.signed) {
+            clearInterval(interval);
+            toast.info("Signed! Submitting EscrowFinish to XRPL…");
+            // Confirm outside the swallowing catch block
+            try {
+              const confirm = await fetch("/api/escrow/finish/confirm", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ contractId, payloadUuid }),
+              });
+              if (confirm.ok) {
+                setFinishStep("done");
+                toast.success("Funds released! Contract completed.");
+                setTimeout(() => window.location.reload(), 1500);
+              } else {
+                const e = await confirm.json();
+                toast.error(e.error ?? "Confirm failed.");
+                setFinishStep("idle");
+                setFinishQr(null);
+              }
+            } catch (confirmErr) {
+              toast.error(confirmErr instanceof Error ? confirmErr.message : "Confirm failed.");
+              setFinishStep("idle");
+              setFinishQr(null);
+            }
+          } else if (data.resolved && !data.signed) {
+            clearInterval(interval);
+            setFinishStep("idle");
+            setFinishQr(null);
+            toast.error("Rejected in Xaman.");
+          }
+        } catch { /* transient network error — keep polling */ }
+      }, 2000);
     } catch (err) {
+      setFinishStep("idle");
+      setFinishQr(null);
       toast.error(err instanceof Error ? err.message : "EscrowFinish failed.");
-    } finally {
-      setLoadingFinish(false);
     }
   }
 
@@ -243,8 +295,17 @@ export function ContractActions({
     );
   }
 
-  // FUNDED: startup uploads proof
+  // FUNDED: only startup uploads proof
   if (status === "FUNDED") {
+    if (viewerWallet !== startupAddress) {
+      return (
+        <div className="flex flex-col gap-3 p-5 bg-blue-50 border border-blue-200 rounded-xl">
+          <p className="text-sm font-medium text-blue-800">
+            Waiting for the startup to upload milestone proof.
+          </p>
+        </div>
+      );
+    }
     return (
       <ProofUpload
         contractId={contractId}
@@ -268,15 +329,29 @@ export function ContractActions({
     );
   }
 
-  // VERIFIED: investor signs EscrowFinish to release funds to startup
+  // VERIFIED: startup signs EscrowFinish to release funds
   if (status === "VERIFIED") {
+    if ((finishStep === "qr" || finishStep === "polling") && finishQr) {
+      return (
+        <div className="flex flex-col items-center gap-4 p-5 bg-green-50 border border-green-200 rounded-xl">
+          <p className="text-sm font-medium text-green-800">
+            Scan with Xaman to release the funds
+          </p>
+          <Image src={finishQr} alt="Xumm QR code" width={192} height={192} className="rounded-lg border" unoptimized />
+          <p className="text-xs text-green-600 animate-pulse">Waiting for Xaman signature…</p>
+          <Button variant="ghost" size="sm" onClick={() => { setFinishStep("idle"); setFinishQr(null); }}>
+            Cancel
+          </Button>
+        </div>
+      );
+    }
     return (
       <div className="flex flex-col gap-3 p-5 bg-green-50 border border-green-200 rounded-xl">
         <p className="text-sm font-medium text-green-800">
-          AI approved the milestone. Sign EscrowFinish to release RLUSD to the startup.
+          AI approved the milestone! Sign with Xaman to receive your funds.
         </p>
-        <Button onClick={handleFinishEscrow} disabled={loadingFinish}>
-          {loadingFinish ? "Opening Xumm…" : "Release Funds via Xumm"}
+        <Button onClick={handleFinishEscrow} disabled={finishStep !== "idle"}>
+          {finishStep !== "idle" ? "Opening Xaman…" : "Release Funds via Xaman"}
         </Button>
       </div>
     );

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { put } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import { extractPdfText } from "@/services/ai/verifier.service";
+import path from "path";
+import fs from "fs/promises";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -60,17 +61,18 @@ export async function POST(request: NextRequest) {
       // Don't block upload — AI verification will fail gracefully
     }
 
-    // Upload to Vercel Blob
-    const blob = await put(`proofs/${contractId}/${Date.now()}-${file.name}`, buffer, {
-      access: "public",
-      contentType: "application/pdf",
-    });
+    // Save to local filesystem (public/uploads/)
+    const uploadDir = path.join(process.cwd(), "public", "uploads", contractId);
+    await fs.mkdir(uploadDir, { recursive: true });
+    const filename = `${Date.now()}-${file.name}`;
+    await fs.writeFile(path.join(uploadDir, filename), buffer);
+    const fileUrl = `/uploads/${contractId}/${filename}`;
 
     // Save proof record
     const proof = await prisma.proof.create({
       data: {
         contractId,
-        fileUrl: blob.url,
+        fileUrl,
         fileName: file.name,
         extractedText,
       },
@@ -84,12 +86,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       proofId: proof.id,
-      fileUrl: blob.url,
+      fileUrl,
       fileName: proof.fileName,
       textExtracted: extractedText !== null,
     });
   } catch (err) {
-    console.error("Upload error:", err);
-    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("Upload error:", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

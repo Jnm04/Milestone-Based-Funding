@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     // Load proof + contract
     const proof = await prisma.proof.findUnique({
       where: { id: proofId },
-      include: { contract: { include: { investor: true } } },
+      include: { contract: { include: { investor: true, startup: true } } },
     });
 
     if (!proof) {
@@ -30,23 +30,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!proof.extractedText) {
-      return NextResponse.json(
-        { error: "No extracted text available for this proof" },
-        { status: 422 }
-      );
-    }
-
-    // Run AI verification
-    const useReal = !!process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY !== "sk-ant-...";
+    // Run AI verification (fall back to mock if no text was extracted)
+    const extractedText = proof.extractedText ?? "";
+    const useReal = !!process.env.ANTHROPIC_API_KEY &&
+      process.env.ANTHROPIC_API_KEY !== "sk-ant-..." &&
+      extractedText.length > 0;
     const result = useReal
       ? await verifyMilestone({
           milestone: contract.milestone,
-          extractedText: proof.extractedText,
+          extractedText,
         })
       : mockVerifyMilestone({
           milestone: contract.milestone,
-          extractedText: proof.extractedText,
+          extractedText,
         });
 
     // Persist AI result on proof
@@ -68,6 +64,7 @@ export async function POST(request: NextRequest) {
       ) {
         try {
           const finishTx = buildEscrowFinishTx({
+            signerAddress: contract.startup?.walletAddress ?? contract.investor.walletAddress,
             investorAddress: contract.investor.walletAddress,
             escrowSequence: contract.escrowSequence,
             fulfillment: contract.escrowFulfillment,

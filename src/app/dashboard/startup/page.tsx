@@ -30,7 +30,7 @@ function StartupDashboardContent() {
       }
       const { contractId } = await res.json();
       toast.success("You have joined the contract!");
-      window.location.href = `/contract/${contractId}`;
+      window.location.href = `/contract/${contractId}?startup=${address}`;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to join.");
     } finally {

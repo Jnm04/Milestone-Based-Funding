@@ -31,7 +31,8 @@ export interface CreateEscrowParams {
 }
 
 export interface FinishEscrowParams {
-  investorAddress: string;   // Account that created the escrow
+  signerAddress: string;     // Account submitting (pays fee) — can be anyone
+  investorAddress: string;   // Owner of the escrow (Account that created it)
   escrowSequence: number;    // EscrowCreate sequence number
   fulfillment: string;        // hex-encoded fulfillment
   condition: string;          // hex-encoded condition
@@ -71,7 +72,7 @@ export function buildEscrowCreateTx(params: CreateEscrowParams): EscrowCreate {
 export function buildEscrowFinishTx(params: FinishEscrowParams): EscrowFinish {
   return {
     TransactionType: "EscrowFinish",
-    Account: params.investorAddress,
+    Account: params.signerAddress,
     Owner: params.investorAddress,
     OfferSequence: params.escrowSequence,
     Condition: params.condition,

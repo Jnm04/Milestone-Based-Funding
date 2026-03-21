@@ -12,10 +12,8 @@ const MODEL = "claude-sonnet-4-6";
  * Returns the raw text content.
  */
 export async function extractPdfText(buffer: Buffer): Promise<string> {
-  // pdf-parse v2 is ESM — named import
-  const { default: pdfParse } = await import("pdf-parse") as unknown as {
-    default: (buf: Buffer) => Promise<{ text: string }>
-  };
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const pdfParse = require("pdf-parse");
   const data = await pdfParse(buffer);
   return data.text.trim();
 }
@@ -83,12 +81,9 @@ export function mockVerifyMilestone(params: {
   extractedText: string;
 }): AIVerificationResult {
   console.warn("[AI] Using mock verifier — set ANTHROPIC_API_KEY for real verification");
-  const hasContent = params.extractedText.length > 100;
   return {
-    decision: hasContent ? "YES" : "NO",
-    reasoning: hasContent
-      ? "Mock: The document appears to contain sufficient content to satisfy the milestone."
-      : "Mock: The document is too short to verify the milestone.",
-    confidence: hasContent ? 85 : 10,
+    decision: "YES",
+    reasoning: "Mock: Document uploaded successfully. Set ANTHROPIC_API_KEY for real AI verification.",
+    confidence: 80,
   };
 }

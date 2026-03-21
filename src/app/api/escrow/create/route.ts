@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { generateCryptoCondition } from "@/services/crypto/condition.service";
 import { buildEscrowCreateTx } from "@/services/xrpl/escrow.service";
 import { createXummSignRequest } from "@/services/xrpl/xumm.service";
+import { getXRPLClient } from "@/services/xrpl/client";
 
 export async function POST(request: NextRequest) {
   try {
@@ -56,10 +57,18 @@ export async function POST(request: NextRequest) {
       cancelAfterDate: contract.cancelAfter,
     });
 
+    // Get current ledger from our own XRPL node and set LastLedgerSequence explicitly.
+    // Without this, Xumm's backend may set a stale value from its own node,
+    // causing "LastLedgerSequence exceeded" errors.
+    const xrplClient = await getXRPLClient();
+    const serverInfo = await xrplClient.request({ command: "server_info" });
+    const currentLedger = serverInfo.result.info.validated_ledger?.seq ?? 0;
+    const escrowTxWithSeq = { ...escrowTx, LastLedgerSequence: currentLedger + 200 };
+
     // Create Xumm sign request — investor scans QR / taps in Xumm app
     const callbackUrl = `${process.env.NEXTAUTH_URL ?? "http://localhost:3000"}/contract/${contractId}`;
     const payload = await createXummSignRequest(
-      escrowTx as unknown as Record<string, unknown> & { TransactionType: string },
+      escrowTxWithSeq as unknown as Record<string, unknown> & { TransactionType: string },
       {
         returnUrl: callbackUrl,
         expiresIn: 600,
