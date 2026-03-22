@@ -55,61 +55,38 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (result.decision === "YES") {
-      // Trigger EscrowFinish
-      if (
-        contract.escrowSequence &&
-        contract.escrowCondition &&
-        contract.escrowFulfillment
-      ) {
-        try {
-          const finishTx = buildEscrowFinishTx({
-            signerAddress: (contract.startup?.walletAddress ?? contract.investor.walletAddress) as string,
-            investorAddress: contract.investor.walletAddress as string,
-            escrowSequence: contract.escrowSequence,
-            fulfillment: contract.escrowFulfillment,
-            condition: contract.escrowCondition,
-          });
+    // Three-tier confidence logic
+    let newStatus: string;
+    let action: string;
 
-          // The platform signs EscrowFinish server-side
-          // In production: use a funded platform wallet (fee payer)
-          // For MVP: the finishTx is returned for the investor to sign via Xumm
-          // TODO Phase 5: auto-submit with platform hot wallet
-
-          await prisma.contract.update({
-            where: { id: contract.id },
-            data: { status: "VERIFIED" },
-          });
-
-          return NextResponse.json({
-            decision: result.decision,
-            reasoning: result.reasoning,
-            confidence: result.confidence,
-            action: "ESCROW_FINISH_READY",
-            escrowFinishTx: finishTx,
-          });
-        } catch (err) {
-          console.error("EscrowFinish build failed:", err);
-        }
-      }
-
-      await prisma.contract.update({
-        where: { id: contract.id },
-        data: { status: "VERIFIED" },
-      });
+    if (result.confidence < 60) {
+      // Too uncertain — auto reject, startup can resubmit
+      newStatus = "REJECTED";
+      action = "REJECTED";
+    } else if (result.confidence <= 85) {
+      // Medium confidence — investor must review manually
+      newStatus = "PENDING_REVIEW";
+      action = "PENDING_REVIEW";
+    } else if (result.decision === "YES") {
+      // High confidence approved — auto release
+      newStatus = "VERIFIED";
+      action = "VERIFIED";
     } else {
-      // AI said NO — startup can resubmit
-      await prisma.contract.update({
-        where: { id: contract.id },
-        data: { status: "REJECTED" },
-      });
+      // High confidence rejected
+      newStatus = "REJECTED";
+      action = "REJECTED";
     }
+
+    await prisma.contract.update({
+      where: { id: contract.id },
+      data: { status: newStatus as never },
+    });
 
     return NextResponse.json({
       decision: result.decision,
       reasoning: result.reasoning,
       confidence: result.confidence,
-      action: result.decision === "YES" ? "VERIFIED" : "REJECTED",
+      action,
     });
   } catch (err) {
     console.error("Verification error:", err);

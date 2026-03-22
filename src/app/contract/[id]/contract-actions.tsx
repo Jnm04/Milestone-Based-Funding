@@ -17,6 +17,8 @@ interface ContractActionsProps {
   amountRLUSD: string;
   cancelAfter: string;
   latestProofId: string | null;
+  latestProofReasoning: string | null;
+  latestProofConfidence: number | null;
   viewerWallet: string | null;
 }
 
@@ -30,11 +32,14 @@ export function ContractActions({
   amountRLUSD,
   cancelAfter,
   latestProofId,
+  latestProofReasoning,
+  latestProofConfidence,
   viewerWallet,
 }: ContractActionsProps) {
   const [escrowStep, setEscrowStep] = useState<"idle" | "qr" | "polling" | "done">("idle");
   const [escrowQr, setEscrowQr] = useState<string | null>(null);
   const [loadingVerify, setLoadingVerify] = useState(false);
+  const [loadingReview, setLoadingReview] = useState<"APPROVE" | "REJECT" | null>(null);
   const [loadingFinish, setLoadingFinish] = useState(false);
   const [loadingCancel, setLoadingCancel] = useState(false);
   const [loadingResubmit, setLoadingResubmit] = useState(false);
@@ -235,6 +240,27 @@ export function ContractActions({
     }
   }
 
+  async function handleReview(decision: "APPROVE" | "REJECT") {
+    setLoadingReview(decision);
+    try {
+      const res = await fetch("/api/contracts/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contractId, decision }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error ?? "Review failed");
+      }
+      toast.success(decision === "APPROVE" ? "Freigegeben! Startup kann jetzt auszahlen." : "Abgelehnt. Startup kann neu einreichen.");
+      setTimeout(() => window.location.reload(), 1200);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Review fehlgeschlagen.");
+    } finally {
+      setLoadingReview(null);
+    }
+  }
+
   async function handleResubmit() {
     setLoadingResubmit(true);
     try {
@@ -325,6 +351,60 @@ export function ContractActions({
         >
           {loadingVerify ? "Verifying…" : "Run AI Verification"}
         </Button>
+      </div>
+    );
+  }
+
+  // PENDING_REVIEW: investor manually approves or rejects
+  if (status === "PENDING_REVIEW") {
+    return (
+      <div className="flex flex-col gap-4 p-5 bg-amber-50 border border-amber-200 rounded-xl">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold text-amber-900">Manuelle Prüfung erforderlich</p>
+          {latestProofConfidence !== null && (
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+              KI-Sicherheit: {latestProofConfidence}%
+            </span>
+          )}
+        </div>
+
+        {latestProofReasoning && (
+          <div className="flex flex-col gap-1">
+            <p className="text-xs font-medium text-amber-700 uppercase tracking-wide">KI-Analyse</p>
+            <p className="text-sm text-amber-900 leading-relaxed bg-amber-100 rounded-lg p-3">
+              {latestProofReasoning}
+            </p>
+          </div>
+        )}
+
+        {viewerWallet === investorAddress ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-xs text-amber-700">
+              Die KI war nicht sicher genug für eine automatische Entscheidung. Bitte prüfe den Nachweis und entscheide manuell.
+            </p>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => handleReview("APPROVE")}
+                disabled={loadingReview !== null}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+              >
+                {loadingReview === "APPROVE" ? "Wird freigegeben…" : "✓ Freigeben"}
+              </Button>
+              <Button
+                onClick={() => handleReview("REJECT")}
+                disabled={loadingReview !== null}
+                variant="outline"
+                className="flex-1 border-red-300 text-red-700 hover:bg-red-50"
+              >
+                {loadingReview === "REJECT" ? "Wird abgelehnt…" : "✗ Ablehnen"}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-amber-700">
+            Der Investor prüft deinen Nachweis. Du wirst benachrichtigt sobald eine Entscheidung getroffen wurde.
+          </p>
+        )}
       </div>
     );
   }

@@ -6,6 +6,7 @@ const STATUS_CONFIG: Record<ContractStatus, { label: string; variant: "default" 
   AWAITING_ESCROW: { label: "Awaiting Escrow",  variant: "secondary" },
   FUNDED:          { label: "Funded",           variant: "default" },
   PROOF_SUBMITTED: { label: "Proof Submitted",  variant: "secondary" },
+  PENDING_REVIEW:  { label: "Manuelle Prüfung", variant: "secondary" },
   VERIFIED:        { label: "Verified — AI Approved", variant: "default" },
   REJECTED:        { label: "Rejected",         variant: "destructive" },
   EXPIRED:         { label: "Expired",          variant: "destructive" },

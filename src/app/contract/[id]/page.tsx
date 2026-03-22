@@ -107,6 +107,8 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           amountRLUSD={contract.amountRLUSD ?? contract.amountUSD.toString()}
           cancelAfter={contract.cancelAfter.toISOString()}
           latestProofId={latestProof?.id ?? null}
+          latestProofReasoning={latestProof?.aiReasoning ?? null}
+          latestProofConfidence={latestProof?.aiConfidence ?? null}
           viewerWallet={viewerWallet}
         />
 
