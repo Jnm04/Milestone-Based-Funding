@@ -8,7 +8,8 @@ const STATUS_CONFIG: Record<ContractStatus, { label: string; variant: "default" 
   PROOF_SUBMITTED: { label: "Proof Submitted",  variant: "secondary" },
   PENDING_REVIEW:  { label: "Manuelle Prüfung", variant: "secondary" },
   VERIFIED:        { label: "Verified — AI Approved", variant: "default" },
-  REJECTED:        { label: "Rejected",         variant: "destructive" },
+  REJECTED:        { label: "Rejected",          variant: "destructive" },
+  DECLINED:        { label: "Einladung abgelehnt", variant: "destructive" },
   EXPIRED:         { label: "Expired",          variant: "destructive" },
   COMPLETED:       { label: "Completed",        variant: "default" },
 };

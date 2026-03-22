@@ -1,10 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { extractPdfText } from "@/services/ai/verifier.service";
+import { extractPdfText, extractOfficeText, categorizeFile } from "@/services/ai/verifier.service";
 import path from "path";
 import fs from "fs/promises";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
+
+const ALLOWED_MIME_TYPES = new Set([
+  // Documents
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // docx
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation", // pptx
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // xlsx
+  "application/msword", // doc
+  "application/vnd.ms-excel", // xls
+  "application/vnd.ms-powerpoint", // ppt
+  // Images
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  // Text
+  "text/csv",
+  "text/plain",
+]);
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,72 +32,66 @@ export async function POST(request: NextRequest) {
     const contractId = formData.get("contractId") as string | null;
 
     if (!file || !contractId) {
-      return NextResponse.json(
-        { error: "file and contractId are required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "file and contractId are required" }, { status: 400 });
     }
 
-    if (file.type !== "application/pdf") {
+    // Some browsers send generic MIME for CSV/TXT — also check extension
+    const mimeType = file.type || "";
+    const fileName = file.name;
+    const ext = path.extname(fileName).toLowerCase();
+    const extMimeMap: Record<string, string> = {
+      ".csv": "text/csv", ".txt": "text/plain", ".md": "text/plain",
+      ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    };
+    const effectiveMime = ALLOWED_MIME_TYPES.has(mimeType) ? mimeType : (extMimeMap[ext] ?? mimeType);
+
+    if (!ALLOWED_MIME_TYPES.has(effectiveMime)) {
       return NextResponse.json(
-        { error: "Only PDF files are accepted" },
+        { error: "Unsupported file type. Allowed: PDF, DOCX, PPTX, XLSX, images (JPG/PNG/WEBP/GIF), CSV, TXT." },
         { status: 400 }
       );
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { error: "File exceeds 10 MB limit" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "File exceeds 20 MB limit" }, { status: 400 });
     }
 
-    // Verify contract exists and is in the right state
-    const contract = await prisma.contract.findUnique({
-      where: { id: contractId },
-    });
-
-    if (!contract) {
-      return NextResponse.json({ error: "Contract not found" }, { status: 404 });
-    }
-
+    const contract = await prisma.contract.findUnique({ where: { id: contractId } });
+    if (!contract) return NextResponse.json({ error: "Contract not found" }, { status: 404 });
     if (contract.status !== "FUNDED") {
-      return NextResponse.json(
-        { error: `Cannot upload proof for contract in status: ${contract.status}` },
-        { status: 409 }
-      );
+      return NextResponse.json({ error: `Cannot upload proof in status: ${contract.status}` }, { status: 409 });
     }
 
-    // Read file buffer
     const buffer = Buffer.from(await file.arrayBuffer());
+    const category = categorizeFile(effectiveMime, fileName);
 
-    // Extract PDF text before uploading
     let extractedText: string | null = null;
     try {
-      extractedText = await extractPdfText(buffer);
+      if (category === "pdf") {
+        extractedText = await extractPdfText(buffer);
+      } else if (category === "office") {
+        extractedText = await extractOfficeText(buffer, fileName);
+      } else if (category === "text") {
+        extractedText = buffer.toString("utf-8").slice(0, 50000);
+      }
+      // images: no text extraction — Claude Vision handles these directly
     } catch (err) {
-      console.error("PDF text extraction failed:", err);
-      // Don't block upload — AI verification will fail gracefully
+      console.error("Text extraction failed:", err);
     }
 
-    // Save to local filesystem (public/uploads/)
+    // Save file
     const uploadDir = path.join(process.cwd(), "public", "uploads", contractId);
     await fs.mkdir(uploadDir, { recursive: true });
-    const filename = `${Date.now()}-${file.name}`;
+    const filename = `${Date.now()}-${fileName}`;
     await fs.writeFile(path.join(uploadDir, filename), buffer);
     const fileUrl = `/uploads/${contractId}/${filename}`;
 
-    // Save proof record
     const proof = await prisma.proof.create({
-      data: {
-        contractId,
-        fileUrl,
-        fileName: file.name,
-        extractedText,
-      },
+      data: { contractId, fileUrl, fileName, extractedText },
     });
 
-    // Update contract status
     await prisma.contract.update({
       where: { id: contractId },
       data: { status: "PROOF_SUBMITTED" },

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyMilestone, mockVerifyMilestone } from "@/services/ai/verifier.service";
+import { verifyMilestone, verifyMilestoneImage, mockVerifyMilestone, categorizeFile } from "@/services/ai/verifier.service";
 import { buildEscrowFinishTx, submitSignedTransaction } from "@/services/xrpl/escrow.service";
+import fs from "fs/promises";
+import path from "path";
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,20 +32,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Run AI verification (fall back to mock if no text was extracted)
+    // Run AI verification
     const extractedText = proof.extractedText ?? "";
-    const useReal = !!process.env.ANTHROPIC_API_KEY &&
-      process.env.ANTHROPIC_API_KEY !== "sk-ant-..." &&
-      extractedText.length > 0;
-    const result = useReal
-      ? await verifyMilestone({
-          milestone: contract.milestone,
-          extractedText,
-        })
-      : mockVerifyMilestone({
-          milestone: contract.milestone,
-          extractedText,
-        });
+    const hasApiKey = !!process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY !== "sk-ant-...";
+    const category = categorizeFile("", proof.fileName);
+
+    let result;
+    if (!hasApiKey) {
+      result = mockVerifyMilestone({ milestone: contract.milestone, extractedText });
+    } else if (category === "image") {
+      // Load file from disk and send to Claude Vision
+      const filePath = path.join(process.cwd(), "public", proof.fileUrl);
+      const imageBuffer = await fs.readFile(filePath);
+      const ext = path.extname(proof.fileName).toLowerCase();
+      const mimeMap: Record<string, "image/jpeg" | "image/png" | "image/gif" | "image/webp"> = {
+        ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+        ".png": "image/png", ".gif": "image/gif", ".webp": "image/webp",
+      };
+      const mimeType = mimeMap[ext] ?? "image/jpeg";
+      result = await verifyMilestoneImage({ milestone: contract.milestone, imageBuffer, mimeType });
+    } else {
+      result = await verifyMilestone({
+        milestone: contract.milestone,
+        extractedText: extractedText || "(No text could be extracted from this document.)",
+      });
+    }
 
     // Persist AI result on proof
     await prisma.proof.update({

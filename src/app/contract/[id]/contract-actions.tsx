@@ -19,6 +19,8 @@ interface ContractActionsProps {
   latestProofId: string | null;
   latestProofReasoning: string | null;
   latestProofConfidence: number | null;
+  latestProofFileUrl: string | null;
+  latestProofFileName: string | null;
   viewerWallet: string | null;
 }
 
@@ -34,6 +36,8 @@ export function ContractActions({
   latestProofId,
   latestProofReasoning,
   latestProofConfidence,
+  latestProofFileUrl,
+  latestProofFileName,
   viewerWallet,
 }: ContractActionsProps) {
   const [escrowStep, setEscrowStep] = useState<"idle" | "qr" | "polling" | "done">("idle");
@@ -345,6 +349,20 @@ export function ContractActions({
     return (
       <div className="flex flex-col gap-3 p-5 bg-blue-50 border border-blue-200 rounded-xl">
         <p className="text-sm text-blue-800">Proof uploaded. Ready for AI verification.</p>
+        {latestProofFileUrl && (
+          <a
+            href={latestProofFileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-4 py-3 bg-white border border-blue-200 rounded-lg hover:border-blue-400 transition-colors"
+          >
+            <span className="text-xs font-mono bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
+              {latestProofFileName?.split(".").pop()?.toUpperCase() ?? "FILE"}
+            </span>
+            <span className="text-sm text-blue-900 flex-1 truncate">{latestProofFileName}</span>
+            <span className="text-xs text-blue-600">Öffnen ↗</span>
+          </a>
+        )}
         <Button
           onClick={() => handleVerify(latestProofId)}
           disabled={loadingVerify}
@@ -362,7 +380,7 @@ export function ContractActions({
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-amber-900">Manuelle Prüfung erforderlich</p>
           {latestProofConfidence !== null && (
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+            <span style={{ background: "#fef3c7", color: "#92400e" }} className="text-xs font-medium px-2 py-0.5 rounded-full">
               KI-Sicherheit: {latestProofConfidence}%
             </span>
           )}
@@ -377,27 +395,41 @@ export function ContractActions({
           </div>
         )}
 
+        {latestProofFileUrl && (
+          <a
+            href={latestProofFileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-4 py-3 bg-white border border-amber-200 rounded-lg hover:border-amber-400 transition-colors"
+          >
+            <span className="text-xs font-mono bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">
+              {latestProofFileName?.split(".").pop()?.toUpperCase() ?? "FILE"}
+            </span>
+            <span className="text-sm text-amber-900 flex-1 truncate">{latestProofFileName}</span>
+            <span className="text-xs text-amber-600">Öffnen ↗</span>
+          </a>
+        )}
+
         {viewerWallet === investorAddress ? (
           <div className="flex flex-col gap-2">
             <p className="text-xs text-amber-700">
-              Die KI war nicht sicher genug für eine automatische Entscheidung. Bitte prüfe den Nachweis und entscheide manuell.
+              Die KI war nicht sicher genug für eine automatische Entscheidung. Prüfe den Nachweis oben und entscheide manuell.
             </p>
             <div className="flex gap-3">
-              <Button
+              <button
                 onClick={() => handleReview("APPROVE")}
                 disabled={loadingReview !== null}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                style={{ background: "#16a34a", color: "#fff", flex: 1, padding: "8px 16px", borderRadius: "8px", border: "none", fontWeight: 600, cursor: loadingReview !== null ? "not-allowed" : "pointer", opacity: loadingReview !== null ? 0.6 : 1 }}
               >
                 {loadingReview === "APPROVE" ? "Wird freigegeben…" : "✓ Freigeben"}
-              </Button>
-              <Button
+              </button>
+              <button
                 onClick={() => handleReview("REJECT")}
                 disabled={loadingReview !== null}
-                variant="outline"
-                className="flex-1 border-red-300 text-red-700 hover:bg-red-50"
+                style={{ background: "#fff", color: "#b91c1c", flex: 1, padding: "8px 16px", borderRadius: "8px", border: "1px solid #fca5a5", fontWeight: 600, cursor: loadingReview !== null ? "not-allowed" : "pointer", opacity: loadingReview !== null ? 0.6 : 1 }}
               >
                 {loadingReview === "REJECT" ? "Wird abgelehnt…" : "✗ Ablehnen"}
-              </Button>
+              </button>
             </div>
           </div>
         ) : (
@@ -409,8 +441,17 @@ export function ContractActions({
     );
   }
 
-  // VERIFIED: startup signs EscrowFinish to release funds
+  // VERIFIED: only startup signs EscrowFinish to release funds
   if (status === "VERIFIED") {
+    if (viewerWallet !== startupAddress) {
+      return (
+        <div className="flex flex-col gap-3 p-5 bg-green-50 border border-green-200 rounded-xl">
+          <p className="text-sm font-medium text-green-800">
+            Milestone freigegeben. Das Startup kann die Funds jetzt auszahlen.
+          </p>
+        </div>
+      );
+    }
     if ((finishStep === "qr" || finishStep === "polling") && finishQr) {
       return (
         <div className="flex flex-col items-center gap-4 p-5 bg-green-50 border border-green-200 rounded-xl">
@@ -428,7 +469,7 @@ export function ContractActions({
     return (
       <div className="flex flex-col gap-3 p-5 bg-green-50 border border-green-200 rounded-xl">
         <p className="text-sm font-medium text-green-800">
-          AI approved the milestone! Sign with Xaman to receive your funds.
+          Milestone approved! Sign with Xaman to receive your funds.
         </p>
         <Button onClick={handleFinishEscrow} disabled={finishStep !== "idle"}>
           {finishStep !== "idle" ? "Opening Xaman…" : "Release Funds via Xaman"}

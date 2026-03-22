@@ -14,6 +14,12 @@ model User {
   name             String?
   role             Role
   walletAddress    String?    @unique
+  companyName      String?
+  department       String?
+  jobTitle         String?
+  phone            String?
+  bio              String?
+  website          String?
   contracts        Contract[] @relation("investor")
   startupContracts Contract[] @relation("startup")
   createdAt        DateTime   @default(now())
@@ -52,6 +58,7 @@ enum ContractStatus {
   PENDING_REVIEW
   VERIFIED
   REJECTED
+  DECLINED
   EXPIRED
   COMPLETED
 }

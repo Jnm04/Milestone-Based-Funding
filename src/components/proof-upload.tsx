@@ -9,6 +9,29 @@ interface ProofUploadProps {
   onUploaded: (proofId: string) => void;
 }
 
+const ACCEPTED_TYPES = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/msword",
+  "application/vnd.ms-excel",
+  "application/vnd.ms-powerpoint",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "text/csv",
+  "text/plain",
+].join(",");
+
+const MAX_SIZE = 20 * 1024 * 1024; // 20 MB
+
+function fileTypeLabel(file: File): string {
+  const ext = file.name.split(".").pop()?.toUpperCase() ?? "FILE";
+  return ext;
+}
+
 export function ProofUpload({ contractId, onUploaded }: ProofUploadProps) {
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -18,12 +41,8 @@ export function ProofUpload({ contractId, onUploaded }: ProofUploadProps) {
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = e.target.files?.[0];
     if (!selected) return;
-    if (selected.type !== "application/pdf") {
-      toast.error("Only PDF files are accepted.");
-      return;
-    }
-    if (selected.size > 10 * 1024 * 1024) {
-      toast.error("File must be under 10 MB.");
+    if (selected.size > MAX_SIZE) {
+      toast.error("File must be under 20 MB.");
       return;
     }
     setFile(selected);
@@ -61,20 +80,25 @@ export function ProofUpload({ contractId, onUploaded }: ProofUploadProps) {
   return (
     <div className="flex flex-col gap-4 p-6 border-2 border-dashed rounded-xl bg-zinc-50">
       <div className="text-center">
-        <p className="text-sm font-medium text-zinc-700">Upload Milestone Proof (PDF)</p>
-        <p className="text-xs text-muted-foreground mt-1">Max 10 MB · PDF only</p>
+        <p className="text-sm font-medium text-zinc-700">Upload Milestone Proof</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          PDF, DOCX, PPTX, XLSX · Images (JPG, PNG, WEBP) · CSV, TXT · Max 20 MB
+        </p>
       </div>
 
       <input
         ref={inputRef}
         type="file"
-        accept="application/pdf"
+        accept={ACCEPTED_TYPES}
         className="hidden"
         onChange={handleFileChange}
       />
 
       {file ? (
         <div className="flex items-center gap-3 bg-white rounded-lg border px-4 py-3">
+          <span className="text-xs font-mono bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded">
+            {fileTypeLabel(file)}
+          </span>
           <span className="text-sm text-zinc-700 flex-1 truncate">{file.name}</span>
           <button
             type="button"
@@ -93,7 +117,7 @@ export function ProofUpload({ contractId, onUploaded }: ProofUploadProps) {
           onClick={() => inputRef.current?.click()}
           type="button"
         >
-          Select PDF
+          Select File
         </Button>
       )}
 

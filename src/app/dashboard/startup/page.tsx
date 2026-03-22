@@ -18,6 +18,7 @@ const STATUS_LABELS: Record<string, string> = {
   PENDING_REVIEW: "Manuelle Prüfung",
   VERIFIED: "Verifiziert",
   REJECTED: "Abgelehnt",
+  DECLINED: "Einladung abgelehnt",
   EXPIRED: "Abgelaufen",
   COMPLETED: "Abgeschlossen",
 };
@@ -30,6 +31,7 @@ const STATUS_COLORS: Record<string, { background: string; color: string }> = {
   PENDING_REVIEW:   { background: "#fef3c7", color: "#92400e" },
   VERIFIED:         { background: "#f3e8ff", color: "#6b21a8" },
   REJECTED:         { background: "#fee2e2", color: "#991b1b" },
+  DECLINED:         { background: "#fee2e2", color: "#991b1b" },
   EXPIRED:          { background: "#f4f4f5", color: "#52525b" },
   COMPLETED:        { background: "#dcfce7", color: "#166534" },
 };
@@ -49,6 +51,7 @@ function StartupDashboardContent() {
   const searchParams = useSearchParams();
   const inviteCode = searchParams.get("invite");
   const [joining, setJoining] = useState(false);
+  const [declining, setDeclining] = useState(false);
   const [savingWallet, setSavingWallet] = useState(false);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loadingContracts, setLoadingContracts] = useState(false);
@@ -105,6 +108,24 @@ function StartupDashboardContent() {
     }
   }
 
+  async function handleDeclineContract() {
+    if (!inviteCode) return;
+    setDeclining(true);
+    try {
+      await fetch("/api/contracts/decline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inviteCode }),
+      });
+      toast.success("Invitation declined.");
+      window.location.href = "/dashboard/startup";
+    } catch {
+      toast.error("Failed to decline invitation.");
+    } finally {
+      setDeclining(false);
+    }
+  }
+
   async function handleJoinContract() {
     if (!session?.user.walletAddress || !inviteCode) return;
     setJoining(true);
@@ -143,6 +164,9 @@ function StartupDashboardContent() {
         <div className="flex items-center gap-3">
           <span className="text-sm text-muted-foreground">{session.user.email}</span>
           <Badge variant="outline">Startup</Badge>
+          <Link href="/profile">
+            <Button variant="ghost" size="sm">Profil</Button>
+          </Link>
           <Button variant="ghost" size="sm" onClick={() => signOut({ callbackUrl: "/login" })}>
             Sign out
           </Button>
@@ -212,9 +236,19 @@ function StartupDashboardContent() {
             </div>
 
             {inviteCode && (
-              <Button size="lg" onClick={handleJoinContract} disabled={joining}>
-                {joining ? "Joining…" : "Accept Contract Invitation"}
-              </Button>
+              <div className="flex flex-col gap-2">
+                <Button size="lg" onClick={handleJoinContract} disabled={joining}>
+                  {joining ? "Joining…" : "Accept Contract Invitation"}
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={handleDeclineContract}
+                  disabled={joining || declining}
+                >
+                  {declining ? "Declining…" : "Decline Invitation"}
+                </Button>
+              </div>
             )}
 
             {!inviteCode && (

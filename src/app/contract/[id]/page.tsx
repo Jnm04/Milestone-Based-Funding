@@ -109,6 +109,8 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           latestProofId={latestProof?.id ?? null}
           latestProofReasoning={latestProof?.aiReasoning ?? null}
           latestProofConfidence={latestProof?.aiConfidence ?? null}
+          latestProofFileUrl={latestProof?.fileUrl ?? null}
+          latestProofFileName={latestProof?.fileName ?? null}
           viewerWallet={viewerWallet}
         />
 
