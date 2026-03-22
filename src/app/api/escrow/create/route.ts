@@ -7,7 +7,7 @@ import { getXRPLClient } from "@/services/xrpl/client";
 
 export async function POST(request: NextRequest) {
   try {
-    const { contractId } = await request.json();
+    const { contractId, milestoneId } = await request.json();
 
     if (!contractId) {
       return NextResponse.json({ error: "contractId is required" }, { status: 400 });
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
 
     const contract = await prisma.contract.findUnique({
       where: { id: contractId },
-      include: { investor: true, startup: true },
+      include: { investor: true, startup: true, milestones: true },
     });
 
     if (!contract) {
@@ -39,27 +39,57 @@ export async function POST(request: NextRequest) {
     // Generate crypto-condition — store fulfillment securely server-side
     const { condition, fulfillment } = generateCryptoCondition();
 
-    // Save condition + fulfillment to DB before sending to Xumm
-    await prisma.contract.update({
-      where: { id: contractId },
-      data: {
-        escrowCondition: condition,
-        escrowFulfillment: fulfillment,
-        amountRLUSD: contract.amountUSD.toString(),
-      },
-    });
+    let amountForEscrow: string;
+    let cancelAfterForEscrow: Date;
+
+    if (milestoneId) {
+      const milestone = contract.milestones.find((m) => m.id === milestoneId);
+      if (!milestone) {
+        return NextResponse.json({ error: "Milestone not found" }, { status: 404 });
+      }
+      if (milestone.status !== "AWAITING_ESCROW") {
+        return NextResponse.json(
+          { error: `Expected milestone in AWAITING_ESCROW, got ${milestone.status}` },
+          { status: 409 }
+        );
+      }
+
+      amountForEscrow = milestone.amountUSD.toString();
+      cancelAfterForEscrow = milestone.cancelAfter;
+
+      // Save condition + fulfillment on milestone
+      await prisma.milestone.update({
+        where: { id: milestoneId },
+        data: {
+          escrowCondition: condition,
+          escrowFulfillment: fulfillment,
+          amountRLUSD: amountForEscrow,
+        },
+      });
+    } else {
+      amountForEscrow = contract.amountUSD.toString();
+      cancelAfterForEscrow = contract.cancelAfter;
+
+      // Save condition + fulfillment to contract (old flow)
+      await prisma.contract.update({
+        where: { id: contractId },
+        data: {
+          escrowCondition: condition,
+          escrowFulfillment: fulfillment,
+          amountRLUSD: amountForEscrow,
+        },
+      });
+    }
 
     const escrowTx = buildEscrowCreateTx({
       investorAddress: contract.investor.walletAddress!,
       startupAddress: contract.startup.walletAddress!,
-      amountRLUSD: contract.amountUSD.toString(),
+      amountRLUSD: amountForEscrow,
       condition,
-      cancelAfterDate: contract.cancelAfter,
+      cancelAfterDate: cancelAfterForEscrow,
     });
 
     // Get current ledger from our own XRPL node and set LastLedgerSequence explicitly.
-    // Without this, Xumm's backend may set a stale value from its own node,
-    // causing "LastLedgerSequence exceeded" errors.
     const xrplClient = await getXRPLClient();
     const serverInfo = await xrplClient.request({ command: "server_info" });
     const currentLedger = serverInfo.result.info.validated_ledger?.seq ?? 0;
@@ -72,14 +102,14 @@ export async function POST(request: NextRequest) {
       {
         returnUrl: callbackUrl,
         expiresIn: 600,
-        customMeta: { contractId }, // webhook uses this to identify the contract
+        customMeta: { contractId, milestoneId: milestoneId ?? null },
       }
     );
 
     return NextResponse.json({
       xummUrl: payload.next.always,
       qrPng: payload.refs.qr_png,
-      payloadUuid: payload.uuid, // frontend polls this to detect signing
+      payloadUuid: payload.uuid,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

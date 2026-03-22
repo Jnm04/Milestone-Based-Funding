@@ -39,6 +39,12 @@ export async function POST(request: NextRequest) {
       data: { status: newStatus },
     });
 
+    // Also update any milestone currently in PENDING_REVIEW
+    await prisma.milestone.updateMany({
+      where: { contractId, status: "PENDING_REVIEW" },
+      data: { status: newStatus as never },
+    });
+
     return NextResponse.json({ status: newStatus });
   } catch (err) {
     console.error("Review error:", err);

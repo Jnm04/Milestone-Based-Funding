@@ -16,6 +16,10 @@ interface ContractActionsProps {
   escrowCondition: string | null;
   amountRLUSD: string;
   cancelAfter: string;
+  milestoneId: string | null;
+  milestoneTitle: string | null;
+  milestoneNumber: number | null;
+  totalMilestones: number;
   latestProofId: string | null;
   latestProofReasoning: string | null;
   latestProofConfidence: number | null;
@@ -33,6 +37,10 @@ export function ContractActions({
   escrowCondition: _escrowCondition,
   amountRLUSD,
   cancelAfter,
+  milestoneId,
+  milestoneTitle,
+  milestoneNumber,
+  totalMilestones,
   latestProofId,
   latestProofReasoning,
   latestProofConfidence,
@@ -51,13 +59,16 @@ export function ContractActions({
   const [finishStep, setFinishStep] = useState<"idle" | "qr" | "polling" | "done">("idle");
   const [finishQr, setFinishQr] = useState<string | null>(null);
 
+  // suppress unused warning — kept for potential future use
+  void loadingFinish;
+
   async function handleFundEscrow() {
     setEscrowStep("qr");
     try {
       const res = await fetch("/api/escrow/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contractId }),
+        body: JSON.stringify({ contractId, milestoneId }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -86,11 +97,10 @@ export function ContractActions({
           if (data.signed) {
             clearInterval(interval);
             toast.info("Signed! Confirming escrow on XRPL…");
-            // Confirm server-side: fetch sequence from XRPL, set status=FUNDED
             const confirm = await fetch("/api/escrow/confirm", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ contractId, payloadUuid }),
+              body: JSON.stringify({ contractId, payloadUuid, milestoneId }),
             });
             if (confirm.ok) {
               setEscrowStep("done");
@@ -136,7 +146,6 @@ export function ContractActions({
         toast.error(`AI rejected: ${result.reasoning}`);
       }
       setVerifyDone(true);
-      // Reload to show updated status
       setTimeout(() => window.location.reload(), 1500);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Verification failed.");
@@ -151,7 +160,7 @@ export function ContractActions({
       const res = await fetch("/api/escrow/finish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contractId }),
+        body: JSON.stringify({ contractId, milestoneId }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -162,7 +171,6 @@ export function ContractActions({
       setFinishStep("polling");
       toast.info("Scan the QR code with Xaman to release funds.");
 
-      // Poll until signed (max 10 min)
       const deadline = Date.now() + 10 * 60 * 1000;
       const interval = setInterval(async () => {
         if (Date.now() > deadline) {
@@ -180,12 +188,11 @@ export function ContractActions({
           if (data.signed) {
             clearInterval(interval);
             toast.info("Signed! Submitting EscrowFinish to XRPL…");
-            // Confirm outside the swallowing catch block
             try {
               const confirm = await fetch("/api/escrow/finish/confirm", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ contractId, payloadUuid }),
+                body: JSON.stringify({ contractId, payloadUuid, milestoneId }),
               });
               if (confirm.ok) {
                 setFinishStep("done");
@@ -223,7 +230,7 @@ export function ContractActions({
       const res = await fetch("/api/escrow/cancel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contractId }),
+        body: JSON.stringify({ contractId, milestoneId }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -316,10 +323,12 @@ export function ContractActions({
     return (
       <div className="flex flex-col gap-3 p-5 bg-amber-50 border border-amber-200 rounded-xl">
         <p className="text-sm font-medium text-amber-800">
-          Both parties have committed. Fund the escrow to lock funds.
+          {totalMilestones > 1 && milestoneNumber !== null
+            ? `Milestone ${milestoneNumber} of ${totalMilestones}${milestoneTitle ? `: ${milestoneTitle}` : ""} — fund the escrow to lock funds.`
+            : "Both parties have committed. Fund the escrow to lock funds."}
         </p>
         <Button onClick={handleFundEscrow} disabled={escrowStep === "qr"}>
-          {escrowStep === "qr" ? "Opening Xaman…" : "Fund Escrow via Xaman"}
+          {escrowStep === "qr" ? "Opening Xaman…" : `Fund Escrow via Xaman${totalMilestones > 1 && milestoneNumber !== null ? ` (Milestone ${milestoneNumber}/${totalMilestones})` : ""}`}
         </Button>
       </div>
     );
@@ -339,6 +348,7 @@ export function ContractActions({
     return (
       <ProofUpload
         contractId={contractId}
+        milestoneId={milestoneId}
         onUploaded={(proofId) => handleVerify(proofId)}
       />
     );
@@ -478,7 +488,7 @@ export function ContractActions({
     );
   }
 
-  // REJECTED: startup can resubmit, or cancel if expired
+  // REJECTED: only startup can resubmit; investor sees info message
   if (status === "REJECTED") {
     return (
       <div className="flex flex-col gap-3 p-5 bg-red-50 border border-red-200 rounded-xl">
@@ -486,20 +496,26 @@ export function ContractActions({
         {isExpired ? (
           <>
             <p className="text-xs text-red-700">Deadline has passed. You can cancel the escrow to recover funds.</p>
-            <Button variant="destructive" onClick={handleCancelEscrow} disabled={loadingCancel}>
-              {loadingCancel ? "Opening Xumm…" : "Cancel Escrow & Recover Funds"}
-            </Button>
+            {viewerWallet === investorAddress && (
+              <Button variant="destructive" onClick={handleCancelEscrow} disabled={loadingCancel}>
+                {loadingCancel ? "Opening Xumm…" : "Cancel Escrow & Recover Funds"}
+              </Button>
+            )}
           </>
-        ) : (
+        ) : viewerWallet === startupAddress ? (
           <Button variant="outline" onClick={handleResubmit} disabled={loadingResubmit}>
             {loadingResubmit ? "Resetting…" : "Resubmit New Proof"}
           </Button>
+        ) : (
+          <p className="text-xs text-red-700">
+            The proof was rejected. The startup will need to resubmit a new proof.
+          </p>
         )}
       </div>
     );
   }
 
-  // FUNDED or EXPIRED with escrow still open: show cancel option when deadline passed
+  // FUNDED or PROOF_SUBMITTED with deadline passed: show cancel option
   if (["FUNDED", "PROOF_SUBMITTED"].includes(status) && isExpired) {
     return (
       <div className="flex flex-col gap-3 p-5 bg-orange-50 border border-orange-200 rounded-xl">

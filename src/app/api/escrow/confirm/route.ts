@@ -11,11 +11,11 @@ import { submitSignedTransaction } from "@/services/xrpl/escrow.service";
  * Since we use submit: false in Xumm, we get the signed tx blob from Xumm
  * and submit it to XRPL ourselves. submitAndWait gives us the sequence directly.
  *
- * Body: { contractId, payloadUuid }
+ * Body: { contractId, payloadUuid, milestoneId? }
  */
 export async function POST(request: NextRequest) {
   try {
-    const { contractId, payloadUuid } = await request.json();
+    const { contractId, payloadUuid, milestoneId } = await request.json();
 
     if (!contractId || !payloadUuid) {
       return NextResponse.json(
@@ -55,10 +55,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Could not read escrow sequence from XRPL" }, { status: 422 });
     }
 
-    await prisma.contract.update({
-      where: { id: contractId },
-      data: { status: "FUNDED", escrowSequence: sequence },
-    });
+    if (milestoneId) {
+      await prisma.milestone.update({
+        where: { id: milestoneId },
+        data: { status: "FUNDED", escrowSequence: sequence },
+      });
+
+      // Check if all milestones for this contract are now funded
+      const allMilestones = await prisma.milestone.findMany({
+        where: { contractId },
+        select: { status: true },
+      });
+      const allFunded = allMilestones.every((m) => m.status === "FUNDED");
+
+      await prisma.contract.update({
+        where: { id: contractId },
+        data: { status: allFunded ? "FUNDED" : "AWAITING_ESCROW" },
+      });
+    } else {
+      await prisma.contract.update({
+        where: { id: contractId },
+        data: {
+          status: "FUNDED",
+          escrowSequence: sequence,
+        },
+      });
+    }
 
     return NextResponse.json({ ok: true, action: "funded", escrowSequence: sequence });
   } catch (err) {

@@ -46,6 +46,12 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Activate all milestones for upfront funding
+    await prisma.milestone.updateMany({
+      where: { contractId: contract.id },
+      data: { status: "AWAITING_ESCROW" },
+    });
+
     return NextResponse.json({ contractId: updated.id });
   } catch (err) {
     console.error("Join contract error:", err);

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 interface ProofUploadProps {
   contractId: string;
+  milestoneId?: string | null;
   onUploaded: (proofId: string) => void;
 }
 
@@ -32,7 +33,7 @@ function fileTypeLabel(file: File): string {
   return ext;
 }
 
-export function ProofUpload({ contractId, onUploaded }: ProofUploadProps) {
+export function ProofUpload({ contractId, milestoneId, onUploaded }: ProofUploadProps) {
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [uploaded, setUploaded] = useState(false);
@@ -55,6 +56,7 @@ export function ProofUpload({ contractId, onUploaded }: ProofUploadProps) {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("contractId", contractId);
+      if (milestoneId) formData.append("milestoneId", milestoneId);
 
       const res = await fetch("/api/proof/upload", {
         method: "POST",

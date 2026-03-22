@@ -11,11 +11,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const { milestone, amountUSD, cancelAfter } = await request.json();
+    const { milestone, amountUSD, cancelAfter, milestones: milestonesInput } = await request.json();
 
-    if (!milestone || !amountUSD || !cancelAfter) {
+    // Need at least a milestone title/description
+    if (!milestone && (!milestonesInput || milestonesInput.length === 0)) {
       return NextResponse.json(
-        { error: "milestone, amountUSD and cancelAfter are required" },
+        { error: "milestone or milestones array is required" },
         { status: 400 }
       );
     }
@@ -32,18 +33,48 @@ export async function POST(request: NextRequest) {
 
     const inviteLink = nanoid(12);
 
-    const contract = await prisma.contract.create({
-      data: {
-        investorId: investor.id,
-        milestone,
-        amountUSD,
-        cancelAfter: new Date(cancelAfter),
-        inviteLink,
-        status: "DRAFT",
-      },
+    const result = await prisma.$transaction(async (tx) => {
+      const msData: { title: string; amountUSD: number; cancelAfter: string }[] =
+        milestonesInput ?? [{ title: milestone, amountUSD, cancelAfter }];
+
+      const totalAmount = msData.reduce(
+        (sum: number, m: { amountUSD: number }) => sum + Number(m.amountUSD),
+        0
+      );
+      const latestDeadline = msData.reduce(
+        (latest: string, m: { cancelAfter: string }) =>
+          m.cancelAfter > latest ? m.cancelAfter : latest,
+        msData[0].cancelAfter
+      );
+
+      const contract = await tx.contract.create({
+        data: {
+          investorId: investor.id,
+          milestone: milestone ?? msData[0].title,
+          amountUSD: totalAmount,
+          cancelAfter: new Date(latestDeadline),
+          inviteLink,
+          status: "DRAFT",
+        },
+      });
+
+      await tx.milestone.createMany({
+        data: msData.map(
+          (m: { title: string; amountUSD: number; cancelAfter: string }, i: number) => ({
+            contractId: contract.id,
+            title: m.title,
+            amountUSD: m.amountUSD,
+            cancelAfter: new Date(m.cancelAfter),
+            order: i,
+            status: "PENDING",
+          })
+        ),
+      });
+
+      return contract;
     });
 
-    return NextResponse.json({ contractId: contract.id, inviteLink });
+    return NextResponse.json({ contractId: result.id, inviteLink });
   } catch (err) {
     console.error("Create contract error:", err);
     return NextResponse.json({ error: "Failed to create contract" }, { status: 500 });

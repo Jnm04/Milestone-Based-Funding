@@ -9,7 +9,10 @@ export async function GET(request: NextRequest) {
 
   const contract = await prisma.contract.findUnique({
     where: { inviteLink: invite },
-    include: { investor: true },
+    include: {
+      investor: true,
+      milestones: { orderBy: { order: "asc" } },
+    },
   });
 
   if (!contract) {
@@ -19,9 +22,16 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     id: contract.id,
     milestone: contract.milestone,
-    amountUSD: contract.amountUSD,
+    amountUSD: contract.amountUSD.toString(),
     status: contract.status,
     cancelAfter: contract.cancelAfter,
     investorWallet: contract.investor.walletAddress,
+    milestones: contract.milestones.map((m) => ({
+      id: m.id,
+      title: m.title,
+      amountUSD: m.amountUSD.toString(),
+      cancelAfter: m.cancelAfter.toISOString(),
+      order: m.order,
+    })),
   });
 }

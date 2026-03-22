@@ -29,10 +29,11 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
+    const milestoneId = formData.get("milestoneId") as string | null;
     const contractId = formData.get("contractId") as string | null;
 
-    if (!file || !contractId) {
-      return NextResponse.json({ error: "file and contractId are required" }, { status: 400 });
+    if (!file || (!milestoneId && !contractId)) {
+      return NextResponse.json({ error: "file and contractId (or milestoneId) are required" }, { status: 400 });
     }
 
     // Some browsers send generic MIME for CSV/TXT — also check extension
@@ -58,12 +59,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "File exceeds 20 MB limit" }, { status: 400 });
     }
 
-    const contract = await prisma.contract.findUnique({ where: { id: contractId } });
-    if (!contract) return NextResponse.json({ error: "Contract not found" }, { status: 404 });
-    if (contract.status !== "FUNDED") {
-      return NextResponse.json({ error: `Cannot upload proof in status: ${contract.status}` }, { status: 409 });
-    }
-
     const buffer = Buffer.from(await file.arrayBuffer());
     const category = categorizeFile(effectiveMime, fileName);
 
@@ -81,28 +76,80 @@ export async function POST(request: NextRequest) {
       console.error("Text extraction failed:", err);
     }
 
-    // Save file
-    const uploadDir = path.join(process.cwd(), "public", "uploads", contractId);
-    await fs.mkdir(uploadDir, { recursive: true });
-    const filename = `${Date.now()}-${fileName}`;
-    await fs.writeFile(path.join(uploadDir, filename), buffer);
-    const fileUrl = `/uploads/${contractId}/${filename}`;
+    if (milestoneId) {
+      // New flow: milestone-based upload
+      const milestone = await prisma.milestone.findUnique({
+        where: { id: milestoneId },
+        include: { contract: true },
+      });
 
-    const proof = await prisma.proof.create({
-      data: { contractId, fileUrl, fileName, extractedText },
-    });
+      if (!milestone) {
+        return NextResponse.json({ error: "Milestone not found" }, { status: 404 });
+      }
+      if (milestone.status !== "FUNDED") {
+        return NextResponse.json(
+          { error: `Cannot upload proof for milestone in status: ${milestone.status}` },
+          { status: 409 }
+        );
+      }
 
-    await prisma.contract.update({
-      where: { id: contractId },
-      data: { status: "PROOF_SUBMITTED" },
-    });
+      const uploadDir = path.join(process.cwd(), "public", "uploads", milestone.contractId);
+      await fs.mkdir(uploadDir, { recursive: true });
+      const filename = `${Date.now()}-${fileName}`;
+      await fs.writeFile(path.join(uploadDir, filename), buffer);
+      const fileUrl = `/uploads/${milestone.contractId}/${filename}`;
 
-    return NextResponse.json({
-      proofId: proof.id,
-      fileUrl,
-      fileName: proof.fileName,
-      textExtracted: extractedText !== null,
-    });
+      const proof = await prisma.proof.create({
+        data: { contractId: milestone.contractId, milestoneId, fileUrl, fileName, extractedText },
+      });
+
+      await prisma.milestone.update({
+        where: { id: milestoneId },
+        data: { status: "PROOF_SUBMITTED" },
+      });
+
+      await prisma.contract.update({
+        where: { id: milestone.contractId },
+        data: { status: "PROOF_SUBMITTED" },
+      });
+
+      return NextResponse.json({
+        proofId: proof.id,
+        fileUrl,
+        fileName: proof.fileName,
+        textExtracted: extractedText !== null,
+      });
+    } else {
+      // Old flow (backward compat) — contractId must be set
+      const resolvedContractId = contractId!;
+      const contract = await prisma.contract.findUnique({ where: { id: resolvedContractId } });
+      if (!contract) return NextResponse.json({ error: "Contract not found" }, { status: 404 });
+      if (contract.status !== "FUNDED") {
+        return NextResponse.json({ error: `Cannot upload proof in status: ${contract.status}` }, { status: 409 });
+      }
+
+      const uploadDir = path.join(process.cwd(), "public", "uploads", resolvedContractId);
+      await fs.mkdir(uploadDir, { recursive: true });
+      const filename = `${Date.now()}-${fileName}`;
+      await fs.writeFile(path.join(uploadDir, filename), buffer);
+      const fileUrl = `/uploads/${resolvedContractId}/${filename}`;
+
+      const proof = await prisma.proof.create({
+        data: { contractId: resolvedContractId, fileUrl, fileName, extractedText },
+      });
+
+      await prisma.contract.update({
+        where: { id: resolvedContractId },
+        data: { status: "PROOF_SUBMITTED" },
+      });
+
+      return NextResponse.json({
+        proofId: proof.id,
+        fileUrl,
+        fileName: proof.fileName,
+        textExtracted: extractedText !== null,
+      });
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("Upload error:", msg);

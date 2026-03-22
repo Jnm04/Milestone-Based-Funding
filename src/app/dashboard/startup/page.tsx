@@ -56,7 +56,12 @@ function StartupDashboardContent() {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loadingContracts, setLoadingContracts] = useState(false);
   const [preview, setPreview] = useState<{
-    id: string; milestone: string; amountUSD: string; cancelAfter: string; investorWallet: string | null;
+    id: string;
+    milestone: string;
+    amountUSD: string;
+    cancelAfter: string;
+    investorWallet: string | null;
+    milestones: Array<{ id: string; title: string; amountUSD: string; cancelAfter: string; order: number }>;
   } | null>(null);
 
   useEffect(() => {
@@ -210,6 +215,27 @@ function StartupDashboardContent() {
                     </div>
                   )}
                 </div>
+                {preview.milestones && preview.milestones.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs text-blue-600 uppercase tracking-wide font-medium">Milestones ({preview.milestones.length})</span>
+                    <div className="flex flex-col gap-1.5">
+                      {preview.milestones.map((ms, idx) => (
+                        <div key={ms.id} className="flex items-start gap-2 p-2.5 bg-white/60 rounded-lg border border-blue-100">
+                          <span style={{ flexShrink: 0, width: "20px", height: "20px", borderRadius: "50%", background: "#bfdbfe", color: "#1e40af", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 700 }}>
+                            {idx + 1}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-blue-900 leading-snug">{ms.title}</p>
+                            <div className="flex gap-3 mt-0.5 text-xs text-blue-700">
+                              <span><strong>${Number(ms.amountUSD).toLocaleString()}</strong> RLUSD</span>
+                              <span>bis {new Date(ms.cancelAfter).toLocaleDateString("de-DE")}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             ) : (
               <p className="text-sm text-blue-700">Contract wird geladen…</p>
