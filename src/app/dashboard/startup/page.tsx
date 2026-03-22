@@ -10,6 +10,37 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Suspense } from "react";
 
+const STATUS_LABELS: Record<string, string> = {
+  DRAFT: "Entwurf",
+  AWAITING_ESCROW: "Warte auf Escrow",
+  FUNDED: "Finanziert",
+  PROOF_SUBMITTED: "Nachweis eingereicht",
+  VERIFIED: "Verifiziert",
+  REJECTED: "Abgelehnt",
+  EXPIRED: "Abgelaufen",
+  COMPLETED: "Abgeschlossen",
+};
+
+const STATUS_COLORS: Record<string, { background: string; color: string }> = {
+  DRAFT:            { background: "#f4f4f5", color: "#52525b" },
+  AWAITING_ESCROW:  { background: "#fef9c3", color: "#854d0e" },
+  FUNDED:           { background: "#dbeafe", color: "#1e40af" },
+  PROOF_SUBMITTED:  { background: "#ffedd5", color: "#9a3412" },
+  VERIFIED:         { background: "#f3e8ff", color: "#6b21a8" },
+  REJECTED:         { background: "#fee2e2", color: "#991b1b" },
+  EXPIRED:          { background: "#f4f4f5", color: "#52525b" },
+  COMPLETED:        { background: "#dcfce7", color: "#166534" },
+};
+
+interface Contract {
+  id: string;
+  milestone: string;
+  amountUSD: string;
+  status: string;
+  investor: { walletAddress: string | null };
+  createdAt: string;
+}
+
 function StartupDashboardContent() {
   const { data: session, status, update } = useSession();
   const router = useRouter();
@@ -17,6 +48,29 @@ function StartupDashboardContent() {
   const inviteCode = searchParams.get("invite");
   const [joining, setJoining] = useState(false);
   const [savingWallet, setSavingWallet] = useState(false);
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [loadingContracts, setLoadingContracts] = useState(false);
+  const [preview, setPreview] = useState<{
+    id: string; milestone: string; amountUSD: string; cancelAfter: string; investorWallet: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!inviteCode) return;
+    fetch(`/api/contracts/preview?invite=${inviteCode}`)
+      .then((r) => r.json())
+      .then((data) => { if (!data.error) setPreview(data); })
+      .catch(() => {});
+  }, [inviteCode]);
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    setLoadingContracts(true);
+    fetch("/api/contracts")
+      .then((r) => r.json())
+      .then((data) => setContracts(data.contracts ?? []))
+      .catch(() => toast.error("Contracts konnten nicht geladen werden."))
+      .finally(() => setLoadingContracts(false));
+  }, [status]);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -106,8 +160,35 @@ function StartupDashboardContent() {
         </div>
 
         {inviteCode && (
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700">
-            You have been invited to a contract. Connect your wallet to accept.
+          <div className="flex flex-col gap-3 p-5 bg-blue-50 border border-blue-200 rounded-xl">
+            <p className="text-sm font-semibold text-blue-800">Contract-Einladung</p>
+            {preview ? (
+              <>
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-blue-600 uppercase tracking-wide font-medium">Milestone</span>
+                  <p className="text-sm text-blue-900 leading-relaxed">{preview.milestone}</p>
+                </div>
+                <div className="flex gap-6 text-sm">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs text-blue-600 uppercase tracking-wide font-medium">Betrag</span>
+                    <strong className="text-blue-900">${Number(preview.amountUSD).toLocaleString()} RLUSD</strong>
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs text-blue-600 uppercase tracking-wide font-medium">Frist</span>
+                    <span className="text-blue-900">{new Date(preview.cancelAfter).toLocaleDateString("de-DE")}</span>
+                  </div>
+                  {preview.investorWallet && (
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs text-blue-600 uppercase tracking-wide font-medium">Investor</span>
+                      <code className="text-xs font-mono text-blue-900">{preview.investorWallet.slice(0, 10)}…</code>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-blue-700">Contract wird geladen…</p>
+            )}
+            <p className="text-xs text-blue-600">Verbinde deine Wallet um zu akzeptieren.</p>
           </div>
         )}
 
@@ -135,10 +216,51 @@ function StartupDashboardContent() {
             )}
 
             {!inviteCode && (
-              <div className="p-6 bg-white rounded-xl border">
-                <p className="text-sm text-muted-foreground text-center">
-                  Your contracts will appear here. Ask the investor to share an invite link.
-                </p>
+              <div className="flex flex-col gap-3">
+                <h2 className="text-base font-semibold">Meine Contracts</h2>
+
+                {loadingContracts && (
+                  <p className="text-sm text-muted-foreground">Laden…</p>
+                )}
+
+                {!loadingContracts && contracts.length === 0 && (
+                  <div className="p-6 bg-white rounded-xl border text-center">
+                    <p className="text-sm text-muted-foreground">
+                      Noch keine Contracts. Warte auf einen Invite-Link vom Investor.
+                    </p>
+                  </div>
+                )}
+
+                {contracts.map((c) => {
+                  const colors = STATUS_COLORS[c.status] ?? STATUS_COLORS.DRAFT;
+                  return (
+                    <Link key={c.id} href={`/contract/${c.id}?startup=${walletAddress}`}>
+                      <div className="p-4 bg-white rounded-xl border hover:border-zinc-400 transition-colors cursor-pointer flex flex-col gap-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-sm font-medium leading-snug line-clamp-2 flex-1">
+                            {c.milestone}
+                          </p>
+                          <span
+                            className="text-xs font-medium px-2 py-0.5 rounded-full shrink-0"
+                            style={colors}
+                          >
+                            {STATUS_LABELS[c.status] ?? c.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs text-zinc-500">
+                          <span>
+                            <strong className="text-zinc-800">${Number(c.amountUSD).toLocaleString()}</strong> RLUSD
+                          </span>
+                          <span>
+                            Investor:{" "}
+                            <code className="font-mono">{c.investor.walletAddress?.slice(0, 8)}…</code>
+                          </span>
+                          <span className="ml-auto">{new Date(c.createdAt).toLocaleDateString("de-DE")}</span>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </div>

@@ -50,22 +50,20 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const walletAddress = searchParams.get("wallet");
-
-    if (!walletAddress) {
-      return NextResponse.json({ error: "wallet param required" }, { status: 400 });
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
+    const where =
+      session.user.role === "INVESTOR"
+        ? { investorId: session.user.id }
+        : { startupId: session.user.id };
+
     const contracts = await prisma.contract.findMany({
-      where: {
-        OR: [
-          { investor: { walletAddress } },
-          { startup: { walletAddress } },
-        ],
-      },
+      where,
       include: { investor: true, startup: true },
       orderBy: { createdAt: "desc" },
     });
