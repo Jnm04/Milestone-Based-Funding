@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { extractPdfText, extractOfficeText, categorizeFile } from "@/services/ai/verifier.service";
+import { sendProofSubmittedEmail } from "@/lib/email";
 import path from "path";
 import fs from "fs/promises";
 
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
       // New flow: milestone-based upload
       const milestone = await prisma.milestone.findUnique({
         where: { id: milestoneId },
-        include: { contract: true },
+        include: { contract: { include: { investor: true, startup: true } } },
       });
 
       if (!milestone) {
@@ -113,6 +114,16 @@ export async function POST(request: NextRequest) {
         data: { status: "PROOF_SUBMITTED" },
       });
 
+      // Email investor: startup submitted proof
+      if (milestone.contract.investor.notifyProofSubmitted) {
+        void sendProofSubmittedEmail({
+          to: milestone.contract.investor.email,
+          contractId: milestone.contractId,
+          milestoneTitle: milestone.title,
+          startupName: milestone.contract.startup?.companyName ?? milestone.contract.startup?.name,
+        });
+      }
+
       return NextResponse.json({
         proofId: proof.id,
         fileUrl,
@@ -122,7 +133,10 @@ export async function POST(request: NextRequest) {
     } else {
       // Old flow (backward compat) — contractId must be set
       const resolvedContractId = contractId!;
-      const contract = await prisma.contract.findUnique({ where: { id: resolvedContractId } });
+      const contract = await prisma.contract.findUnique({
+        where: { id: resolvedContractId },
+        include: { investor: true, startup: true },
+      });
       if (!contract) return NextResponse.json({ error: "Contract not found" }, { status: 404 });
       if (contract.status !== "FUNDED") {
         return NextResponse.json({ error: `Cannot upload proof in status: ${contract.status}` }, { status: 409 });
@@ -142,6 +156,16 @@ export async function POST(request: NextRequest) {
         where: { id: resolvedContractId },
         data: { status: "PROOF_SUBMITTED" },
       });
+
+      // Email investor: startup submitted proof
+      if (contract.investor.notifyProofSubmitted) {
+        void sendProofSubmittedEmail({
+          to: contract.investor.email,
+          contractId: resolvedContractId,
+          milestoneTitle: contract.milestone,
+          startupName: contract.startup?.companyName ?? contract.startup?.name,
+        });
+      }
 
       return NextResponse.json({
         proofId: proof.id,

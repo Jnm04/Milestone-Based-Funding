@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyMilestone, verifyMilestoneImage, mockVerifyMilestone, categorizeFile } from "@/services/ai/verifier.service";
+import { sendPendingReviewEmail, sendRejectedEmail } from "@/lib/email";
 import fs from "fs/promises";
 import path from "path";
 
@@ -107,6 +108,26 @@ export async function POST(request: NextRequest) {
       where: { id: contract.id },
       data: { status: newStatus as never },
     });
+
+    const amountUSD = (proof.milestone?.amountUSD ?? contract.amountUSD).toString();
+
+    if (action === "PENDING_REVIEW" && contract.investor.notifyPendingReview) {
+      void sendPendingReviewEmail({
+        to: contract.investor.email,
+        contractId: contract.id,
+        milestoneTitle,
+        aiReasoning: result.reasoning,
+      });
+    }
+
+    if (action === "REJECTED" && contract.startup?.notifyRejected) {
+      void sendRejectedEmail({
+        to: contract.startup.email,
+        contractId: contract.id,
+        milestoneTitle,
+        aiReasoning: result.reasoning,
+      });
+    }
 
     return NextResponse.json({
       decision: result.decision,

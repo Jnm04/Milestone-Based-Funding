@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyFundTx } from "@/services/evm/escrow.service";
+import { sendFundedEmail } from "@/lib/email";
 
 /**
  * POST /api/escrow/confirm
@@ -22,6 +23,7 @@ export async function POST(request: NextRequest) {
 
     const contract = await prisma.contract.findUnique({
       where: { id: contractId },
+      include: { startup: true },
     });
 
     if (!contract) {
@@ -42,11 +44,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let fundedMilestoneTitle = contract.milestone;
+    let fundedAmountUSD = contract.amountUSD.toString();
+
     if (milestoneId) {
-      await prisma.milestone.update({
+      const updatedMilestone = await prisma.milestone.update({
         where: { id: milestoneId },
         data: { status: "FUNDED", evmTxHash: txHash },
       });
+      fundedMilestoneTitle = updatedMilestone.title;
+      fundedAmountUSD = updatedMilestone.amountUSD.toString();
 
       // Check if all milestones are now funded
       const allMilestones = await prisma.milestone.findMany({
@@ -66,6 +73,16 @@ export async function POST(request: NextRequest) {
       await prisma.contract.update({
         where: { id: contractId },
         data: { status: "FUNDED", evmTxHash: txHash },
+      });
+    }
+
+    // Email startup: milestone funded
+    if (contract.startup?.notifyFunded) {
+      void sendFundedEmail({
+        to: contract.startup.email,
+        contractId,
+        milestoneTitle: fundedMilestoneTitle,
+        amountUSD: fundedAmountUSD,
       });
     }
 

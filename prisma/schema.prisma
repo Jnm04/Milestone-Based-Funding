@@ -23,6 +23,14 @@ model User {
   contracts        Contract[] @relation("investor")
   startupContracts Contract[] @relation("startup")
   createdAt        DateTime   @default(now())
+
+  // Email notification preferences
+  notifyProofSubmitted  Boolean @default(true)  // Investor: startup submitted proof
+  notifyPendingReview   Boolean @default(true)  // Investor: AI needs manual review
+  notifyMilestoneCompleted Boolean @default(true) // Investor: milestone fully completed
+  notifyFunded          Boolean @default(true)  // Startup: milestone was funded
+  notifyVerified        Boolean @default(true)  // Startup: proof approved, funds released
+  notifyRejected        Boolean @default(true)  // Startup: proof rejected by AI
 }
 
 enum Role {

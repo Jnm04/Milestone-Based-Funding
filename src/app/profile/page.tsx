@@ -21,6 +21,12 @@ interface ProfileData {
   bio: string | null;
   website: string | null;
   createdAt: string;
+  notifyProofSubmitted: boolean;
+  notifyPendingReview: boolean;
+  notifyMilestoneCompleted: boolean;
+  notifyFunded: boolean;
+  notifyVerified: boolean;
+  notifyRejected: boolean;
 }
 
 export default function ProfilePage() {
@@ -38,6 +44,14 @@ export default function ProfilePage() {
   const [phone, setPhone] = useState("");
   const [bio, setBio] = useState("");
   const [website, setWebsite] = useState("");
+
+  const [notifyProofSubmitted, setNotifyProofSubmitted] = useState(true);
+  const [notifyPendingReview, setNotifyPendingReview] = useState(true);
+  const [notifyMilestoneCompleted, setNotifyMilestoneCompleted] = useState(true);
+  const [notifyFunded, setNotifyFunded] = useState(true);
+  const [notifyVerified, setNotifyVerified] = useState(true);
+  const [notifyRejected, setNotifyRejected] = useState(true);
+  const [savingNotify, setSavingNotify] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -57,6 +71,12 @@ export default function ProfilePage() {
         setPhone(user.phone ?? "");
         setBio(user.bio ?? "");
         setWebsite(user.website ?? "");
+        setNotifyProofSubmitted(user.notifyProofSubmitted);
+        setNotifyPendingReview(user.notifyPendingReview);
+        setNotifyMilestoneCompleted(user.notifyMilestoneCompleted);
+        setNotifyFunded(user.notifyFunded);
+        setNotifyVerified(user.notifyVerified);
+        setNotifyRejected(user.notifyRejected);
       });
   }, [status, router]);
 
@@ -96,6 +116,26 @@ export default function ProfilePage() {
       toast.error(err instanceof Error ? err.message : "Fehler beim Ändern");
     } finally {
       setSavingPw(false);
+    }
+  }
+
+  async function handleSaveNotifications() {
+    setSavingNotify(true);
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          notifyProofSubmitted, notifyPendingReview, notifyMilestoneCompleted,
+          notifyFunded, notifyVerified, notifyRejected,
+        }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      toast.success("Benachrichtigungen gespeichert.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Fehler beim Speichern");
+    } finally {
+      setSavingNotify(false);
     }
   }
 
@@ -222,6 +262,67 @@ export default function ProfilePage() {
           </form>
         </section>
 
+        {/* Email Notifications */}
+        <section className="bg-white rounded-2xl border p-6 flex flex-col gap-5">
+          <div>
+            <h2 className="font-semibold text-base">E-Mail Benachrichtigungen</h2>
+            <p className="text-xs text-muted-foreground mt-1">
+              Wähle, wann du per E-Mail benachrichtigt werden möchtest.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            {profile.role === "INVESTOR" && (
+              <>
+                <NotifyToggle
+                  label="Beweis eingereicht"
+                  description="Startup hat einen Nachweis für einen Milestone hochgeladen"
+                  checked={notifyProofSubmitted}
+                  onChange={setNotifyProofSubmitted}
+                />
+                <NotifyToggle
+                  label="Manuelle Prüfung erforderlich"
+                  description="Die KI ist unsicher — deine Einschätzung wird benötigt"
+                  checked={notifyPendingReview}
+                  onChange={setNotifyPendingReview}
+                />
+                <NotifyToggle
+                  label="Milestone abgeschlossen"
+                  description="Zahlung wurde erfolgreich freigegeben"
+                  checked={notifyMilestoneCompleted}
+                  onChange={setNotifyMilestoneCompleted}
+                />
+              </>
+            )}
+            {profile.role === "STARTUP" && (
+              <>
+                <NotifyToggle
+                  label="Milestone finanziert"
+                  description="Ein Investor hat deinen Milestone mit RLUSD finanziert"
+                  checked={notifyFunded}
+                  onChange={setNotifyFunded}
+                />
+                <NotifyToggle
+                  label="Beweis genehmigt"
+                  description="KI hat deinen Nachweis akzeptiert — Zahlung wird freigegeben"
+                  checked={notifyVerified}
+                  onChange={setNotifyVerified}
+                />
+                <NotifyToggle
+                  label="Beweis abgelehnt"
+                  description="KI hat deinen Nachweis abgelehnt — erneutes Einreichen möglich"
+                  checked={notifyRejected}
+                  onChange={setNotifyRejected}
+                />
+              </>
+            )}
+          </div>
+
+          <Button onClick={handleSaveNotifications} disabled={savingNotify} variant="outline" className="self-end">
+            {savingNotify ? "Wird gespeichert…" : "Einstellungen speichern"}
+          </Button>
+        </section>
+
         {/* Password Change */}
         <section className="bg-white rounded-2xl border p-6 flex flex-col gap-5">
           <h2 className="font-semibold text-base">Passwort ändern</h2>
@@ -267,6 +368,7 @@ export default function ProfilePage() {
         </section>
 
         {/* Account Info */}
+
         <section className="bg-white rounded-2xl border p-6 flex flex-col gap-3">
           <h2 className="font-semibold text-base">Account</h2>
           <div className="flex items-center justify-between text-sm">
@@ -280,5 +382,41 @@ export default function ProfilePage() {
         </section>
       </div>
     </main>
+  );
+}
+
+function NotifyToggle({
+  label,
+  description,
+  checked,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-2 border-b last:border-0">
+      <div className="flex flex-col">
+        <span className="text-sm font-medium text-zinc-800">{label}</span>
+        <span className="text-xs text-muted-foreground">{description}</span>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-2 ${
+          checked ? "bg-zinc-900" : "bg-zinc-200"
+        }`}
+      >
+        <span
+          className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform transition-transform ${
+            checked ? "translate-x-5" : "translate-x-0"
+          }`}
+        />
+      </button>
+    </div>
   );
 }

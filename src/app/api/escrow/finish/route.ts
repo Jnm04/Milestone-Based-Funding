@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { releaseMilestone } from "@/services/evm/escrow.service";
+import { sendVerifiedEmail, sendMilestoneCompletedInvestorEmail } from "@/lib/email";
 
 /**
  * POST /api/escrow/finish
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
 
     const contract = await prisma.contract.findUnique({
       where: { id: contractId },
-      include: { milestones: true },
+      include: { milestones: true, investor: true, startup: true },
     });
 
     if (!contract) {
@@ -79,6 +80,32 @@ export async function POST(request: NextRequest) {
       await prisma.contract.update({
         where: { id: contractId },
         data: { status: "COMPLETED" },
+      });
+    }
+
+    const completedTitle = milestoneId
+      ? contract.milestones.find((m) => m.id === milestoneId)?.title ?? contract.milestone
+      : contract.milestone;
+    const completedAmount = milestoneId
+      ? (contract.milestones.find((m) => m.id === milestoneId)?.amountUSD ?? contract.amountUSD).toString()
+      : contract.amountUSD.toString();
+
+    if (contract.startup?.notifyVerified) {
+      void sendVerifiedEmail({
+        to: contract.startup.email,
+        contractId,
+        milestoneTitle: completedTitle,
+        amountUSD: completedAmount,
+        txHash,
+      });
+    }
+
+    if (contract.investor.notifyMilestoneCompleted) {
+      void sendMilestoneCompletedInvestorEmail({
+        to: contract.investor.email,
+        contractId,
+        milestoneTitle: completedTitle,
+        amountUSD: completedAmount,
       });
     }
 
