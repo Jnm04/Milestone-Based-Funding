@@ -6,12 +6,12 @@ import { getXRPLClient } from "@/services/xrpl/client";
 /**
  * POST /api/escrow/finish/confirm
  * Called after the frontend detects the user signed the EscrowFinish payload.
- * Submits the signed tx to XRPL and marks contract as COMPLETED.
+ * Submits the signed tx to XRPL and marks contract/milestone as COMPLETED.
  * Uses fire-and-forget submit (not submitAndWait) to avoid hanging.
  */
 export async function POST(request: NextRequest) {
   try {
-    const { contractId, payloadUuid } = await request.json();
+    const { contractId, payloadUuid, milestoneId } = await request.json();
 
     if (!contractId || !payloadUuid) {
       return NextResponse.json(
@@ -72,10 +72,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No tx blob or hash from Xumm" }, { status: 422 });
     }
 
-    await prisma.contract.update({
-      where: { id: contractId },
-      data: { status: "COMPLETED" },
-    });
+    if (milestoneId) {
+      // Mark this milestone COMPLETED
+      const completedMilestone = await prisma.milestone.update({
+        where: { id: milestoneId },
+        data: { status: "COMPLETED" },
+        include: { contract: { include: { milestones: { orderBy: { order: "asc" } } } } },
+      });
+
+      const milestones = completedMilestone.contract.milestones;
+      // With upfront funding, next milestone is FUNDED (not PENDING)
+      const nextMilestone = milestones.find(
+        (m) => m.id !== milestoneId && m.status === "FUNDED"
+      );
+
+      if (nextMilestone) {
+        // Next milestone is already funded — startup can submit proof
+        await prisma.contract.update({
+          where: { id: contractId },
+          data: { status: "FUNDED" },
+        });
+      } else {
+        // All milestones done
+        await prisma.contract.update({
+          where: { id: contractId },
+          data: { status: "COMPLETED" },
+        });
+      }
+    } else {
+      // Old behavior — no milestones
+      await prisma.contract.update({
+        where: { id: contractId },
+        data: { status: "COMPLETED" },
+      });
+    }
 
     return NextResponse.json({ ok: true, action: "completed" });
   } catch (err) {

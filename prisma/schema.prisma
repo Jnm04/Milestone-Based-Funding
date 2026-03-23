@@ -14,6 +14,12 @@ model User {
   name             String?
   role             Role
   walletAddress    String?    @unique
+  companyName      String?
+  department       String?
+  jobTitle         String?
+  phone            String?
+  bio              String?
+  website          String?
   contracts        Contract[] @relation("investor")
   startupContracts Contract[] @relation("startup")
   createdAt        DateTime   @default(now())
@@ -40,6 +46,7 @@ model Contract {
   cancelAfter         DateTime
   inviteLink          String?        @unique
   proofs              Proof[]
+  milestones          Milestone[]
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
 }
@@ -52,19 +59,52 @@ enum ContractStatus {
   PENDING_REVIEW
   VERIFIED
   REJECTED
+  DECLINED
   EXPIRED
   COMPLETED
 }
 
 model Proof {
-  id            String   @id @default(cuid())
+  id            String     @id @default(cuid())
   contractId    String
-  contract      Contract @relation(fields: [contractId], references: [id])
+  contract      Contract   @relation(fields: [contractId], references: [id])
+  milestoneId   String?
+  milestone     Milestone? @relation(fields: [milestoneId], references: [id])
   fileUrl       String
   fileName      String
-  extractedText String?  @db.Text
+  extractedText String?    @db.Text
   aiDecision    String?
-  aiReasoning   String?  @db.Text
+  aiReasoning   String?    @db.Text
   aiConfidence  Int?
-  createdAt     DateTime @default(now())
+  createdAt     DateTime   @default(now())
+}
+
+model Milestone {
+  id                String          @id @default(cuid())
+  contractId        String
+  contract          Contract        @relation(fields: [contractId], references: [id])
+  title             String
+  amountUSD         Decimal
+  amountRLUSD       String?
+  cancelAfter       DateTime
+  status            MilestoneStatus @default(PENDING)
+  order             Int
+  escrowSequence    Int?
+  escrowCondition   String?
+  escrowFulfillment String?
+  proofs            Proof[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+enum MilestoneStatus {
+  PENDING
+  AWAITING_ESCROW
+  FUNDED
+  PROOF_SUBMITTED
+  PENDING_REVIEW
+  VERIFIED
+  REJECTED
+  EXPIRED
+  COMPLETED
 }

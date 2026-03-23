@@ -16,9 +16,15 @@ interface ContractActionsProps {
   escrowCondition: string | null;
   amountRLUSD: string;
   cancelAfter: string;
+  milestoneId: string | null;
+  milestoneTitle: string | null;
+  milestoneNumber: number | null;
+  totalMilestones: number;
   latestProofId: string | null;
   latestProofReasoning: string | null;
   latestProofConfidence: number | null;
+  latestProofFileUrl: string | null;
+  latestProofFileName: string | null;
   viewerWallet: string | null;
 }
 
@@ -31,9 +37,15 @@ export function ContractActions({
   escrowCondition: _escrowCondition,
   amountRLUSD,
   cancelAfter,
+  milestoneId,
+  milestoneTitle,
+  milestoneNumber,
+  totalMilestones,
   latestProofId,
   latestProofReasoning,
   latestProofConfidence,
+  latestProofFileUrl,
+  latestProofFileName,
   viewerWallet,
 }: ContractActionsProps) {
   const [escrowStep, setEscrowStep] = useState<"idle" | "qr" | "polling" | "done">("idle");
@@ -47,13 +59,16 @@ export function ContractActions({
   const [finishStep, setFinishStep] = useState<"idle" | "qr" | "polling" | "done">("idle");
   const [finishQr, setFinishQr] = useState<string | null>(null);
 
+  // suppress unused warning — kept for potential future use
+  void loadingFinish;
+
   async function handleFundEscrow() {
     setEscrowStep("qr");
     try {
       const res = await fetch("/api/escrow/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contractId }),
+        body: JSON.stringify({ contractId, milestoneId }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -82,11 +97,10 @@ export function ContractActions({
           if (data.signed) {
             clearInterval(interval);
             toast.info("Signed! Confirming escrow on XRPL…");
-            // Confirm server-side: fetch sequence from XRPL, set status=FUNDED
             const confirm = await fetch("/api/escrow/confirm", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ contractId, payloadUuid }),
+              body: JSON.stringify({ contractId, payloadUuid, milestoneId }),
             });
             if (confirm.ok) {
               setEscrowStep("done");
@@ -132,7 +146,6 @@ export function ContractActions({
         toast.error(`AI rejected: ${result.reasoning}`);
       }
       setVerifyDone(true);
-      // Reload to show updated status
       setTimeout(() => window.location.reload(), 1500);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Verification failed.");
@@ -147,7 +160,7 @@ export function ContractActions({
       const res = await fetch("/api/escrow/finish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contractId }),
+        body: JSON.stringify({ contractId, milestoneId }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -158,7 +171,6 @@ export function ContractActions({
       setFinishStep("polling");
       toast.info("Scan the QR code with Xaman to release funds.");
 
-      // Poll until signed (max 10 min)
       const deadline = Date.now() + 10 * 60 * 1000;
       const interval = setInterval(async () => {
         if (Date.now() > deadline) {
@@ -176,12 +188,11 @@ export function ContractActions({
           if (data.signed) {
             clearInterval(interval);
             toast.info("Signed! Submitting EscrowFinish to XRPL…");
-            // Confirm outside the swallowing catch block
             try {
               const confirm = await fetch("/api/escrow/finish/confirm", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ contractId, payloadUuid }),
+                body: JSON.stringify({ contractId, payloadUuid, milestoneId }),
               });
               if (confirm.ok) {
                 setFinishStep("done");
@@ -219,7 +230,7 @@ export function ContractActions({
       const res = await fetch("/api/escrow/cancel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contractId }),
+        body: JSON.stringify({ contractId, milestoneId }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -312,10 +323,12 @@ export function ContractActions({
     return (
       <div className="flex flex-col gap-3 p-5 bg-amber-50 border border-amber-200 rounded-xl">
         <p className="text-sm font-medium text-amber-800">
-          Both parties have committed. Fund the escrow to lock funds.
+          {totalMilestones > 1 && milestoneNumber !== null
+            ? `Milestone ${milestoneNumber} of ${totalMilestones}${milestoneTitle ? `: ${milestoneTitle}` : ""} — fund the escrow to lock funds.`
+            : "Both parties have committed. Fund the escrow to lock funds."}
         </p>
         <Button onClick={handleFundEscrow} disabled={escrowStep === "qr"}>
-          {escrowStep === "qr" ? "Opening Xaman…" : "Fund Escrow via Xaman"}
+          {escrowStep === "qr" ? "Opening Xaman…" : `Fund Escrow via Xaman${totalMilestones > 1 && milestoneNumber !== null ? ` (Milestone ${milestoneNumber}/${totalMilestones})` : ""}`}
         </Button>
       </div>
     );
@@ -335,6 +348,7 @@ export function ContractActions({
     return (
       <ProofUpload
         contractId={contractId}
+        milestoneId={milestoneId}
         onUploaded={(proofId) => handleVerify(proofId)}
       />
     );
@@ -345,6 +359,20 @@ export function ContractActions({
     return (
       <div className="flex flex-col gap-3 p-5 bg-blue-50 border border-blue-200 rounded-xl">
         <p className="text-sm text-blue-800">Proof uploaded. Ready for AI verification.</p>
+        {latestProofFileUrl && (
+          <a
+            href={latestProofFileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-4 py-3 bg-white border border-blue-200 rounded-lg hover:border-blue-400 transition-colors"
+          >
+            <span className="text-xs font-mono bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
+              {latestProofFileName?.split(".").pop()?.toUpperCase() ?? "FILE"}
+            </span>
+            <span className="text-sm text-blue-900 flex-1 truncate">{latestProofFileName}</span>
+            <span className="text-xs text-blue-600">Öffnen ↗</span>
+          </a>
+        )}
         <Button
           onClick={() => handleVerify(latestProofId)}
           disabled={loadingVerify}
@@ -362,7 +390,7 @@ export function ContractActions({
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-amber-900">Manuelle Prüfung erforderlich</p>
           {latestProofConfidence !== null && (
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+            <span style={{ background: "#fef3c7", color: "#92400e" }} className="text-xs font-medium px-2 py-0.5 rounded-full">
               KI-Sicherheit: {latestProofConfidence}%
             </span>
           )}
@@ -377,27 +405,41 @@ export function ContractActions({
           </div>
         )}
 
+        {latestProofFileUrl && (
+          <a
+            href={latestProofFileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-4 py-3 bg-white border border-amber-200 rounded-lg hover:border-amber-400 transition-colors"
+          >
+            <span className="text-xs font-mono bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">
+              {latestProofFileName?.split(".").pop()?.toUpperCase() ?? "FILE"}
+            </span>
+            <span className="text-sm text-amber-900 flex-1 truncate">{latestProofFileName}</span>
+            <span className="text-xs text-amber-600">Öffnen ↗</span>
+          </a>
+        )}
+
         {viewerWallet === investorAddress ? (
           <div className="flex flex-col gap-2">
             <p className="text-xs text-amber-700">
-              Die KI war nicht sicher genug für eine automatische Entscheidung. Bitte prüfe den Nachweis und entscheide manuell.
+              Die KI war nicht sicher genug für eine automatische Entscheidung. Prüfe den Nachweis oben und entscheide manuell.
             </p>
             <div className="flex gap-3">
-              <Button
+              <button
                 onClick={() => handleReview("APPROVE")}
                 disabled={loadingReview !== null}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                style={{ background: "#16a34a", color: "#fff", flex: 1, padding: "8px 16px", borderRadius: "8px", border: "none", fontWeight: 600, cursor: loadingReview !== null ? "not-allowed" : "pointer", opacity: loadingReview !== null ? 0.6 : 1 }}
               >
                 {loadingReview === "APPROVE" ? "Wird freigegeben…" : "✓ Freigeben"}
-              </Button>
-              <Button
+              </button>
+              <button
                 onClick={() => handleReview("REJECT")}
                 disabled={loadingReview !== null}
-                variant="outline"
-                className="flex-1 border-red-300 text-red-700 hover:bg-red-50"
+                style={{ background: "#fff", color: "#b91c1c", flex: 1, padding: "8px 16px", borderRadius: "8px", border: "1px solid #fca5a5", fontWeight: 600, cursor: loadingReview !== null ? "not-allowed" : "pointer", opacity: loadingReview !== null ? 0.6 : 1 }}
               >
                 {loadingReview === "REJECT" ? "Wird abgelehnt…" : "✗ Ablehnen"}
-              </Button>
+              </button>
             </div>
           </div>
         ) : (
@@ -409,8 +451,17 @@ export function ContractActions({
     );
   }
 
-  // VERIFIED: startup signs EscrowFinish to release funds
+  // VERIFIED: only startup signs EscrowFinish to release funds
   if (status === "VERIFIED") {
+    if (viewerWallet !== startupAddress) {
+      return (
+        <div className="flex flex-col gap-3 p-5 bg-green-50 border border-green-200 rounded-xl">
+          <p className="text-sm font-medium text-green-800">
+            Milestone freigegeben. Das Startup kann die Funds jetzt auszahlen.
+          </p>
+        </div>
+      );
+    }
     if ((finishStep === "qr" || finishStep === "polling") && finishQr) {
       return (
         <div className="flex flex-col items-center gap-4 p-5 bg-green-50 border border-green-200 rounded-xl">
@@ -428,7 +479,7 @@ export function ContractActions({
     return (
       <div className="flex flex-col gap-3 p-5 bg-green-50 border border-green-200 rounded-xl">
         <p className="text-sm font-medium text-green-800">
-          AI approved the milestone! Sign with Xaman to receive your funds.
+          Milestone approved! Sign with Xaman to receive your funds.
         </p>
         <Button onClick={handleFinishEscrow} disabled={finishStep !== "idle"}>
           {finishStep !== "idle" ? "Opening Xaman…" : "Release Funds via Xaman"}
@@ -437,7 +488,7 @@ export function ContractActions({
     );
   }
 
-  // REJECTED: startup can resubmit, or cancel if expired
+  // REJECTED: only startup can resubmit; investor sees info message
   if (status === "REJECTED") {
     return (
       <div className="flex flex-col gap-3 p-5 bg-red-50 border border-red-200 rounded-xl">
@@ -445,20 +496,26 @@ export function ContractActions({
         {isExpired ? (
           <>
             <p className="text-xs text-red-700">Deadline has passed. You can cancel the escrow to recover funds.</p>
-            <Button variant="destructive" onClick={handleCancelEscrow} disabled={loadingCancel}>
-              {loadingCancel ? "Opening Xumm…" : "Cancel Escrow & Recover Funds"}
-            </Button>
+            {viewerWallet === investorAddress && (
+              <Button variant="destructive" onClick={handleCancelEscrow} disabled={loadingCancel}>
+                {loadingCancel ? "Opening Xumm…" : "Cancel Escrow & Recover Funds"}
+              </Button>
+            )}
           </>
-        ) : (
+        ) : viewerWallet === startupAddress ? (
           <Button variant="outline" onClick={handleResubmit} disabled={loadingResubmit}>
             {loadingResubmit ? "Resetting…" : "Resubmit New Proof"}
           </Button>
+        ) : (
+          <p className="text-xs text-red-700">
+            The proof was rejected. The startup will need to resubmit a new proof.
+          </p>
         )}
       </div>
     );
   }
 
-  // FUNDED or EXPIRED with escrow still open: show cancel option when deadline passed
+  // FUNDED or PROOF_SUBMITTED with deadline passed: show cancel option
   if (["FUNDED", "PROOF_SUBMITTED"].includes(status) && isExpired) {
     return (
       <div className="flex flex-col gap-3 p-5 bg-orange-50 border border-orange-200 rounded-xl">

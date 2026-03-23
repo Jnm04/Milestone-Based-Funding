@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyMilestone, mockVerifyMilestone } from "@/services/ai/verifier.service";
-import { buildEscrowFinishTx, submitSignedTransaction } from "@/services/xrpl/escrow.service";
+import { verifyMilestone, verifyMilestoneImage, mockVerifyMilestone, categorizeFile } from "@/services/ai/verifier.service";
+import fs from "fs/promises";
+import path from "path";
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,10 +12,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "proofId is required" }, { status: 400 });
     }
 
-    // Load proof + contract
+    // Load proof + contract + milestone
     const proof = await prisma.proof.findUnique({
       where: { id: proofId },
-      include: { contract: { include: { investor: true, startup: true } } },
+      include: {
+        contract: { include: { investor: true, startup: true } },
+        milestone: true,
+      },
     });
 
     if (!proof) {
@@ -30,20 +34,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Run AI verification (fall back to mock if no text was extracted)
+    // Use milestone title for verification if available, otherwise contract milestone
+    const milestoneTitle = proof.milestone?.title ?? contract.milestone;
+
+    // Run AI verification
     const extractedText = proof.extractedText ?? "";
-    const useReal = !!process.env.ANTHROPIC_API_KEY &&
-      process.env.ANTHROPIC_API_KEY !== "sk-ant-..." &&
-      extractedText.length > 0;
-    const result = useReal
-      ? await verifyMilestone({
-          milestone: contract.milestone,
-          extractedText,
-        })
-      : mockVerifyMilestone({
-          milestone: contract.milestone,
-          extractedText,
-        });
+    const hasApiKey = !!process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY !== "sk-ant-...";
+    const category = categorizeFile("", proof.fileName);
+
+    let result;
+    if (!hasApiKey) {
+      result = mockVerifyMilestone({ milestone: milestoneTitle, extractedText });
+    } else if (category === "image") {
+      // Load file from disk and send to Claude Vision
+      const filePath = path.join(process.cwd(), "public", proof.fileUrl);
+      const imageBuffer = await fs.readFile(filePath);
+      const ext = path.extname(proof.fileName).toLowerCase();
+      const mimeMap: Record<string, "image/jpeg" | "image/png" | "image/gif" | "image/webp"> = {
+        ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+        ".png": "image/png", ".gif": "image/gif", ".webp": "image/webp",
+      };
+      const mimeType = mimeMap[ext] ?? "image/jpeg";
+      result = await verifyMilestoneImage({ milestone: milestoneTitle, imageBuffer, mimeType });
+    } else {
+      result = await verifyMilestone({
+        milestone: milestoneTitle,
+        extractedText: extractedText || "(No text could be extracted from this document.)",
+      });
+    }
 
     // Persist AI result on proof
     await prisma.proof.update({
@@ -75,6 +93,14 @@ export async function POST(request: NextRequest) {
       // High confidence rejected
       newStatus = "REJECTED";
       action = "REJECTED";
+    }
+
+    // Update milestone status if proof is linked to one
+    if (proof.milestoneId) {
+      await prisma.milestone.update({
+        where: { id: proof.milestoneId },
+        data: { status: newStatus as never },
+      });
     }
 
     await prisma.contract.update({

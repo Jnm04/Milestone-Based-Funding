@@ -6,7 +6,7 @@ import { createXummSignRequest } from "@/services/xrpl/xumm.service";
 
 export async function POST(request: NextRequest) {
   try {
-    const { contractId } = await request.json();
+    const { contractId, milestoneId } = await request.json();
 
     if (!contractId) {
       return NextResponse.json({ error: "contractId is required" }, { status: 400 });
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
 
     const contract = await prisma.contract.findUnique({
       where: { id: contractId },
-      include: { investor: true, startup: true },
+      include: { investor: true, startup: true, milestones: true },
     });
 
     if (!contract) {
@@ -28,15 +28,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!contract.escrowSequence || !contract.escrowCondition || !contract.escrowFulfillment) {
-      return NextResponse.json(
-        { error: "Missing escrow data — cannot finish" },
-        { status: 422 }
-      );
-    }
-
     if (!contract.startup) {
       return NextResponse.json({ error: "No startup has joined this contract" }, { status: 422 });
+    }
+
+    let escrowSequence: number;
+    let escrowCondition: string;
+    let escrowFulfillment: string;
+
+    if (milestoneId) {
+      const milestone = contract.milestones.find((m) => m.id === milestoneId);
+      if (!milestone) {
+        return NextResponse.json({ error: "Milestone not found" }, { status: 404 });
+      }
+      if (milestone.status !== "VERIFIED") {
+        return NextResponse.json(
+          { error: `Expected milestone in VERIFIED, got ${milestone.status}` },
+          { status: 409 }
+        );
+      }
+      if (!milestone.escrowSequence || !milestone.escrowCondition || !milestone.escrowFulfillment) {
+        return NextResponse.json(
+          { error: "Missing milestone escrow data — cannot finish" },
+          { status: 422 }
+        );
+      }
+      escrowSequence = milestone.escrowSequence;
+      escrowCondition = milestone.escrowCondition;
+      escrowFulfillment = milestone.escrowFulfillment;
+    } else {
+      if (!contract.escrowSequence || !contract.escrowCondition || !contract.escrowFulfillment) {
+        return NextResponse.json(
+          { error: "Missing escrow data — cannot finish" },
+          { status: 422 }
+        );
+      }
+      escrowSequence = contract.escrowSequence;
+      escrowCondition = contract.escrowCondition;
+      escrowFulfillment = contract.escrowFulfillment;
     }
 
     // Get current ledger to set a fresh LastLedgerSequence
@@ -45,7 +74,7 @@ export async function POST(request: NextRequest) {
     const currentLedger = serverInfo.result.info.validated_ledger?.seq ?? 0;
 
     // EscrowFinish fee = 12 drops base + 10 drops per byte of fulfillment
-    const fulfillmentBytes = Math.ceil(contract.escrowFulfillment.length / 2);
+    const fulfillmentBytes = Math.ceil(escrowFulfillment.length / 2);
     const fee = String(12 + fulfillmentBytes * 10);
 
     // Startup signs EscrowFinish (any account can submit, they pay the fee)
@@ -53,9 +82,9 @@ export async function POST(request: NextRequest) {
       ...buildEscrowFinishTx({
         signerAddress: contract.startup.walletAddress as string,
         investorAddress: contract.investor.walletAddress as string,
-        escrowSequence: contract.escrowSequence,
-        fulfillment: contract.escrowFulfillment,
-        condition: contract.escrowCondition,
+        escrowSequence,
+        fulfillment: escrowFulfillment,
+        condition: escrowCondition,
       }),
       Fee: fee,
       LastLedgerSequence: currentLedger + 1000,
