@@ -43,6 +43,7 @@ model Contract {
   escrowSequence      Int?
   escrowCondition     String?
   escrowFulfillment   String?
+  evmTxHash           String?   // EVM: tx hash of the fundMilestone transaction
   cancelAfter         DateTime
   inviteLink          String?        @unique
   proofs              Proof[]
@@ -92,6 +93,7 @@ model Milestone {
   escrowSequence    Int?
   escrowCondition   String?
   escrowFulfillment String?
+  evmTxHash         String?   // EVM: tx hash of the fundMilestone transaction
   proofs            Proof[]
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt

@@ -2,28 +2,28 @@ import { Badge } from "@/components/ui/badge";
 import { ContractStatus } from "@/types";
 
 const STATUS_CONFIG: Record<ContractStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  DRAFT:           { label: "Draft",            variant: "outline" },
-  AWAITING_ESCROW: { label: "Awaiting Escrow",  variant: "secondary" },
-  FUNDED:          { label: "Funded",           variant: "default" },
-  PROOF_SUBMITTED: { label: "Proof Submitted",  variant: "secondary" },
-  PENDING_REVIEW:  { label: "Manuelle Prüfung", variant: "secondary" },
+  DRAFT:           { label: "Draft",                  variant: "outline" },
+  AWAITING_ESCROW: { label: "Awaiting Escrow",        variant: "secondary" },
+  FUNDED:          { label: "Funded",                 variant: "default" },
+  PROOF_SUBMITTED: { label: "Proof Submitted",        variant: "secondary" },
+  PENDING_REVIEW:  { label: "Manuelle Prüfung",       variant: "secondary" },
   VERIFIED:        { label: "Verified — AI Approved", variant: "default" },
-  REJECTED:        { label: "Rejected",          variant: "destructive" },
-  DECLINED:        { label: "Einladung abgelehnt", variant: "destructive" },
-  EXPIRED:         { label: "Expired",          variant: "destructive" },
-  COMPLETED:       { label: "Completed",        variant: "default" },
+  REJECTED:        { label: "Rejected",               variant: "destructive" },
+  DECLINED:        { label: "Einladung abgelehnt",    variant: "destructive" },
+  EXPIRED:         { label: "Expired",                variant: "destructive" },
+  COMPLETED:       { label: "Completed",              variant: "default" },
 };
 
 interface EscrowStatusProps {
   status: ContractStatus;
-  escrowSequence?: number | null;
+  evmTxHash?: string | null;
   amountRLUSD?: string | null;
   cancelAfter: Date | string;
 }
 
 export function EscrowStatus({
   status,
-  escrowSequence,
+  evmTxHash,
   amountRLUSD,
   cancelAfter,
 }: EscrowStatusProps) {
@@ -46,10 +46,12 @@ export function EscrowStatus({
         </div>
       )}
 
-      {escrowSequence && (
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-zinc-500">Escrow Sequence</span>
-          <code className="text-xs font-mono">{escrowSequence}</code>
+      {evmTxHash && (
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-sm text-zinc-500 shrink-0">Fund Tx</span>
+          <code className="text-xs font-mono text-right break-all text-zinc-600">
+            {evmTxHash.slice(0, 12)}…{evmTxHash.slice(-8)}
+          </code>
         </div>
       )}
 

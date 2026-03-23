@@ -209,10 +209,11 @@ export default function ProfilePage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide">XRPL Wallet</label>
-              <p className="text-sm text-zinc-900 bg-zinc-50 border rounded-lg px-3 py-2 font-mono">
+              <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide">EVM Wallet (MetaMask)</label>
+              <p className="text-sm text-zinc-900 bg-zinc-50 border rounded-lg px-3 py-2 font-mono break-all">
                 {profile.walletAddress ?? <span className="text-zinc-400">Noch keine Wallet verbunden</span>}
               </p>
+              <p className="text-xs text-zinc-400">0x… Adresse aus MetaMask eintragen lassen (über Dashboard)</p>
             </div>
 
             <Button type="submit" disabled={saving} className="self-end">

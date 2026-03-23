@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { WalletConnect } from "@/components/wallet-connect";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -45,9 +44,8 @@ interface Contract {
 }
 
 export default function InvestorDashboard() {
-  const { data: session, status, update } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
-  const [savingWallet, setSavingWallet] = useState(false);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loadingContracts, setLoadingContracts] = useState(false);
 
@@ -66,26 +64,6 @@ export default function InvestorDashboard() {
       .finally(() => setLoadingContracts(false));
   }, [status]);
 
-  async function handleWalletConnected(address: string) {
-    setSavingWallet(true);
-    try {
-      const res = await fetch("/api/user/wallet", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress: address }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error ?? "Failed to save wallet");
-      }
-      await update({ walletAddress: address });
-      toast.success("Wallet verbunden!");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save wallet.");
-    } finally {
-      setSavingWallet(false);
-    }
-  }
 
   if (status === "loading") {
     return <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">Laden…</div>;
@@ -115,23 +93,24 @@ export default function InvestorDashboard() {
         <div>
           <h1 className="text-2xl font-bold">Investor Dashboard</h1>
           <p className="text-muted-foreground mt-1">
-            {walletAddress ? "Deine Contracts im Überblick." : "Verbinde deine XRPL Wallet um Contracts zu erstellen."}
+            {walletAddress ? "Deine Contracts im Überblick." : "Verbinde deine MetaMask Wallet um Contracts zu erstellen."}
           </p>
         </div>
 
         {!walletAddress ? (
           <div className="flex flex-col gap-4 p-6 bg-white rounded-xl border">
-            <p className="text-sm font-medium">Wallet über Xaman verbinden</p>
-            <p className="text-xs text-muted-foreground">Nur einmalig nötig. Wird gespeichert.</p>
-            <WalletConnect role="INVESTOR" onConnected={handleWalletConnected} />
-            {savingWallet && <p className="text-xs text-muted-foreground">Wird gespeichert…</p>}
+            <p className="text-sm font-medium">EVM Wallet verbinden</p>
+            <p className="text-xs text-muted-foreground">Trage deine MetaMask-Adresse (0x…) im Profil ein.</p>
+            <Link href="/profile">
+              <Button variant="outline" className="w-full">Zum Profil →</Button>
+            </Link>
           </div>
         ) : (
           <>
             <div className="flex items-center gap-3 p-4 bg-white rounded-xl border">
               <div className="flex-1">
-                <p className="text-sm text-muted-foreground">XRPL Wallet</p>
-                <code className="text-sm font-mono">{walletAddress}</code>
+                <p className="text-sm text-muted-foreground">EVM Wallet (MetaMask)</p>
+                <code className="text-sm font-mono break-all">{walletAddress}</code>
               </div>
               <Badge className="bg-green-100 text-green-700 border-green-200">Verbunden</Badge>
             </div>

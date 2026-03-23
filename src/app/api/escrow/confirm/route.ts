@@ -1,25 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getXummPayloadResult } from "@/services/xrpl/xumm.service";
-import { submitSignedTransaction } from "@/services/xrpl/escrow.service";
+import { verifyFundTx } from "@/services/evm/escrow.service";
 
 /**
  * POST /api/escrow/confirm
- * Client-side alternative to the Xumm webhook — works on localhost.
- * Called after the frontend detects the user has signed the EscrowCreate payload.
+ * Called after the frontend submits a fundMilestone transaction via MetaMask.
+ * Verifies the transaction on-chain and marks the milestone/contract as FUNDED.
  *
- * Since we use submit: false in Xumm, we get the signed tx blob from Xumm
- * and submit it to XRPL ourselves. submitAndWait gives us the sequence directly.
- *
- * Body: { contractId, payloadUuid, milestoneId? }
+ * Body: { contractId, txHash, milestoneId? }
  */
 export async function POST(request: NextRequest) {
   try {
-    const { contractId, payloadUuid, milestoneId } = await request.json();
+    const { contractId, txHash, milestoneId } = await request.json();
 
-    if (!contractId || !payloadUuid) {
+    if (!contractId || !txHash) {
       return NextResponse.json(
-        { error: "contractId and payloadUuid are required" },
+        { error: "contractId and txHash are required" },
         { status: 400 }
       );
     }
@@ -32,36 +28,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Contract not found" }, { status: 404 });
     }
 
-    // Already funded — idempotent
+    // Idempotent — already funded
     if (contract.status === "FUNDED") {
-      return NextResponse.json({ ok: true, action: "already_funded", escrowSequence: contract.escrowSequence });
+      return NextResponse.json({ ok: true, action: "already_funded" });
     }
 
-    // Get the signed tx blob from Xumm (submit: false means Xumm only signs)
-    const result = await getXummPayloadResult(payloadUuid);
-
-    if (!result?.signed) {
-      return NextResponse.json({ error: "Transaction not signed yet" }, { status: 422 });
-    }
-
-    if (!result.txBlob) {
-      return NextResponse.json({ error: "No signed tx blob from Xumm" }, { status: 422 });
-    }
-
-    // Submit to XRPL ourselves and wait for validation
-    const { sequence } = await submitSignedTransaction(result.txBlob);
-
-    if (!sequence) {
-      return NextResponse.json({ error: "Could not read escrow sequence from XRPL" }, { status: 422 });
+    // Verify the transaction was mined successfully on-chain
+    const { ok } = await verifyFundTx(txHash);
+    if (!ok) {
+      return NextResponse.json(
+        { error: "Transaction not found or failed on-chain. Please wait and retry." },
+        { status: 422 }
+      );
     }
 
     if (milestoneId) {
       await prisma.milestone.update({
         where: { id: milestoneId },
-        data: { status: "FUNDED", escrowSequence: sequence },
+        data: { status: "FUNDED", evmTxHash: txHash },
       });
 
-      // Check if all milestones for this contract are now funded
+      // Check if all milestones are now funded
       const allMilestones = await prisma.milestone.findMany({
         where: { contractId },
         select: { status: true },
@@ -70,19 +57,19 @@ export async function POST(request: NextRequest) {
 
       await prisma.contract.update({
         where: { id: contractId },
-        data: { status: allFunded ? "FUNDED" : "AWAITING_ESCROW" },
+        data: {
+          status: allFunded ? "FUNDED" : "AWAITING_ESCROW",
+          evmTxHash: allFunded ? txHash : undefined,
+        },
       });
     } else {
       await prisma.contract.update({
         where: { id: contractId },
-        data: {
-          status: "FUNDED",
-          escrowSequence: sequence,
-        },
+        data: { status: "FUNDED", evmTxHash: txHash },
       });
     }
 
-    return NextResponse.json({ ok: true, action: "funded", escrowSequence: sequence });
+    return NextResponse.json({ ok: true, action: "funded" });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("Escrow confirm error:", err);

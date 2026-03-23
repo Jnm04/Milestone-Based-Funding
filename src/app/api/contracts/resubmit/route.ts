@@ -45,6 +45,12 @@ export async function POST(request: NextRequest) {
       data: { status: "FUNDED" },
     });
 
+    // Also reset any REJECTED milestones back to FUNDED
+    await prisma.milestone.updateMany({
+      where: { contractId, status: "REJECTED" },
+      data: { status: "FUNDED" },
+    });
+
     return NextResponse.json({ ok: true, status: "FUNDED" });
   } catch (err) {
     console.error("Resubmit error:", err);

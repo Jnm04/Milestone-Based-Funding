@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { generateCryptoCondition } from "@/services/crypto/condition.service";
-import { buildEscrowCreateTx } from "@/services/xrpl/escrow.service";
-import { createXummSignRequest } from "@/services/xrpl/xumm.service";
-import { getXRPLClient } from "@/services/xrpl/client";
+import {
+  buildApproveCalldata,
+  buildFundMilestoneCalldata,
+} from "@/services/evm/escrow.service";
 
+const ESCROW_CONTRACT = process.env.NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS!;
+const RLUSD_CONTRACT = process.env.NEXT_PUBLIC_RLUSD_CONTRACT_ADDRESS!;
+
+/**
+ * POST /api/escrow/create
+ * Returns pre-encoded EVM calldata for MetaMask to:
+ *   1. Approve RLUSD spending by the escrow contract
+ *   2. Call fundMilestone on the escrow contract
+ *
+ * The frontend sends both transactions via window.ethereum, then confirms
+ * the funding by calling POST /api/escrow/confirm with the tx hash.
+ */
 export async function POST(request: NextRequest) {
   try {
     const { contractId, milestoneId } = await request.json();
@@ -29,18 +41,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!contract.startup) {
-      return NextResponse.json(
-        { error: "No startup has joined yet" },
-        { status: 409 }
-      );
+    if (!contract.startup?.walletAddress) {
+      return NextResponse.json({ error: "No startup has joined yet" }, { status: 409 });
     }
 
-    // Generate crypto-condition — store fulfillment securely server-side
-    const { condition, fulfillment } = generateCryptoCondition();
-
-    let amountForEscrow: string;
-    let cancelAfterForEscrow: Date;
+    let amountUSD: string;
+    let deadline: Date;
+    let milestoneOrder: number;
 
     if (milestoneId) {
       const milestone = contract.milestones.find((m) => m.id === milestoneId);
@@ -53,63 +60,42 @@ export async function POST(request: NextRequest) {
           { status: 409 }
         );
       }
+      amountUSD = milestone.amountUSD.toString();
+      deadline = milestone.cancelAfter;
+      milestoneOrder = milestone.order;
 
-      amountForEscrow = milestone.amountUSD.toString();
-      cancelAfterForEscrow = milestone.cancelAfter;
-
-      // Save condition + fulfillment on milestone
+      // Store the RLUSD amount on the milestone for display
       await prisma.milestone.update({
         where: { id: milestoneId },
-        data: {
-          escrowCondition: condition,
-          escrowFulfillment: fulfillment,
-          amountRLUSD: amountForEscrow,
-        },
+        data: { amountRLUSD: amountUSD },
       });
     } else {
-      amountForEscrow = contract.amountUSD.toString();
-      cancelAfterForEscrow = contract.cancelAfter;
+      amountUSD = contract.amountUSD.toString();
+      deadline = contract.cancelAfter;
+      milestoneOrder = 0;
 
-      // Save condition + fulfillment to contract (old flow)
       await prisma.contract.update({
         where: { id: contractId },
-        data: {
-          escrowCondition: condition,
-          escrowFulfillment: fulfillment,
-          amountRLUSD: amountForEscrow,
-        },
+        data: { amountRLUSD: amountUSD },
       });
     }
 
-    const escrowTx = buildEscrowCreateTx({
-      investorAddress: contract.investor.walletAddress!,
-      startupAddress: contract.startup.walletAddress!,
-      amountRLUSD: amountForEscrow,
-      condition,
-      cancelAfterDate: cancelAfterForEscrow,
+    const approveCalldata = buildApproveCalldata(amountUSD);
+    const fundCalldata = buildFundMilestoneCalldata({
+      contractId,
+      milestoneOrder,
+      startupAddress: contract.startup.walletAddress,
+      amountUSD,
+      deadline,
     });
 
-    // Get current ledger from our own XRPL node and set LastLedgerSequence explicitly.
-    const xrplClient = await getXRPLClient();
-    const serverInfo = await xrplClient.request({ command: "server_info" });
-    const currentLedger = serverInfo.result.info.validated_ledger?.seq ?? 0;
-    const escrowTxWithSeq = { ...escrowTx, LastLedgerSequence: currentLedger + 200 };
-
-    // Create Xumm sign request — investor scans QR / taps in Xumm app
-    const callbackUrl = `${process.env.NEXTAUTH_URL ?? "http://localhost:3000"}/contract/${contractId}`;
-    const payload = await createXummSignRequest(
-      escrowTxWithSeq as unknown as Record<string, unknown> & { TransactionType: string },
-      {
-        returnUrl: callbackUrl,
-        expiresIn: 600,
-        customMeta: { contractId, milestoneId: milestoneId ?? null },
-      }
-    );
-
     return NextResponse.json({
-      xummUrl: payload.next.always,
-      qrPng: payload.refs.qr_png,
-      payloadUuid: payload.uuid,
+      rlusdAddress: RLUSD_CONTRACT,
+      escrowContractAddress: ESCROW_CONTRACT,
+      approveCalldata,
+      fundCalldata,
+      amountUSD,
+      milestoneOrder,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

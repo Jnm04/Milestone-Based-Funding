@@ -5,15 +5,13 @@ import { Button } from "@/components/ui/button";
 import { ProofUpload } from "@/components/proof-upload";
 import { toast } from "sonner";
 import { ContractStatus } from "@/types";
-import Image from "next/image";
+import { XRPL_EVM_CHAIN_ID } from "@/lib/evm-abi";
 
 interface ContractActionsProps {
   contractId: string;
   status: ContractStatus;
   investorAddress: string;
   startupAddress: string | null;
-  escrowSequence: number | null;
-  escrowCondition: string | null;
   amountRLUSD: string;
   cancelAfter: string;
   milestoneId: string | null;
@@ -28,13 +26,99 @@ interface ContractActionsProps {
   viewerWallet: string | null;
 }
 
+// ─── MetaMask helpers ────────────────────────────────────────────────────────
+
+declare global {
+  interface Window {
+    ethereum?: {
+      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+      isMetaMask?: boolean;
+    };
+  }
+}
+
+/** Ensure MetaMask is connected and on the XRPL EVM chain. */
+async function connectMetaMask(): Promise<string> {
+  if (!window.ethereum) {
+    throw new Error(
+      "MetaMask is not installed. Please install MetaMask to fund the escrow."
+    );
+  }
+  const accounts = (await window.ethereum.request({
+    method: "eth_requestAccounts",
+  })) as string[];
+
+  if (!accounts || accounts.length === 0) {
+    throw new Error("No MetaMask account selected.");
+  }
+
+  // Check and switch chain if needed
+  const chainId = (await window.ethereum.request({ method: "eth_chainId" })) as string;
+  if (parseInt(chainId, 16) !== XRPL_EVM_CHAIN_ID) {
+    try {
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: `0x${XRPL_EVM_CHAIN_ID.toString(16)}` }],
+      });
+    } catch {
+      // Chain not added yet — ask MetaMask to add it
+      await window.ethereum.request({
+        method: "wallet_addEthereumChain",
+        params: [
+          {
+            chainId: `0x${XRPL_EVM_CHAIN_ID.toString(16)}`,
+            chainName: "XRPL EVM Sidechain Testnet",
+            nativeCurrency: { name: "XRP", symbol: "XRP", decimals: 18 },
+            rpcUrls: [
+              process.env.NEXT_PUBLIC_EVM_RPC_URL ??
+                "https://rpc.testnet.xrplevm.org",
+            ],
+            blockExplorerUrls: ["https://explorer.xrplevm.org"],
+          },
+        ],
+      });
+    }
+  }
+
+  return accounts[0].toLowerCase();
+}
+
+/** Send a raw EVM transaction and return the tx hash. */
+async function sendTx(from: string, to: string, data: string): Promise<string> {
+  const txHash = (await window.ethereum!.request({
+    method: "eth_sendTransaction",
+    params: [{ from, to, data }],
+  })) as string;
+  return txHash;
+}
+
+/** Poll eth_getTransactionReceipt until the tx is mined (max 5 min). */
+async function waitForReceipt(txHash: string): Promise<void> {
+  const deadline = Date.now() + 5 * 60 * 1000;
+  while (Date.now() < deadline) {
+    const receipt = (await window.ethereum!.request({
+      method: "eth_getTransactionReceipt",
+      params: [txHash],
+    })) as { status: string } | null;
+
+    if (receipt) {
+      if (receipt.status !== "0x1") {
+        throw new Error("Transaction reverted on-chain.");
+      }
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 2500));
+  }
+  throw new Error("Transaction not mined within 5 minutes.");
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
+
 export function ContractActions({
   contractId,
   status,
   investorAddress,
   startupAddress,
-  escrowSequence: _escrowSequence,
-  escrowCondition: _escrowCondition,
   amountRLUSD,
   cancelAfter,
   milestoneId,
@@ -48,23 +132,23 @@ export function ContractActions({
   latestProofFileName,
   viewerWallet,
 }: ContractActionsProps) {
-  const [escrowStep, setEscrowStep] = useState<"idle" | "qr" | "polling" | "done">("idle");
-  const [escrowQr, setEscrowQr] = useState<string | null>(null);
+  const [fundingStep, setFundingStep] = useState<
+    "idle" | "approving" | "funding" | "confirming" | "done"
+  >("idle");
   const [loadingVerify, setLoadingVerify] = useState(false);
   const [loadingReview, setLoadingReview] = useState<"APPROVE" | "REJECT" | null>(null);
   const [loadingFinish, setLoadingFinish] = useState(false);
   const [loadingCancel, setLoadingCancel] = useState(false);
   const [loadingResubmit, setLoadingResubmit] = useState(false);
   const [verifyDone, setVerifyDone] = useState(false);
-  const [finishStep, setFinishStep] = useState<"idle" | "qr" | "polling" | "done">("idle");
-  const [finishQr, setFinishQr] = useState<string | null>(null);
 
-  // suppress unused warning — kept for potential future use
-  void loadingFinish;
-
+  // ── Fund escrow via MetaMask ──────────────────────────────────────────────
   async function handleFundEscrow() {
-    setEscrowStep("qr");
+    setFundingStep("approving");
     try {
+      const account = await connectMetaMask();
+
+      // 1. Get pre-encoded calldata from backend
       const res = await fetch("/api/escrow/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -72,61 +156,45 @@ export function ContractActions({
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error ?? "Escrow creation failed");
+        throw new Error(err.error ?? "Failed to prepare escrow transaction");
       }
-      const { qrPng, payloadUuid } = await res.json();
-      setEscrowQr(qrPng);
-      setEscrowStep("polling");
-      toast.info("Scan the QR code with Xaman to sign the EscrowCreate.");
+      const { rlusdAddress, escrowContractAddress, approveCalldata, fundCalldata } =
+        await res.json();
 
-      // Poll Xumm until the user signs (max 10 min)
-      const deadline = Date.now() + 10 * 60 * 1000;
-      const interval = setInterval(async () => {
-        if (Date.now() > deadline) {
-          clearInterval(interval);
-          setEscrowStep("idle");
-          setEscrowQr(null);
-          toast.error("Sign request expired.");
-          return;
-        }
-        try {
-          const poll = await fetch(`/api/auth/xumm-result?uuid=${payloadUuid}`);
-          if (!poll.ok) return;
-          const data = await poll.json();
+      // 2. Step 1 — Approve RLUSD spending
+      toast.info("Step 1/2: Approve RLUSD in MetaMask…");
+      const approveTxHash = await sendTx(account, rlusdAddress, approveCalldata);
+      await waitForReceipt(approveTxHash);
+      toast.info("Approved! Step 2/2: Fund escrow in MetaMask…");
 
-          if (data.signed) {
-            clearInterval(interval);
-            toast.info("Signed! Confirming escrow on XRPL…");
-            const confirm = await fetch("/api/escrow/confirm", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ contractId, payloadUuid, milestoneId }),
-            });
-            if (confirm.ok) {
-              setEscrowStep("done");
-              toast.success("Escrow funded! Reloading…");
-              setTimeout(() => window.location.reload(), 1200);
-            } else {
-              const e = await confirm.json();
-              toast.error(e.error ?? "Confirm failed.");
-              setEscrowStep("idle");
-              setEscrowQr(null);
-            }
-          } else if (data.resolved && !data.signed) {
-            clearInterval(interval);
-            setEscrowStep("idle");
-            setEscrowQr(null);
-            toast.error("Rejected in Xaman.");
-          }
-        } catch { /* transient — keep polling */ }
-      }, 2000);
+      // 3. Step 2 — Fund milestone on-chain
+      setFundingStep("funding");
+      const fundTxHash = await sendTx(account, escrowContractAddress, fundCalldata);
+      await waitForReceipt(fundTxHash);
+
+      // 4. Confirm with backend
+      setFundingStep("confirming");
+      toast.info("Confirming on server…");
+      const confirm = await fetch("/api/escrow/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contractId, milestoneId, txHash: fundTxHash }),
+      });
+      if (!confirm.ok) {
+        const e = await confirm.json();
+        throw new Error(e.error ?? "Escrow confirm failed");
+      }
+
+      setFundingStep("done");
+      toast.success("Escrow funded! Reloading…");
+      setTimeout(() => window.location.reload(), 1200);
     } catch (err) {
-      setEscrowStep("idle");
-      setEscrowQr(null);
-      toast.error(err instanceof Error ? err.message : "Escrow failed.");
+      setFundingStep("idle");
+      toast.error(err instanceof Error ? err.message : "Escrow funding failed.");
     }
   }
 
+  // ── AI verification ───────────────────────────────────────────────────────
   async function handleVerify(proofId: string) {
     setLoadingVerify(true);
     try {
@@ -154,8 +222,9 @@ export function ContractActions({
     }
   }
 
+  // ── Release funds (platform signs on-chain — no MetaMask needed) ──────────
   async function handleFinishEscrow() {
-    setFinishStep("qr");
+    setLoadingFinish(true);
     try {
       const res = await fetch("/api/escrow/finish", {
         method: "POST",
@@ -164,66 +233,18 @@ export function ContractActions({
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error ?? "EscrowFinish failed");
+        throw new Error(err.error ?? "Release failed");
       }
-      const { qrPng, payloadUuid } = await res.json();
-      setFinishQr(qrPng);
-      setFinishStep("polling");
-      toast.info("Scan the QR code with Xaman to release funds.");
-
-      const deadline = Date.now() + 10 * 60 * 1000;
-      const interval = setInterval(async () => {
-        if (Date.now() > deadline) {
-          clearInterval(interval);
-          setFinishStep("idle");
-          setFinishQr(null);
-          toast.error("Sign request expired.");
-          return;
-        }
-        try {
-          const poll = await fetch(`/api/auth/xumm-result?uuid=${payloadUuid}`);
-          if (!poll.ok) return;
-          const data = await poll.json();
-
-          if (data.signed) {
-            clearInterval(interval);
-            toast.info("Signed! Submitting EscrowFinish to XRPL…");
-            try {
-              const confirm = await fetch("/api/escrow/finish/confirm", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ contractId, payloadUuid, milestoneId }),
-              });
-              if (confirm.ok) {
-                setFinishStep("done");
-                toast.success("Funds released! Contract completed.");
-                setTimeout(() => window.location.reload(), 1500);
-              } else {
-                const e = await confirm.json();
-                toast.error(e.error ?? "Confirm failed.");
-                setFinishStep("idle");
-                setFinishQr(null);
-              }
-            } catch (confirmErr) {
-              toast.error(confirmErr instanceof Error ? confirmErr.message : "Confirm failed.");
-              setFinishStep("idle");
-              setFinishQr(null);
-            }
-          } else if (data.resolved && !data.signed) {
-            clearInterval(interval);
-            setFinishStep("idle");
-            setFinishQr(null);
-            toast.error("Rejected in Xaman.");
-          }
-        } catch { /* transient network error — keep polling */ }
-      }, 2000);
+      toast.success("Funds released! Contract completed.");
+      setTimeout(() => window.location.reload(), 1500);
     } catch (err) {
-      setFinishStep("idle");
-      setFinishQr(null);
-      toast.error(err instanceof Error ? err.message : "EscrowFinish failed.");
+      toast.error(err instanceof Error ? err.message : "Release failed.");
+    } finally {
+      setLoadingFinish(false);
     }
   }
 
+  // ── Cancel escrow (platform signs on-chain — no MetaMask needed) ──────────
   async function handleCancelEscrow() {
     setLoadingCancel(true);
     try {
@@ -234,23 +255,23 @@ export function ContractActions({
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error ?? "EscrowCancel failed");
+        throw new Error(err.error ?? "Cancel failed");
       }
       const data = await res.json();
       if (data.action === "already_closed") {
-        toast.success("Escrow already closed. Contract marked as expired.");
-        setTimeout(() => window.location.reload(), 1000);
+        toast.success("Escrow already settled. Contract marked as expired.");
       } else {
-        toast.info("Opening Xumm — sign the EscrowCancel to recover your funds.");
-        window.open(data.xummUrl, "_blank");
+        toast.success("Escrow cancelled. Funds returned to investor.");
       }
+      setTimeout(() => window.location.reload(), 1200);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "EscrowCancel failed.");
+      toast.error(err instanceof Error ? err.message : "Cancel failed.");
     } finally {
       setLoadingCancel(false);
     }
   }
 
+  // ── Manual review (investor approves/rejects) ─────────────────────────────
   async function handleReview(decision: "APPROVE" | "REJECT") {
     setLoadingReview(decision);
     try {
@@ -263,7 +284,11 @@ export function ContractActions({
         const err = await res.json();
         throw new Error(err.error ?? "Review failed");
       }
-      toast.success(decision === "APPROVE" ? "Freigegeben! Startup kann jetzt auszahlen." : "Abgelehnt. Startup kann neu einreichen.");
+      toast.success(
+        decision === "APPROVE"
+          ? "Freigegeben! Startup kann jetzt auszahlen."
+          : "Abgelehnt. Startup kann neu einreichen."
+      );
       setTimeout(() => window.location.reload(), 1200);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Review fehlgeschlagen.");
@@ -272,6 +297,7 @@ export function ContractActions({
     }
   }
 
+  // ── Resubmit proof ────────────────────────────────────────────────────────
   async function handleResubmit() {
     setLoadingResubmit(true);
     try {
@@ -295,7 +321,7 @@ export function ContractActions({
 
   const isExpired = new Date() >= new Date(cancelAfter);
 
-  // AWAITING_ESCROW: only the investor can fund
+  // ── AWAITING_ESCROW: investor funds via MetaMask ──────────────────────────
   if (status === "AWAITING_ESCROW") {
     if (viewerWallet !== investorAddress) {
       return (
@@ -306,20 +332,20 @@ export function ContractActions({
         </div>
       );
     }
-    if ((escrowStep === "qr" || escrowStep === "polling") && escrowQr) {
-      return (
-        <div className="flex flex-col items-center gap-4 p-5 bg-amber-50 border border-amber-200 rounded-xl">
-          <p className="text-sm font-medium text-amber-800">
-            Scan with Xaman to sign the EscrowCreate transaction
-          </p>
-          <Image src={escrowQr} alt="Xumm QR code" width={192} height={192} className="rounded-lg border" unoptimized />
-          <p className="text-xs text-amber-600 animate-pulse">Waiting for Xaman signature…</p>
-          <Button variant="ghost" size="sm" onClick={() => { setEscrowStep("idle"); setEscrowQr(null); }}>
-            Cancel
-          </Button>
-        </div>
-      );
-    }
+
+    const fundingLabel =
+      totalMilestones > 1 && milestoneNumber !== null
+        ? `Fund Milestone ${milestoneNumber}/${totalMilestones} via MetaMask`
+        : "Fund Escrow via MetaMask";
+
+    const stepLabel: Record<typeof fundingStep, string> = {
+      idle: fundingLabel,
+      approving: "Step 1/2: Approving RLUSD…",
+      funding: "Step 2/2: Funding escrow…",
+      confirming: "Confirming…",
+      done: "Done!",
+    };
+
     return (
       <div className="flex flex-col gap-3 p-5 bg-amber-50 border border-amber-200 rounded-xl">
         <p className="text-sm font-medium text-amber-800">
@@ -327,14 +353,21 @@ export function ContractActions({
             ? `Milestone ${milestoneNumber} of ${totalMilestones}${milestoneTitle ? `: ${milestoneTitle}` : ""} — fund the escrow to lock funds.`
             : "Both parties have committed. Fund the escrow to lock funds."}
         </p>
-        <Button onClick={handleFundEscrow} disabled={escrowStep === "qr"}>
-          {escrowStep === "qr" ? "Opening Xaman…" : `Fund Escrow via Xaman${totalMilestones > 1 && milestoneNumber !== null ? ` (Milestone ${milestoneNumber}/${totalMilestones})` : ""}`}
+        <p className="text-xs text-amber-600">
+          Amount: <strong>{amountRLUSD} RLUSD</strong> — MetaMask will ask you to
+          approve the token transfer, then sign the escrow transaction.
+        </p>
+        <Button
+          onClick={handleFundEscrow}
+          disabled={fundingStep !== "idle"}
+        >
+          {stepLabel[fundingStep]}
         </Button>
       </div>
     );
   }
 
-  // FUNDED: only startup uploads proof
+  // ── FUNDED: startup uploads proof ─────────────────────────────────────────
   if (status === "FUNDED") {
     if (viewerWallet !== startupAddress) {
       return (
@@ -354,7 +387,7 @@ export function ContractActions({
     );
   }
 
-  // PROOF_SUBMITTED: trigger AI verification manually (if not auto-triggered)
+  // ── PROOF_SUBMITTED: trigger AI verification ──────────────────────────────
   if (status === "PROOF_SUBMITTED" && latestProofId && !verifyDone) {
     return (
       <div className="flex flex-col gap-3 p-5 bg-blue-50 border border-blue-200 rounded-xl">
@@ -373,24 +406,24 @@ export function ContractActions({
             <span className="text-xs text-blue-600">Öffnen ↗</span>
           </a>
         )}
-        <Button
-          onClick={() => handleVerify(latestProofId)}
-          disabled={loadingVerify}
-        >
+        <Button onClick={() => handleVerify(latestProofId)} disabled={loadingVerify}>
           {loadingVerify ? "Verifying…" : "Run AI Verification"}
         </Button>
       </div>
     );
   }
 
-  // PENDING_REVIEW: investor manually approves or rejects
+  // ── PENDING_REVIEW: investor manually approves or rejects ─────────────────
   if (status === "PENDING_REVIEW") {
     return (
       <div className="flex flex-col gap-4 p-5 bg-amber-50 border border-amber-200 rounded-xl">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-amber-900">Manuelle Prüfung erforderlich</p>
           {latestProofConfidence !== null && (
-            <span style={{ background: "#fef3c7", color: "#92400e" }} className="text-xs font-medium px-2 py-0.5 rounded-full">
+            <span
+              style={{ background: "#fef3c7", color: "#92400e" }}
+              className="text-xs font-medium px-2 py-0.5 rounded-full"
+            >
               KI-Sicherheit: {latestProofConfidence}%
             </span>
           )}
@@ -398,7 +431,9 @@ export function ContractActions({
 
         {latestProofReasoning && (
           <div className="flex flex-col gap-1">
-            <p className="text-xs font-medium text-amber-700 uppercase tracking-wide">KI-Analyse</p>
+            <p className="text-xs font-medium text-amber-700 uppercase tracking-wide">
+              KI-Analyse
+            </p>
             <p className="text-sm text-amber-900 leading-relaxed bg-amber-100 rounded-lg p-3">
               {latestProofReasoning}
             </p>
@@ -423,20 +458,41 @@ export function ContractActions({
         {viewerWallet === investorAddress ? (
           <div className="flex flex-col gap-2">
             <p className="text-xs text-amber-700">
-              Die KI war nicht sicher genug für eine automatische Entscheidung. Prüfe den Nachweis oben und entscheide manuell.
+              Die KI war nicht sicher genug für eine automatische Entscheidung. Prüfe den
+              Nachweis oben und entscheide manuell.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => handleReview("APPROVE")}
                 disabled={loadingReview !== null}
-                style={{ background: "#16a34a", color: "#fff", flex: 1, padding: "8px 16px", borderRadius: "8px", border: "none", fontWeight: 600, cursor: loadingReview !== null ? "not-allowed" : "pointer", opacity: loadingReview !== null ? 0.6 : 1 }}
+                style={{
+                  background: "#16a34a",
+                  color: "#fff",
+                  flex: 1,
+                  padding: "8px 16px",
+                  borderRadius: "8px",
+                  border: "none",
+                  fontWeight: 600,
+                  cursor: loadingReview !== null ? "not-allowed" : "pointer",
+                  opacity: loadingReview !== null ? 0.6 : 1,
+                }}
               >
                 {loadingReview === "APPROVE" ? "Wird freigegeben…" : "✓ Freigeben"}
               </button>
               <button
                 onClick={() => handleReview("REJECT")}
                 disabled={loadingReview !== null}
-                style={{ background: "#fff", color: "#b91c1c", flex: 1, padding: "8px 16px", borderRadius: "8px", border: "1px solid #fca5a5", fontWeight: 600, cursor: loadingReview !== null ? "not-allowed" : "pointer", opacity: loadingReview !== null ? 0.6 : 1 }}
+                style={{
+                  background: "#fff",
+                  color: "#b91c1c",
+                  flex: 1,
+                  padding: "8px 16px",
+                  borderRadius: "8px",
+                  border: "1px solid #fca5a5",
+                  fontWeight: 600,
+                  cursor: loadingReview !== null ? "not-allowed" : "pointer",
+                  opacity: loadingReview !== null ? 0.6 : 1,
+                }}
               >
                 {loadingReview === "REJECT" ? "Wird abgelehnt…" : "✗ Ablehnen"}
               </button>
@@ -444,14 +500,15 @@ export function ContractActions({
           </div>
         ) : (
           <p className="text-sm text-amber-700">
-            Der Investor prüft deinen Nachweis. Du wirst benachrichtigt sobald eine Entscheidung getroffen wurde.
+            Der Investor prüft deinen Nachweis. Du wirst benachrichtigt sobald eine
+            Entscheidung getroffen wurde.
           </p>
         )}
       </div>
     );
   }
 
-  // VERIFIED: only startup signs EscrowFinish to release funds
+  // ── VERIFIED: startup releases funds (platform calls contract server-side) ─
   if (status === "VERIFIED") {
     if (viewerWallet !== startupAddress) {
       return (
@@ -462,43 +519,32 @@ export function ContractActions({
         </div>
       );
     }
-    if ((finishStep === "qr" || finishStep === "polling") && finishQr) {
-      return (
-        <div className="flex flex-col items-center gap-4 p-5 bg-green-50 border border-green-200 rounded-xl">
-          <p className="text-sm font-medium text-green-800">
-            Scan with Xaman to release the funds
-          </p>
-          <Image src={finishQr} alt="Xumm QR code" width={192} height={192} className="rounded-lg border" unoptimized />
-          <p className="text-xs text-green-600 animate-pulse">Waiting for Xaman signature…</p>
-          <Button variant="ghost" size="sm" onClick={() => { setFinishStep("idle"); setFinishQr(null); }}>
-            Cancel
-          </Button>
-        </div>
-      );
-    }
     return (
       <div className="flex flex-col gap-3 p-5 bg-green-50 border border-green-200 rounded-xl">
         <p className="text-sm font-medium text-green-800">
-          Milestone approved! Sign with Xaman to receive your funds.
+          Milestone approved! Click below to receive your RLUSD — no wallet signing
+          required.
         </p>
-        <Button onClick={handleFinishEscrow} disabled={finishStep !== "idle"}>
-          {finishStep !== "idle" ? "Opening Xaman…" : "Release Funds via Xaman"}
+        <Button onClick={handleFinishEscrow} disabled={loadingFinish}>
+          {loadingFinish ? "Releasing funds…" : "Release Funds"}
         </Button>
       </div>
     );
   }
 
-  // REJECTED: only startup can resubmit; investor sees info message
+  // ── REJECTED: startup resubmits or investor cancels if expired ────────────
   if (status === "REJECTED") {
     return (
       <div className="flex flex-col gap-3 p-5 bg-red-50 border border-red-200 rounded-xl">
         <p className="text-sm font-medium text-red-800">AI rejected the proof.</p>
         {isExpired ? (
           <>
-            <p className="text-xs text-red-700">Deadline has passed. You can cancel the escrow to recover funds.</p>
+            <p className="text-xs text-red-700">
+              Deadline has passed. Cancel the escrow to recover your RLUSD.
+            </p>
             {viewerWallet === investorAddress && (
               <Button variant="destructive" onClick={handleCancelEscrow} disabled={loadingCancel}>
-                {loadingCancel ? "Opening Xumm…" : "Cancel Escrow & Recover Funds"}
+                {loadingCancel ? "Cancelling…" : "Cancel Escrow & Recover Funds"}
               </Button>
             )}
           </>
@@ -515,16 +561,18 @@ export function ContractActions({
     );
   }
 
-  // FUNDED or PROOF_SUBMITTED with deadline passed: show cancel option
+  // ── Deadline passed on FUNDED/PROOF_SUBMITTED ─────────────────────────────
   if (["FUNDED", "PROOF_SUBMITTED"].includes(status) && isExpired) {
     return (
       <div className="flex flex-col gap-3 p-5 bg-orange-50 border border-orange-200 rounded-xl">
         <p className="text-sm font-medium text-orange-800">
           Deadline has passed. Cancel the escrow to recover your RLUSD.
         </p>
-        <Button variant="destructive" onClick={handleCancelEscrow} disabled={loadingCancel}>
-          {loadingCancel ? "Opening Xumm…" : "Cancel Escrow & Recover Funds"}
-        </Button>
+        {viewerWallet === investorAddress && (
+          <Button variant="destructive" onClick={handleCancelEscrow} disabled={loadingCancel}>
+            {loadingCancel ? "Cancelling…" : "Cancel Escrow & Recover Funds"}
+          </Button>
+        )}
       </div>
     );
   }

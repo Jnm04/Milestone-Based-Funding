@@ -29,49 +29,61 @@ const ACCEPTED_TYPES = [
 const MAX_SIZE = 20 * 1024 * 1024; // 20 MB
 
 function fileTypeLabel(file: File): string {
-  const ext = file.name.split(".").pop()?.toUpperCase() ?? "FILE";
-  return ext;
+  return file.name.split(".").pop()?.toUpperCase() ?? "FILE";
 }
 
 export function ProofUpload({ contractId, milestoneId, onUploaded }: ProofUploadProps) {
   const [loading, setLoading] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [uploaded, setUploaded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const selected = e.target.files?.[0];
-    if (!selected) return;
-    if (selected.size > MAX_SIZE) {
-      toast.error("File must be under 20 MB.");
+    const selected = Array.from(e.target.files ?? []);
+    const oversized = selected.filter((f) => f.size > MAX_SIZE);
+    if (oversized.length > 0) {
+      toast.error(`${oversized.map((f) => f.name).join(", ")} exceed 20 MB limit.`);
       return;
     }
-    setFile(selected);
+    setFiles((prev) => {
+      const existing = new Set(prev.map((f) => f.name));
+      return [...prev, ...selected.filter((f) => !existing.has(f.name))];
+    });
+    if (inputRef.current) inputRef.current.value = "";
+  }
+
+  function removeFile(name: string) {
+    setFiles((prev) => prev.filter((f) => f.name !== name));
   }
 
   async function handleUpload() {
-    if (!file) return;
+    if (files.length === 0) return;
     setLoading(true);
+    let lastProofId = "";
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("contractId", contractId);
-      if (milestoneId) formData.append("milestoneId", milestoneId);
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("contractId", contractId);
+        if (milestoneId) formData.append("milestoneId", milestoneId);
 
-      const res = await fetch("/api/proof/upload", {
-        method: "POST",
-        body: formData,
-      });
+        const res = await fetch("/api/proof/upload", {
+          method: "POST",
+          body: formData,
+        });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error ?? "Upload failed");
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(`${file.name}: ${err.error ?? "Upload failed"}`);
+        }
+
+        const { proofId } = await res.json();
+        lastProofId = proofId;
       }
 
-      const { proofId } = await res.json();
       setUploaded(true);
-      toast.success("Proof uploaded! AI verification is starting…");
-      onUploaded(proofId);
+      toast.success(`${files.length} file${files.length > 1 ? "s" : ""} uploaded! AI verification is starting…`);
+      onUploaded(lastProofId);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Upload failed.");
     } finally {
@@ -84,7 +96,7 @@ export function ProofUpload({ contractId, milestoneId, onUploaded }: ProofUpload
       <div className="text-center">
         <p className="text-sm font-medium text-zinc-700">Upload Milestone Proof</p>
         <p className="text-xs text-muted-foreground mt-1">
-          PDF, DOCX, PPTX, XLSX · Images (JPG, PNG, WEBP) · CSV, TXT · Max 20 MB
+          PDF, DOCX, PPTX, XLSX · Images (JPG, PNG, WEBP) · CSV, TXT · Max 20 MB · Mehrere Dateien möglich
         </p>
       </div>
 
@@ -92,40 +104,47 @@ export function ProofUpload({ contractId, milestoneId, onUploaded }: ProofUpload
         ref={inputRef}
         type="file"
         accept={ACCEPTED_TYPES}
+        multiple
         className="hidden"
         onChange={handleFileChange}
       />
 
-      {file ? (
-        <div className="flex items-center gap-3 bg-white rounded-lg border px-4 py-3">
-          <span className="text-xs font-mono bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded">
-            {fileTypeLabel(file)}
-          </span>
-          <span className="text-sm text-zinc-700 flex-1 truncate">{file.name}</span>
-          <button
-            type="button"
-            className="text-xs text-red-500 hover:underline"
-            onClick={() => {
-              setFile(null);
-              if (inputRef.current) inputRef.current.value = "";
-            }}
-          >
-            Remove
-          </button>
+      {files.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {files.map((file) => (
+            <div key={file.name} className="flex items-center gap-3 bg-white rounded-lg border px-4 py-3">
+              <span className="text-xs font-mono bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded">
+                {fileTypeLabel(file)}
+              </span>
+              <span className="text-sm text-zinc-700 flex-1 truncate">{file.name}</span>
+              <button
+                type="button"
+                className="text-xs text-red-500 hover:underline"
+                onClick={() => removeFile(file.name)}
+              >
+                Remove
+              </button>
+            </div>
+          ))}
         </div>
-      ) : (
+      )}
+
+      {!uploaded && (
         <Button
           variant="outline"
           onClick={() => inputRef.current?.click()}
           type="button"
+          disabled={loading}
         >
-          Select File
+          {files.length > 0 ? "Weitere Datei hinzufügen" : "Datei auswählen"}
         </Button>
       )}
 
-      {file && !uploaded && (
+      {files.length > 0 && !uploaded && (
         <Button onClick={handleUpload} disabled={loading}>
-          {loading ? "Uploading…" : "Upload & Trigger AI Verification"}
+          {loading
+            ? "Uploading…"
+            : `${files.length} Datei${files.length > 1 ? "en" : ""} hochladen & KI-Verifikation starten`}
         </Button>
       )}
 
@@ -133,12 +152,11 @@ export function ProofUpload({ contractId, milestoneId, onUploaded }: ProofUpload
         <Button
           variant="outline"
           onClick={() => {
-            setFile(null);
+            setFiles([]);
             setUploaded(false);
-            if (inputRef.current) inputRef.current.value = "";
           }}
         >
-          Upload a different document
+          Andere Dokumente hochladen
         </Button>
       )}
     </div>

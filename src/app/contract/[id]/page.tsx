@@ -146,7 +146,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
         {/* Escrow status */}
         <EscrowStatus
           status={contract.status as ContractStatus}
-          escrowSequence={activeMilestone?.escrowSequence ?? contract.escrowSequence}
+          evmTxHash={activeMilestone?.evmTxHash ?? contract.evmTxHash}
           amountRLUSD={activeMilestone?.amountRLUSD ?? contract.amountRLUSD}
           cancelAfter={activeMilestone?.cancelAfter ?? contract.cancelAfter}
         />
@@ -157,8 +157,6 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           status={contract.status as ContractStatus}
           investorAddress={contract.investor.walletAddress ?? ""}
           startupAddress={contract.startup?.walletAddress ?? null}
-          escrowSequence={activeMilestone?.escrowSequence ?? contract.escrowSequence}
-          escrowCondition={activeMilestone?.escrowCondition ?? contract.escrowCondition}
           amountRLUSD={
             activeMilestone?.amountRLUSD ??
             contract.amountRLUSD ??
