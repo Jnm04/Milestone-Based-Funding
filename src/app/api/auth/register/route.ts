@@ -40,10 +40,12 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Send verification email (non-blocking — registration succeeds even if mail fails)
-    sendVerificationEmail({ to: email, token: emailVerificationToken }).catch((err) =>
-      console.error("[register] Failed to send verification email:", err)
-    );
+    // Send verification email
+    try {
+      await sendVerificationEmail({ to: email, token: emailVerificationToken });
+    } catch (err) {
+      console.error("[register] Failed to send verification email:", err);
+    }
 
     return NextResponse.json({ id: user.id, email: user.email, role: user.role });
   } catch (err) {
