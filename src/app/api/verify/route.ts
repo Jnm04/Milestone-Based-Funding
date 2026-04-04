@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyMilestone, verifyMilestoneImage, mockVerifyMilestone, categorizeFile } from "@/services/ai/verifier.service";
 import { sendPendingReviewEmail, sendRejectedEmail } from "@/lib/email";
-import fs from "fs/promises";
-import path from "path";
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,10 +45,10 @@ export async function POST(request: NextRequest) {
     if (!hasApiKey) {
       result = mockVerifyMilestone({ milestone: milestoneTitle, extractedText });
     } else if (category === "image") {
-      // Load file from disk and send to Claude Vision
-      const filePath = path.join(process.cwd(), "public", proof.fileUrl);
-      const imageBuffer = await fs.readFile(filePath);
-      const ext = path.extname(proof.fileName).toLowerCase();
+      // Fetch image from Vercel Blob URL and send to Claude Vision
+      const imageRes = await fetch(proof.fileUrl);
+      const imageBuffer = Buffer.from(await imageRes.arrayBuffer());
+      const ext = proof.fileName.slice(proof.fileName.lastIndexOf(".")).toLowerCase();
       const mimeMap: Record<string, "image/jpeg" | "image/png" | "image/gif" | "image/webp"> = {
         ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
         ".png": "image/png", ".gif": "image/gif", ".webp": "image/webp",

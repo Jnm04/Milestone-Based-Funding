@@ -33,6 +33,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Contract not found" }, { status: 404 });
     }
 
+    if (contract.startupId !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     if (contract.status !== "REJECTED") {
       return NextResponse.json(
         { error: `Can only resubmit from REJECTED status, current: ${contract.status}` },

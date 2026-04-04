@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { cancelMilestone, getMilestoneEscrowState } from "@/services/evm/escrow.service";
 
@@ -12,6 +14,11 @@ import { cancelMilestone, getMilestoneEscrowState } from "@/services/evm/escrow.
  */
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { contractId, milestoneId } = await request.json();
 
     if (!contractId) {
@@ -25,6 +32,10 @@ export async function POST(request: NextRequest) {
 
     if (!contract) {
       return NextResponse.json({ error: "Contract not found" }, { status: 404 });
+    }
+
+    if (contract.investorId !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     let milestoneOrder: number;

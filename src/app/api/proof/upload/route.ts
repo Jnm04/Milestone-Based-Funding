@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse, after } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { extractPdfText, extractOfficeText, categorizeFile } from "@/services/ai/verifier.service";
 import { sendProofSubmittedEmail } from "@/lib/email";
@@ -42,6 +44,11 @@ const ALLOWED_MIME_TYPES = new Set([
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
     const milestoneId = formData.get("milestoneId") as string | null;
@@ -101,6 +108,9 @@ export async function POST(request: NextRequest) {
       if (!milestone) {
         return NextResponse.json({ error: "Milestone not found" }, { status: 404 });
       }
+      if (milestone.contract.startupId !== session.user.id) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
       if (milestone.status !== "FUNDED") {
         return NextResponse.json(
           { error: `Cannot upload proof for milestone in status: ${milestone.status}` },
@@ -153,6 +163,9 @@ export async function POST(request: NextRequest) {
         include: { investor: true, startup: true },
       });
       if (!contract) return NextResponse.json({ error: "Contract not found" }, { status: 404 });
+      if (contract.startupId !== session.user.id) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
       if (contract.status !== "FUNDED") {
         return NextResponse.json({ error: `Cannot upload proof in status: ${contract.status}` }, { status: 409 });
       }
