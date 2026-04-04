@@ -14,6 +14,9 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendDone, setResendDone] = useState(false);
 
   // Show feedback from email verification redirects
   useEffect(() => {
@@ -37,7 +40,7 @@ function LoginForm() {
       });
 
       if (res?.error === "EmailNotVerified") {
-        toast.error("Please verify your email first. Check your inbox.");
+        setUnverifiedEmail(email);
         return;
       }
 
@@ -65,6 +68,45 @@ function LoginForm() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleResend() {
+    if (!unverifiedEmail) return;
+    setResendLoading(true);
+    try {
+      await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: unverifiedEmail }),
+      });
+      setResendDone(true);
+    } finally {
+      setResendLoading(false);
+    }
+  }
+
+  if (unverifiedEmail) {
+    return (
+      <main className="min-h-screen bg-zinc-50 flex items-center justify-center px-4">
+        <div className="w-full max-w-sm bg-white rounded-2xl border shadow-sm p-8 flex flex-col gap-4 text-center">
+          <Link href="/" className="font-bold text-lg tracking-tight">Cascrow</Link>
+          <h1 className="text-2xl font-bold mt-2">Verify your email</h1>
+          <p className="text-sm text-muted-foreground">
+            Your account is not yet verified. Check your inbox at <strong>{unverifiedEmail}</strong> or request a new link.
+          </p>
+          {resendDone ? (
+            <p className="text-sm text-green-600 font-medium">Verification email sent! Check your inbox.</p>
+          ) : (
+            <Button onClick={handleResend} disabled={resendLoading}>
+              {resendLoading ? "Sending…" : "Resend verification email"}
+            </Button>
+          )}
+          <button onClick={() => setUnverifiedEmail(null)} className="text-sm text-muted-foreground hover:underline">
+            Back to sign in
+          </button>
+        </div>
+      </main>
+    );
   }
 
   return (

@@ -22,6 +22,21 @@ export async function POST(request: NextRequest) {
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
+      // If account exists but is unverified, resend the verification email
+      if (!existing.emailVerified) {
+        const emailVerificationToken = crypto.randomBytes(32).toString("hex");
+        const emailVerificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        await prisma.user.update({
+          where: { id: existing.id },
+          data: { emailVerificationToken, emailVerificationTokenExpiry },
+        });
+        try {
+          await sendVerificationEmail({ to: email, token: emailVerificationToken });
+        } catch (err) {
+          console.error("[register] Failed to resend verification email:", err);
+        }
+        return NextResponse.json({ id: existing.id, email: existing.email, role: existing.role, resent: true });
+      }
       return NextResponse.json({ error: "Email already registered" }, { status: 409 });
     }
 
