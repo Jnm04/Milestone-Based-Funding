@@ -15,6 +15,17 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Show feedback from email verification redirects
+  useState(() => {
+    if (searchParams.get("verified") === "1") {
+      toast.success("Email verified! You can now sign in.");
+    } else if (searchParams.get("error") === "invalid_token") {
+      toast.error("Invalid or expired verification link.");
+    } else if (searchParams.get("error") === "token_expired") {
+      toast.error("Verification link has expired. Please register again.");
+    }
+  });
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -24,6 +35,11 @@ function LoginForm() {
         password,
         redirect: false,
       });
+
+      if (res?.error === "EmailNotVerified") {
+        toast.error("Please verify your email first. Check your inbox.");
+        return;
+      }
 
       if (res?.error) {
         toast.error("Invalid email or password.");

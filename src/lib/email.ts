@@ -8,6 +8,30 @@ function contractLink(contractId: string) {
   return `${BASE_URL}/contract/${contractId}`;
 }
 
+// ── Email verification ──────────────────────────────────────────────────────
+
+export async function sendVerificationEmail({
+  to,
+  token,
+}: {
+  to: string;
+  token: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  const link = `${BASE_URL}/api/auth/verify-email?token=${token}`;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: "Verify your Cascrow email address",
+    html: `
+      <p>Hi,</p>
+      <p>Thanks for signing up for Cascrow. Please verify your email address by clicking the link below.</p>
+      <p><a href="${link}">Verify email address →</a></p>
+      <p>This link expires in 24 hours. If you did not create an account, you can ignore this email.</p>
+    `,
+  });
+}
+
 // ── Grant Giver notifications ───────────────────────────────────────────────
 
 export async function sendProofSubmittedEmail({

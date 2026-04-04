@@ -24,6 +24,11 @@ model User {
   startupContracts Contract[] @relation("startup")
   createdAt        DateTime   @default(now())
 
+  // Email verification
+  emailVerified                Boolean   @default(false)
+  emailVerificationToken       String?   @unique
+  emailVerificationTokenExpiry DateTime?
+
   // Email notification preferences
   notifyProofSubmitted  Boolean @default(true)  // Investor: startup submitted proof
   notifyPendingReview   Boolean @default(true)  // Investor: AI needs manual review

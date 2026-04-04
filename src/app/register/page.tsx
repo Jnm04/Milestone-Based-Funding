@@ -1,14 +1,12 @@
 "use client";
 
-import { useState, Suspense } from "react";
-import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, Suspense, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 function RegisterForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl");
   const [name, setName] = useState("");
@@ -16,6 +14,9 @@ function RegisterForm() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"INVESTOR" | "STARTUP">("INVESTOR");
   const [loading, setLoading] = useState(false);
+  const [registered, setRegistered] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resending, setResending] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,26 +34,76 @@ function RegisterForm() {
         return;
       }
 
-      // Auto-login after registration
-      const signInRes = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
-
-      if (signInRes?.error) {
-        toast.error("Registered but login failed — please sign in manually.");
-        router.push("/login");
-        return;
-      }
-
-      toast.success("Account created! Welcome to Cascrow.");
-      router.push(callbackUrl ?? (role === "INVESTOR" ? "/dashboard/investor" : "/dashboard/startup"));
+      setRegistered(true);
+      setResendCooldown(60);
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
+  }
+
+  // Countdown timer for resend cooldown
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const id = setTimeout(() => setResendCooldown((s) => s - 1), 1000);
+    return () => clearTimeout(id);
+  }, [resendCooldown]);
+
+  const handleResend = useCallback(async () => {
+    setResending(true);
+    try {
+      const res = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        toast.error(err.error ?? "Failed to resend. Please try again.");
+        return;
+      }
+      toast.success("Verification email sent again. Check your inbox.");
+      setResendCooldown(60);
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setResending(false);
+    }
+  }, [email]);
+
+  if (registered) {
+    return (
+      <main className="min-h-screen bg-zinc-50 flex items-center justify-center px-4">
+        <div className="w-full max-w-sm bg-white rounded-2xl border shadow-sm p-8 flex flex-col gap-4 text-center">
+          <Link href="/" className="font-bold text-lg tracking-tight">Cascrow</Link>
+          <div className="flex flex-col gap-2 mt-2">
+            <h1 className="text-2xl font-bold">Check your email</h1>
+            <p className="text-sm text-muted-foreground">
+              We sent a verification link to <strong>{email}</strong>. Click it to activate your account.
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">
+              The link expires in 24 hours. Check your spam folder if you don&apos;t see it.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={handleResend}
+            disabled={resendCooldown > 0 || resending}
+            className="mt-2"
+          >
+            {resending
+              ? "Sending…"
+              : resendCooldown > 0
+              ? `Resend in ${resendCooldown}s`
+              : "Resend verification email"}
+          </Button>
+          <Link href="/login" className="text-sm font-medium text-zinc-900 hover:underline">
+            Back to sign in
+          </Link>
+        </div>
+      </main>
+    );
   }
 
   return (
