@@ -10,6 +10,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
+    if (session.user.role !== "STARTUP") {
+      return NextResponse.json({ error: "Only startups can join contracts" }, { status: 403 });
+    }
+
     const { inviteCode } = await request.json();
 
     if (!inviteCode) {
@@ -29,6 +33,10 @@ export async function POST(request: NextRequest) {
 
     if (!contract) {
       return NextResponse.json({ error: "Invalid invite code" }, { status: 404 });
+    }
+
+    if (contract.investorId === session.user.id) {
+      return NextResponse.json({ error: "You cannot join your own contract" }, { status: 403 });
     }
 
     if (contract.status !== "DRAFT") {

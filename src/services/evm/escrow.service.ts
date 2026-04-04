@@ -80,9 +80,10 @@ export async function cancelMilestone(
 
 /**
  * Verify a fundMilestone transaction on-chain.
- * Returns ok=true if the tx was mined successfully and emitted MilestoneFunded.
+ * Returns ok=true if the tx was mined successfully and emitted MilestoneFunded
+ * for the expected contractId.
  */
-export async function verifyFundTx(txHash: string): Promise<{
+export async function verifyFundTx(txHash: string, contractId: string): Promise<{
   ok: boolean;
   milestoneOrder?: number;
 }> {
@@ -90,11 +91,14 @@ export async function verifyFundTx(txHash: string): Promise<{
   const receipt = await provider.getTransactionReceipt(txHash);
   if (!receipt || receipt.status !== 1) return { ok: false };
 
+  const expectedContractIdHash = contractIdToBytes32(contractId);
   const iface = new ethers.Interface(ESCROW_ABI);
   for (const log of receipt.logs) {
     try {
       const parsed = iface.parseLog({ topics: [...log.topics], data: log.data });
       if (parsed?.name === "MilestoneFunded") {
+        // Verify the event belongs to this specific contract
+        if (parsed.args.contractId !== expectedContractIdHash) return { ok: false };
         return {
           ok: true,
           milestoneOrder: Number(parsed.args.milestoneOrder),
@@ -105,8 +109,7 @@ export async function verifyFundTx(txHash: string): Promise<{
     }
   }
 
-  // Tx succeeded but MilestoneFunded event not found (shouldn't happen)
-  return { ok: true };
+  return { ok: false };
 }
 
 /**

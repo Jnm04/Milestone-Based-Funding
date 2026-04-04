@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { verifyFundTx } from "@/services/evm/escrow.service";
 import { sendFundedEmail } from "@/lib/email";
@@ -12,6 +14,11 @@ import { sendFundedEmail } from "@/lib/email";
  */
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
     const { contractId, txHash, milestoneId } = await request.json();
 
     if (!contractId || !txHash) {
@@ -30,13 +37,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Contract not found" }, { status: 404 });
     }
 
+    if (contract.investorId !== session.user.id) {
+      return NextResponse.json({ error: "Not your contract" }, { status: 403 });
+    }
+
     // Idempotent — already funded
     if (contract.status === "FUNDED") {
       return NextResponse.json({ ok: true, action: "already_funded" });
     }
 
-    // Verify the transaction was mined successfully on-chain
-    const { ok } = await verifyFundTx(txHash);
+    // Verify the transaction was mined successfully on-chain for this specific contract
+    const { ok } = await verifyFundTx(txHash, contractId);
     if (!ok) {
       return NextResponse.json(
         { error: "Transaction not found or failed on-chain. Please wait and retry." },

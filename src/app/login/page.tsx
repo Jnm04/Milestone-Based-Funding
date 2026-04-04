@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -16,7 +16,7 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
 
   // Show feedback from email verification redirects
-  useState(() => {
+  useEffect(() => {
     if (searchParams.get("verified") === "1") {
       toast.success("Email verified! You can now sign in.");
     } else if (searchParams.get("error") === "invalid_token") {
@@ -24,7 +24,7 @@ function LoginForm() {
     } else if (searchParams.get("error") === "token_expired") {
       toast.error("Verification link has expired. Please register again.");
     }
-  });
+  }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -51,7 +51,7 @@ function LoginForm() {
       const session = await sessionRes.json();
       const role = session?.user?.role;
 
-      if (callbackUrl) {
+      if (callbackUrl && callbackUrl.startsWith("/")) {
         router.push(callbackUrl);
       } else if (role === "INVESTOR") {
         router.push("/dashboard/investor");
