@@ -3,7 +3,7 @@
 AI-powered RLUSD escrow agent on the XRPL EVM Sidechain.  
 Grant givers lock RLUSD in a smart contract escrow; funds release automatically when an AI agent verifies the receiver has met the agreed milestone.
 
-Built at the **XRPL Student Builder Residency 2026** · **Claude AI** · **MetaMask** · **Next.js 16**
+Built at the **XRPL Student Builder Residency 2026** · **Claude AI** · **Gemini AI** · **MetaMask** · **Next.js 16**
 
 ---
 
@@ -16,7 +16,7 @@ Grant Giver approves RLUSD + signs fundMilestone via MetaMask
               ↓
 Receiver uploads PDF/image proof of milestone completion
               ↓
-Claude AI reads the proof and returns YES, NO, or UNCERTAIN
+Claude + Gemini both verify the proof — both must return YES, NO, or UNCERTAIN
               ↓
   YES       → funds automatically released to receiver
   UNCERTAIN → Grant Giver manually reviews and decides
@@ -49,6 +49,7 @@ Claude AI reads the proof and returns YES, NO, or UNCERTAIN
 - Node.js 20+
 - PostgreSQL (local or hosted)
 - Anthropic API key
+- Google Gemini API key
 - Vercel Blob token
 - Resend API key (optional — email features disabled without it)
 
@@ -166,7 +167,7 @@ src/
 │   ├── profile/           # Profile settings
 │   └── page.tsx           # Landing page
 ├── services/
-│   ├── ai/                # Claude verifier (PDF + image)
+│   ├── ai/                # Claude + Gemini dual-model verifier (PDF + image)
 │   └── evm/               # EVM client, escrow calldata, release/cancel
 └── lib/
     ├── prisma.ts
