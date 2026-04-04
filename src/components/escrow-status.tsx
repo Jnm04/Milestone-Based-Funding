@@ -6,10 +6,10 @@ const STATUS_CONFIG: Record<ContractStatus, { label: string; variant: "default" 
   AWAITING_ESCROW: { label: "Awaiting Escrow",        variant: "secondary" },
   FUNDED:          { label: "Funded",                 variant: "default" },
   PROOF_SUBMITTED: { label: "Proof Submitted",        variant: "secondary" },
-  PENDING_REVIEW:  { label: "Manuelle Prüfung",       variant: "secondary" },
+  PENDING_REVIEW:  { label: "Pending Review",          variant: "secondary" },
   VERIFIED:        { label: "Verified — AI Approved", variant: "default" },
   REJECTED:        { label: "Rejected",               variant: "destructive" },
-  DECLINED:        { label: "Einladung abgelehnt",    variant: "destructive" },
+  DECLINED:        { label: "Invitation Declined",    variant: "destructive" },
   EXPIRED:         { label: "Expired",                variant: "destructive" },
   COMPLETED:       { label: "Completed",              variant: "default" },
 };

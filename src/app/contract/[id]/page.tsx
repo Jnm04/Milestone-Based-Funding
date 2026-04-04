@@ -7,6 +7,7 @@ import { AIResult } from "@/components/ai-result";
 import { ContractStatus } from "@/types";
 import { ContractActions } from "./contract-actions";
 import { MilestoneTimeline } from "./milestone-timeline";
+import { ContractPoller } from "./contract-poller";
 
 interface ContractPageProps {
   params: Promise<{ id: string }>;
@@ -60,8 +61,13 @@ export default async function ContractPage({ params, searchParams }: ContractPag
 
   return (
     <main className="min-h-screen bg-zinc-50">
+      <ContractPoller
+        contractId={contract.id}
+        currentStatus={contract.status}
+        milestoneStatuses={contract.milestones.map((m) => m.status)}
+      />
       <nav className="border-b bg-white px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="font-bold text-lg tracking-tight">MilestoneFund</Link>
+        <Link href="/" className="font-bold text-lg tracking-tight">Prova</Link>
         <Badge variant="outline">Contract</Badge>
       </nav>
 
@@ -122,11 +128,11 @@ export default async function ContractPage({ params, searchParams }: ContractPag
         {/* Parties */}
         <div className="grid grid-cols-2 gap-4">
           <div className="p-4 bg-white rounded-xl border flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground uppercase tracking-wide">Investor</span>
+            <span className="text-xs text-muted-foreground uppercase tracking-wide">Grant Giver</span>
             <code className="text-xs font-mono break-all">{contract.investor.walletAddress}</code>
           </div>
           <div className="p-4 bg-white rounded-xl border flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground uppercase tracking-wide">Startup</span>
+            <span className="text-xs text-muted-foreground uppercase tracking-wide">Receiver</span>
             {contract.startup ? (
               <code className="text-xs font-mono break-all">{contract.startup.walletAddress}</code>
             ) : (
@@ -138,7 +144,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
         {/* Invite link */}
         {inviteUrl && contract.status === "DRAFT" && (
           <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl flex flex-col gap-2">
-            <span className="text-sm font-medium text-blue-700">Share with startup</span>
+            <span className="text-sm font-medium text-blue-700">Share with receiver</span>
             <code className="text-xs font-mono break-all text-blue-600">{inviteUrl}</code>
           </div>
         )}

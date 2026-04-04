@@ -55,7 +55,7 @@ function LoginForm() {
     <main className="min-h-screen bg-zinc-50 flex items-center justify-center px-4">
       <div className="w-full max-w-sm bg-white rounded-2xl border shadow-sm p-8 flex flex-col gap-6">
         <div>
-          <Link href="/" className="font-bold text-lg tracking-tight">MilestoneFund</Link>
+          <Link href="/" className="font-bold text-lg tracking-tight">Prova</Link>
           <h1 className="text-2xl font-bold mt-4">Sign in</h1>
           <p className="text-sm text-muted-foreground mt-1">Welcome back</p>
         </div>

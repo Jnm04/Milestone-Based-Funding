@@ -1,11 +1,15 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenAI } from "@google/genai";
 import { AIVerificationResult } from "@/types";
 
-const client = new Anthropic({
+const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-const MODEL = "claude-sonnet-4-6";
+const geminiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY ?? "" });
+
+const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
+const GEMINI_MODEL = "gemini-2.5-flash";
 
 export type FileCategory = "pdf" | "image" | "office" | "text";
 
@@ -40,30 +44,84 @@ export async function extractOfficeText(buffer: Buffer, fileName: string): Promi
 
 const PROMPT_SUFFIX = `\n\nRespond with ONLY a JSON object:\n{\n  "decision": "YES" or "NO",\n  "reasoning": "Brief explanation (2-3 sentences)",\n  "confidence": 0-100\n}`;
 
+function parseAIResponse(raw: string, source: string): AIVerificationResult {
+  const cleaned = raw.replace(/```json\n?|\n?```/g, "").trim();
+  let parsed: AIVerificationResult;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    throw new Error(`${source} returned invalid JSON: ${cleaned}`);
+  }
+  if (parsed.decision !== "YES" && parsed.decision !== "NO") {
+    throw new Error(`${source} returned unexpected decision: ${parsed.decision}`);
+  }
+  return {
+    decision: parsed.decision,
+    reasoning: parsed.reasoning ?? "",
+    confidence: Math.min(100, Math.max(0, Number(parsed.confidence) || 0)),
+  };
+}
+
 async function callClaude(messages: Anthropic.MessageParam[]): Promise<AIVerificationResult> {
-  const message = await client.messages.create({
-    model: MODEL,
+  const message = await anthropic.messages.create({
+    model: CLAUDE_MODEL,
     max_tokens: 512,
     messages,
   });
 
   const content = message.content[0];
   if (content.type !== "text") throw new Error("Unexpected response type from Claude");
+  return parseAIResponse(content.text, "Claude");
+}
 
-  const raw = content.text.replace(/```json\n?|\n?```/g, "").trim();
-  let parsed: AIVerificationResult;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error(`Claude returned invalid JSON: ${raw}`);
+async function callGeminiText(prompt: string): Promise<AIVerificationResult> {
+  const result = await geminiClient.models.generateContent({
+    model: GEMINI_MODEL,
+    contents: prompt,
+  });
+  const text = result.text ?? "";
+  return parseAIResponse(text, "Gemini");
+}
+
+async function callGeminiImage(
+  prompt: string,
+  imageBase64: string,
+  mimeType: string
+): Promise<AIVerificationResult> {
+  const result = await geminiClient.models.generateContent({
+    model: GEMINI_MODEL,
+    contents: [
+      { parts: [{ text: prompt }, { inlineData: { mimeType, data: imageBase64 } }] },
+    ],
+  });
+  const text = result.text ?? "";
+  return parseAIResponse(text, "Gemini");
+}
+
+/**
+ * Combines Claude and Gemini results using AND logic:
+ * Both must say YES for the final decision to be YES.
+ * If they disagree, returns NO with the dissenting model's reasoning.
+ */
+function combineResults(
+  claude: AIVerificationResult,
+  gemini: AIVerificationResult
+): AIVerificationResult {
+  if (claude.decision === "YES" && gemini.decision === "YES") {
+    return {
+      decision: "YES",
+      reasoning: `Both models approved. Claude: ${claude.reasoning} Gemini: ${gemini.reasoning}`,
+      confidence: Math.round((claude.confidence + gemini.confidence) / 2),
+    };
   }
-  if (parsed.decision !== "YES" && parsed.decision !== "NO") {
-    throw new Error(`Unexpected decision value: ${parsed.decision}`);
-  }
+
+  // At least one said NO
+  const dissenter = claude.decision === "NO" ? claude : gemini;
+  const dissenterName = claude.decision === "NO" ? "Claude" : "Gemini";
   return {
-    decision: parsed.decision,
-    reasoning: parsed.reasoning ?? "",
-    confidence: Math.min(100, Math.max(0, Number(parsed.confidence) || 0)),
+    decision: "NO",
+    reasoning: `${dissenterName} rejected the proof: ${dissenter.reasoning}`,
+    confidence: dissenter.confidence,
   };
 }
 
@@ -74,10 +132,15 @@ export async function verifyMilestone(params: {
 }): Promise<AIVerificationResult> {
   const prompt = `You are a milestone verification agent. Compare the uploaded proof document against the following milestone criteria and determine if the milestone has been met.\n\nMilestone: ${params.milestone}\n\nDocument content:\n${params.extractedText.slice(0, 8000)}${PROMPT_SUFFIX}`;
 
-  return callClaude([{ role: "user", content: prompt }]);
+  const [claude, gemini] = await Promise.all([
+    callClaude([{ role: "user", content: prompt }]),
+    callGeminiText(prompt),
+  ]);
+
+  return combineResults(claude, gemini);
 }
 
-/** Verifies milestone against an image (PNG, JPG, WEBP, GIF) using Claude Vision. */
+/** Verifies milestone against an image using Claude Vision + Gemini Vision. */
 export async function verifyMilestoneImage(params: {
   milestone: string;
   imageBuffer: Buffer;
@@ -86,17 +149,22 @@ export async function verifyMilestoneImage(params: {
   const base64 = params.imageBuffer.toString("base64");
   const prompt = `You are a milestone verification agent. Examine the uploaded image and determine if it proves that the following milestone has been met.\n\nMilestone: ${params.milestone}${PROMPT_SUFFIX}`;
 
-  return callClaude([{
-    role: "user",
-    content: [
-      { type: "image", source: { type: "base64", media_type: params.mimeType, data: base64 } },
-      { type: "text", text: prompt },
-    ],
-  }]);
+  const [claude, gemini] = await Promise.all([
+    callClaude([{
+      role: "user",
+      content: [
+        { type: "image", source: { type: "base64", media_type: params.mimeType, data: base64 } },
+        { type: "text", text: prompt },
+      ],
+    }]),
+    callGeminiImage(prompt, base64, params.mimeType),
+  ]);
+
+  return combineResults(claude, gemini);
 }
 
 /**
- * Mock verifier for development without a real API key.
+ * Mock verifier for development without real API keys.
  * Always returns YES with 85% confidence.
  */
 export function mockVerifyMilestone(params: {

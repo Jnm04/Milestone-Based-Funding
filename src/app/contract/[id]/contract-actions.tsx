@@ -209,7 +209,7 @@ export function ContractActions({
       }
       const result = await res.json();
       if (result.decision === "YES") {
-        toast.success("AI approved! Escrow release triggered.");
+        toast.success("AI approved! Milestone verified — you can now release the funds.");
       } else {
         toast.error(`AI rejected: ${result.reasoning}`);
       }
@@ -261,7 +261,7 @@ export function ContractActions({
       if (data.action === "already_closed") {
         toast.success("Escrow already settled. Contract marked as expired.");
       } else {
-        toast.success("Escrow cancelled. Funds returned to investor.");
+        toast.success("Escrow cancelled. Funds returned to grant giver.");
       }
       setTimeout(() => window.location.reload(), 1200);
     } catch (err) {
@@ -286,12 +286,12 @@ export function ContractActions({
       }
       toast.success(
         decision === "APPROVE"
-          ? "Freigegeben! Startup kann jetzt auszahlen."
-          : "Abgelehnt. Startup kann neu einreichen."
+          ? "Approved! Receiver can now withdraw funds."
+          : "Rejected. Receiver can resubmit."
       );
       setTimeout(() => window.location.reload(), 1200);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Review fehlgeschlagen.");
+      toast.error(err instanceof Error ? err.message : "Review failed.");
     } finally {
       setLoadingReview(null);
     }
@@ -327,7 +327,7 @@ export function ContractActions({
       return (
         <div className="flex flex-col gap-3 p-5 bg-amber-50 border border-amber-200 rounded-xl">
           <p className="text-sm font-medium text-amber-800">
-            Waiting for the investor to fund the escrow.
+            Waiting for the grant giver to fund the escrow.
           </p>
         </div>
       );
@@ -373,7 +373,7 @@ export function ContractActions({
       return (
         <div className="flex flex-col gap-3 p-5 bg-blue-50 border border-blue-200 rounded-xl">
           <p className="text-sm font-medium text-blue-800">
-            Waiting for the startup to upload milestone proof.
+            Waiting for the receiver to upload milestone proof.
           </p>
         </div>
       );
@@ -403,7 +403,7 @@ export function ContractActions({
               {latestProofFileName?.split(".").pop()?.toUpperCase() ?? "FILE"}
             </span>
             <span className="text-sm text-blue-900 flex-1 truncate">{latestProofFileName}</span>
-            <span className="text-xs text-blue-600">Öffnen ↗</span>
+            <span className="text-xs text-blue-600">Open ↗</span>
           </a>
         )}
         <Button onClick={() => handleVerify(latestProofId)} disabled={loadingVerify}>
@@ -418,13 +418,13 @@ export function ContractActions({
     return (
       <div className="flex flex-col gap-4 p-5 bg-amber-50 border border-amber-200 rounded-xl">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-amber-900">Manuelle Prüfung erforderlich</p>
+          <p className="text-sm font-semibold text-amber-900">Manual Review Required</p>
           {latestProofConfidence !== null && (
             <span
               style={{ background: "#fef3c7", color: "#92400e" }}
               className="text-xs font-medium px-2 py-0.5 rounded-full"
             >
-              KI-Sicherheit: {latestProofConfidence}%
+              AI Confidence: {latestProofConfidence}%
             </span>
           )}
         </div>
@@ -432,7 +432,7 @@ export function ContractActions({
         {latestProofReasoning && (
           <div className="flex flex-col gap-1">
             <p className="text-xs font-medium text-amber-700 uppercase tracking-wide">
-              KI-Analyse
+              AI Analysis
             </p>
             <p className="text-sm text-amber-900 leading-relaxed bg-amber-100 rounded-lg p-3">
               {latestProofReasoning}
@@ -451,15 +451,14 @@ export function ContractActions({
               {latestProofFileName?.split(".").pop()?.toUpperCase() ?? "FILE"}
             </span>
             <span className="text-sm text-amber-900 flex-1 truncate">{latestProofFileName}</span>
-            <span className="text-xs text-amber-600">Öffnen ↗</span>
+            <span className="text-xs text-amber-600">Open ↗</span>
           </a>
         )}
 
         {viewerWallet === investorAddress ? (
           <div className="flex flex-col gap-2">
             <p className="text-xs text-amber-700">
-              Die KI war nicht sicher genug für eine automatische Entscheidung. Prüfe den
-              Nachweis oben und entscheide manuell.
+              The AI was not confident enough for an automatic decision. Review the proof above and decide manually.
             </p>
             <div className="flex gap-3">
               <button
@@ -477,7 +476,7 @@ export function ContractActions({
                   opacity: loadingReview !== null ? 0.6 : 1,
                 }}
               >
-                {loadingReview === "APPROVE" ? "Wird freigegeben…" : "✓ Freigeben"}
+                {loadingReview === "APPROVE" ? "Approving…" : "✓ Approve"}
               </button>
               <button
                 onClick={() => handleReview("REJECT")}
@@ -494,14 +493,13 @@ export function ContractActions({
                   opacity: loadingReview !== null ? 0.6 : 1,
                 }}
               >
-                {loadingReview === "REJECT" ? "Wird abgelehnt…" : "✗ Ablehnen"}
+                {loadingReview === "REJECT" ? "Rejecting…" : "✗ Reject"}
               </button>
             </div>
           </div>
         ) : (
           <p className="text-sm text-amber-700">
-            Der Investor prüft deinen Nachweis. Du wirst benachrichtigt sobald eine
-            Entscheidung getroffen wurde.
+            The grant giver is reviewing your proof. You will be notified once a decision has been made.
           </p>
         )}
       </div>
@@ -514,7 +512,7 @@ export function ContractActions({
       return (
         <div className="flex flex-col gap-3 p-5 bg-green-50 border border-green-200 rounded-xl">
           <p className="text-sm font-medium text-green-800">
-            Milestone freigegeben. Das Startup kann die Funds jetzt auszahlen.
+            Milestone approved. The receiver can now withdraw the funds.
           </p>
         </div>
       );
@@ -554,7 +552,7 @@ export function ContractActions({
           </Button>
         ) : (
           <p className="text-xs text-red-700">
-            The proof was rejected. The startup will need to resubmit a new proof.
+            The proof was rejected. The receiver will need to resubmit a new proof.
           </p>
         )}
       </div>

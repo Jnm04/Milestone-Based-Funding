@@ -140,7 +140,7 @@ export function MilestoneTimeline({ milestones, activeMilestoneId }: MilestoneTi
                     <span>
                       Due:{" "}
                       <strong style={{ color: "#18181b" }}>
-                        {new Date(ms.cancelAfter).toLocaleDateString("de-DE")}
+                        {new Date(ms.cancelAfter).toLocaleDateString()}
                       </strong>
                     </span>
                   </div>
@@ -228,7 +228,7 @@ export function MilestoneTimeline({ milestones, activeMilestoneId }: MilestoneTi
                             </p>
                           )}
                           <p style={{ fontSize: "11px", color: "#a1a1aa", margin: 0 }}>
-                            {new Date(proof.createdAt).toLocaleString("de-DE")}
+                            {new Date(proof.createdAt).toLocaleString()}
                           </p>
                         </div>
                       ))}

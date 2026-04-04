@@ -21,6 +21,7 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [projectTitle, setProjectTitle] = useState("");
+  const [receiverWallet, setReceiverWallet] = useState("");
   const [milestones, setMilestones] = useState<MilestoneInput[]>([
     { title: "", amountUSD: "", deadlineDays: "30" },
   ]);
@@ -64,6 +65,7 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
         body: JSON.stringify({
           milestone: projectTitle || milestones[0].title,
           milestones: milestonesPayload,
+          receiverWalletAddress: receiverWallet.trim() || undefined,
         }),
       });
 
@@ -72,8 +74,8 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
         throw new Error(err.error ?? "Failed to create contract");
       }
 
-      const { contractId } = await res.json();
-      toast.success("Contract created! Redirecting…");
+      const { contractId, directlyLinked } = await res.json();
+      toast.success(directlyLinked ? "Contract created and receiver linked!" : "Contract created! Share the invite link with the receiver.");
       router.push(`/contract/${contractId}?investor=${investorAddress}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong.");
@@ -95,6 +97,22 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
         />
         <p style={{ fontSize: "12px", color: "#71717a" }}>
           Optional — defaults to the first milestone title if left blank.
+        </p>
+      </div>
+
+      {/* Receiver */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+        <Label htmlFor="receiverWallet">Receiver Wallet Address <span style={{ color: "#a1a1aa", fontWeight: 400 }}>(optional)</span></Label>
+        <Input
+          id="receiverWallet"
+          placeholder="0x… — leave empty to share an invite link instead"
+          value={receiverWallet}
+          onChange={(e) => setReceiverWallet(e.target.value)}
+        />
+        <p style={{ fontSize: "12px", color: "#71717a" }}>
+          {receiverWallet.trim()
+            ? "The receiver will be linked directly — no invite link needed."
+            : "You will get an invite link to share with the receiver after creation."}
         </p>
       </div>
 
@@ -240,7 +258,7 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
           onMouseOver={(e) => (e.currentTarget.style.borderColor = "#a1a1aa")}
           onMouseOut={(e) => (e.currentTarget.style.borderColor = "#d4d4d8")}
         >
-          + Milestone hinzufügen
+          + Add Milestone
         </button>
       </div>
 

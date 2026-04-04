@@ -26,12 +26,12 @@ function NewContractContent() {
         </Link>
         <h1 className="text-2xl font-bold mt-3">New Contract</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Define the milestone and lock RLUSD for the startup.
+          Define the milestone and lock RLUSD for the receiver.
         </p>
       </div>
 
       <div className="flex items-center gap-2 text-sm p-3 bg-zinc-50 rounded-lg border">
-        <span className="text-zinc-500">Investor:</span>
+        <span className="text-zinc-500">Grant Giver:</span>
         <code className="font-mono text-xs">{investorAddress}</code>
       </div>
 
@@ -46,8 +46,8 @@ export default function NewContractPage() {
   return (
     <main className="min-h-screen bg-zinc-50">
       <nav className="border-b bg-white px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="font-bold text-lg tracking-tight">MilestoneFund</Link>
-        <Badge variant="outline">Investor</Badge>
+        <Link href="/" className="font-bold text-lg tracking-tight">Prova</Link>
+        <Badge variant="outline">Grant Giver</Badge>
       </nav>
       <Suspense>
         <NewContractContent />

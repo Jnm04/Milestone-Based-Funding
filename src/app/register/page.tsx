@@ -46,7 +46,7 @@ function RegisterForm() {
         return;
       }
 
-      toast.success("Account created! Welcome to MilestoneFund.");
+      toast.success("Account created! Welcome to Prova.");
       router.push(callbackUrl ?? (role === "INVESTOR" ? "/dashboard/investor" : "/dashboard/startup"));
     } catch {
       toast.error("Something went wrong. Please try again.");
@@ -59,9 +59,9 @@ function RegisterForm() {
     <main className="min-h-screen bg-zinc-50 flex items-center justify-center px-4">
       <div className="w-full max-w-sm bg-white rounded-2xl border shadow-sm p-8 flex flex-col gap-6">
         <div>
-          <Link href="/" className="font-bold text-lg tracking-tight">MilestoneFund</Link>
+          <Link href="/" className="font-bold text-lg tracking-tight">Prova</Link>
           <h1 className="text-2xl font-bold mt-4">Create account</h1>
-          <p className="text-sm text-muted-foreground mt-1">Join MilestoneFund</p>
+          <p className="text-sm text-muted-foreground mt-1">Join Prova</p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -74,7 +74,7 @@ function RegisterForm() {
                 className="flex-1 py-2 rounded-lg border text-sm font-medium transition-colors"
                 style={role === "INVESTOR" ? { backgroundColor: "#18181b", color: "#fff", borderColor: "#18181b" } : { backgroundColor: "#fff", color: "#3f3f46" }}
               >
-                Investor
+                Grant Giver
               </button>
               <button
                 type="button"
@@ -82,7 +82,7 @@ function RegisterForm() {
                 className="flex-1 py-2 rounded-lg border text-sm font-medium transition-colors"
                 style={role === "STARTUP" ? { backgroundColor: "#18181b", color: "#fff", borderColor: "#18181b" } : { backgroundColor: "#fff", color: "#3f3f46" }}
               >
-                Startup
+                Receiver
               </button>
             </div>
           </div>

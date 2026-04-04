@@ -96,7 +96,7 @@ export function ProofUpload({ contractId, milestoneId, onUploaded }: ProofUpload
       <div className="text-center">
         <p className="text-sm font-medium text-zinc-700">Upload Milestone Proof</p>
         <p className="text-xs text-muted-foreground mt-1">
-          PDF, DOCX, PPTX, XLSX · Images (JPG, PNG, WEBP) · CSV, TXT · Max 20 MB · Mehrere Dateien möglich
+          PDF, DOCX, PPTX, XLSX · Images (JPG, PNG, WEBP) · CSV, TXT · Max 20 MB · Multiple files supported
         </p>
       </div>
 
@@ -136,7 +136,7 @@ export function ProofUpload({ contractId, milestoneId, onUploaded }: ProofUpload
           type="button"
           disabled={loading}
         >
-          {files.length > 0 ? "Weitere Datei hinzufügen" : "Datei auswählen"}
+          {files.length > 0 ? "Add Another File" : "Select File"}
         </Button>
       )}
 
@@ -144,7 +144,7 @@ export function ProofUpload({ contractId, milestoneId, onUploaded }: ProofUpload
         <Button onClick={handleUpload} disabled={loading}>
           {loading
             ? "Uploading…"
-            : `${files.length} Datei${files.length > 1 ? "en" : ""} hochladen & KI-Verifikation starten`}
+            : `Upload ${files.length} file${files.length > 1 ? "s" : ""} & start AI verification`}
         </Button>
       )}
 
@@ -156,7 +156,7 @@ export function ProofUpload({ contractId, milestoneId, onUploaded }: ProofUpload
             setUploaded(false);
           }}
         >
-          Andere Dokumente hochladen
+          Upload Other Documents
         </Button>
       )}
     </div>

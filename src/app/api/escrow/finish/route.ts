@@ -68,13 +68,22 @@ export async function POST(request: NextRequest) {
       });
 
       const milestones = completedMilestone.contract.milestones;
-      const nextFunded = milestones.find(
-        (m) => m.id !== milestoneId && m.status === "FUNDED"
+      const remaining = milestones.find(
+        (m) => m.id !== milestoneId && !["COMPLETED", "EXPIRED"].includes(m.status)
       );
+
+      let nextContractStatus: string;
+      if (!remaining) {
+        nextContractStatus = "COMPLETED";
+      } else if (remaining.status === "FUNDED") {
+        nextContractStatus = "FUNDED";
+      } else {
+        nextContractStatus = "AWAITING_ESCROW";
+      }
 
       await prisma.contract.update({
         where: { id: contractId },
-        data: { status: nextFunded ? "FUNDED" : "COMPLETED" },
+        data: { status: nextContractStatus as never },
       });
     } else {
       await prisma.contract.update({

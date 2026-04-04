@@ -5,6 +5,10 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --color-terracotta: #C1654A;
+  --color-terracotta-dark: #9B4A32;
+  --color-terracotta-light: #F0D5CC;
+  --color-terracotta-muted: #FBF0EC;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
@@ -126,5 +130,38 @@
   }
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
   }
 }
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.8); }
+}
+
+.animate-fade-up       { animation: fade-up 0.7s ease both; }
+.animate-fade-up-1     { animation: fade-up 0.7s ease 0.1s both; }
+.animate-fade-up-2     { animation: fade-up 0.7s ease 0.2s both; }
+.animate-fade-up-3     { animation: fade-up 0.7s ease 0.3s both; }
+.animate-fade-up-4     { animation: fade-up 0.7s ease 0.45s both; }
+.animate-fade-in       { animation: fade-in 1s ease 0.1s both; }
+.animate-float         { animation: float 4s ease-in-out infinite; }
+.animate-pulse-dot     { animation: pulse-dot 2s ease-in-out infinite; }
+
+@keyframes ticker {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-ticker { animation: ticker 28s linear infinite; }

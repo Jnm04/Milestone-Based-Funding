@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const { milestone, amountUSD, cancelAfter, milestones: milestonesInput } = await request.json();
+    const { milestone, amountUSD, cancelAfter, milestones: milestonesInput, receiverWalletAddress } = await request.json();
 
     // Need at least a milestone title/description
     if (!milestone && (!milestonesInput || milestonesInput.length === 0)) {
@@ -31,6 +31,20 @@ export async function POST(request: NextRequest) {
     const investor = await prisma.user.findUnique({ where: { id: session.user.id } });
     if (!investor) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
+    // If a receiver wallet was provided, look up that user now
+    let receiver: { id: string } | null = null;
+    if (receiverWalletAddress) {
+      receiver = await prisma.user.findUnique({
+        where: { walletAddress: receiverWalletAddress },
+      });
+      if (!receiver) {
+        return NextResponse.json(
+          { error: "No account found with that wallet address. The receiver must register first." },
+          { status: 404 }
+        );
+      }
+    }
+
     const inviteLink = nanoid(12);
 
     const result = await prisma.$transaction(async (tx) => {
@@ -47,14 +61,19 @@ export async function POST(request: NextRequest) {
         msData[0].cancelAfter
       );
 
+      const directLink = receiver ? null : inviteLink;
+      const contractStatus = receiver ? "AWAITING_ESCROW" : "DRAFT";
+      const milestoneStatus = receiver ? "AWAITING_ESCROW" : "PENDING";
+
       const contract = await tx.contract.create({
         data: {
           investorId: investor.id,
+          startupId: receiver?.id ?? null,
           milestone: milestone ?? msData[0].title,
           amountUSD: totalAmount,
           cancelAfter: new Date(latestDeadline),
-          inviteLink,
-          status: "DRAFT",
+          inviteLink: directLink,
+          status: contractStatus,
         },
       });
 
@@ -66,7 +85,7 @@ export async function POST(request: NextRequest) {
             amountUSD: m.amountUSD,
             cancelAfter: new Date(m.cancelAfter),
             order: i,
-            status: "PENDING",
+            status: milestoneStatus,
           })
         ),
       });
@@ -74,7 +93,11 @@ export async function POST(request: NextRequest) {
       return contract;
     });
 
-    return NextResponse.json({ contractId: result.id, inviteLink });
+    return NextResponse.json({
+      contractId: result.id,
+      inviteLink: receiver ? null : inviteLink,
+      directlyLinked: !!receiver,
+    });
   } catch (err) {
     console.error("Create contract error:", err);
     return NextResponse.json({ error: "Failed to create contract" }, { status: 500 });
@@ -95,7 +118,11 @@ export async function GET() {
 
     const contracts = await prisma.contract.findMany({
       where,
-      include: { investor: true, startup: true },
+      include: {
+        investor: true,
+        startup: true,
+        milestones: { select: { status: true }, orderBy: { order: "asc" } },
+      },
       orderBy: { createdAt: "desc" },
     });
 

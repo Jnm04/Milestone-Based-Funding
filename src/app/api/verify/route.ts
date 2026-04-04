@@ -137,6 +137,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error("Verification error:", err);
-    return NextResponse.json({ error: "Verification failed" }, { status: 500 });
+    const message = err instanceof Error ? err.message : "Verification failed";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

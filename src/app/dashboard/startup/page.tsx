@@ -11,16 +11,16 @@ import { toast } from "sonner";
 import { Suspense } from "react";
 
 const STATUS_LABELS: Record<string, string> = {
-  DRAFT: "Entwurf",
-  AWAITING_ESCROW: "Warte auf Escrow",
-  FUNDED: "Finanziert",
-  PROOF_SUBMITTED: "Nachweis eingereicht",
-  PENDING_REVIEW: "Manuelle Prüfung",
-  VERIFIED: "Verifiziert",
-  REJECTED: "Abgelehnt",
-  DECLINED: "Einladung abgelehnt",
-  EXPIRED: "Abgelaufen",
-  COMPLETED: "Abgeschlossen",
+  DRAFT: "Draft",
+  AWAITING_ESCROW: "Awaiting Escrow",
+  FUNDED: "Funded",
+  PROOF_SUBMITTED: "Proof Submitted",
+  PENDING_REVIEW: "Pending Review",
+  VERIFIED: "Verified",
+  REJECTED: "Rejected",
+  DECLINED: "Invitation Declined",
+  EXPIRED: "Expired",
+  COMPLETED: "Completed",
 };
 
 const STATUS_COLORS: Record<string, { background: string; color: string }> = {
@@ -42,6 +42,7 @@ interface Contract {
   amountUSD: string;
   status: string;
   investor: { walletAddress: string | null };
+  milestones: { status: string }[];
   createdAt: string;
 }
 
@@ -89,7 +90,7 @@ function StartupDashboardContent() {
         : "/dashboard/startup";
       router.push(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
     }
-    if (status === "authenticated" && session.user.role !== "STARTUP") router.push("/dashboard/investor");
+    if (status === "authenticated" && session.user.role !== "STARTUP" && !inviteCode) router.push("/dashboard/investor");
   }, [status, session, router, inviteCode]);
 
   async function handleWalletConnected(address: string) {
@@ -160,17 +161,40 @@ function StartupDashboardContent() {
 
   if (!session) return null;
 
+  // Grant Giver opened an invite link — show a clear message instead of silently redirecting
+  if (session.user.role !== "STARTUP" && inviteCode) {
+    return (
+      <main className="min-h-screen bg-zinc-50 flex items-center justify-center px-4">
+        <div className="w-full max-w-sm bg-white rounded-2xl border shadow-sm p-8 flex flex-col gap-4 text-center">
+          <p className="text-lg font-bold">Wrong account</p>
+          <p className="text-sm text-muted-foreground">
+            You&apos;re logged in as a <strong>Grant Giver</strong>. This invite link is for a <strong>Receiver</strong> account.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Sign out and register or log in as a Receiver to accept this invitation.
+          </p>
+          <Button onClick={() => signOut({ callbackUrl: `/dashboard/startup?invite=${inviteCode}` })}>
+            Sign out & switch account
+          </Button>
+          <Link href="/dashboard/investor" className="text-sm text-muted-foreground hover:underline">
+            Back to my dashboard
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
   const walletAddress = session.user.walletAddress;
 
   return (
     <main className="min-h-screen bg-zinc-50">
       <nav className="border-b bg-white px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="font-bold text-lg tracking-tight">MilestoneFund</Link>
+        <Link href="/" className="font-bold text-lg tracking-tight">Prova</Link>
         <div className="flex items-center gap-3">
           <span className="text-sm text-muted-foreground">{session.user.email}</span>
-          <Badge variant="outline">Startup</Badge>
+          <Badge variant="outline">Receiver</Badge>
           <Link href="/profile">
-            <Button variant="ghost" size="sm">Profil</Button>
+            <Button variant="ghost" size="sm">Profile</Button>
           </Link>
           <Button variant="ghost" size="sm" onClick={() => signOut({ callbackUrl: "/login" })}>
             Sign out
@@ -180,7 +204,7 @@ function StartupDashboardContent() {
 
       <div className="max-w-2xl mx-auto py-12 px-6 flex flex-col gap-8">
         <div>
-          <h1 className="text-2xl font-bold">Startup Dashboard</h1>
+          <h1 className="text-2xl font-bold">Receiver Dashboard</h1>
           <p className="text-muted-foreground mt-1">
             {inviteCode
               ? "Connect your wallet to accept the contract invitation."
@@ -192,7 +216,7 @@ function StartupDashboardContent() {
 
         {inviteCode && (
           <div className="flex flex-col gap-3 p-5 bg-blue-50 border border-blue-200 rounded-xl">
-            <p className="text-sm font-semibold text-blue-800">Contract-Einladung</p>
+            <p className="text-sm font-semibold text-blue-800">Contract Invitation</p>
             {preview ? (
               <>
                 <div className="flex flex-col gap-1">
@@ -201,16 +225,16 @@ function StartupDashboardContent() {
                 </div>
                 <div className="flex gap-6 text-sm">
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-xs text-blue-600 uppercase tracking-wide font-medium">Betrag</span>
+                    <span className="text-xs text-blue-600 uppercase tracking-wide font-medium">Amount</span>
                     <strong className="text-blue-900">${Number(preview.amountUSD).toLocaleString()} RLUSD</strong>
                   </div>
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-xs text-blue-600 uppercase tracking-wide font-medium">Frist</span>
-                    <span className="text-blue-900">{new Date(preview.cancelAfter).toLocaleDateString("de-DE")}</span>
+                    <span className="text-xs text-blue-600 uppercase tracking-wide font-medium">Deadline</span>
+                    <span className="text-blue-900">{new Date(preview.cancelAfter).toLocaleDateString()}</span>
                   </div>
                   {preview.investorWallet && (
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-xs text-blue-600 uppercase tracking-wide font-medium">Investor</span>
+                      <span className="text-xs text-blue-600 uppercase tracking-wide font-medium">Grant Giver</span>
                       <code className="text-xs font-mono text-blue-900">{preview.investorWallet.slice(0, 10)}…</code>
                     </div>
                   )}
@@ -218,6 +242,7 @@ function StartupDashboardContent() {
                 {preview.milestones && preview.milestones.length > 0 && (
                   <div className="flex flex-col gap-2">
                     <span className="text-xs text-blue-600 uppercase tracking-wide font-medium">Milestones ({preview.milestones.length})</span>
+
                     <div className="flex flex-col gap-1.5">
                       {preview.milestones.map((ms, idx) => (
                         <div key={ms.id} className="flex items-start gap-2 p-2.5 bg-white/60 rounded-lg border border-blue-100">
@@ -228,7 +253,7 @@ function StartupDashboardContent() {
                             <p className="text-xs font-semibold text-blue-900 leading-snug">{ms.title}</p>
                             <div className="flex gap-3 mt-0.5 text-xs text-blue-700">
                               <span><strong>${Number(ms.amountUSD).toLocaleString()}</strong> RLUSD</span>
-                              <span>bis {new Date(ms.cancelAfter).toLocaleDateString("de-DE")}</span>
+                              <span>bis {new Date(ms.cancelAfter).toLocaleDateString()}</span>
                             </div>
                           </div>
                         </div>
@@ -238,9 +263,9 @@ function StartupDashboardContent() {
                 )}
               </>
             ) : (
-              <p className="text-sm text-blue-700">Contract wird geladen…</p>
+              <p className="text-sm text-blue-700">Loading contract…</p>
             )}
-            <p className="text-xs text-blue-600">Verbinde deine Wallet um zu akzeptieren.</p>
+            <p className="text-xs text-blue-600">Connect your wallet to accept.</p>
           </div>
         )}
 
@@ -279,22 +304,25 @@ function StartupDashboardContent() {
 
             {!inviteCode && (
               <div className="flex flex-col gap-3">
-                <h2 className="text-base font-semibold">Meine Contracts</h2>
+                <h2 className="text-base font-semibold">My Contracts</h2>
 
                 {loadingContracts && (
-                  <p className="text-sm text-muted-foreground">Laden…</p>
+                  <p className="text-sm text-muted-foreground">Loading…</p>
                 )}
 
                 {!loadingContracts && contracts.length === 0 && (
                   <div className="p-6 bg-white rounded-xl border text-center">
                     <p className="text-sm text-muted-foreground">
-                      Noch keine Contracts. Warte auf einen Invite-Link vom Investor.
+                      No contracts yet. Wait for an invite link from your Grant Giver.
                     </p>
                   </div>
                 )}
 
                 {contracts.map((c) => {
                   const colors = STATUS_COLORS[c.status] ?? STATUS_COLORS.DRAFT;
+                  const totalMs = c.milestones.length;
+                  const completedMs = c.milestones.filter((m) => m.status === "COMPLETED").length;
+                  const showProgress = totalMs > 1;
                   return (
                     <Link key={c.id} href={`/contract/${c.id}?startup=${walletAddress}`}>
                       <div className="p-4 bg-white rounded-xl border hover:border-zinc-400 transition-colors cursor-pointer flex flex-col gap-2">
@@ -302,22 +330,37 @@ function StartupDashboardContent() {
                           <p className="text-sm font-medium leading-snug line-clamp-2 flex-1">
                             {c.milestone}
                           </p>
-                          <span
-                            className="text-xs font-medium px-2 py-0.5 rounded-full shrink-0"
-                            style={colors}
-                          >
-                            {STATUS_LABELS[c.status] ?? c.status}
-                          </span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {showProgress && (
+                              <span className="text-xs text-zinc-500">
+                                {completedMs}/{totalMs} milestones
+                              </span>
+                            )}
+                            <span
+                              className="text-xs font-medium px-2 py-0.5 rounded-full"
+                              style={colors}
+                            >
+                              {STATUS_LABELS[c.status] ?? c.status}
+                            </span>
+                          </div>
                         </div>
+                        {showProgress && (
+                          <div className="w-full h-1 bg-zinc-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-green-500 rounded-full transition-all"
+                              style={{ width: `${(completedMs / totalMs) * 100}%` }}
+                            />
+                          </div>
+                        )}
                         <div className="flex items-center gap-4 text-xs text-zinc-500">
                           <span>
                             <strong className="text-zinc-800">${Number(c.amountUSD).toLocaleString()}</strong> RLUSD
                           </span>
                           <span>
-                            Investor:{" "}
+                            Grant Giver:{" "}
                             <code className="font-mono">{c.investor.walletAddress?.slice(0, 8)}…</code>
                           </span>
-                          <span className="ml-auto">{new Date(c.createdAt).toLocaleDateString("de-DE")}</span>
+                          <span className="ml-auto">{new Date(c.createdAt).toLocaleDateString()}</span>
                         </div>
                       </div>
                     </Link>

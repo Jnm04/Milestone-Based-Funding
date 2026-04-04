@@ -1,14 +1,14 @@
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = process.env.EMAIL_FROM ?? "MilestoneFund <onboarding@resend.dev>";
+const FROM = process.env.EMAIL_FROM ?? "Prova <onboarding@resend.dev>";
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 
 function contractLink(contractId: string) {
   return `${BASE_URL}/contract/${contractId}`;
 }
 
-// ── Investor notifications ──────────────────────────────────────────────────
+// ── Grant Giver notifications ───────────────────────────────────────────────
 
 export async function sendProofSubmittedEmail({
   to,
@@ -25,12 +25,12 @@ export async function sendProofSubmittedEmail({
   await resend.emails.send({
     from: FROM,
     to,
-    subject: `Beweis eingereicht: ${milestoneTitle}`,
+    subject: `Proof submitted: ${milestoneTitle}`,
     html: `
-      <p>Hallo,</p>
-      <p><strong>${startupName ?? "Das Startup"}</strong> hat einen Beweis für den Milestone <strong>${milestoneTitle}</strong> eingereicht.</p>
-      <p>Die KI-Verifikation läuft automatisch. Du wirst benachrichtigt, sobald eine manuelle Prüfung erforderlich ist.</p>
-      <p><a href="${contractLink(contractId)}">Contract öffnen →</a></p>
+      <p>Hi,</p>
+      <p><strong>${startupName ?? "The receiver"}</strong> has submitted proof for the milestone <strong>${milestoneTitle}</strong>.</p>
+      <p>AI verification runs automatically. You will be notified if a manual review is required.</p>
+      <p><a href="${contractLink(contractId)}">Open contract →</a></p>
     `,
   });
 }
@@ -50,12 +50,12 @@ export async function sendPendingReviewEmail({
   await resend.emails.send({
     from: FROM,
     to,
-    subject: `Manuelle Prüfung erforderlich: ${milestoneTitle}`,
+    subject: `Manual review required: ${milestoneTitle}`,
     html: `
-      <p>Hallo,</p>
-      <p>Die KI ist beim Milestone <strong>${milestoneTitle}</strong> unsicher und benötigt deine manuelle Prüfung.</p>
-      ${aiReasoning ? `<p><em>KI-Begründung: ${aiReasoning}</em></p>` : ""}
-      <p><a href="${contractLink(contractId)}">Jetzt prüfen →</a></p>
+      <p>Hi,</p>
+      <p>The AI was uncertain about milestone <strong>${milestoneTitle}</strong> and needs your manual review.</p>
+      ${aiReasoning ? `<p><em>AI reasoning: ${aiReasoning}</em></p>` : ""}
+      <p><a href="${contractLink(contractId)}">Review now →</a></p>
     `,
   });
 }
@@ -75,16 +75,16 @@ export async function sendMilestoneCompletedInvestorEmail({
   await resend.emails.send({
     from: FROM,
     to,
-    subject: `Milestone abgeschlossen: ${milestoneTitle}`,
+    subject: `Milestone completed: ${milestoneTitle}`,
     html: `
-      <p>Hallo,</p>
-      <p>Der Milestone <strong>${milestoneTitle}</strong> wurde erfolgreich abgeschlossen. Die Zahlung von <strong>$${Number(amountUSD).toLocaleString("de-DE")} RLUSD</strong> wurde freigegeben.</p>
-      <p><a href="${contractLink(contractId)}">Contract ansehen →</a></p>
+      <p>Hi,</p>
+      <p>Milestone <strong>${milestoneTitle}</strong> has been successfully completed. The payment of <strong>$${Number(amountUSD).toLocaleString()} RLUSD</strong> has been released.</p>
+      <p><a href="${contractLink(contractId)}">View contract →</a></p>
     `,
   });
 }
 
-// ── Startup notifications ───────────────────────────────────────────────────
+// ── Receiver notifications ──────────────────────────────────────────────────
 
 export async function sendFundedEmail({
   to,
@@ -101,12 +101,12 @@ export async function sendFundedEmail({
   await resend.emails.send({
     from: FROM,
     to,
-    subject: `Milestone finanziert: ${milestoneTitle}`,
+    subject: `Milestone funded: ${milestoneTitle}`,
     html: `
-      <p>Hallo,</p>
-      <p>Dein Milestone <strong>${milestoneTitle}</strong> wurde mit <strong>$${Number(amountUSD).toLocaleString("de-DE")} RLUSD</strong> finanziert.</p>
-      <p>Du kannst jetzt Beweise hochladen, um die Freigabe der Zahlung zu starten.</p>
-      <p><a href="${contractLink(contractId)}">Beweis hochladen →</a></p>
+      <p>Hi,</p>
+      <p>Your milestone <strong>${milestoneTitle}</strong> has been funded with <strong>$${Number(amountUSD).toLocaleString()} RLUSD</strong>.</p>
+      <p>You can now upload proof to trigger the payment release.</p>
+      <p><a href="${contractLink(contractId)}">Upload proof →</a></p>
     `,
   });
 }
@@ -128,12 +128,12 @@ export async function sendVerifiedEmail({
   await resend.emails.send({
     from: FROM,
     to,
-    subject: `Zahlung freigegeben: ${milestoneTitle}`,
+    subject: `Payment released: ${milestoneTitle}`,
     html: `
-      <p>Hallo,</p>
-      <p>Glückwunsch! Der Beweis für <strong>${milestoneTitle}</strong> wurde genehmigt. <strong>$${Number(amountUSD).toLocaleString("de-DE")} RLUSD</strong> wurden an deine Wallet überwiesen.</p>
-      ${txHash ? `<p>Transaktion: <code>${txHash}</code></p>` : ""}
-      <p><a href="${contractLink(contractId)}">Contract ansehen →</a></p>
+      <p>Hi,</p>
+      <p>Congratulations! Your proof for <strong>${milestoneTitle}</strong> has been approved. <strong>$${Number(amountUSD).toLocaleString()} RLUSD</strong> has been sent to your wallet.</p>
+      ${txHash ? `<p>Transaction: <code>${txHash}</code></p>` : ""}
+      <p><a href="${contractLink(contractId)}">View contract →</a></p>
     `,
   });
 }
@@ -153,13 +153,13 @@ export async function sendRejectedEmail({
   await resend.emails.send({
     from: FROM,
     to,
-    subject: `Beweis abgelehnt: ${milestoneTitle}`,
+    subject: `Proof rejected: ${milestoneTitle}`,
     html: `
-      <p>Hallo,</p>
-      <p>Dein Beweis für <strong>${milestoneTitle}</strong> wurde von der KI abgelehnt.</p>
-      ${aiReasoning ? `<p><strong>Begründung:</strong> ${aiReasoning}</p>` : ""}
-      <p>Du kannst einen neuen Beweis einreichen, solange die Deadline nicht abgelaufen ist.</p>
-      <p><a href="${contractLink(contractId)}">Erneut einreichen →</a></p>
+      <p>Hi,</p>
+      <p>Your proof for <strong>${milestoneTitle}</strong> was rejected by the AI.</p>
+      ${aiReasoning ? `<p><strong>Reason:</strong> ${aiReasoning}</p>` : ""}
+      <p>You can submit new proof as long as the deadline has not passed.</p>
+      <p><a href="${contractLink(contractId)}">Resubmit →</a></p>
     `,
   });
 }

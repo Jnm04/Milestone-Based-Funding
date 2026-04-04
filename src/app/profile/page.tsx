@@ -90,9 +90,9 @@ export default function ProfilePage() {
         body: JSON.stringify({ name, companyName, department, jobTitle, phone, bio, website }),
       });
       if (!res.ok) throw new Error((await res.json()).error);
-      toast.success("Profil gespeichert.");
+      toast.success("Profile saved.");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Fehler beim Speichern");
+      toast.error(err instanceof Error ? err.message : "Error saving profile.");
     } finally {
       setSaving(false);
     }
@@ -100,7 +100,7 @@ export default function ProfilePage() {
 
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault();
-    if (newPassword !== confirmPassword) { toast.error("Passwörter stimmen nicht überein."); return; }
+    if (newPassword !== confirmPassword) { toast.error("Passwords do not match."); return; }
     setSavingPw(true);
     try {
       const res = await fetch("/api/profile/password", {
@@ -110,10 +110,10 @@ export default function ProfilePage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      toast.success("Passwort geändert.");
+      toast.success("Password changed.");
       setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Fehler beim Ändern");
+      toast.error(err instanceof Error ? err.message : "Error changing password.");
     } finally {
       setSavingPw(false);
     }
@@ -131,9 +131,9 @@ export default function ProfilePage() {
         }),
       });
       if (!res.ok) throw new Error((await res.json()).error);
-      toast.success("Benachrichtigungen gespeichert.");
+      toast.success("Notifications saved.");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Fehler beim Speichern");
+      toast.error(err instanceof Error ? err.message : "Error saving settings.");
     } finally {
       setSavingNotify(false);
     }
@@ -142,34 +142,34 @@ export default function ProfilePage() {
   const dashboardHref = profile?.role === "INVESTOR" ? "/dashboard/investor" : "/dashboard/startup";
 
   if (status === "loading" || !profile) {
-    return <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">Laden…</div>;
+    return <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">Loading…</div>;
   }
 
   return (
     <main className="min-h-screen bg-zinc-50">
       <nav className="border-b bg-white px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="font-bold text-lg tracking-tight">MilestoneFund</Link>
+        <Link href="/" className="font-bold text-lg tracking-tight">Prova</Link>
         <div className="flex items-center gap-3">
           <Link href={dashboardHref} className="text-sm text-muted-foreground hover:text-zinc-900">← Dashboard</Link>
-          <Badge variant="outline">{profile.role === "INVESTOR" ? "Investor" : "Startup"}</Badge>
+          <Badge variant="outline">{profile.role === "INVESTOR" ? "Grant Giver" : "Receiver"}</Badge>
           <Button variant="ghost" size="sm" onClick={() => signOut({ callbackUrl: "/login" })}>
-            Abmelden
+            Sign out
           </Button>
         </div>
       </nav>
 
       <div className="max-w-2xl mx-auto py-12 px-6 flex flex-col gap-8">
         <div>
-          <h1 className="text-2xl font-bold">Mein Profil</h1>
-          <p className="text-muted-foreground mt-1">Persönliche Angaben und Sicherheit verwalten</p>
+          <h1 className="text-2xl font-bold">My Profile</h1>
+          <p className="text-muted-foreground mt-1">Manage personal information and security</p>
         </div>
 
         {/* Profile Info */}
         <section className="bg-white rounded-2xl border p-6 flex flex-col gap-5">
-          <h2 className="font-semibold text-base">Profilinformationen</h2>
+          <h2 className="font-semibold text-base">Profile Information</h2>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide">E-Mail</label>
+            <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Email</label>
             <p className="text-sm text-zinc-900 bg-zinc-50 border rounded-lg px-3 py-2">{profile.email}</p>
           </div>
 
@@ -181,22 +181,22 @@ export default function ProfilePage() {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Max Mustermann"
+                  placeholder="John Doe"
                   className="text-sm border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-900"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Firmenname</label>
+                <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Company Name</label>
                 <input
                   type="text"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder="Acme GmbH"
+                  placeholder="Acme Inc."
                   className="text-sm border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-900"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Position / Titel</label>
+                <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Position / Title</label>
                 <input
                   type="text"
                   value={jobTitle}
@@ -206,7 +206,7 @@ export default function ProfilePage() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Abteilung</label>
+                <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Department</label>
                 <input
                   type="text"
                   value={department}
@@ -216,12 +216,12 @@ export default function ProfilePage() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Telefon</label>
+                <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Phone</label>
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+49 123 456789"
+                  placeholder="+1 234 567 890"
                   className="text-sm border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-900"
                 />
               </div>
@@ -231,18 +231,18 @@ export default function ProfilePage() {
                   type="url"
                   value={website}
                   onChange={(e) => setWebsite(e.target.value)}
-                  placeholder="https://beispiel.de"
+                  placeholder="https://example.com"
                   className="text-sm border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-900"
                 />
               </div>
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Über mich / Bio</label>
+              <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide">About / Bio</label>
               <textarea
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                placeholder="Kurze Beschreibung…"
+                placeholder="Short description…"
                 rows={3}
                 className="text-sm border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-900 resize-none"
               />
@@ -251,13 +251,13 @@ export default function ProfilePage() {
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide">EVM Wallet (MetaMask)</label>
               <p className="text-sm text-zinc-900 bg-zinc-50 border rounded-lg px-3 py-2 font-mono break-all">
-                {profile.walletAddress ?? <span className="text-zinc-400">Noch keine Wallet verbunden</span>}
+                {profile.walletAddress ?? <span className="text-zinc-400">No wallet connected yet</span>}
               </p>
-              <p className="text-xs text-zinc-400">0x… Adresse aus MetaMask eintragen lassen (über Dashboard)</p>
+              <p className="text-xs text-zinc-400">Connect your 0x… address via the dashboard.</p>
             </div>
 
             <Button type="submit" disabled={saving} className="self-end">
-              {saving ? "Wird gespeichert…" : "Profil speichern"}
+              {saving ? "Saving…" : "Save Profile"}
             </Button>
           </form>
         </section>
@@ -265,9 +265,9 @@ export default function ProfilePage() {
         {/* Email Notifications */}
         <section className="bg-white rounded-2xl border p-6 flex flex-col gap-5">
           <div>
-            <h2 className="font-semibold text-base">E-Mail Benachrichtigungen</h2>
+            <h2 className="font-semibold text-base">Email Notifications</h2>
             <p className="text-xs text-muted-foreground mt-1">
-              Wähle, wann du per E-Mail benachrichtigt werden möchtest.
+              Choose when you want to be notified by email.
             </p>
           </div>
 
@@ -275,20 +275,20 @@ export default function ProfilePage() {
             {profile.role === "INVESTOR" && (
               <>
                 <NotifyToggle
-                  label="Beweis eingereicht"
-                  description="Startup hat einen Nachweis für einen Milestone hochgeladen"
+                  label="Proof submitted"
+                  description="Receiver has submitted proof for a milestone"
                   checked={notifyProofSubmitted}
                   onChange={setNotifyProofSubmitted}
                 />
                 <NotifyToggle
-                  label="Manuelle Prüfung erforderlich"
-                  description="Die KI ist unsicher — deine Einschätzung wird benötigt"
+                  label="Manual review required"
+                  description="The AI is uncertain — your assessment is needed"
                   checked={notifyPendingReview}
                   onChange={setNotifyPendingReview}
                 />
                 <NotifyToggle
-                  label="Milestone abgeschlossen"
-                  description="Zahlung wurde erfolgreich freigegeben"
+                  label="Milestone completed"
+                  description="Payment has been successfully released"
                   checked={notifyMilestoneCompleted}
                   onChange={setNotifyMilestoneCompleted}
                 />
@@ -297,20 +297,20 @@ export default function ProfilePage() {
             {profile.role === "STARTUP" && (
               <>
                 <NotifyToggle
-                  label="Milestone finanziert"
-                  description="Ein Investor hat deinen Milestone mit RLUSD finanziert"
+                  label="Milestone funded"
+                  description="A Grant Giver has funded your milestone with RLUSD"
                   checked={notifyFunded}
                   onChange={setNotifyFunded}
                 />
                 <NotifyToggle
-                  label="Beweis genehmigt"
-                  description="KI hat deinen Nachweis akzeptiert — Zahlung wird freigegeben"
+                  label="Proof approved"
+                  description="AI accepted your proof — payment is being released"
                   checked={notifyVerified}
                   onChange={setNotifyVerified}
                 />
                 <NotifyToggle
-                  label="Beweis abgelehnt"
-                  description="KI hat deinen Nachweis abgelehnt — erneutes Einreichen möglich"
+                  label="Proof rejected"
+                  description="AI rejected your proof — resubmission is possible"
                   checked={notifyRejected}
                   onChange={setNotifyRejected}
                 />
@@ -319,16 +319,16 @@ export default function ProfilePage() {
           </div>
 
           <Button onClick={handleSaveNotifications} disabled={savingNotify} variant="outline" className="self-end">
-            {savingNotify ? "Wird gespeichert…" : "Einstellungen speichern"}
+            {savingNotify ? "Saving…" : "Save Settings"}
           </Button>
         </section>
 
         {/* Password Change */}
         <section className="bg-white rounded-2xl border p-6 flex flex-col gap-5">
-          <h2 className="font-semibold text-base">Passwort ändern</h2>
+          <h2 className="font-semibold text-base">Change Password</h2>
           <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Aktuelles Passwort</label>
+              <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Current Password</label>
               <input
                 type="password"
                 value={currentPassword}
@@ -339,7 +339,7 @@ export default function ProfilePage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Neues Passwort</label>
+                <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide">New Password</label>
                 <input
                   type="password"
                   value={newPassword}
@@ -350,7 +350,7 @@ export default function ProfilePage() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Passwort bestätigen</label>
+                <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Confirm Password</label>
                 <input
                   type="password"
                   value={confirmPassword}
@@ -362,22 +362,21 @@ export default function ProfilePage() {
               </div>
             </div>
             <Button type="submit" disabled={savingPw} variant="outline" className="self-end">
-              {savingPw ? "Wird geändert…" : "Passwort ändern"}
+              {savingPw ? "Changing…" : "Change Password"}
             </Button>
           </form>
         </section>
 
         {/* Account Info */}
-
         <section className="bg-white rounded-2xl border p-6 flex flex-col gap-3">
           <h2 className="font-semibold text-base">Account</h2>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-zinc-500">Mitglied seit</span>
-            <span className="text-zinc-900">{new Date(profile.createdAt).toLocaleDateString("de-DE", { year: "numeric", month: "long", day: "numeric" })}</span>
+            <span className="text-zinc-500">Member since</span>
+            <span className="text-zinc-900">{new Date(profile.createdAt).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}</span>
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-zinc-500">Rolle</span>
-            <Badge variant="outline">{profile.role === "INVESTOR" ? "Investor" : "Startup"}</Badge>
+            <span className="text-zinc-500">Role</span>
+            <Badge variant="outline">{profile.role === "INVESTOR" ? "Grant Giver" : "Receiver"}</Badge>
           </div>
         </section>
       </div>
