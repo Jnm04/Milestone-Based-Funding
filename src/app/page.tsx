@@ -399,7 +399,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {[
               {
-                quote: "Prova completely changed how we structure startup deals. The AI verification removed all the subjective back-and-forth we used to have.",
+                quote: "Cascrow completely changed how we structure startup deals. The AI verification removed all the subjective back-and-forth we used to have.",
                 name: "Sarah Chen",
                 title: "Managing Partner, Nexus Ventures",
                 initials: "SC",
@@ -483,7 +483,7 @@ export default function LandingPage() {
           <span className="font-bold text-white">
             Pro<span style={{ color: "#C1654A" }}>va</span>
           </span>
-          <span>© 2025 Prova · Built on XRPL EVM · RLUSD · Claude AI</span>
+          <span>© 2025 Cascrow · Built on XRPL EVM · RLUSD · Claude AI</span>
           <div className="flex gap-6">
             <Link href="/login" className="hover:text-white transition-colors">Sign in</Link>
             <Link href="/register" className="hover:text-white transition-colors">Register</Link>

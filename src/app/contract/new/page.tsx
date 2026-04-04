@@ -46,7 +46,7 @@ export default function NewContractPage() {
   return (
     <main className="min-h-screen bg-zinc-50">
       <nav className="border-b bg-white px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="font-bold text-lg tracking-tight">Prova</Link>
+        <Link href="/" className="font-bold text-lg tracking-tight">Cascrow</Link>
         <Badge variant="outline">Grant Giver</Badge>
       </nav>
       <Suspense>

@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = process.env.EMAIL_FROM ?? "Prova <onboarding@resend.dev>";
+const FROM = process.env.EMAIL_FROM ?? "Cascrow <onboarding@resend.dev>";
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 
 function contractLink(contractId: string) {

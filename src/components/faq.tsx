@@ -5,7 +5,7 @@ import { useState } from "react";
 const ITEMS = [
   {
     q: "Who controls the funds?",
-    a: "No one — the smart contract does. Once the grant giver funds the milestone, the RLUSD is locked on-chain and can only be released by the contract logic itself. Neither the grant giver nor Prova can withdraw funds arbitrarily.",
+    a: "No one — the smart contract does. Once the grant giver funds the milestone, the RLUSD is locked on-chain and can only be released by the contract logic itself. Neither the grant giver nor Cascrow can withdraw funds arbitrarily.",
   },
   {
     q: "What happens if the AI rejects my proof?",

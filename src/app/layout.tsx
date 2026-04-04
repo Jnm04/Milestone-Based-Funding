@@ -7,7 +7,7 @@ import { AuthSessionProvider } from "@/components/session-provider";
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
 
 export const metadata: Metadata = {
-  title: "Prova — AI Escrow on XRPL",
+  title: "Cascrow — AI Escrow on XRPL",
   description:
     "Lock RLUSD in escrow. AI verifies milestones. Instant trustless settlement on the XRP Ledger.",
 };

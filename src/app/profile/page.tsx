@@ -148,7 +148,7 @@ export default function ProfilePage() {
   return (
     <main className="min-h-screen bg-zinc-50">
       <nav className="border-b bg-white px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="font-bold text-lg tracking-tight">Prova</Link>
+        <Link href="/" className="font-bold text-lg tracking-tight">Cascrow</Link>
         <div className="flex items-center gap-3">
           <Link href={dashboardHref} className="text-sm text-muted-foreground hover:text-zinc-900">← Dashboard</Link>
           <Badge variant="outline">{profile.role === "INVESTOR" ? "Grant Giver" : "Receiver"}</Badge>

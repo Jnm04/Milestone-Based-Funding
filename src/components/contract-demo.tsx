@@ -74,7 +74,7 @@ export function ContractDemo() {
     >
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-        <span className="text-xs font-semibold text-white">Prova · Contract</span>
+        <span className="text-xs font-semibold text-white">Cascrow · Contract</span>
         <span
           className="text-xs font-semibold px-2.5 py-1 rounded-full transition-all duration-300"
           style={{ background: `${s.statusColor}20`, color: s.statusColor, opacity: fading ? 0 : 1 }}

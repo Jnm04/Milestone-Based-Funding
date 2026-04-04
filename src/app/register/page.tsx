@@ -46,7 +46,7 @@ function RegisterForm() {
         return;
       }
 
-      toast.success("Account created! Welcome to Prova.");
+      toast.success("Account created! Welcome to Cascrow.");
       router.push(callbackUrl ?? (role === "INVESTOR" ? "/dashboard/investor" : "/dashboard/startup"));
     } catch {
       toast.error("Something went wrong. Please try again.");
@@ -59,9 +59,9 @@ function RegisterForm() {
     <main className="min-h-screen bg-zinc-50 flex items-center justify-center px-4">
       <div className="w-full max-w-sm bg-white rounded-2xl border shadow-sm p-8 flex flex-col gap-6">
         <div>
-          <Link href="/" className="font-bold text-lg tracking-tight">Prova</Link>
+          <Link href="/" className="font-bold text-lg tracking-tight">Cascrow</Link>
           <h1 className="text-2xl font-bold mt-4">Create account</h1>
-          <p className="text-sm text-muted-foreground mt-1">Join Prova</p>
+          <p className="text-sm text-muted-foreground mt-1">Join Cascrow</p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">

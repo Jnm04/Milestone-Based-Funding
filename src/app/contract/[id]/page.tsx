@@ -67,7 +67,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
         milestoneStatuses={contract.milestones.map((m) => m.status)}
       />
       <nav className="border-b bg-white px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="font-bold text-lg tracking-tight">Prova</Link>
+        <Link href="/" className="font-bold text-lg tracking-tight">Cascrow</Link>
         <Badge variant="outline">Contract</Badge>
       </nav>
 
