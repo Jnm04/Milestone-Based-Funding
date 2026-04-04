@@ -1,9 +1,23 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { extractPdfText, extractOfficeText, categorizeFile } from "@/services/ai/verifier.service";
 import { sendProofSubmittedEmail } from "@/lib/email";
+import { put } from "@vercel/blob";
 import path from "path";
-import fs from "fs/promises";
+
+async function triggerVerification(proofId: string) {
+  try {
+    const baseUrl = process.env.NEXTAUTH_URL
+      ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+    await fetch(`${baseUrl}/api/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ proofId }),
+    });
+  } catch (err) {
+    console.error("[auto-verify] failed:", err);
+  }
+}
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
@@ -94,11 +108,9 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const uploadDir = path.join(process.cwd(), "public", "uploads", milestone.contractId);
-      await fs.mkdir(uploadDir, { recursive: true });
-      const filename = `${Date.now()}-${fileName}`;
-      await fs.writeFile(path.join(uploadDir, filename), buffer);
-      const fileUrl = `/uploads/${milestone.contractId}/${filename}`;
+      const filename = `proofs/${milestone.contractId}/${Date.now()}-${fileName}`;
+      const blob = await put(filename, buffer, { access: "public", contentType: effectiveMime });
+      const fileUrl = blob.url;
 
       const proof = await prisma.proof.create({
         data: { contractId: milestone.contractId, milestoneId, fileUrl, fileName, extractedText },
@@ -124,6 +136,9 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      // Auto-trigger AI verification after response is sent
+      after(() => triggerVerification(proof.id));
+
       return NextResponse.json({
         proofId: proof.id,
         fileUrl,
@@ -142,11 +157,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: `Cannot upload proof in status: ${contract.status}` }, { status: 409 });
       }
 
-      const uploadDir = path.join(process.cwd(), "public", "uploads", resolvedContractId);
-      await fs.mkdir(uploadDir, { recursive: true });
-      const filename = `${Date.now()}-${fileName}`;
-      await fs.writeFile(path.join(uploadDir, filename), buffer);
-      const fileUrl = `/uploads/${resolvedContractId}/${filename}`;
+      const filename = `proofs/${resolvedContractId}/${Date.now()}-${fileName}`;
+      const blob = await put(filename, buffer, { access: "public", contentType: effectiveMime });
+      const fileUrl = blob.url;
 
       const proof = await prisma.proof.create({
         data: { contractId: resolvedContractId, fileUrl, fileName, extractedText },
@@ -166,6 +179,9 @@ export async function POST(request: NextRequest) {
           startupName: contract.startup?.companyName ?? contract.startup?.name,
         });
       }
+
+      // Auto-trigger AI verification after response is sent
+      after(() => triggerVerification(proof.id));
 
       return NextResponse.json({
         proofId: proof.id,
