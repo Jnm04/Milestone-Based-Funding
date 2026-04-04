@@ -34,7 +34,7 @@ Claude AI reads the proof and returns YES, NO, or UNCERTAIN
 | Wallet | MetaMask (ethers.js) |
 | Blockchain | XRPL EVM Sidechain (Testnet), Solidity smart contract |
 | Stablecoin | RLUSD (ERC-20 on XRPL EVM) |
-| AI | Claude `claude-sonnet-4-6` via Anthropic SDK |
+| AI | Claude `claude-haiku-4-5` + Gemini `gemini-2.5-flash` (dual-model, both must approve) |
 | Database | PostgreSQL + Prisma |
 | File storage | Vercel Blob |
 | Email | Resend |
@@ -73,6 +73,7 @@ NEXTAUTH_URL=http://localhost:3000
 
 # AI
 ANTHROPIC_API_KEY=sk-ant-...
+GEMINI_API_KEY=AIza...
 
 # File storage
 BLOB_READ_WRITE_TOKEN=  # Vercel Blob token
