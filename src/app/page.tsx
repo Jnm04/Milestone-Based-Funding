@@ -78,7 +78,7 @@ export default function LandingPage() {
       >
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <span className="font-bold text-xl tracking-tight text-white">
-            Pro<span style={{ color: "#C1654A" }}>va</span>
+            Cas<span style={{ color: "#C1654A" }}>crow</span>
           </span>
           <div className="hidden md:flex items-center gap-8 text-sm" style={{ color: "#9CA3AF" }}>
             <a href="#problem" className="hover:text-white transition-colors">Why us</a>
@@ -130,7 +130,7 @@ export default function LandingPage() {
           </h1>
 
           <p className="animate-fade-up-2 text-lg md:text-xl max-w-2xl leading-relaxed" style={{ color: "#9CA3AF" }}>
-            RLUSD locked in escrow — released only when Claude AI confirms your milestone is complete.
+            RLUSD locked in escrow — released only when Claude + Gemini AI confirm your milestone is complete.
             No middlemen. No disputes. Instant settlement.
           </p>
 
@@ -481,9 +481,9 @@ export default function LandingPage() {
       <footer className="border-t py-8 px-6" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm" style={{ color: "#6B7280" }}>
           <span className="font-bold text-white">
-            Pro<span style={{ color: "#C1654A" }}>va</span>
+            Cas<span style={{ color: "#C1654A" }}>crow</span>
           </span>
-          <span>© 2025 Cascrow · Built on XRPL EVM · RLUSD · Claude AI</span>
+          <span>© 2025 Cascrow · Built on XRPL EVM · RLUSD · Claude + Gemini AI</span>
           <div className="flex gap-6">
             <Link href="/login" className="hover:text-white transition-colors">Sign in</Link>
             <Link href="/register" className="hover:text-white transition-colors">Register</Link>
