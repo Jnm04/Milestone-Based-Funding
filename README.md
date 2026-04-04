@@ -1,38 +1,44 @@
-# MilestoneFund
+# Cascrow
 
-AI-powered RLUSD escrow agent on the XRP Ledger.
-Investors lock RLUSD in a crypto-condition escrow; funds release automatically when an AI agent verifies the startup has met the agreed milestone.
+AI-powered RLUSD escrow agent on the XRPL EVM Sidechain.  
+Grant givers lock RLUSD in a smart contract escrow; funds release automatically when an AI agent verifies the receiver has met the agreed milestone.
 
-Built on **XLS-85** (IOU Escrow, live Feb 2026) · **Claude AI** · **Xumm** wallet signing · **Next.js 15**
+Built at the **XRPL Student Builder Residency 2026** · **Claude AI** · **MetaMask** · **Next.js 16**
 
 ---
 
 ## How it works
 
 ```
-Investor creates contract  →  Startup accepts invite
-        ↓
-Investor signs EscrowCreate via Xumm (RLUSD locked on-chain)
-        ↓
-Startup uploads PDF proof of milestone completion
-        ↓
-Claude AI reads the PDF and returns YES or NO
-        ↓
-  YES → Investor signs EscrowFinish → RLUSD sent to startup
-  NO  → Startup can resubmit (or cancel after deadline)
+Grant Giver creates contract  →  Receiver accepts invite link
+              ↓
+Grant Giver approves RLUSD + signs fundMilestone via MetaMask
+              ↓
+Receiver uploads PDF/image proof of milestone completion
+              ↓
+Claude AI reads the proof and returns YES, NO, or UNCERTAIN
+              ↓
+  YES       → funds automatically released to receiver
+  UNCERTAIN → Grant Giver manually reviews and decides
+  NO        → Receiver can resubmit (until deadline)
+              ↓
+  Deadline passed → cron job cancels escrow, RLUSD returned
 ```
 
 ## Tech stack
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 15 (App Router), Tailwind CSS, shadcn/ui |
-| Wallet | Xumm SDK (QR sign requests) |
-| Blockchain | XRPL Testnet, xrpl.js v4, XLS-85 IOU Escrow |
-| Stablecoin | RLUSD (`rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De`) |
+| Frontend | Next.js 16 (App Router), Tailwind CSS, shadcn/ui |
+| Auth | NextAuth.js — email/password with email verification |
+| Wallet | MetaMask (ethers.js) |
+| Blockchain | XRPL EVM Sidechain (Testnet), Solidity smart contract |
+| Stablecoin | RLUSD (ERC-20 on XRPL EVM) |
 | AI | Claude `claude-sonnet-4-6` via Anthropic SDK |
-| Database | PostgreSQL + Prisma 7 |
+| Database | PostgreSQL + Prisma |
 | File storage | Vercel Blob |
+| Email | Resend |
+| Cron | Vercel Cron (auto-cancel expired milestones) |
 
 ---
 
@@ -42,9 +48,9 @@ Claude AI reads the PDF and returns YES or NO
 
 - Node.js 20+
 - PostgreSQL (local or hosted)
-- [Xumm developer account](https://apps.xumm.dev) — create an app, get API key + secret
-- Anthropic API key (optional — falls back to mock verifier)
-- Vercel Blob token (optional — or replace with local file handling)
+- Anthropic API key
+- Vercel Blob token
+- Resend API key (optional — email features disabled without it)
 
 ### 2. Install
 
@@ -55,37 +61,41 @@ npm install
 
 ### 3. Environment variables
 
-Copy `.env.example` to `.env.local` and fill in your values:
+Create `.env.local` with the following:
 
-```bash
-cp .env.example .env.local
+```env
+# Database
+DATABASE_URL=postgresql://...
+
+# Auth
+NEXTAUTH_SECRET=        # openssl rand -base64 32
+NEXTAUTH_URL=http://localhost:3000
+
+# AI
+ANTHROPIC_API_KEY=sk-ant-...
+
+# File storage
+BLOB_READ_WRITE_TOKEN=  # Vercel Blob token
+
+# EVM / Blockchain
+EVM_RPC_URL=https://rpc.testnet.xrplevm.org
+NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS=0x...
+NEXT_PUBLIC_RLUSD_CONTRACT_ADDRESS=0x...
+PLATFORM_WALLET_PRIVATE_KEY=0x...   # Platform wallet — releases/cancels escrow server-side
+
+# Email (optional — notifications disabled without this)
+RESEND_API_KEY=re_...
+EMAIL_FROM=Cascrow <noreply@yourdomain.com>
+
+# Cron (set to any secret string, must match Vercel Cron config)
+CRON_SECRET=your-secret
 ```
-
-Required for full functionality:
-
-| Variable | Description |
-|---|---|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `XUMM_API_KEY` | Xumm app API key |
-| `XUMM_API_SECRET` | Xumm app API secret |
-| `NEXTAUTH_SECRET` | Random secret (run `openssl rand -base64 32`) |
-| `NEXTAUTH_URL` | Your app URL (e.g. `http://localhost:3000`) |
-
-Optional (fall back to mocks if not set):
-
-| Variable | Description |
-|---|---|
-| `ANTHROPIC_API_KEY` | Real Claude AI verification |
-| `BLOB_READ_WRITE_TOKEN` | Vercel Blob for PDF storage |
 
 ### 4. Database setup
 
 ```bash
-# Apply migrations
-npm run db:migrate
-
-# (Optional) Pre-populate demo contract
-npm run db:seed
+npx prisma db push
+npx prisma generate
 ```
 
 ### 5. Run
@@ -99,83 +109,37 @@ npm run dev
 
 ## Vercel deployment
 
-### One-click
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
-
-### Manual
+### Deploy
 
 ```bash
-# Install Vercel CLI
 npm i -g vercel
-
-# Deploy
 vercel --prod
 ```
 
-### Environment variables on Vercel
+### Environment variables
 
-Set these in the Vercel dashboard under **Settings → Environment Variables**:
+Set all variables from the section above in the Vercel dashboard under **Settings → Environment Variables**.
 
-```
-DATABASE_URL
-XUMM_API_KEY
-XUMM_API_SECRET
-ANTHROPIC_API_KEY
-BLOB_READ_WRITE_TOKEN
-NEXTAUTH_SECRET
-NEXTAUTH_URL          # your Vercel URL, e.g. https://milestonefund.vercel.app
-```
-
-After deploying, run migrations:
+After deploying, sync the database:
 
 ```bash
-# From local (pointing at prod DB)
-DATABASE_URL=<prod-url> npm run db:migrate
+DATABASE_URL=<prod-url> npx prisma db push
 ```
 
-And set the **Xumm webhook URL** in your Xumm app settings:
+### Cron job
+
+The cron job at `/api/cron/cancel-expired` runs daily and cancels any milestone whose deadline has passed. Configure it in `vercel.json`:
+
+```json
+{
+  "crons": [
+    {
+      "path": "/api/cron/cancel-expired",
+      "schedule": "0 2 * * *"
+    }
+  ]
+}
 ```
-https://your-app.vercel.app/api/escrow/webhook
-```
-
----
-
-## Demo flow (5-minute live demo)
-
-### Setup (before demo)
-
-```bash
-npm run db:seed
-# Note the Contract ID printed — open it in the browser
-```
-
-### Demo script
-
-**Step 1 — Investor creates contract** (already seeded)
-- Open `/contract/<id>` as investor wallet
-- Show: milestone text, RLUSD amount, deadline
-
-**Step 2 — Fund Escrow**
-- Click "Fund Escrow via Xumm"
-- Scan QR in Xumm mobile app and sign
-- Page reloads to FUNDED status
-
-**Step 3 — Startup uploads proof**
-- Switch to startup wallet (join via invite link)
-- Upload a PDF with detailed milestone evidence
-- AI verification runs automatically
-
-**Step 4 — AI decision**
-- Show AI verdict (YES/NO), confidence score, reasoning
-- If YES: investor clicks "Release Funds via Xumm"
-
-**Step 5 — EscrowFinish**
-- Investor signs in Xumm → RLUSD sent to startup
-- Check XRPL Testnet explorer to confirm the transaction
-
-### Testnet explorer
-- Transactions: `https://testnet.xrpl.org/accounts/<address>`
 
 ---
 
@@ -185,38 +149,28 @@ npm run db:seed
 src/
 ├── app/
 │   ├── api/
-│   │   ├── auth/          # Xumm wallet sign-in
-│   │   ├── contracts/     # Create, join, resubmit
-│   │   ├── escrow/        # Create, finish, cancel, webhook
-│   │   ├── proof/         # PDF upload + text extraction
-│   │   └── verify/        # AI milestone verification
+│   │   ├── auth/          # Register, login, email verification, resend
+│   │   ├── contracts/     # Create, join, decline, resubmit, review, preview
+│   │   ├── escrow/        # Create calldata, confirm funding, finish, cancel
+│   │   ├── proof/         # PDF/image upload → Vercel Blob
+│   │   ├── verify/        # AI milestone verification
+│   │   ├── profile/       # User profile + notification preferences
+│   │   ├── user/wallet/   # Save wallet address
+│   │   ├── cron/          # Auto-cancel expired milestones
+│   │   └── health/        # Health check
 │   ├── contract/[id]/     # Contract detail page
-│   ├── dashboard/         # Investor + startup dashboards
+│   ├── dashboard/         # Grant giver + receiver dashboards
+│   ├── login/             # Sign in
+│   ├── register/          # Sign up + email verification screen
+│   ├── profile/           # Profile settings
 │   └── page.tsx           # Landing page
-├── components/
-│   ├── contract-form.tsx
-│   ├── proof-upload.tsx
-│   ├── escrow-status.tsx
-│   ├── ai-result.tsx
-│   └── wallet-connect.tsx
 ├── services/
-│   ├── ai/               # Claude verifier + mock
-│   ├── crypto/           # Crypto-condition generation
-│   └── xrpl/             # Escrow TXs, Xumm, XRPL client
-├── lib/
-│   └── prisma.ts          # Prisma 7 + pg adapter singleton
-└── types/
-    └── index.ts
-
-prisma/
-├── schema.prisma
-└── migrations/
-
-scripts/
-├── seed-demo.ts           # Pre-populate demo data
-├── test-e2e-flow.ts       # Full flow test (no DB/Xumm)
-├── test-xrpl.ts           # Live Testnet connectivity test
-└── test-ai.ts             # AI verifier test
+│   ├── ai/                # Claude verifier (PDF + image)
+│   └── evm/               # EVM client, escrow calldata, release/cancel
+└── lib/
+    ├── prisma.ts
+    ├── auth-options.ts
+    └── email.ts            # Resend email templates
 ```
 
 ---
@@ -225,43 +179,33 @@ scripts/
 
 ```
 DRAFT
-  └─ startup joins ──→ AWAITING_ESCROW
-                              └─ investor funds ──→ FUNDED
-                                                       └─ startup uploads ──→ PROOF_SUBMITTED
-                                                                                    └─ AI YES ──→ VERIFIED ──→ COMPLETED
-                                                                                    └─ AI NO  ──→ REJECTED
-                                                                                                     └─ resubmit ──→ FUNDED (loop)
-                                                                                                     └─ expired  ──→ EXPIRED
-                                                       └─ deadline passed ──→ EXPIRED
+  └─ receiver joins ──→ AWAITING_ESCROW
+                               └─ grant giver funds ──→ FUNDED
+                                                            └─ receiver uploads proof ──→ PROOF_SUBMITTED
+                                                                                                └─ AI YES      ──→ VERIFIED ──→ COMPLETED
+                                                                                                └─ AI UNCERTAIN ──→ PENDING_REVIEW
+                                                                                                │                       └─ investor APPROVE ──→ VERIFIED ──→ COMPLETED
+                                                                                                │                       └─ investor REJECT  ──→ REJECTED
+                                                                                                └─ AI NO       ──→ REJECTED
+                                                                                                                        └─ resubmit ──→ FUNDED (loop)
+                                                            └─ deadline passed (cron) ──→ EXPIRED
 ```
 
 ---
 
 ## Key design decisions
 
-**Why crypto-conditions?**
-XRPL native escrow requires a `Condition`/`Fulfillment` pair (SHA-256 preimage). The AI verifier reveals the fulfillment only on YES — this is the cryptographic gate that releases funds.
+**Why EVM smart contracts?**  
+XRPL EVM Sidechain gives us Solidity smart contracts with full programmability, while staying in the XRPL ecosystem and using RLUSD as the native stablecoin.
 
-**Why Xumm for signing?**
-We never hold private keys. Xumm signs transactions on the user's device. The app builds the unsigned TX and creates a sign request; Xumm handles the rest.
+**Why MetaMask?**  
+The platform never holds user private keys. MetaMask signs the `approve` + `fundMilestone` transactions on the user's device. The platform wallet only calls `releaseMilestone` / `cancelMilestone` server-side after AI verification.
 
-**Why mock mode?**
-Setting `ANTHROPIC_API_KEY` is optional. Without it, the verifier falls back to a length-based mock (>100 chars → YES). This lets you run the full UI flow without an API key.
+**Why PENDING_REVIEW?**  
+When the AI confidence is below a threshold, instead of making a wrong call, it escalates to the grant giver for a manual decision. This is the Tier 2 governance model.
 
-**XLS-85 (IOU Escrow)**
-Live on XRPL Mainnet/Testnet since February 2026. Allows RLUSD (and any IOU) as the escrow amount, not just XRP. The `Amount` field uses the IOU object format: `{ currency, issuer, value }`.
+**Why email/password auth?**  
+Straightforward onboarding without requiring a wallet upfront. Users connect MetaMask separately once they're ready to fund or receive.
 
----
-
-## Running tests
-
-```bash
-# Full E2E logic test (no external services needed)
-npm run test:e2e
-
-# Live Testnet connectivity
-npm run test:xrpl
-
-# AI verifier (mock mode)
-npm run test:ai
-```
+**Email verification**  
+All new accounts require email verification before they can sign in. Tokens expire in 24 hours; resend is rate-limited to once per 60 seconds server-side.
