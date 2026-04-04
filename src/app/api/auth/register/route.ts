@@ -35,7 +35,6 @@ export async function POST(request: NextRequest) {
         passwordHash,
         name: name || null,
         role,
-        emailVerified: true,
         emailVerificationToken,
         emailVerificationTokenExpiry,
       },
