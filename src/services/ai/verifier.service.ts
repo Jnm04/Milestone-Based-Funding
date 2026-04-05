@@ -209,6 +209,29 @@ export async function verifyMilestoneImage(params: {
   return combineResults(claudeResult, geminiResult);
 }
 
+/** Verifies milestone against an image using Claude Vision only (Gemini fallback). */
+export async function callClaudeImageOnly(params: {
+  milestone: string;
+  imageBuffer: Buffer;
+  mimeType: "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+}): Promise<AIVerificationResult> {
+  const base64 = params.imageBuffer.toString("base64");
+  const userMessage =
+    `Examine the image and determine if it proves the following milestone was completed.\n\n` +
+    `Milestone:\n[MILESTONE START]\n${params.milestone}\n[MILESTONE END]`;
+
+  return callClaude(
+    [{
+      role: "user",
+      content: [
+        { type: "image", source: { type: "base64", media_type: params.mimeType, data: base64 } },
+        { type: "text", text: userMessage },
+      ],
+    }],
+    VERIFICATION_SYSTEM_PROMPT
+  );
+}
+
 /**
  * Mock verifier for development without real API keys.
  * Always returns YES with 85% confidence.

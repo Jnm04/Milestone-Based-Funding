@@ -62,6 +62,9 @@ export async function POST(request: NextRequest) {
       // Fetch image from Vercel Blob (private store — use signed downloadUrl)
       const blobMeta = await head(proof.fileUrl);
       const imageRes = await fetch(blobMeta.downloadUrl);
+      if (!imageRes.ok) {
+        throw new Error(`Failed to download image from storage: ${imageRes.status} ${imageRes.statusText}`);
+      }
       const imageBuffer = Buffer.from(await imageRes.arrayBuffer());
       const ext = proof.fileName.slice(proof.fileName.lastIndexOf(".")).toLowerCase();
       const mimeMap: Record<string, "image/jpeg" | "image/png" | "image/gif" | "image/webp"> = {
@@ -69,7 +72,14 @@ export async function POST(request: NextRequest) {
         ".png": "image/png", ".gif": "image/gif", ".webp": "image/webp",
       };
       const mimeType = mimeMap[ext] ?? "image/jpeg";
-      result = await verifyMilestoneImage({ milestone: milestoneTitle, imageBuffer, mimeType });
+      try {
+        result = await verifyMilestoneImage({ milestone: milestoneTitle, imageBuffer, mimeType });
+      } catch (imgErr) {
+        // Gemini sometimes rejects images (format, size, transient error) — fall back to Claude-only
+        console.warn("[verify] Image verification failed, falling back to Claude-only:", imgErr);
+        const { callClaudeImageOnly } = await import("@/services/ai/verifier.service");
+        result = await callClaudeImageOnly({ milestone: milestoneTitle, imageBuffer, mimeType });
+      }
     } else {
       result = await verifyMilestone({
         milestone: milestoneTitle,
