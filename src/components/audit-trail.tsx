@@ -12,8 +12,6 @@ const EVENT_LABELS: Record<string, string> = {
   MANUAL_REVIEW_REJECTED: "Manually Rejected",
 };
 
-const EXPLORER_BASE = "https://explorer.xrplevm.org/tx";
-
 export function AuditTrail({ logs }: { logs: AuditLog[] }) {
   if (logs.length === 0) return null;
 
@@ -80,15 +78,13 @@ export function AuditTrail({ logs }: { logs: AuditLog[] }) {
                   {new Date(log.createdAt).toLocaleString()}
                 </span>
                 {log.evmTxHash ? (
-                  <a
-                    href={`${EXPLORER_BASE}/${log.evmTxHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-mono hover:underline"
+                  <span
+                    className="text-xs font-mono"
+                    title={log.evmTxHash}
                     style={{ color: "#C4704B" }}
                   >
-                    {log.evmTxHash.slice(0, 10)}… ↗
-                  </a>
+                    {log.evmTxHash.slice(0, 10)}…
+                  </span>
                 ) : (
                   <span className="text-xs" style={{ color: "#52525b" }}>
                     off-chain only
