@@ -136,7 +136,7 @@ async function waitForReceipt(txHash: string): Promise<void> {
       }
       return;
     }
-    await new Promise((r) => setTimeout(r, 2500));
+    await new Promise((r) => setTimeout(r, 4000));
   }
   throw new Error("Transaction not mined within 5 minutes.");
 }
@@ -212,6 +212,8 @@ export function ContractActions({
       const approveTxHash = await sendTx(account, rlusdAddress, approveCalldata);
       await waitForReceipt(approveTxHash);
       toast.info("Approved! Step 2/2: Fund escrow in MetaMask…");
+      // Small delay so the RPC rate-limiter resets between the two transactions
+      await new Promise((r) => setTimeout(r, 4000));
 
       // 3. Step 2 — Fund milestone on-chain
       setFundingStep("funding");
