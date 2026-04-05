@@ -42,7 +42,7 @@ export function EscrowStatus({
       {amountRLUSD && (
         <div className="flex items-center justify-between">
           <span className="text-sm text-zinc-500">Amount Locked</span>
-          <span className="font-semibold">{amountRLUSD} RLUSD</span>
+          <span className="font-semibold text-zinc-900">{amountRLUSD} RLUSD</span>
         </div>
       )}
 
@@ -57,7 +57,7 @@ export function EscrowStatus({
 
       <div className="flex items-center justify-between">
         <span className="text-sm text-zinc-500">Deadline</span>
-        <span className={`text-sm font-medium ${daysLeft < 3 ? "text-red-500" : ""}`}>
+        <span className={`text-sm font-medium ${daysLeft < 3 ? "text-red-500" : "text-zinc-900"}`}>
           {deadline.toLocaleDateString()} ({daysLeft > 0 ? `${daysLeft}d left` : "expired"})
         </span>
       </div>

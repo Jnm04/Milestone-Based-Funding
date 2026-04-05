@@ -118,7 +118,7 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
 
       {/* Milestones */}
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", color: "#18181b" }}>
           <span style={{ fontSize: "14px", fontWeight: 600, color: "#18181b" }}>Milestones</span>
           {totalAmount > 0 && (
             <span style={{ fontSize: "13px", color: "#71717a" }}>
@@ -139,6 +139,7 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
               background: "#fafafa",
               border: "1px solid #e4e4e7",
               borderRadius: "12px",
+              color: "#18181b",
             }}
           >
             {/* Milestone header */}
@@ -197,6 +198,7 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
                   fontFamily: "inherit",
                   resize: "vertical",
                   background: "#fff",
+                  color: "#18181b",
                   boxSizing: "border-box",
                 }}
               />

@@ -106,7 +106,7 @@ export function ProofUpload({ contractId, milestoneId, onUploaded, replaceMode }
     <div className="flex flex-col gap-4 p-6 border-2 border-dashed rounded-xl bg-zinc-50">
       <div className="text-center">
         <p className="text-sm font-medium text-zinc-700">Upload Milestone Proof</p>
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-xs text-zinc-500 mt-1">
           PDF, DOCX, PPTX, XLSX · Images (JPG, PNG, WEBP) · CSV, TXT · Max 20 MB · Multiple files supported
         </p>
       </div>
