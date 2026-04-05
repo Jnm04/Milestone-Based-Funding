@@ -70,7 +70,9 @@ async function connectMetaMask(): Promise<string> {
     chainName: "XRPL EVM Sidechain Testnet",
     nativeCurrency: { name: "XRP", symbol: "XRP", decimals: 18 },
     rpcUrls: [
-      process.env.NEXT_PUBLIC_EVM_RPC_URL ?? "https://1449000.rpc.thirdweb.com",
+      process.env.NEXT_PUBLIC_EVM_RPC_URL ?? "https://rpc.testnet.xrplevm.org",
+      "https://rpc.testnet.xrplevm.org",
+      "https://1449000.rpc.thirdweb.com",
     ],
     blockExplorerUrls: ["https://explorer.xrplevm.org"],
   };
