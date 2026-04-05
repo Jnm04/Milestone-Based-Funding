@@ -132,6 +132,7 @@ model AuditLog {
   milestoneId String?
   event       String
   evmTxHash   String?
+  xrplTxHash  String?
   actor       String?
   metadata    Json?
   createdAt   DateTime @default(now())

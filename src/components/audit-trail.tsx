@@ -12,6 +12,8 @@ const EVENT_LABELS: Record<string, string> = {
   MANUAL_REVIEW_REJECTED: "Manually Rejected",
 };
 
+const XRPL_EXPLORER = "https://testnet.xrpscan.com/tx";
+
 export function AuditTrail({ logs }: { logs: AuditLog[] }) {
   if (logs.length === 0) return null;
 
@@ -40,7 +42,7 @@ export function AuditTrail({ logs }: { logs: AuditLog[] }) {
                 style={{
                   width: 8,
                   height: 8,
-                  background: log.evmTxHash ? "#C4704B" : "#52525b",
+                  background: log.xrplTxHash ? "#C4704B" : log.evmTxHash ? "#7c6a5c" : "#52525b",
                   marginTop: 6,
                 }}
               />
@@ -77,11 +79,24 @@ export function AuditTrail({ logs }: { logs: AuditLog[] }) {
                 <span className="text-xs" style={{ color: "#A89B8C" }}>
                   {new Date(log.createdAt).toLocaleString()}
                 </span>
-                {log.evmTxHash ? (
+
+                {/* XRPL native ledger link — full explorer support */}
+                {log.xrplTxHash ? (
+                  <a
+                    href={`${XRPL_EXPLORER}/${log.xrplTxHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-mono hover:underline"
+                    title={log.xrplTxHash}
+                    style={{ color: "#C4704B" }}
+                  >
+                    {log.xrplTxHash.slice(0, 10)}… ↗
+                  </a>
+                ) : log.evmTxHash ? (
                   <span
                     className="text-xs font-mono"
                     title={log.evmTxHash}
-                    style={{ color: "#C4704B" }}
+                    style={{ color: "#7c6a5c" }}
                   >
                     {log.evmTxHash.slice(0, 10)}…
                   </span>
