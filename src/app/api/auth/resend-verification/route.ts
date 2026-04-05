@@ -41,9 +41,11 @@ export async function POST(request: NextRequest) {
       data: { emailVerificationToken, emailVerificationTokenExpiry },
     });
 
-    sendVerificationEmail({ to: email, token: emailVerificationToken }).catch((err) =>
-      console.error("[resend-verification] Failed to send email:", err)
-    );
+    try {
+      await sendVerificationEmail({ to: email, token: emailVerificationToken });
+    } catch (err) {
+      console.error("[resend-verification] Failed to send email:", err);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {

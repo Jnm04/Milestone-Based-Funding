@@ -29,6 +29,9 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendDone, setResendDone] = useState(false);
 
   useEffect(() => {
     if (searchParams.get("verified") === "1") {
@@ -47,7 +50,7 @@ function LoginForm() {
       const res = await signIn("credentials", { email, password, redirect: false });
 
       if (res?.error === "EmailNotVerified") {
-        toast.error("Please verify your email first. Check your inbox.");
+        setUnverifiedEmail(email);
         return;
       }
       if (res?.error) {
@@ -73,6 +76,54 @@ function LoginForm() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleResend() {
+    if (!unverifiedEmail) return;
+    setResendLoading(true);
+    try {
+      await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: unverifiedEmail }),
+      });
+      setResendDone(true);
+    } finally {
+      setResendLoading(false);
+    }
+  }
+
+  if (unverifiedEmail) {
+    return (
+      <main
+        className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
+        style={{ background: "#171311" }}
+      >
+        <NodeBackground />
+        <div className="relative z-10 w-full max-w-md flex flex-col gap-8 text-center">
+          <Logo variant="full" />
+          <div
+            className="flex flex-col gap-5 p-8 rounded-2xl"
+            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.15)" }}
+          >
+            <h1 className="text-2xl" style={{ color: "#EDE6DD", fontWeight: 300 }}>Verify your email</h1>
+            <p className="text-sm" style={{ color: "#A89B8C" }}>
+              Your account is not yet verified. Check your inbox at <strong style={{ color: "#EDE6DD" }}>{unverifiedEmail}</strong> or request a new link.
+            </p>
+            {resendDone ? (
+              <p className="text-sm font-medium" style={{ color: "#6EAF7C" }}>Verification email sent! Check your inbox.</p>
+            ) : (
+              <button onClick={handleResend} disabled={resendLoading} className="cs-btn-primary w-full">
+                {resendLoading ? "Sending…" : "Resend verification email"}
+              </button>
+            )}
+            <button onClick={() => setUnverifiedEmail(null)} className="text-sm hover:underline" style={{ color: "#A89B8C" }}>
+              Back to sign in
+            </button>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   return (
