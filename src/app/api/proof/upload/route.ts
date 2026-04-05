@@ -13,7 +13,10 @@ async function triggerVerification(proofId: string) {
       ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
     await fetch(`${baseUrl}/api/verify`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.CRON_SECRET}`,
+      },
       body: JSON.stringify({ proofId }),
     });
   } catch (err) {
@@ -83,6 +86,8 @@ export async function POST(request: NextRequest) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const category = categorizeFile(effectiveMime, fileName);
+    // Sanitize filename for use in Blob storage paths (keep original for display)
+    const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
 
     let extractedText: string | null = null;
     try {
@@ -118,7 +123,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const filename = `proofs/${milestone.contractId}/${Date.now()}-${fileName}`;
+      const filename = `proofs/${milestone.contractId}/${Date.now()}-${safeFileName}`;
       const blob = await put(filename, buffer, { access: "private", contentType: effectiveMime });
       const fileUrl = blob.url;
 
@@ -170,7 +175,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: `Cannot upload proof in status: ${contract.status}` }, { status: 409 });
       }
 
-      const filename = `proofs/${resolvedContractId}/${Date.now()}-${fileName}`;
+      const filename = `proofs/${resolvedContractId}/${Date.now()}-${safeFileName}`;
       const blob = await put(filename, buffer, { access: "private", contentType: effectiveMime });
       const fileUrl = blob.url;
 

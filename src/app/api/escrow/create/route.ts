@@ -41,6 +41,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Contract not found" }, { status: 404 });
     }
 
+    if (contract.investorId !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     if (contract.status !== "AWAITING_ESCROW") {
       return NextResponse.json(
         { error: `Expected AWAITING_ESCROW, got ${contract.status}` },

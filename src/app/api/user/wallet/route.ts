@@ -14,6 +14,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "walletAddress is required" }, { status: 400 });
   }
 
+  if (!/^0x[0-9a-fA-F]{40}$/.test(walletAddress)) {
+    return NextResponse.json({ error: "Invalid EVM wallet address" }, { status: 400 });
+  }
+
   try {
     await prisma.user.update({
       where: { id: session.user.id },

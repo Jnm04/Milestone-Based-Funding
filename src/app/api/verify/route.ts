@@ -7,6 +7,12 @@ import { sendPendingReviewEmail, sendRejectedEmail, sendVerifiedEmail, sendMiles
 
 export async function POST(request: NextRequest) {
   try {
+    // Internal endpoint — only callable by the server itself (via triggerVerification) or the cron job
+    const authHeader = request.headers.get("authorization");
+    if (!authHeader || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { proofId } = await request.json();
 
     if (!proofId) {

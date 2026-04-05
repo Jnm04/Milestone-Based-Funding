@@ -15,6 +15,8 @@ export async function GET(
   const contract = await prisma.contract.findUnique({
     where: { id },
     select: {
+      investorId: true,
+      startupId: true,
       status: true,
       milestones: { select: { id: true, status: true }, orderBy: { order: "asc" } },
     },
@@ -22,5 +24,10 @@ export async function GET(
 
   if (!contract) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  return NextResponse.json(contract);
+  if (contract.investorId !== session.user.id && contract.startupId !== session.user.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { investorId: _i, startupId: _s, ...contractData } = contract;
+  return NextResponse.json(contractData);
 }
