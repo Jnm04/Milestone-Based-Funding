@@ -6,6 +6,7 @@ import { extractPdfText, extractOfficeText, categorizeFile } from "@/services/ai
 import { sendProofSubmittedEmail } from "@/lib/email";
 import { put } from "@vercel/blob";
 import path from "path";
+import { writeAuditLog } from "@/services/evm/audit.service";
 
 async function triggerVerification(proofId: string) {
   try {
@@ -151,6 +152,14 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      void writeAuditLog({
+        contractId: milestone.contractId,
+        milestoneId,
+        event: "PROOF_SUBMITTED",
+        actor: session.user.id,
+        metadata: { proofId: proof.id, fileName },
+      });
+
       // Auto-trigger AI verification after response is sent
       after(() => triggerVerification(proof.id));
 
@@ -197,6 +206,13 @@ export async function POST(request: NextRequest) {
           startupName: contract.startup?.companyName ?? contract.startup?.name,
         });
       }
+
+      void writeAuditLog({
+        contractId: resolvedContractId,
+        event: "PROOF_SUBMITTED",
+        actor: session.user.id,
+        metadata: { proofId: proof.id, fileName },
+      });
 
       // Auto-trigger AI verification after response is sent
       after(() => triggerVerification(proof.id));

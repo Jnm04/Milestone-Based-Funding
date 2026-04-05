@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { verifyFundTx } from "@/services/evm/escrow.service";
 import { sendFundedEmail } from "@/lib/email";
+import { writeAuditLog } from "@/services/evm/audit.service";
 
 /**
  * POST /api/escrow/confirm
@@ -86,6 +87,14 @@ export async function POST(request: NextRequest) {
         data: { status: "FUNDED", evmTxHash: txHash },
       });
     }
+
+    void writeAuditLog({
+      contractId,
+      milestoneId: milestoneId ?? undefined,
+      event: "ESCROW_FUNDED",
+      actor: session.user.walletAddress ?? session.user.id,
+      metadata: { txHash, amountUSD: fundedAmountUSD },
+    });
 
     // Email startup: milestone funded
     if (contract.startup?.notifyFunded) {

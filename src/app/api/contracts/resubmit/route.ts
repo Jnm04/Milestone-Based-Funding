@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { writeAuditLog } from "@/services/evm/audit.service";
 
 /**
  * POST /api/contracts/resubmit
@@ -60,6 +61,12 @@ export async function POST(request: NextRequest) {
     await prisma.milestone.updateMany({
       where: { contractId, status: "REJECTED" },
       data: { status: "FUNDED" },
+    });
+
+    void writeAuditLog({
+      contractId,
+      event: "PROOF_RESUBMITTED",
+      actor: session.user.id,
     });
 
     return NextResponse.json({ ok: true, status: "FUNDED" });

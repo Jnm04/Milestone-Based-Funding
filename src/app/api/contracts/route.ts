@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { nanoid } from "nanoid";
+import { writeAuditLog } from "@/services/evm/audit.service";
 
 export async function POST(request: NextRequest) {
   try {
@@ -91,6 +92,13 @@ export async function POST(request: NextRequest) {
       });
 
       return contract;
+    });
+
+    void writeAuditLog({
+      contractId: result.id,
+      event: "CONTRACT_CREATED",
+      actor: session.user.id,
+      metadata: { milestoneCount: result.id ? 1 : 0 },
     });
 
     return NextResponse.json({

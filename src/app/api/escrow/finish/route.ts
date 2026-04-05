@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { releaseMilestone } from "@/services/evm/escrow.service";
 import { sendVerifiedEmail, sendMilestoneCompletedInvestorEmail } from "@/lib/email";
+import { writeAuditLog } from "@/services/evm/audit.service";
 
 /**
  * POST /api/escrow/finish
@@ -109,6 +110,13 @@ export async function POST(request: NextRequest) {
     const completedAmount = milestoneId
       ? (contract.milestones.find((m) => m.id === milestoneId)?.amountUSD ?? contract.amountUSD).toString()
       : contract.amountUSD.toString();
+
+    void writeAuditLog({
+      contractId,
+      milestoneId: milestoneId ?? undefined,
+      event: "FUNDS_RELEASED",
+      metadata: { txHash, amountUSD: completedAmount, auto: false },
+    });
 
     if (contract.startup?.notifyVerified) {
       void sendVerifiedEmail({

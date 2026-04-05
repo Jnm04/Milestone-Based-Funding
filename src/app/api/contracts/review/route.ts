@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { writeAuditLog } from "@/services/evm/audit.service";
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,6 +44,12 @@ export async function POST(request: NextRequest) {
     await prisma.milestone.updateMany({
       where: { contractId, status: "PENDING_REVIEW" },
       data: { status: newStatus as never },
+    });
+
+    void writeAuditLog({
+      contractId,
+      event: decision === "APPROVE" ? "MANUAL_REVIEW_APPROVED" : "MANUAL_REVIEW_REJECTED",
+      actor: session.user.id,
     });
 
     return NextResponse.json({ status: newStatus });

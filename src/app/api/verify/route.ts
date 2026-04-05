@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyMilestone, verifyMilestoneImage, mockVerifyMilestone, categorizeFile } from "@/services/ai/verifier.service";
 import { releaseMilestone } from "@/services/evm/escrow.service";
 import { sendPendingReviewEmail, sendRejectedEmail, sendVerifiedEmail, sendMilestoneCompletedInvestorEmail } from "@/lib/email";
+import { writeAuditLog } from "@/services/evm/audit.service";
 
 export async function POST(request: NextRequest) {
   try {
@@ -134,6 +135,14 @@ export async function POST(request: NextRequest) {
 
     const amountUSD = (proof.milestone?.amountUSD ?? contract.amountUSD).toString();
 
+    void writeAuditLog({
+      contractId: contract.id,
+      milestoneId: proof.milestoneId ?? undefined,
+      event: "AI_DECISION",
+      actor: "AI",
+      metadata: { decision: result.decision, confidence: result.confidence, action, proofId },
+    });
+
     if (action === "PENDING_REVIEW" && contract.investor.notifyPendingReview) {
       void sendPendingReviewEmail({
         to: contract.investor.email,
@@ -174,6 +183,13 @@ export async function POST(request: NextRequest) {
         } else {
           await prisma.contract.update({ where: { id: contract.id }, data: { status: "COMPLETED" } });
         }
+
+        void writeAuditLog({
+          contractId: contract.id,
+          milestoneId: proof.milestoneId ?? undefined,
+          event: "FUNDS_RELEASED",
+          metadata: { txHash, amountUSD, auto: true },
+        });
 
         if (contract.startup?.notifyVerified) {
           void sendVerifiedEmail({ to: contract.startup.email, contractId: contract.id, milestoneTitle, amountUSD: amountUSD, txHash });

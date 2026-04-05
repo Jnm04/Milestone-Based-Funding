@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { cancelMilestone, getMilestoneEscrowState } from "@/services/evm/escrow.service";
+import { writeAuditLog } from "@/services/evm/audit.service";
 
 /**
  * POST /api/escrow/cancel
@@ -113,6 +114,14 @@ export async function POST(request: NextRequest) {
     await prisma.contract.update({
       where: { id: contractId },
       data: { status: "EXPIRED" },
+    });
+
+    void writeAuditLog({
+      contractId,
+      milestoneId: milestoneId ?? undefined,
+      event: "ESCROW_CANCELLED",
+      actor: session.user.id,
+      metadata: { txHash },
     });
 
     return NextResponse.json({ ok: true, action: "cancelled", txHash });

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { EscrowStatus } from "@/components/escrow-status";
 import { AIResult } from "@/components/ai-result";
+import { AuditTrail } from "@/components/audit-trail";
 import { ContractStatus } from "@/types";
 import { ContractActions } from "./contract-actions";
 import { MilestoneTimeline } from "./milestone-timeline";
@@ -20,18 +21,24 @@ export default async function ContractPage({ params, searchParams }: ContractPag
   const { investor, startup } = await searchParams;
   const viewerWallet = investor ?? startup ?? null;
 
-  const contract = await prisma.contract.findUnique({
-    where: { id },
-    include: {
-      investor: true,
-      startup: true,
-      proofs: { orderBy: { createdAt: "desc" } },
-      milestones: {
-        orderBy: { order: "asc" },
-        include: { proofs: { orderBy: { createdAt: "desc" } } },
+  const [contract, auditLogs] = await Promise.all([
+    prisma.contract.findUnique({
+      where: { id },
+      include: {
+        investor: true,
+        startup: true,
+        proofs: { orderBy: { createdAt: "desc" } },
+        milestones: {
+          orderBy: { order: "asc" },
+          include: { proofs: { orderBy: { createdAt: "desc" } } },
+        },
       },
-    },
-  });
+    }),
+    prisma.auditLog.findMany({
+      where: { contractId: id },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
 
   if (!contract) return notFound();
 
@@ -205,6 +212,9 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           amountRLUSD={activeMilestone?.amountRLUSD ?? contract.amountRLUSD}
           cancelAfter={activeMilestone?.cancelAfter ?? contract.cancelAfter}
         />
+
+        {/* On-chain audit trail */}
+        <AuditTrail logs={auditLogs} />
 
         {/* Interactive actions (client component) */}
         <ContractActions

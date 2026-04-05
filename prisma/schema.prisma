@@ -61,6 +61,7 @@ model Contract {
   inviteLink          String?        @unique
   proofs              Proof[]
   milestones          Milestone[]
+  auditLogs           AuditLog[]
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
 }
@@ -122,4 +123,16 @@ enum MilestoneStatus {
   REJECTED
   EXPIRED
   COMPLETED
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  contractId  String
+  contract    Contract @relation(fields: [contractId], references: [id])
+  milestoneId String?
+  event       String
+  evmTxHash   String?
+  actor       String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
 }
