@@ -22,12 +22,14 @@ async function rpc(method: string, params: Record<string, unknown>) {
 }
 
 /**
- * Writes an audit memo to the native XRP Ledger testnet as a 1-drop Payment
- * to self with hex-encoded JSON in the Memos field.
+ * Writes an audit memo to the native XRP Ledger testnet using an AccountSet
+ * transaction with hex-encoded JSON in the Memos field.
+ *
+ * AccountSet is used instead of Payment-to-self because XRPL rejects
+ * self-payments as temREDUNDANT. AccountSet carries Memos without a destination.
  *
  * Uses HTTP JSON-RPC (not WebSocket) so it works reliably in Vercel serverless.
- * Signs locally, submits without waiting for confirmation — returns the tx hash
- * immediately (deterministic from the signed blob).
+ * Signs locally, awaits submit, returns the tx hash (deterministic from signed blob).
  *
  * Never throws — returns null on failure.
  */
@@ -68,11 +70,11 @@ export async function writeXrplAuditMemo(
       ts: new Date().toISOString(),
     });
 
+    // AccountSet instead of Payment-to-self — no destination required,
+    // no temREDUNDANT rejection, Memos field is fully supported.
     const tx = {
-      TransactionType: "Payment" as const,
+      TransactionType: "AccountSet" as const,
       Account: wallet.address,
-      Destination: wallet.address,
-      Amount: "1",
       Fee: fee,
       Sequence: sequence,
       Memos: [
@@ -99,7 +101,7 @@ export async function writeXrplAuditMemo(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ method: "submit", params: [{ tx_blob: blob }] }),
       });
-      return res.json() as Promise<{ result?: { engine_result?: string; account_sequence_next?: number } }>;
+      return res.json() as Promise<{ result?: { engine_result?: string } }>;
     };
 
     let result = await submit(signed.tx_blob).catch((err) => {
