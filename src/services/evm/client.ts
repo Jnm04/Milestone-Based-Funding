@@ -3,14 +3,15 @@ import { ethers } from "ethers";
 const RPC_URL =
   process.env.EVM_RPC_URL ?? "https://1449000.rpc.thirdweb.com";
 
-let provider: ethers.JsonRpcProvider | null = null;
-let platformSigner: ethers.Wallet | null = null;
+function makeProvider(): ethers.JsonRpcProvider {
+  return new ethers.JsonRpcProvider(RPC_URL, undefined, {
+    staticNetwork: true,
+    polling: false,
+  });
+}
 
 export function getEVMProvider(): ethers.JsonRpcProvider {
-  if (!provider) {
-    provider = new ethers.JsonRpcProvider(RPC_URL);
-  }
-  return provider;
+  return makeProvider();
 }
 
 /**
@@ -25,8 +26,35 @@ export function getPlatformSigner(): ethers.Wallet {
       "PLATFORM_WALLET_PRIVATE_KEY is not set — required to release/cancel escrow"
     );
   }
-  if (!platformSigner) {
-    platformSigner = new ethers.Wallet(key, getEVMProvider());
+  return new ethers.Wallet(key, makeProvider());
+}
+
+/**
+ * Wraps an async fn with exponential backoff retries.
+ * Handles 429 / rate-limit errors from the public RPC.
+ */
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  retries = 5,
+  delayMs = 3000
+): Promise<T> {
+  let lastErr: unknown;
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      const isRateLimit =
+        msg.includes("429") ||
+        msg.includes("Too Many Requests") ||
+        msg.includes("exceeded maximum retry limit") ||
+        msg.includes("SERVER_ERROR");
+      if (!isRateLimit) throw err;
+      const wait = delayMs * Math.pow(2, i);
+      console.warn(`[evm] Rate limited, retrying in ${wait}ms… (attempt ${i + 1}/${retries})`);
+      await new Promise((r) => setTimeout(r, wait));
+    }
   }
-  return platformSigner;
+  throw lastErr;
 }

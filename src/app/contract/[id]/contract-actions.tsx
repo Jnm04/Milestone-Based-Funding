@@ -445,10 +445,13 @@ export function ContractActions({
 
   // ── PROOF_SUBMITTED: trigger AI verification ──────────────────────────────
   if (status === "PROOF_SUBMITTED" && latestProofId && !verifyDone) {
+    const isStartup = viewerWallet === startupAddress;
     return (
       <div className="flex flex-col gap-3 p-5 bg-blue-50 border border-blue-200 rounded-xl">
-        <p className="text-sm text-blue-800">Proof uploaded. Ready for AI verification.</p>
-        {latestProofFileUrl && (
+        <p className="text-sm text-blue-800">
+          {isStartup ? "Proof uploaded. Ready for AI verification." : "The receiver has submitted proof. AI verification is pending."}
+        </p>
+        {latestProofFileUrl && isStartup && (
           <a
             href={latestProofFileUrl}
             target="_blank"
@@ -462,9 +465,11 @@ export function ContractActions({
             <span className="text-xs text-blue-600">Open ↗</span>
           </a>
         )}
-        <Button onClick={() => handleVerify(latestProofId)} disabled={loadingVerify}>
-          {loadingVerify ? "Verifying…" : "Run AI Verification"}
-        </Button>
+        {isStartup && (
+          <Button onClick={() => handleVerify(latestProofId)} disabled={loadingVerify}>
+            {loadingVerify ? "Verifying…" : "Run AI Verification"}
+          </Button>
+        )}
       </div>
     );
   }

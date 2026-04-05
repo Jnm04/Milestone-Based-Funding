@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
       }
 
       const filename = `proofs/${milestone.contractId}/${Date.now()}-${fileName}`;
-      const blob = await put(filename, buffer, { access: "public", contentType: effectiveMime });
+      const blob = await put(filename, buffer, { access: "private", contentType: effectiveMime });
       const fileUrl = blob.url;
 
       const proof = await prisma.proof.create({
@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
       }
 
       const filename = `proofs/${resolvedContractId}/${Date.now()}-${fileName}`;
-      const blob = await put(filename, buffer, { access: "public", contentType: effectiveMime });
+      const blob = await put(filename, buffer, { access: "private", contentType: effectiveMime });
       const fileUrl = blob.url;
 
       const proof = await prisma.proof.create({

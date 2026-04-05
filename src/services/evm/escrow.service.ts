@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import { getEVMProvider, getPlatformSigner } from "./client";
+import { getEVMProvider, getPlatformSigner, withRetry } from "./client";
 import { ESCROW_ABI, ERC20_ABI, toRLUSDUnits } from "@/lib/evm-abi";
 
 const ESCROW_CONTRACT = process.env.NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS!;
@@ -54,12 +54,14 @@ export async function releaseMilestone(
   contractId: string,
   milestoneOrder: number
 ): Promise<string> {
-  const signer = getPlatformSigner();
-  const contract = new ethers.Contract(ESCROW_CONTRACT, ESCROW_ABI, signer);
-  const contractIdHash = contractIdToBytes32(contractId);
-  const tx = await contract.releaseMilestone(contractIdHash, milestoneOrder);
-  const receipt = await tx.wait();
-  return receipt.hash;
+  return withRetry(async () => {
+    const signer = getPlatformSigner();
+    const contract = new ethers.Contract(ESCROW_CONTRACT, ESCROW_ABI, signer);
+    const contractIdHash = contractIdToBytes32(contractId);
+    const tx = await contract.releaseMilestone(contractIdHash, milestoneOrder);
+    const receipt = await tx.wait();
+    return receipt.hash;
+  });
 }
 
 /**
@@ -70,12 +72,14 @@ export async function cancelMilestone(
   contractId: string,
   milestoneOrder: number
 ): Promise<string> {
-  const signer = getPlatformSigner();
-  const contract = new ethers.Contract(ESCROW_CONTRACT, ESCROW_ABI, signer);
-  const contractIdHash = contractIdToBytes32(contractId);
-  const tx = await contract.cancelMilestone(contractIdHash, milestoneOrder);
-  const receipt = await tx.wait();
-  return receipt.hash;
+  return withRetry(async () => {
+    const signer = getPlatformSigner();
+    const contract = new ethers.Contract(ESCROW_CONTRACT, ESCROW_ABI, signer);
+    const contractIdHash = contractIdToBytes32(contractId);
+    const tx = await contract.cancelMilestone(contractIdHash, milestoneOrder);
+    const receipt = await tx.wait();
+    return receipt.hash;
+  });
 }
 
 /**

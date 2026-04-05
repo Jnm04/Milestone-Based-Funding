@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { head } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import { verifyMilestone, verifyMilestoneImage, mockVerifyMilestone, categorizeFile } from "@/services/ai/verifier.service";
-import { sendPendingReviewEmail, sendRejectedEmail } from "@/lib/email";
+import { releaseMilestone } from "@/services/evm/escrow.service";
+import { sendPendingReviewEmail, sendRejectedEmail, sendVerifiedEmail, sendMilestoneCompletedInvestorEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,8 +47,9 @@ export async function POST(request: NextRequest) {
     if (!hasApiKey) {
       result = mockVerifyMilestone({ milestone: milestoneTitle, extractedText });
     } else if (category === "image") {
-      // Fetch image from Vercel Blob URL and send to Claude Vision
-      const imageRes = await fetch(proof.fileUrl);
+      // Fetch image from Vercel Blob (private store — use signed downloadUrl)
+      const blobMeta = await head(proof.fileUrl);
+      const imageRes = await fetch(blobMeta.downloadUrl);
       const imageBuffer = Buffer.from(await imageRes.arrayBuffer());
       const ext = proof.fileName.slice(proof.fileName.lastIndexOf(".")).toLowerCase();
       const mimeMap: Record<string, "image/jpeg" | "image/png" | "image/gif" | "image/webp"> = {
@@ -125,6 +128,43 @@ export async function POST(request: NextRequest) {
         milestoneTitle,
         aiReasoning: result.reasoning,
       });
+    }
+
+    // Auto-release funds when AI approves with high confidence
+    if (action === "VERIFIED") {
+      try {
+        const milestoneOrder = proof.milestone?.order ?? 0;
+        const txHash = await releaseMilestone(contract.id, milestoneOrder);
+        console.log("[verify] Auto-released on-chain:", txHash);
+
+        if (proof.milestoneId) {
+          const completedMilestone = await prisma.milestone.update({
+            where: { id: proof.milestoneId },
+            data: { status: "COMPLETED", evmTxHash: txHash },
+            include: { contract: { include: { milestones: { orderBy: { order: "asc" } } } } },
+          });
+          const milestones = completedMilestone.contract.milestones;
+          const remaining = milestones.find(
+            (m) => m.id !== proof.milestoneId && !["COMPLETED", "EXPIRED"].includes(m.status)
+          );
+          const nextStatus = !remaining ? "COMPLETED" : remaining.status === "FUNDED" ? "FUNDED" : "AWAITING_ESCROW";
+          await prisma.contract.update({ where: { id: contract.id }, data: { status: nextStatus as never } });
+        } else {
+          await prisma.contract.update({ where: { id: contract.id }, data: { status: "COMPLETED" } });
+        }
+
+        if (contract.startup?.notifyVerified) {
+          void sendVerifiedEmail({ to: contract.startup.email, contractId: contract.id, milestoneTitle, amountUSD: amountUSD, txHash });
+        }
+        if (contract.investor.notifyMilestoneCompleted) {
+          void sendMilestoneCompletedInvestorEmail({ to: contract.investor.email, contractId: contract.id, milestoneTitle, amountUSD });
+        }
+
+        return NextResponse.json({ decision: result.decision, reasoning: result.reasoning, confidence: result.confidence, action: "COMPLETED", txHash });
+      } catch (releaseErr) {
+        // Auto-release failed — leave status as VERIFIED so startup can retry manually
+        console.error("[verify] Auto-release failed:", releaseErr);
+      }
     }
 
     return NextResponse.json({
