@@ -9,7 +9,7 @@ const anthropic = new Anthropic({
 const gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
-const GEMINI_MODEL = "gemini-2.0-flash";
+const GEMINI_MODEL = "gemini-2.5-flash";
 
 export type FileCategory = "pdf" | "image" | "office" | "text";
 
