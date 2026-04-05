@@ -5,10 +5,18 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --color-terracotta: #C1654A;
-  --color-terracotta-dark: #9B4A32;
+  /* Cascrow Brand */
+  --color-cs-bg:     #171311;
+  --color-cs-accent: #C4704B;
+  --color-cs-sand:   #D4B896;
+  --color-cs-text:   #EDE6DD;
+  --color-cs-muted:  #A89B8C;
+  /* Legacy compat */
+  --color-terracotta:       #C4704B;
+  --color-terracotta-dark:  #9B4A32;
   --color-terracotta-light: #F0D5CC;
   --color-terracotta-muted: #FBF0EC;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
@@ -43,82 +51,96 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-sm:  calc(var(--radius) * 0.6);
+  --radius-md:  calc(var(--radius) * 0.8);
+  --radius-lg:  var(--radius);
+  --radius-xl:  calc(var(--radius) * 1.4);
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ── Cascrow Design-System variables ────────────────────────── */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --cs-bg:             #171311;
+  --cs-bg-alt:         #1C1917;
+  --cs-accent:         #C4704B;
+  --cs-accent-dim:     rgba(196,112,75,0.15);
+  --cs-accent-glow:    rgba(196,112,75,0.08);
+  --cs-sand:           #D4B896;
+  --cs-text:           #EDE6DD;
+  --cs-muted:          #A89B8C;
+  --cs-card-bg:        rgba(255,255,255,0.04);
+  --cs-card-bg-hover:  rgba(255,255,255,0.06);
+  --cs-card-border:    rgba(196,112,75,0.15);
+
+  /* shadcn/ui → map to Cascrow dark palette */
+  --background:             #171311;
+  --foreground:             #EDE6DD;
+  --card:                   rgba(255,255,255,0.04);
+  --card-foreground:        #EDE6DD;
+  --popover:                #1C1917;
+  --popover-foreground:     #EDE6DD;
+  --primary:                #EDE6DD;
+  --primary-foreground:     #171311;
+  --secondary:              rgba(255,255,255,0.06);
+  --secondary-foreground:   #EDE6DD;
+  --muted:                  rgba(255,255,255,0.04);
+  --muted-foreground:       #A89B8C;
+  --accent:                 rgba(196,112,75,0.1);
+  --accent-foreground:      #EDE6DD;
+  --destructive:            oklch(0.704 0.191 22.216);
+  --border:                 rgba(196,112,75,0.15);
+  --input:                  rgba(255,255,255,0.06);
+  --ring:                   #C4704B;
+  --chart-1:                #C4704B;
+  --chart-2:                #D4B896;
+  --chart-3:                oklch(0.439 0 0);
+  --chart-4:                oklch(0.371 0 0);
+  --chart-5:                oklch(0.269 0 0);
+  --radius:                 0.625rem;
+  --sidebar:                #1C1917;
+  --sidebar-foreground:     #EDE6DD;
+  --sidebar-primary:        #C4704B;
+  --sidebar-primary-foreground: #EDE6DD;
+  --sidebar-accent:         rgba(196,112,75,0.1);
+  --sidebar-accent-foreground: #EDE6DD;
+  --sidebar-border:         rgba(196,112,75,0.15);
+  --sidebar-ring:           #C4704B;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background:             #171311;
+  --foreground:             #EDE6DD;
+  --card:                   rgba(255,255,255,0.04);
+  --card-foreground:        #EDE6DD;
+  --popover:                #1C1917;
+  --popover-foreground:     #EDE6DD;
+  --primary:                #EDE6DD;
+  --primary-foreground:     #171311;
+  --secondary:              rgba(255,255,255,0.06);
+  --secondary-foreground:   #EDE6DD;
+  --muted:                  rgba(255,255,255,0.04);
+  --muted-foreground:       #A89B8C;
+  --accent:                 rgba(196,112,75,0.1);
+  --accent-foreground:      #EDE6DD;
+  --destructive:            oklch(0.704 0.191 22.216);
+  --border:                 rgba(196,112,75,0.15);
+  --input:                  rgba(255,255,255,0.06);
+  --ring:                   #C4704B;
+  --chart-1:                #C4704B;
+  --chart-2:                #D4B896;
+  --chart-3:                oklch(0.439 0 0);
+  --chart-4:                oklch(0.371 0 0);
+  --chart-5:                oklch(0.269 0 0);
+  --sidebar:                #1C1917;
+  --sidebar-foreground:     #EDE6DD;
+  --sidebar-primary:        #C4704B;
+  --sidebar-primary-foreground: #EDE6DD;
+  --sidebar-accent:         rgba(196,112,75,0.1);
+  --sidebar-accent-foreground: #EDE6DD;
+  --sidebar-border:         rgba(196,112,75,0.15);
+  --sidebar-ring:           #C4704B;
 }
 
 @layer base {
@@ -129,11 +151,261 @@
     @apply bg-background text-foreground;
   }
   html {
-    @apply font-sans;
     scroll-behavior: smooth;
   }
 }
 
+/* ── Cascrow Card ────────────────────────────────────────────── */
+.cs-card {
+  background:    var(--cs-card-bg);
+  border:        1px solid var(--cs-card-border);
+  border-top:    1px solid var(--cs-accent);
+  border-radius: 12px;
+  padding:       32px;
+  transition:    border-color 0.2s ease, transform 0.2s ease;
+}
+.cs-card:hover {
+  border-color: rgba(196,112,75,0.4);
+  transform:    translateY(-2px);
+}
+.cs-card-flat {
+  background:    var(--cs-card-bg);
+  border:        1px solid var(--cs-card-border);
+  border-radius: 12px;
+  transition:    border-color 0.2s ease;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────── */
+.cs-btn-primary {
+  display:         inline-flex;
+  align-items:     center;
+  justify-content: center;
+  gap:             8px;
+  background:      #EDE6DD;
+  color:           #171311;
+  border-radius:   50px;
+  padding:         14px 32px;
+  font-weight:     500;
+  font-size:       16px;
+  border:          none;
+  cursor:          pointer;
+  transition:      transform 0.2s ease, box-shadow 0.2s ease;
+  text-decoration: none;
+  white-space:     nowrap;
+}
+.cs-btn-primary:hover {
+  transform:  scale(1.02);
+  box-shadow: 0 8px 32px rgba(237,230,221,0.12);
+}
+.cs-btn-primary:disabled {
+  opacity: 0.5;
+  cursor:  not-allowed;
+  transform: none;
+}
+.cs-btn-ghost {
+  display:         inline-flex;
+  align-items:     center;
+  justify-content: center;
+  gap:             8px;
+  background:      transparent;
+  color:           #EDE6DD;
+  border-radius:   50px;
+  padding:         14px 32px;
+  font-weight:     500;
+  font-size:       16px;
+  border:          1px solid #C4704B;
+  cursor:          pointer;
+  transition:      background 0.2s ease;
+  text-decoration: none;
+  white-space:     nowrap;
+}
+.cs-btn-ghost:hover {
+  background: rgba(196,112,75,0.1);
+}
+.cs-btn-ghost:disabled {
+  opacity: 0.5;
+  cursor:  not-allowed;
+}
+.cs-btn-sm {
+  padding:   10px 20px;
+  font-size: 14px;
+}
+.cs-btn-danger {
+  display:         inline-flex;
+  align-items:     center;
+  justify-content: center;
+  gap:             8px;
+  background:      transparent;
+  color:           #f87171;
+  border-radius:   50px;
+  padding:         10px 20px;
+  font-weight:     500;
+  font-size:       14px;
+  border:          1px solid rgba(248,113,113,0.3);
+  cursor:          pointer;
+  transition:      background 0.2s ease;
+  text-decoration: none;
+}
+.cs-btn-danger:hover {
+  background: rgba(248,113,113,0.08);
+}
+
+/* ── Input Fields ────────────────────────────────────────────── */
+.cs-input {
+  background:    rgba(255,255,255,0.04);
+  border:        1px solid rgba(196,112,75,0.15);
+  border-radius: 8px;
+  padding:       12px 16px;
+  color:         #EDE6DD;
+  font-size:     15px;
+  width:         100%;
+  transition:    border-color 0.2s ease, box-shadow 0.2s ease;
+  outline:       none;
+}
+.cs-input::placeholder { color: rgba(168,155,140,0.5); }
+.cs-input:focus {
+  border-color: #C4704B;
+  box-shadow:   0 0 0 3px rgba(196,112,75,0.1);
+}
+.cs-label {
+  color:        #A89B8C;
+  font-size:    13px;
+  font-weight:  400;
+  margin-bottom: 6px;
+  display:      block;
+}
+
+
+/* ── Status badges ───────────────────────────────────────────── */
+.cs-badge {
+  display:       inline-flex;
+  align-items:   center;
+  gap:           5px;
+  padding:       4px 10px;
+  border-radius: 50px;
+  font-size:     12px;
+  font-weight:   500;
+  white-space:   nowrap;
+}
+.cs-badge-draft       { background: rgba(168,155,140,0.12); color: #A89B8C; }
+.cs-badge-awaiting    { background: rgba(234,179,8,0.12);   color: #eab308; }
+.cs-badge-funded      { background: rgba(59,130,246,0.12);  color: #60a5fa; }
+.cs-badge-proof       { background: rgba(196,112,75,0.15);  color: #C4704B; }
+.cs-badge-review      { background: rgba(251,191,36,0.12);  color: #fbbf24; }
+.cs-badge-verified    { background: rgba(168,85,247,0.12);  color: #c084fc; }
+.cs-badge-rejected    { background: rgba(248,113,113,0.12); color: #f87171; }
+.cs-badge-completed   { background: rgba(52,211,153,0.12);  color: #34d399; }
+.cs-badge-investor    { background: rgba(196,112,75,0.12);  color: #C4704B; }
+.cs-badge-startup     { background: rgba(212,184,150,0.12); color: #D4B896; }
+
+/* ── Toggle switch ───────────────────────────────────────────── */
+.cs-toggle {
+  position:   relative;
+  width:       44px;
+  height:      24px;
+  flex-shrink: 0;
+}
+.cs-toggle input {
+  opacity:  0;
+  width:    0;
+  height:   0;
+  position: absolute;
+}
+.cs-toggle-track {
+  position:      absolute;
+  inset:         0;
+  background:    rgba(255,255,255,0.08);
+  border-radius: 50px;
+  cursor:        pointer;
+  transition:    background 0.2s ease;
+  border:        1px solid rgba(255,255,255,0.08);
+}
+.cs-toggle input:checked + .cs-toggle-track {
+  background:   #C4704B;
+  border-color: #C4704B;
+}
+.cs-toggle-thumb {
+  position:      absolute;
+  top:           3px;
+  left:          3px;
+  width:         16px;
+  height:        16px;
+  background:    #EDE6DD;
+  border-radius: 50%;
+  transition:    transform 0.2s ease;
+  pointer-events: none;
+}
+.cs-toggle input:checked ~ .cs-toggle-thumb {
+  transform: translateX(20px);
+}
+
+/* ── Scroll reveal ───────────────────────────────────────────── */
+.scroll-reveal {
+  opacity:    0;
+  transform:  translateY(30px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  will-change: opacity, transform;
+}
+.scroll-reveal.visible {
+  opacity:   1;
+  transform: translateY(0);
+}
+
+/* ── Global hover system ─────────────────────────────────────── */
+
+/* Cards: elevation + border glow */
+.cs-card {
+  will-change: transform, border-color;
+}
+.cs-card:hover {
+  border-color: rgba(196,112,75,0.45);
+  border-top-color: #C4704B;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 32px rgba(196,112,75,0.08);
+}
+
+/* All interactive links / buttons: smooth color shifts */
+a, button {
+  transition-property: color, background, border-color, opacity, transform, box-shadow;
+  transition-duration: 0.2s;
+  transition-timing-function: ease;
+}
+
+/* Nav links */
+nav a:hover,
+nav button:hover {
+  color: #EDE6DD !important;
+}
+
+/* Table rows */
+.cs-table-row {
+  transition: background 0.18s ease;
+}
+.cs-table-row:hover {
+  background: rgba(196,112,75,0.04) !important;
+}
+
+/* Stat cards hover */
+.cs-stat-card {
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.cs-stat-card:hover {
+  transform:    translateY(-2px);
+  border-color: rgba(196,112,75,0.3) !important;
+  box-shadow:   0 6px 24px rgba(196,112,75,0.06);
+}
+
+/* Input focus ring enhancement */
+.cs-input:hover {
+  border-color: rgba(196,112,75,0.3);
+}
+.cs-input:focus {
+  border-color: #C4704B;
+  box-shadow:   0 0 0 3px rgba(196,112,75,0.12);
+  outline:      none;
+}
+
+/* ── Animations ──────────────────────────────────────────────── */
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(24px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -150,6 +422,32 @@
   0%, 100% { opacity: 1; transform: scale(1); }
   50%       { opacity: 0.5; transform: scale(0.8); }
 }
+@keyframes ticker {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes particle-a {
+  0%   { transform: translate(0, 0);          opacity: 0; }
+  15%  { opacity: 0.35; }
+  85%  { opacity: 0.25; }
+  100% { transform: translate(40px, -80px);   opacity: 0; }
+}
+@keyframes particle-b {
+  0%   { transform: translate(0, 0);          opacity: 0; }
+  15%  { opacity: 0.2; }
+  85%  { opacity: 0.15; }
+  100% { transform: translate(-30px, -70px);  opacity: 0; }
+}
+@keyframes particle-c {
+  0%   { transform: translate(0, 0);          opacity: 0; }
+  20%  { opacity: 0.3; }
+  80%  { opacity: 0.2; }
+  100% { transform: translate(60px, -50px);   opacity: 0; }
+}
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
 
 .animate-fade-up       { animation: fade-up 0.7s ease both; }
 .animate-fade-up-1     { animation: fade-up 0.7s ease 0.1s both; }
@@ -159,9 +457,43 @@
 .animate-fade-in       { animation: fade-in 1s ease 0.1s both; }
 .animate-float         { animation: float 4s ease-in-out infinite; }
 .animate-pulse-dot     { animation: pulse-dot 2s ease-in-out infinite; }
+.animate-ticker        { animation: ticker 28s linear infinite; }
+.animate-slide-in      { animation: slide-in-right 0.4s ease both; }
 
-@keyframes ticker {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+/* ── Particles ───────────────────────────────────────────────── */
+.particle {
+  position:        absolute;
+  border-radius:   50%;
+  background:      #C4704B;
+  pointer-events:  none;
+  will-change:     transform, opacity;
 }
-.animate-ticker { animation: ticker 28s linear infinite; }
+.particle-1  { width:4px;  height:4px;  top:20%;  left:15%; animation: particle-a 8s  ease-in-out 0s   infinite; }
+.particle-2  { width:3px;  height:3px;  top:35%;  left:25%; animation: particle-b 10s ease-in-out 1s   infinite; }
+.particle-3  { width:5px;  height:5px;  top:55%;  left:10%; animation: particle-a 12s ease-in-out 2s   infinite; }
+.particle-4  { width:3px;  height:3px;  top:70%;  left:30%; animation: particle-c 9s  ease-in-out 0.5s infinite; }
+.particle-5  { width:4px;  height:4px;  top:15%;  left:70%; animation: particle-b 11s ease-in-out 3s   infinite; }
+.particle-6  { width:2px;  height:2px;  top:45%;  left:80%; animation: particle-a 7s  ease-in-out 1.5s infinite; }
+.particle-7  { width:5px;  height:5px;  top:60%;  left:60%; animation: particle-c 13s ease-in-out 2.5s infinite; }
+.particle-8  { width:3px;  height:3px;  top:80%;  left:50%; animation: particle-b 9s  ease-in-out 4s   infinite; }
+.particle-9  { width:2px;  height:2px;  top:25%;  left:45%; animation: particle-a 14s ease-in-out 0.8s infinite; }
+.particle-10 { width:4px;  height:4px;  top:50%;  left:90%; animation: particle-b 10s ease-in-out 3.5s infinite; }
+.particle-11 { width:3px;  height:3px;  top:10%;  left:55%; animation: particle-c 8s  ease-in-out 1.2s infinite; }
+.particle-12 { width:2px;  height:2px;  top:75%;  left:75%; animation: particle-a 11s ease-in-out 5s   infinite; }
+
+/* ── Cinematic intro utility ─────────────────────────────────── */
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.8; }
+}
+@keyframes scan-line {
+  from { transform: translateY(-100%); }
+  to   { transform: translateY(100vh); }
+}
+.animate-glow-pulse { animation: glow-pulse 2.5s ease-in-out infinite; }
+
+/* ── Hero text shimmer ───────────────────────────────────────── */
+@keyframes shimmer-text {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}

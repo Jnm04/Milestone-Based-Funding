@@ -4,8 +4,22 @@ import { useState, useEffect, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { Logo } from "@/components/logo";
+import { NodeBackground } from "@/components/node-background";
+
+function EyeIcon({ open }: { open: boolean }) {
+  return open ? (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
+    </svg>
+  ) : (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
+  );
+}
 
 function LoginForm() {
   const router = useRouter();
@@ -13,9 +27,9 @@ function LoginForm() {
   const callbackUrl = searchParams.get("callbackUrl");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Show feedback from email verification redirects
   useEffect(() => {
     if (searchParams.get("verified") === "1") {
       toast.success("Email verified! You can now sign in.");
@@ -30,23 +44,17 @@ function LoginForm() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
+      const res = await signIn("credentials", { email, password, redirect: false });
 
       if (res?.error === "EmailNotVerified") {
         toast.error("Please verify your email first. Check your inbox.");
         return;
       }
-
       if (res?.error) {
         toast.error("Invalid email or password.");
         return;
       }
 
-      // Fetch session to get role and redirect
       const sessionRes = await fetch("/api/auth/session");
       const session = await sessionRes.json();
       const role = session?.user?.role;
@@ -68,53 +76,113 @@ function LoginForm() {
   }
 
   return (
-    <main className="min-h-screen bg-zinc-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm bg-white rounded-2xl border shadow-sm p-8 flex flex-col gap-6">
-        <div>
-          <Link href="/" className="font-bold text-lg tracking-tight">Cascrow</Link>
-          <h1 className="text-2xl font-bold mt-4">Sign in</h1>
-          <p className="text-sm text-muted-foreground mt-1">Welcome back</p>
+    <main
+      className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
+      style={{ background: "#171311" }}
+    >
+      <NodeBackground />
+      {/* Subtle background glow */}
+      <div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full pointer-events-none"
+        style={{ background: "radial-gradient(ellipse, rgba(196,112,75,0.06) 0%, transparent 70%)" }}
+      />
+
+      <div
+        className="animate-fade-up relative z-10 w-full max-w-md flex flex-col gap-8"
+        style={{ paddingTop: "2rem", paddingBottom: "2rem" }}
+      >
+        {/* Logo */}
+        <div className="flex flex-col items-center gap-2">
+          <Logo variant="full" />
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">Email</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-900"
-              placeholder="you@example.com"
-            />
+        {/* Card */}
+        <div
+          className="flex flex-col gap-6 p-8 rounded-2xl"
+          style={{
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(196,112,75,0.15)",
+          }}
+        >
+          <div className="flex flex-col gap-1">
+            <h1
+              className="text-2xl"
+              style={{ fontFamily: "var(--font-libre-franklin)", fontWeight: 300, color: "#EDE6DD" }}
+            >
+              Welcome back
+            </h1>
+            <p className="text-sm" style={{ color: "#A89B8C" }}>Sign in to your account</p>
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">Password</label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-900"
-              placeholder="••••••••"
-            />
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            {/* Email */}
+            <div className="flex flex-col gap-1.5">
+              <label className="cs-label">Email</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="cs-input"
+                placeholder="you@example.com"
+              />
+            </div>
+
+            {/* Password */}
+            <div className="flex flex-col gap-1.5">
+              <label className="cs-label">Password</label>
+              <div className="relative">
+                <input
+                  type={showPw ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="cs-input"
+                  style={{ paddingRight: 44 }}
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw(!showPw)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  style={{ color: "#A89B8C" }}
+                  tabIndex={-1}
+                >
+                  <EyeIcon open={showPw} />
+                </button>
+              </div>
+            </div>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="cs-btn-primary w-full mt-1"
+              style={{ width: "100%" }}
+            >
+              {loading ? "Signing in…" : "Sign in"}
+            </button>
+          </form>
+
+          {/* Divider */}
+          <div className="flex items-center gap-4">
+            <div className="flex-1 h-px" style={{ background: "rgba(196,112,75,0.15)" }} />
+            <span className="text-xs" style={{ color: "#A89B8C" }}>or</span>
+            <div className="flex-1 h-px" style={{ background: "rgba(196,112,75,0.15)" }} />
           </div>
 
-          <Button type="submit" disabled={loading} className="mt-2">
-            {loading ? "Signing in…" : "Sign in"}
-          </Button>
-        </form>
-
-        <p className="text-sm text-center text-muted-foreground">
-          No account?{" "}
-          <Link
-            href={callbackUrl ? `/register?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/register"}
-            className="font-medium text-zinc-900 hover:underline"
-          >
-            Register
-          </Link>
-        </p>
+          {/* Footer */}
+          <p className="text-sm text-center" style={{ color: "#A89B8C" }}>
+            Don&apos;t have an account?{" "}
+            <Link
+              href={callbackUrl ? `/register?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/register"}
+              style={{ color: "#C4704B" }}
+              className="font-medium hover:underline"
+            >
+              Register
+            </Link>
+          </p>
+        </div>
       </div>
     </main>
   );
