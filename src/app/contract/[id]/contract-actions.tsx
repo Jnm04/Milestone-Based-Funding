@@ -38,7 +38,18 @@ declare global {
   }
 }
 
-/** Ensure MetaMask is connected and on the XRPL EVM chain. */
+/** Extract a human-readable message from any thrown value (Error or MetaMask object). */
+function extractError(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === "object") {
+    const e = err as Record<string, unknown>;
+    if (typeof e.message === "string") return e.message;
+    if (typeof e.error === "string") return e.error;
+  }
+  return String(err);
+}
+
+/** Ensure MetaMask is connected and on the XRPL EVM chain (always refreshes RPC). */
 async function connectMetaMask(): Promise<string> {
   if (!window.ethereum) {
     throw new Error(
@@ -53,32 +64,39 @@ async function connectMetaMask(): Promise<string> {
     throw new Error("No MetaMask account selected.");
   }
 
-  // Check and switch chain if needed
-  const chainId = (await window.ethereum.request({ method: "eth_chainId" })) as string;
-  if (parseInt(chainId, 16) !== XRPL_EVM_CHAIN_ID) {
+  const targetChainId = `0x${XRPL_EVM_CHAIN_ID.toString(16)}`;
+  const chainParams = {
+    chainId: targetChainId,
+    chainName: "XRPL EVM Sidechain Testnet",
+    nativeCurrency: { name: "XRP", symbol: "XRP", decimals: 18 },
+    rpcUrls: [
+      process.env.NEXT_PUBLIC_EVM_RPC_URL ?? "https://1449000.rpc.thirdweb.com",
+    ],
+    blockExplorerUrls: ["https://explorer.xrplevm.org"],
+  };
+
+  // Always call addEthereumChain — MetaMask updates RPC if chain already exists
+  try {
+    await window.ethereum.request({
+      method: "wallet_addEthereumChain",
+      params: [chainParams],
+    });
+  } catch {
+    // Chain exists and MetaMask rejected the update prompt — just switch
     try {
       await window.ethereum.request({
         method: "wallet_switchEthereumChain",
-        params: [{ chainId: `0x${XRPL_EVM_CHAIN_ID.toString(16)}` }],
+        params: [{ chainId: targetChainId }],
       });
-    } catch {
-      // Chain not added yet — ask MetaMask to add it
-      await window.ethereum.request({
-        method: "wallet_addEthereumChain",
-        params: [
-          {
-            chainId: `0x${XRPL_EVM_CHAIN_ID.toString(16)}`,
-            chainName: "XRPL EVM Sidechain Testnet",
-            nativeCurrency: { name: "XRP", symbol: "XRP", decimals: 18 },
-            rpcUrls: [
-              process.env.NEXT_PUBLIC_EVM_RPC_URL ??
-                "https://1449000.rpc.thirdweb.com",
-            ],
-            blockExplorerUrls: ["https://explorer.xrplevm.org"],
-          },
-        ],
-      });
+    } catch (switchErr) {
+      throw new Error(`Failed to switch to XRPL EVM chain: ${extractError(switchErr)}`);
     }
+  }
+
+  // Confirm we're on the right chain
+  const chainId = (await window.ethereum.request({ method: "eth_chainId" })) as string;
+  if (parseInt(chainId, 16) !== XRPL_EVM_CHAIN_ID) {
+    throw new Error("Wrong network selected in MetaMask. Please switch to XRPL EVM Sidechain Testnet.");
   }
 
   return accounts[0].toLowerCase();
@@ -163,7 +181,8 @@ export function ContractActions({
       await callFaucet(account, amountRLUSD);
       toast.success(`Minted ${amountRLUSD} RLUSD to your wallet! You can now fund the escrow.`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Faucet failed.");
+      console.error("Faucet error:", err);
+      toast.error(extractError(err));
     } finally {
       setFaucetLoading(false);
     }
@@ -216,8 +235,9 @@ export function ContractActions({
       toast.success("Escrow funded! Reloading…");
       setTimeout(() => window.location.reload(), 1200);
     } catch (err) {
+      console.error("Escrow funding error:", err);
       setFundingStep("idle");
-      toast.error(err instanceof Error ? err.message : "Escrow funding failed.");
+      toast.error(extractError(err));
     }
   }
 
