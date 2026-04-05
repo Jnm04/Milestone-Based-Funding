@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 
 const RPC_URL =
-  process.env.EVM_RPC_URL ?? "https://rpc.testnet.xrplevm.org";
+  process.env.EVM_RPC_URL ?? "https://1449000.rpc.thirdweb.com";
 
 let provider: ethers.JsonRpcProvider | null = null;
 let platformSigner: ethers.Wallet | null = null;

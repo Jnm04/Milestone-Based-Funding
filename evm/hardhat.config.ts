@@ -22,7 +22,7 @@ const config: HardhatUserConfig = {
   networks: {
     // XRPL EVM Sidechain Testnet
     "xrpl-evm-testnet": {
-      url: process.env.EVM_RPC_URL ?? "https://rpc.testnet.xrplevm.org",
+      url: process.env.EVM_RPC_URL ?? "https://1449000.rpc.thirdweb.com",
       chainId: 1449000,
       accounts: DEPLOY_PRIVATE_KEY ? [DEPLOY_PRIVATE_KEY] : [],
     },

@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { ProofUpload } from "@/components/proof-upload";
 import { toast } from "sonner";
 import { ContractStatus } from "@/types";
-import { XRPL_EVM_CHAIN_ID } from "@/lib/evm-abi";
+import { XRPL_EVM_CHAIN_ID, ERC20_ABI, toRLUSDUnits } from "@/lib/evm-abi";
+import { ethers } from "ethers";
 
 interface ContractActionsProps {
   contractId: string;
@@ -71,7 +72,7 @@ async function connectMetaMask(): Promise<string> {
             nativeCurrency: { name: "XRP", symbol: "XRP", decimals: 18 },
             rpcUrls: [
               process.env.NEXT_PUBLIC_EVM_RPC_URL ??
-                "https://rpc.testnet.xrplevm.org",
+                "https://1449000.rpc.thirdweb.com",
             ],
             blockExplorerUrls: ["https://explorer.xrplevm.org"],
           },
@@ -90,6 +91,16 @@ async function sendTx(from: string, to: string, data: string): Promise<string> {
     params: [{ from, to, data }],
   })) as string;
   return txHash;
+}
+
+/** Call MockRLUSD.faucet(amount) to mint test tokens into the caller's wallet. */
+async function callFaucet(from: string, amountUSD: string): Promise<void> {
+  const rlusdAddress = process.env.NEXT_PUBLIC_RLUSD_CONTRACT_ADDRESS!;
+  const iface = new ethers.Interface(ERC20_ABI);
+  const amount = toRLUSDUnits(amountUSD);
+  const data = iface.encodeFunctionData("faucet", [amount]);
+  const txHash = await sendTx(from, rlusdAddress, data);
+  await waitForReceipt(txHash);
 }
 
 /** Poll eth_getTransactionReceipt until the tx is mined (max 5 min). */
@@ -135,12 +146,28 @@ export function ContractActions({
   const [fundingStep, setFundingStep] = useState<
     "idle" | "approving" | "funding" | "confirming" | "done"
   >("idle");
+  const [faucetLoading, setFaucetLoading] = useState(false);
   const [loadingVerify, setLoadingVerify] = useState(false);
   const [loadingReview, setLoadingReview] = useState<"APPROVE" | "REJECT" | null>(null);
   const [loadingFinish, setLoadingFinish] = useState(false);
   const [loadingCancel, setLoadingCancel] = useState(false);
   const [loadingResubmit, setLoadingResubmit] = useState(false);
   const [verifyDone, setVerifyDone] = useState(false);
+
+  // ── Mint test RLUSD via MockRLUSD.faucet() ───────────────────────────────
+  async function handleFaucet() {
+    setFaucetLoading(true);
+    try {
+      const account = await connectMetaMask();
+      toast.info("Minting test RLUSD to your wallet…");
+      await callFaucet(account, amountRLUSD);
+      toast.success(`Minted ${amountRLUSD} RLUSD to your wallet! You can now fund the escrow.`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Faucet failed.");
+    } finally {
+      setFaucetLoading(false);
+    }
+  }
 
   // ── Fund escrow via MetaMask ──────────────────────────────────────────────
   async function handleFundEscrow() {
@@ -359,10 +386,17 @@ export function ContractActions({
         </p>
         <Button
           onClick={handleFundEscrow}
-          disabled={fundingStep !== "idle"}
+          disabled={fundingStep !== "idle" || faucetLoading}
         >
           {stepLabel[fundingStep]}
         </Button>
+        <button
+          onClick={handleFaucet}
+          disabled={faucetLoading || fundingStep !== "idle"}
+          className="text-xs underline text-amber-700 hover:text-amber-900 disabled:opacity-50 disabled:no-underline"
+        >
+          {faucetLoading ? "Minting…" : `No RLUSD? Get ${amountRLUSD} test RLUSD from faucet`}
+        </button>
       </div>
     );
   }

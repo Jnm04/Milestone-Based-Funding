@@ -19,6 +19,7 @@ export const ERC20_ABI = [
   "function allowance(address owner, address spender) external view returns (uint256)",
   "function balanceOf(address account) external view returns (uint256)",
   "function decimals() external view returns (uint8)",
+  "function faucet(uint256 amount) external",
 ] as const;
 
 /** RLUSD uses 6 decimal places (same as USDC on Ethereum). */
