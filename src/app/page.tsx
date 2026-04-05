@@ -368,10 +368,10 @@ export default function LandingPage() {
           {[...Array(2)].map((_, rep) => (
             <div key={rep} className="flex items-center gap-12 pr-12">
               {[
-                { Icon: IconLayers,      label: "Built on XRP Ledger" },
+                { Icon: IconLayers,      label: "Built on XRPL EVM Sidechain" },
                 { Icon: IconGlobe,       label: "Powered by RLUSD" },
-                { Icon: IconMonitor,     label: "AI Verification by Claude" },
-                { Icon: IconShieldSmall, label: "Secured by Xumm" },
+                { Icon: IconMonitor,     label: "AI Verification by Claude + Gemini" },
+                { Icon: IconShieldSmall, label: "Secured by MetaMask" },
                 { Icon: IconLayers,      label: "Zero middlemen" },
                 { Icon: IconGlobe,       label: "Instant settlement" },
                 { Icon: IconMonitor,     label: "On-chain transparency" },
@@ -450,7 +450,7 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8" style={{ alignItems: "stretch" }}>
             {[
-              { num: "01", title: "Agree & lock",          desc: "Grant Giver and receiver agree on a milestone and amount. Funds are locked in RLUSD escrow on the XRP Ledger." },
+              { num: "01", title: "Agree & lock",          desc: "Grant Giver and receiver agree on a milestone and amount. Funds are locked in RLUSD escrow on the XRPL EVM Sidechain." },
               { num: "02", title: "Deliver & upload",       desc: "The receiver completes the milestone and uploads proof as a PDF document." },
               { num: "03", title: "AI verifies & releases", desc: "Our AI evaluates the proof against the milestone criteria. If approved, funds are released instantly." },
             ].map((step, i) => (
@@ -516,7 +516,7 @@ export default function LandingPage() {
               <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#C4704B" }}>On-chain escrow with RLUSD</p>
               <h3 className="text-2xl font-semibold" style={{ color: "#EDE6DD" }}>Your funds, locked until it&apos;s earned</h3>
               <p className="text-base leading-relaxed" style={{ color: "#A89B8C" }}>
-                Funds are locked in Ripple&apos;s USD-pegged stablecoin using native XRP Ledger escrow.
+                Funds are locked in Ripple&apos;s USD-pegged stablecoin using smart contract escrow on the XRPL EVM Sidechain.
                 No volatility, no middlemen, fully transparent on-chain.
               </p>
               <div className="flex flex-col gap-2.5">
@@ -567,7 +567,7 @@ export default function LandingPage() {
       </section>
 
       {/* ══════════════════════════════════════════════════
-          WHY XRP LEDGER
+          WHY XRPL EVM SIDECHAIN
       ═══════════════════════════════════════════════════ */}
       <section
         className="py-32 px-6"
@@ -579,7 +579,7 @@ export default function LandingPage() {
               className="text-4xl md:text-5xl tracking-tight"
               style={{ fontFamily: "var(--font-libre-franklin)", fontWeight: 600, color: "#EDE6DD" }}
             >
-              Why we build on the XRP Ledger
+              Why we build on the XRPL EVM Sidechain
             </h2>
           </ScrollReveal>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -627,8 +627,8 @@ export default function LandingPage() {
           </ScrollReveal>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             {[
-              { Icon: IconLock,  title: "Self-custody",          desc: "Private keys never leave your wallet. You sign every transaction yourself via Xumm." },
-              { Icon: IconEye,   title: "On-chain transparency",  desc: "Every escrow is visible on the XRP Ledger. Both parties can verify the status at any time." },
+              { Icon: IconLock,  title: "Self-custody",          desc: "Private keys never leave your wallet. You sign every transaction yourself via MetaMask." },
+              { Icon: IconEye,   title: "On-chain transparency",  desc: "Every escrow is visible on the XRPL EVM Sidechain. Both parties can verify the status at any time." },
               { Icon: IconScale, title: "Automated fairness",     desc: "No human gatekeepers. AI decides based on the evidence, and the blockchain executes automatically." },
             ].map((item, i) => (
               <ScrollReveal key={item.title} delay={i * 100}>
