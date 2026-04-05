@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 const ITEMS = [
   {
@@ -29,44 +29,168 @@ const ITEMS = [
   },
 ];
 
+function FAQItem({ item, index, isOpen, onToggle }: {
+  item: { q: string; a: string };
+  index: number;
+  isOpen: boolean;
+  onToggle: () => void;
+}) {
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState(0);
+  const [hovered, setHovered] = useState(false);
+
+  useEffect(() => {
+    if (bodyRef.current) {
+      setHeight(isOpen ? bodyRef.current.scrollHeight : 0);
+    }
+  }, [isOpen]);
+
+  return (
+    <div
+      style={{
+        borderBottom: "1px solid rgba(196,112,75,0.1)",
+        transition: "border-color 0.3s ease",
+        position: "relative",
+        overflow: "hidden",
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {/* Left accent bar — grows on hover/open */}
+      <div
+        style={{
+          position:   "absolute",
+          left:       0,
+          top:        0,
+          bottom:     0,
+          width:      2,
+          background: "linear-gradient(180deg, #C4704B, rgba(196,112,75,0.2))",
+          opacity:    isOpen ? 1 : hovered ? 0.6 : 0,
+          transition: "opacity 0.3s ease",
+        }}
+      />
+
+      {/* Hover glow */}
+      <div
+        style={{
+          position:       "absolute",
+          inset:          0,
+          background:     "radial-gradient(ellipse 60% 100% at 0% 50%, rgba(196,112,75,0.04) 0%, transparent 70%)",
+          opacity:        hovered || isOpen ? 1 : 0,
+          transition:     "opacity 0.4s ease",
+          pointerEvents:  "none",
+        }}
+      />
+
+      <button
+        className="w-full text-left"
+        onClick={onToggle}
+        style={{
+          display:        "flex",
+          alignItems:     "center",
+          justifyContent: "space-between",
+          gap:            16,
+          padding:        "22px 24px 22px 20px",
+          cursor:         "pointer",
+          background:     "transparent",
+          border:         "none",
+          width:          "100%",
+        }}
+        aria-expanded={isOpen}
+      >
+        {/* Index number */}
+        <span
+          style={{
+            fontFamily:    "var(--font-libre-franklin), sans-serif",
+            fontWeight:    300,
+            fontSize:      12,
+            color:         isOpen || hovered ? "#C4704B" : "rgba(168,155,140,0.5)",
+            letterSpacing: "0.1em",
+            minWidth:      24,
+            transition:    "color 0.3s ease",
+          }}
+        >
+          {String(index + 1).padStart(2, "0")}
+        </span>
+
+        {/* Question */}
+        <span
+          style={{
+            flex:          1,
+            fontFamily:    "var(--font-libre-franklin), sans-serif",
+            fontWeight:    isOpen ? 500 : 400,
+            fontSize:      15,
+            color:         isOpen ? "#EDE6DD" : hovered ? "#EDE6DD" : "#C8BEB4",
+            transition:    "color 0.3s ease, font-weight 0.2s ease",
+            textAlign:     "left",
+          }}
+        >
+          {item.q}
+        </span>
+
+        {/* Toggle icon */}
+        <div
+          style={{
+            width:      28,
+            height:     28,
+            borderRadius: "50%",
+            display:    "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            border:     `1px solid ${isOpen ? "#C4704B" : hovered ? "rgba(196,112,75,0.4)" : "rgba(196,112,75,0.15)"}`,
+            background: isOpen ? "rgba(196,112,75,0.12)" : hovered ? "rgba(196,112,75,0.06)" : "transparent",
+            transform:  isOpen ? "rotate(45deg)" : "rotate(0deg)",
+            transition: "transform 0.35s cubic-bezier(0.22,1,0.36,1), background 0.3s ease, border-color 0.3s ease",
+            flexShrink: 0,
+            color:      isOpen ? "#C4704B" : hovered ? "rgba(196,112,75,0.8)" : "rgba(168,155,140,0.5)",
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5"  y1="12" x2="19" y2="12" />
+          </svg>
+        </div>
+      </button>
+
+      {/* Collapsible answer */}
+      <div
+        style={{
+          height:     height,
+          overflow:   "hidden",
+          transition: "height 0.4s cubic-bezier(0.22,1,0.36,1)",
+        }}
+      >
+        <div ref={bodyRef}>
+          <p
+            style={{
+              padding:     "0 24px 22px 52px",
+              fontSize:    14,
+              lineHeight:  1.75,
+              color:       "#A89B8C",
+              fontWeight:  300,
+            }}
+          >
+            {item.a}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function FAQ() {
   const [open, setOpen] = useState<number | null>(null);
 
   return (
-    <div className="flex flex-col divide-y" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+    <div style={{ display: "flex", flexDirection: "column" }}>
       {ITEMS.map((item, i) => (
-        <div key={i} className="py-5">
-          <button
-            className="w-full flex items-center justify-between text-left gap-4 group"
-            onClick={() => setOpen(open === i ? null : i)}
-          >
-            <span
-              className="font-semibold text-base transition-colors"
-              style={{ color: open === i ? "#C1654A" : "#F0EDE8" }}
-            >
-              {item.q}
-            </span>
-            <span
-              className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold transition-all"
-              style={{
-                background: open === i ? "rgba(193,101,74,0.15)" : "rgba(255,255,255,0.05)",
-                color: open === i ? "#C1654A" : "#6B7280",
-                transform: open === i ? "rotate(45deg)" : "rotate(0deg)",
-              }}
-            >
-              +
-            </span>
-          </button>
-
-          <div
-            className="overflow-hidden transition-all duration-300 ease-in-out"
-            style={{ maxHeight: open === i ? "200px" : "0px", opacity: open === i ? 1 : 0 }}
-          >
-            <p className="pt-4 text-sm leading-relaxed pr-10" style={{ color: "#9CA3AF" }}>
-              {item.a}
-            </p>
-          </div>
-        </div>
+        <FAQItem
+          key={i}
+          item={item}
+          index={i}
+          isOpen={open === i}
+          onToggle={() => setOpen(open === i ? null : i)}
+        />
       ))}
     </div>
   );
