@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       data: { status: "FUNDED" },
     });
 
-    void writeAuditLog({
+    await writeAuditLog({
       contractId,
       event: "PROOF_RESUBMITTED",
       actor: session.user.id,

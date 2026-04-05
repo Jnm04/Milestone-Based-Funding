@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      void writeAuditLog({
+      await writeAuditLog({
         contractId: milestone.contractId,
         milestoneId,
         event: "PROOF_SUBMITTED",
@@ -207,7 +207,7 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      void writeAuditLog({
+      await writeAuditLog({
         contractId: resolvedContractId,
         event: "PROOF_SUBMITTED",
         actor: session.user.id,

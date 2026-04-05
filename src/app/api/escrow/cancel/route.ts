@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
       data: { status: "EXPIRED" },
     });
 
-    void writeAuditLog({
+    await writeAuditLog({
       contractId,
       milestoneId: milestoneId ?? undefined,
       event: "ESCROW_CANCELLED",

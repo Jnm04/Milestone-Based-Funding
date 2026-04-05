@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
 
     const amountUSD = (proof.milestone?.amountUSD ?? contract.amountUSD).toString();
 
-    void writeAuditLog({
+    await writeAuditLog({
       contractId: contract.id,
       milestoneId: proof.milestoneId ?? undefined,
       event: "AI_DECISION",
@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
           await prisma.contract.update({ where: { id: contract.id }, data: { status: "COMPLETED" } });
         }
 
-        void writeAuditLog({
+        await writeAuditLog({
           contractId: contract.id,
           milestoneId: proof.milestoneId ?? undefined,
           event: "FUNDS_RELEASED",

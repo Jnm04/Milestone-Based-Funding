@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    void writeAuditLog({
+    await writeAuditLog({
       contractId,
       milestoneId: milestoneId ?? undefined,
       event: "ESCROW_FUNDED",

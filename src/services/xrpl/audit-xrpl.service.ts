@@ -90,26 +90,46 @@ export async function writeXrplAuditMemo(
 
     const signed = wallet.sign(tx);
 
-    // Await the submit HTTP call so Vercel doesn't kill it before it completes.
-    // We don't need ledger confirmation — the hash is deterministic from the signed blob.
-    try {
-      const submitRes = await fetch(XRPL_HTTP, {
+    // Await the submit so Vercel doesn't kill it before completion.
+    // Retry once with a fresh sequence if we hit a sequence conflict
+    // (happens when two audit events fire within the same ledger interval ~3s).
+    const submit = async (blob: string) => {
+      const res = await fetch(XRPL_HTTP, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          method: "submit",
-          params: [{ tx_blob: signed.tx_blob }],
-        }),
+        body: JSON.stringify({ method: "submit", params: [{ tx_blob: blob }] }),
       });
-      const data = await submitRes.json();
-      const engineResult = (data as { result?: { engine_result?: string } })
-        ?.result?.engine_result;
-      if (engineResult && engineResult !== "tesSUCCESS") {
-        console.error("[xrpl-audit] submit rejected:", engineResult, data);
+      return res.json() as Promise<{ result?: { engine_result?: string; account_sequence_next?: number } }>;
+    };
+
+    let result = await submit(signed.tx_blob).catch((err) => {
+      console.error("[xrpl-audit] submit fetch failed:", err);
+      return null;
+    });
+    if (!result) return null;
+
+    const SEQ_ERRORS = new Set(["tefPAST_SEQ", "terPRE_SEQ", "tefMAX_LEDGER"]);
+    if (result.result?.engine_result && SEQ_ERRORS.has(result.result.engine_result)) {
+      // Fetch fresh sequence and retry once
+      console.warn("[xrpl-audit] sequence conflict, retrying with fresh sequence");
+      const freshInfo = await rpc("account_info", { account: wallet.address, ledger_index: "current" });
+      const freshSeq = (freshInfo.result as { account_data: { Sequence: number } }).account_data.Sequence;
+      const retryTx = { ...tx, Sequence: freshSeq };
+      const retrySigned = wallet.sign(retryTx);
+      result = await submit(retrySigned.tx_blob).catch((err) => {
+        console.error("[xrpl-audit] retry submit failed:", err);
+        return null;
+      });
+      if (!result) return null;
+      if (result.result?.engine_result && result.result.engine_result !== "tesSUCCESS") {
+        console.error("[xrpl-audit] retry rejected:", result.result.engine_result);
         return null;
       }
-    } catch (err) {
-      console.error("[xrpl-audit] submit fetch failed:", err);
+      return retrySigned.hash;
+    }
+
+    if (result.result?.engine_result && result.result.engine_result !== "tesSUCCESS") {
+      console.error("[xrpl-audit] submit rejected:", result.result.engine_result);
       return null;
     }
 

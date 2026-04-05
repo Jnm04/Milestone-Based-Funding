@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
       ? (contract.milestones.find((m) => m.id === milestoneId)?.amountUSD ?? contract.amountUSD).toString()
       : contract.amountUSD.toString();
 
-    void writeAuditLog({
+    await writeAuditLog({
       contractId,
       milestoneId: milestoneId ?? undefined,
       event: "FUNDS_RELEASED",

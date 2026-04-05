@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       return contract;
     });
 
-    void writeAuditLog({
+    await writeAuditLog({
       contractId: result.id,
       event: "CONTRACT_CREATED",
       actor: session.user.id,

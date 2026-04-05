@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       data: { status: newStatus as never },
     });
 
-    void writeAuditLog({
+    await writeAuditLog({
       contractId,
       event: decision === "APPROVE" ? "MANUAL_REVIEW_APPROVED" : "MANUAL_REVIEW_REJECTED",
       actor: session.user.id,
