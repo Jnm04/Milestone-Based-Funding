@@ -1,7 +1,8 @@
 import * as xrpl from "xrpl";
 
-const XRPL_WSS =
-  process.env.XRPL_WSS_URL ?? "wss://s.altnet.rippletest.net:51233";
+// HTTP JSON-RPC endpoint — avoids WebSocket overhead in serverless functions
+const XRPL_HTTP =
+  process.env.XRPL_HTTP_URL ?? "https://s.altnet.rippletest.net:51234";
 
 interface XrplAuditParams {
   event: string;
@@ -11,9 +12,23 @@ interface XrplAuditParams {
   metadata?: Record<string, unknown>;
 }
 
+async function rpc(method: string, params: Record<string, unknown>) {
+  const res = await fetch(XRPL_HTTP, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ method, params: [params] }),
+  });
+  return res.json() as Promise<{ result: Record<string, unknown> }>;
+}
+
 /**
- * Writes an audit memo to the native XRP Ledger (testnet) as a 1-drop
- * Payment to self with hex-encoded JSON in the Memos field.
+ * Writes an audit memo to the native XRP Ledger testnet as a 1-drop Payment
+ * to self with hex-encoded JSON in the Memos field.
+ *
+ * Uses HTTP JSON-RPC (not WebSocket) so it works reliably in Vercel serverless.
+ * Signs locally, submits without waiting for confirmation — returns the tx hash
+ * immediately (deterministic from the signed blob).
+ *
  * Never throws — returns null on failure.
  */
 export async function writeXrplAuditMemo(
@@ -25,10 +40,22 @@ export async function writeXrplAuditMemo(
     return null;
   }
 
-  const client = new xrpl.Client(XRPL_WSS);
   try {
-    await client.connect();
     const wallet = xrpl.Wallet.fromSeed(seed);
+
+    // Fetch sequence number and current fee in parallel
+    const [accountInfo, feeInfo] = await Promise.all([
+      rpc("account_info", { account: wallet.address, ledger_index: "current" }),
+      rpc("fee", {}),
+    ]);
+
+    const sequence = (
+      accountInfo.result as { account_data: { Sequence: number } }
+    ).account_data.Sequence;
+
+    const fee =
+      (feeInfo.result as { drops: { open_ledger_fee?: string } }).drops
+        .open_ledger_fee ?? "12";
 
     const payload = JSON.stringify({
       app: "cascrow",
@@ -41,11 +68,13 @@ export async function writeXrplAuditMemo(
       ts: new Date().toISOString(),
     });
 
-    const tx: xrpl.Payment = {
-      TransactionType: "Payment",
+    const tx = {
+      TransactionType: "Payment" as const,
       Account: wallet.address,
       Destination: wallet.address,
       Amount: "1",
+      Fee: fee,
+      Sequence: sequence,
       Memos: [
         {
           Memo: {
@@ -59,19 +88,30 @@ export async function writeXrplAuditMemo(
       ],
     };
 
-    const prepared = await client.autofill(tx);
-    const signed = wallet.sign(prepared);
-    const result = await client.submitAndWait(signed.tx_blob);
+    const signed = wallet.sign(tx);
 
-    return result.result.hash;
+    // Submit without waiting for ledger confirmation — hash is deterministic
+    void fetch(XRPL_HTTP, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        method: "submit",
+        params: [{ tx_blob: signed.tx_blob }],
+      }),
+    })
+      .then(async (r) => {
+        const data = await r.json();
+        const engineResult = (data as { result?: { engine_result?: string } })
+          ?.result?.engine_result;
+        if (engineResult && engineResult !== "tesSUCCESS") {
+          console.error("[xrpl-audit] submit rejected:", engineResult);
+        }
+      })
+      .catch((err) => console.error("[xrpl-audit] submit fetch failed:", err));
+
+    return signed.hash;
   } catch (err) {
     console.error("[xrpl-audit] write failed:", err);
     return null;
-  } finally {
-    try {
-      await client.disconnect();
-    } catch {
-      // ignore disconnect errors
-    }
   }
 }
