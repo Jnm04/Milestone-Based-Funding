@@ -1,11 +1,15 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenAI } from "@google/genai";
 import { AIVerificationResult } from "@/types";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
+const gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
 const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
+const GEMINI_MODEL = "gemini-2.0-flash";
 
 export type FileCategory = "pdf" | "image" | "office" | "text";
 
@@ -86,8 +90,23 @@ function parseAIResponse(raw: string, source: string): AIVerificationResult {
 }
 
 /**
+ * Combines Claude + Gemini results with AND logic.
+ * Both must approve for a YES. The lower confidence wins.
+ */
+function combineResults(claude: AIVerificationResult, geminiResult: AIVerificationResult): AIVerificationResult {
+  const decision = claude.decision === "YES" && geminiResult.decision === "YES" ? "YES" : "NO";
+  const confidence = Math.min(claude.confidence, geminiResult.confidence);
+  const reasoning =
+    decision === "YES"
+      ? `Claude: ${claude.reasoning} | Gemini: ${geminiResult.reasoning}`
+      : claude.decision === "NO"
+      ? `Claude rejected: ${claude.reasoning}`
+      : `Gemini rejected: ${geminiResult.reasoning}`;
+  return { decision, reasoning, confidence };
+}
+
+/**
  * Calls Claude with a dedicated system prompt (instructions) and user message (data only).
- * This separation is the core defence against prompt injection from document content.
  */
 async function callClaude(
   messages: Anthropic.MessageParam[],
@@ -105,6 +124,40 @@ async function callClaude(
   return parseAIResponse(content.text, "Claude");
 }
 
+/** Calls Gemini with text content. */
+async function callGeminiText(userMessage: string): Promise<AIVerificationResult> {
+  const response = await gemini.models.generateContent({
+    model: GEMINI_MODEL,
+    contents: [
+      { role: "user", parts: [{ text: VERIFICATION_SYSTEM_PROMPT + "\n\n" + userMessage }] },
+    ],
+  });
+  const text = response.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  return parseAIResponse(text, "Gemini");
+}
+
+/** Calls Gemini with an image + text prompt. */
+async function callGeminiImage(
+  imageBase64: string,
+  mimeType: string,
+  userMessage: string
+): Promise<AIVerificationResult> {
+  const response = await gemini.models.generateContent({
+    model: GEMINI_MODEL,
+    contents: [
+      {
+        role: "user",
+        parts: [
+          { inlineData: { mimeType, data: imageBase64 } },
+          { text: VERIFICATION_SYSTEM_PROMPT + "\n\n" + userMessage },
+        ],
+      },
+    ],
+  });
+  const text = response.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  return parseAIResponse(text, "Gemini");
+}
+
 /** Verifies milestone against extracted text (PDF, Office, CSV). */
 export async function verifyMilestone(params: {
   milestone: string;
@@ -115,11 +168,16 @@ export async function verifyMilestone(params: {
     ? `\n\n[NOTE: Document exceeds ${MAX_TEXT_CHARS.toLocaleString()} characters and has been truncated. Evaluate only the visible portion.]`
     : "";
 
-  const claudeUserMessage =
+  const userMessage =
     `Milestone to verify:\n[MILESTONE START]\n${params.milestone}\n[MILESTONE END]\n\n` +
     `Document content:\n[DOCUMENT START]\n${content}\n[DOCUMENT END]${truncationNote}`;
 
-  return callClaude([{ role: "user", content: claudeUserMessage }], VERIFICATION_SYSTEM_PROMPT);
+  const [claudeResult, geminiResult] = await Promise.all([
+    callClaude([{ role: "user", content: userMessage }], VERIFICATION_SYSTEM_PROMPT),
+    callGeminiText(userMessage),
+  ]);
+
+  return combineResults(claudeResult, geminiResult);
 }
 
 /** Verifies milestone against an image using Claude Vision + Gemini Vision. */
@@ -130,20 +188,25 @@ export async function verifyMilestoneImage(params: {
 }): Promise<AIVerificationResult> {
   const base64 = params.imageBuffer.toString("base64");
 
-  const claudeUserMessage =
+  const userMessage =
     `Examine the image and determine if it proves the following milestone was completed.\n\n` +
     `Milestone:\n[MILESTONE START]\n${params.milestone}\n[MILESTONE END]`;
 
-  return callClaude(
-    [{
-      role: "user",
-      content: [
-        { type: "image", source: { type: "base64", media_type: params.mimeType, data: base64 } },
-        { type: "text", text: claudeUserMessage },
-      ],
-    }],
-    VERIFICATION_SYSTEM_PROMPT
-  );
+  const [claudeResult, geminiResult] = await Promise.all([
+    callClaude(
+      [{
+        role: "user",
+        content: [
+          { type: "image", source: { type: "base64", media_type: params.mimeType, data: base64 } },
+          { type: "text", text: userMessage },
+        ],
+      }],
+      VERIFICATION_SYSTEM_PROMPT
+    ),
+    callGeminiImage(base64, params.mimeType, userMessage),
+  ]);
+
+  return combineResults(claudeResult, geminiResult);
 }
 
 /**
