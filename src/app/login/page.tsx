@@ -95,23 +95,47 @@ function LoginForm() {
 
   if (unverifiedEmail) {
     return (
-      <main className="min-h-screen bg-zinc-50 flex items-center justify-center px-4">
-        <div className="w-full max-w-sm bg-white rounded-2xl border shadow-sm p-8 flex flex-col gap-4 text-center">
-          <Link href="/" className="font-bold text-lg tracking-tight">Cascrow</Link>
-          <h1 className="text-2xl font-bold mt-2">Verify your email</h1>
-          <p className="text-sm text-muted-foreground">
-            Your account is not yet verified. Check your inbox at <strong>{unverifiedEmail}</strong> or request a new link.
-          </p>
-          {resendDone ? (
-            <p className="text-sm text-green-600 font-medium">Verification email sent! Check your inbox.</p>
-          ) : (
-            <Button onClick={handleResend} disabled={resendLoading}>
-              {resendLoading ? "Sending…" : "Resend verification email"}
-            </Button>
-          )}
-          <button onClick={() => setUnverifiedEmail(null)} className="text-sm text-muted-foreground hover:underline">
-            Back to sign in
-          </button>
+      <main
+        className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
+        style={{ background: "#171311" }}
+      >
+        <NodeBackground />
+        <div className="relative z-10 w-full max-w-md flex flex-col gap-8 text-center">
+          <div className="flex flex-col items-center gap-2">
+            <Logo variant="full" />
+          </div>
+          <div
+            className="flex flex-col gap-5 p-8 rounded-2xl"
+            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.15)" }}
+          >
+            <h1 className="text-2xl" style={{ fontFamily: "var(--font-libre-franklin)", fontWeight: 300, color: "#EDE6DD" }}>
+              Verify your email
+            </h1>
+            <p className="text-sm" style={{ color: "#A89B8C" }}>
+              Your account is not yet verified. Check your inbox at{" "}
+              <strong style={{ color: "#EDE6DD" }}>{unverifiedEmail}</strong> or request a new link.
+            </p>
+            {resendDone ? (
+              <p className="text-sm font-medium" style={{ color: "#6EAF7C" }}>
+                Verification email sent! Check your inbox.
+              </p>
+            ) : (
+              <button
+                onClick={handleResend}
+                disabled={resendLoading}
+                className="cs-btn-primary w-full"
+              >
+                {resendLoading ? "Sending…" : "Resend verification email"}
+              </button>
+            )}
+            <button
+              onClick={() => setUnverifiedEmail(null)}
+              className="text-sm hover:underline"
+              style={{ color: "#A89B8C" }}
+            >
+              Back to sign in
+            </button>
+          </div>
         </div>
       </main>
     );
