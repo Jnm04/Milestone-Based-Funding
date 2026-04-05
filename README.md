@@ -1,6 +1,6 @@
 # Cascrow
 
-AI-powered RLUSD escrow agent on the XRPL EVM Sidechain.  
+AI-powered RLUSD escrow agent on the XRPL EVM Sidechain with dual-chain audit trail.  
 Grant givers lock RLUSD in a smart contract escrow; funds release automatically when an AI agent verifies the receiver has met the agreed milestone.
 
 Built at the **XRPL Student Builder Residency 2026** · **Claude AI** · **Gemini AI** · **MetaMask** · **Next.js 16**
@@ -25,6 +25,12 @@ Claude + Gemini both verify the proof — both must return YES, NO, or UNCERTAIN
   Deadline passed → cron job cancels escrow, RLUSD returned
 ```
 
+Every key event is written to **both chains** as an immutable audit entry:
+- **XRPL EVM Sidechain** — hex-encoded JSON in an EVM transaction's `data` field
+- **Native XRP Ledger** — JSON memo in an `AccountSet` transaction, publicly verifiable on [testnet.xrpscan.com](https://testnet.xrpscan.com)
+
+---
+
 ## Tech stack
 
 | Layer | Technology |
@@ -35,6 +41,7 @@ Claude + Gemini both verify the proof — both must return YES, NO, or UNCERTAIN
 | Blockchain | XRPL EVM Sidechain (Testnet), Solidity smart contract |
 | Stablecoin | RLUSD (ERC-20 on XRPL EVM) |
 | AI | Claude `claude-haiku-4-5` + Gemini `gemini-2.5-flash` (dual-model, both must approve) |
+| Audit trail | Dual-chain: XRPL EVM Sidechain + native XRP Ledger (AccountSet memos via HTTP JSON-RPC) |
 | Database | PostgreSQL + Prisma |
 | File storage | Vercel Blob |
 | Email | Resend |
@@ -85,6 +92,10 @@ NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS=0x...
 NEXT_PUBLIC_RLUSD_CONTRACT_ADDRESS=0x...
 PLATFORM_WALLET_PRIVATE_KEY=0x...   # Platform wallet — releases/cancels escrow server-side
 
+# Native XRPL audit trail (AccountSet memo transactions)
+XRPL_PLATFORM_SEED=s...             # XRPL testnet wallet seed (fund via testnet faucet)
+# XRPL_HTTP_URL=https://s.altnet.rippletest.net:51234  # optional override
+
 # Email (optional — notifications disabled without this)
 RESEND_API_KEY=re_...
 EMAIL_FROM=Cascrow <noreply@yourdomain.com>
@@ -92,6 +103,8 @@ EMAIL_FROM=Cascrow <noreply@yourdomain.com>
 # Cron (set to any secret string, must match Vercel Cron config)
 CRON_SECRET=your-secret
 ```
+
+> **XRPL audit wallet setup:** Create a testnet wallet at [xrpl.org/xrp-testnet-faucet.html](https://xrpl.org/xrp-testnet-faucet.html), copy the seed into `XRPL_PLATFORM_SEED`. The wallet needs ~10 XRP reserve + small amount for fees.
 
 ### 4. Database setup
 
@@ -160,7 +173,7 @@ src/
 │   │   ├── user/wallet/   # Save wallet address
 │   │   ├── cron/          # Auto-cancel expired milestones
 │   │   └── health/        # Health check
-│   ├── contract/[id]/     # Contract detail page
+│   ├── contract/[id]/     # Contract detail page (incl. audit trail)
 │   ├── dashboard/         # Grant giver + receiver dashboards
 │   ├── login/             # Sign in
 │   ├── register/          # Sign up + email verification screen
@@ -168,12 +181,39 @@ src/
 │   └── page.tsx           # Landing page
 ├── services/
 │   ├── ai/                # Claude + Gemini dual-model verifier (PDF + image)
-│   └── evm/               # EVM client, escrow calldata, release/cancel
+│   ├── evm/               # EVM client, escrow calldata, release/cancel, audit
+│   └── xrpl/              # Native XRPL audit memo writer (HTTP JSON-RPC)
+├── components/
+│   └── audit-trail.tsx    # On-chain audit trail UI with xrpscan.com links
 └── lib/
     ├── prisma.ts
     ├── auth-options.ts
     └── email.ts            # Resend email templates
 ```
+
+---
+
+## On-chain audit trail
+
+Every contract lifecycle event is written to both chains simultaneously and stored in the database:
+
+| Event | Trigger |
+|---|---|
+| `CONTRACT_CREATED` | Investor creates a new contract |
+| `ESCROW_FUNDED` | Grant giver funds milestone via MetaMask |
+| `PROOF_SUBMITTED` | Receiver uploads proof document |
+| `AI_DECISION` | Claude + Gemini return a verdict |
+| `MANUAL_REVIEW_APPROVED` | Grant giver manually approves |
+| `MANUAL_REVIEW_REJECTED` | Grant giver manually rejects |
+| `FUNDS_RELEASED` | RLUSD released to receiver |
+| `ESCROW_CANCELLED` | Deadline passed, RLUSD returned |
+| `PROOF_RESUBMITTED` | Receiver resubmits after rejection |
+
+Each entry stores:
+- `evmTxHash` — EVM sidechain transaction hash
+- `xrplTxHash` — Native XRP Ledger transaction hash (clickable link to xrpscan.com)
+
+The audit trail is displayed on every contract detail page as a timestamped timeline.
 
 ---
 
@@ -184,11 +224,11 @@ DRAFT
   └─ receiver joins ──→ AWAITING_ESCROW
                                └─ grant giver funds ──→ FUNDED
                                                             └─ receiver uploads proof ──→ PROOF_SUBMITTED
-                                                                                                └─ AI YES      ──→ VERIFIED ──→ COMPLETED
+                                                                                                └─ AI YES       ──→ VERIFIED ──→ COMPLETED
                                                                                                 └─ AI UNCERTAIN ──→ PENDING_REVIEW
                                                                                                 │                       └─ investor APPROVE ──→ VERIFIED ──→ COMPLETED
                                                                                                 │                       └─ investor REJECT  ──→ REJECTED
-                                                                                                └─ AI NO       ──→ REJECTED
+                                                                                                └─ AI NO        ──→ REJECTED
                                                                                                                         └─ resubmit ──→ FUNDED (loop)
                                                             └─ deadline passed (cron) ──→ EXPIRED
 ```
@@ -197,6 +237,15 @@ DRAFT
 
 ## Key design decisions
 
+**Why dual-chain audit?**  
+The EVM sidechain stores business logic and escrow state. The native XRP Ledger stores an independent, immutable audit record via `AccountSet` memo transactions — publicly verifiable without trusting our backend. Two independent chains means two independent proofs.
+
+**Why AccountSet for XRPL memos?**  
+`AccountSet` transactions don't require a destination address and support arbitrary Memos. Payment-to-self is rejected by XRPL as `temREDUNDANT`; `AccountSet` has no such restriction.
+
+**Why HTTP JSON-RPC for XRPL?**  
+Vercel serverless functions kill background work after the HTTP response is sent. WebSocket-based `xrpl.Client` with `submitAndWait` doesn't complete in time. HTTP JSON-RPC calls complete synchronously within the request lifecycle.
+
 **Why EVM smart contracts?**  
 XRPL EVM Sidechain gives us Solidity smart contracts with full programmability, while staying in the XRPL ecosystem and using RLUSD as the native stablecoin.
 
@@ -204,10 +253,7 @@ XRPL EVM Sidechain gives us Solidity smart contracts with full programmability, 
 The platform never holds user private keys. MetaMask signs the `approve` + `fundMilestone` transactions on the user's device. The platform wallet only calls `releaseMilestone` / `cancelMilestone` server-side after AI verification.
 
 **Why PENDING_REVIEW?**  
-When the AI confidence is below a threshold, instead of making a wrong call, it escalates to the grant giver for a manual decision. This is the Tier 2 governance model.
-
-**Why email/password auth?**  
-Straightforward onboarding without requiring a wallet upfront. Users connect MetaMask separately once they're ready to fund or receive.
+When AI confidence is below a threshold, instead of making a wrong call, the system escalates to the grant giver for a manual decision. This is the Tier 2 governance model.
 
 **Email verification**  
-All new accounts require email verification before they can sign in. Tokens expire in 24 hours; resend is rate-limited to once per 60 seconds server-side.
+All new accounts require email verification before sign-in. Tokens expire in 24 hours; resend is rate-limited to once per 60 seconds server-side.
