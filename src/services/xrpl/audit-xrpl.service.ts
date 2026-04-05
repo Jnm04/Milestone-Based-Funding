@@ -90,24 +90,28 @@ export async function writeXrplAuditMemo(
 
     const signed = wallet.sign(tx);
 
-    // Submit without waiting for ledger confirmation — hash is deterministic
-    void fetch(XRPL_HTTP, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        method: "submit",
-        params: [{ tx_blob: signed.tx_blob }],
-      }),
-    })
-      .then(async (r) => {
-        const data = await r.json();
-        const engineResult = (data as { result?: { engine_result?: string } })
-          ?.result?.engine_result;
-        if (engineResult && engineResult !== "tesSUCCESS") {
-          console.error("[xrpl-audit] submit rejected:", engineResult);
-        }
-      })
-      .catch((err) => console.error("[xrpl-audit] submit fetch failed:", err));
+    // Await the submit HTTP call so Vercel doesn't kill it before it completes.
+    // We don't need ledger confirmation — the hash is deterministic from the signed blob.
+    try {
+      const submitRes = await fetch(XRPL_HTTP, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          method: "submit",
+          params: [{ tx_blob: signed.tx_blob }],
+        }),
+      });
+      const data = await submitRes.json();
+      const engineResult = (data as { result?: { engine_result?: string } })
+        ?.result?.engine_result;
+      if (engineResult && engineResult !== "tesSUCCESS") {
+        console.error("[xrpl-audit] submit rejected:", engineResult, data);
+        return null;
+      }
+    } catch (err) {
+      console.error("[xrpl-audit] submit fetch failed:", err);
+      return null;
+    }
 
     return signed.hash;
   } catch (err) {
