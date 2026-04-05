@@ -8,6 +8,7 @@ interface ProofUploadProps {
   contractId: string;
   milestoneId?: string | null;
   onUploaded: (proofId: string) => void;
+  replaceMode?: boolean;
 }
 
 const ACCEPTED_TYPES = [
@@ -32,10 +33,11 @@ function fileTypeLabel(file: File): string {
   return file.name.split(".").pop()?.toUpperCase() ?? "FILE";
 }
 
-export function ProofUpload({ contractId, milestoneId, onUploaded }: ProofUploadProps) {
+export function ProofUpload({ contractId, milestoneId, onUploaded, replaceMode }: ProofUploadProps) {
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [uploaded, setUploaded] = useState(false);
+  const [showReplace, setShowReplace] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -89,6 +91,15 @@ export function ProofUpload({ contractId, milestoneId, onUploaded }: ProofUpload
     } finally {
       setLoading(false);
     }
+  }
+
+  // In replaceMode, show just a button until the user clicks it
+  if (replaceMode && !showReplace) {
+    return (
+      <Button variant="outline" onClick={() => setShowReplace(true)} type="button">
+        Replace File
+      </Button>
+    );
   }
 
   return (

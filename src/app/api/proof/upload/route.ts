@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
       if (milestone.contract.startupId !== session.user.id) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
-      if (milestone.status !== "FUNDED") {
+      if (!["FUNDED", "PROOF_SUBMITTED"].includes(milestone.status)) {
         return NextResponse.json(
           { error: `Cannot upload proof for milestone in status: ${milestone.status}` },
           { status: 409 }
@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
       if (contract.startupId !== session.user.id) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
-      if (contract.status !== "FUNDED") {
+      if (!["FUNDED", "PROOF_SUBMITTED"].includes(contract.status)) {
         return NextResponse.json({ error: `Cannot upload proof in status: ${contract.status}` }, { status: 409 });
       }
 

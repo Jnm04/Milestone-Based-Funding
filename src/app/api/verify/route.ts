@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
-import { head } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import { verifyMilestone, verifyMilestoneImage, mockVerifyMilestone, categorizeFile } from "@/services/ai/verifier.service";
 import { releaseMilestone } from "@/services/evm/escrow.service";
@@ -59,9 +58,10 @@ export async function POST(request: NextRequest) {
     if (!hasApiKey) {
       result = mockVerifyMilestone({ milestone: milestoneTitle, extractedText });
     } else if (category === "image") {
-      // Fetch image from Vercel Blob (private store — use signed downloadUrl)
-      const blobMeta = await head(proof.fileUrl);
-      const imageRes = await fetch(blobMeta.downloadUrl);
+      // Fetch image from Vercel Blob — private blobs require the token as Bearer auth
+      const imageRes = await fetch(proof.fileUrl, {
+        headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` },
+      });
       if (!imageRes.ok) {
         throw new Error(`Failed to download image from storage: ${imageRes.status} ${imageRes.statusText}`);
       }

@@ -466,9 +466,17 @@ export function ContractActions({
           </a>
         )}
         {isStartup && (
-          <Button onClick={() => handleVerify(latestProofId)} disabled={loadingVerify}>
-            {loadingVerify ? "Verifying…" : "Run AI Verification"}
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => handleVerify(latestProofId)} disabled={loadingVerify} className="flex-1">
+              {loadingVerify ? "Verifying…" : "Run AI Verification"}
+            </Button>
+            <ProofUpload
+              contractId={contractId}
+              milestoneId={milestoneId}
+              onUploaded={(proofId) => handleVerify(proofId)}
+              replaceMode
+            />
+          </div>
         )}
       </div>
     );
