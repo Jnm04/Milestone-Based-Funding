@@ -370,7 +370,7 @@ export default function LandingPage() {
               {[
                 { Icon: IconLayers,      label: "Built on XRPL EVM Sidechain" },
                 { Icon: IconGlobe,       label: "Powered by RLUSD" },
-                { Icon: IconMonitor,     label: "AI Verification by Claude + Gemini" },
+                { Icon: IconMonitor,     label: "AI Verification by Claude, Gemini, OpenAI, Mistral & Qwen" },
                 { Icon: IconShieldSmall, label: "Secured by MetaMask" },
                 { Icon: IconLayers,      label: "Zero middlemen" },
                 { Icon: IconGlobe,       label: "Instant settlement" },
@@ -397,7 +397,7 @@ export default function LandingPage() {
               className="text-4xl md:text-5xl mb-4 tracking-tight"
               style={{ fontFamily: "var(--font-libre-franklin)", fontWeight: 600, color: "#EDE6DD" }}
             >
-              The trust gap in startup funding
+              The trust gap in funding
             </h2>
             <p style={{ color: "#A89B8C", fontSize: 18, fontWeight: 300 }}>
               Traditional funding processes are broken.
@@ -532,10 +532,10 @@ export default function LandingPage() {
           <ScrollReveal className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-24">
             <div className="order-2 md:order-1"><AIVerifyMockup /></div>
             <div className="order-1 md:order-2 flex flex-col gap-5">
-              <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#C4704B" }}>AI-powered milestone verification</p>
+              <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#D4956A" }}>AI-powered milestone verification</p>
               <h3 className="text-2xl font-semibold" style={{ color: "#EDE6DD" }}>No human gatekeepers</h3>
               <p className="text-base leading-relaxed" style={{ color: "#A89B8C" }}>
-                Upload your proof as a PDF. Claude + Gemini AI analyse it against the agreed milestone
+                Upload your proof as a PDF. Five independent AI models — Claude, Gemini, OpenAI, Mistral and Qwen — analyse it against the agreed milestone
                 criteria and deliver an objective verdict in seconds.
               </p>
               <div className="flex flex-col gap-2.5">
@@ -579,18 +579,18 @@ export default function LandingPage() {
               className="text-4xl md:text-5xl tracking-tight"
               style={{ fontFamily: "var(--font-libre-franklin)", fontWeight: 600, color: "#EDE6DD" }}
             >
-              Why we build on the XRPL EVM Sidechain
+              Why we build on XRP Ledger
             </h2>
           </ScrollReveal>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 items-stretch">
             {[
-              { stat: "Native",  label: "escrow",          desc: "No smart contracts needed — escrow is built into the protocol with XLS-85 support for RLUSD." },
+              { stat: "EVM +",   label: "native XRPL",     desc: "Smart contract escrow on the XRPL EVM Sidechain, with every event written as an immutable audit memo on the native XRP Ledger." },
               { stat: "3-5 sec", label: "settlement",      desc: "Transactions confirm in seconds, not minutes or hours." },
               { stat: "<$0.01",  label: "per transaction", desc: "Near-zero fees make frequent settlements economically viable." },
-              { stat: "100%",    label: "transparent",     desc: "All escrows are visible and verifiable on-chain by both parties." },
+              { stat: "100%",    label: "transparent",     desc: "All escrows are visible on-chain. Every action is dual-verified on both the EVM Sidechain and the XRP Ledger." },
             ].map((item, i) => (
-              <ScrollReveal key={item.label} delay={i * 80}>
-                <div className="cs-card">
+              <ScrollReveal key={item.label} delay={i * 80} className="h-full">
+                <div className="cs-card h-full">
                   <p
                     style={{
                       fontFamily: "var(--font-libre-franklin)",
@@ -792,7 +792,7 @@ export default function LandingPage() {
               cascrow
             </span>
           </div>
-          <span>© 2025 Cascrow · Built on XRPL · RLUSD · Claude + Gemini AI</span>
+          <span>© 2025 Cascrow · Built on XRPL · RLUSD · Claude · Gemini · OpenAI · Mistral · Qwen</span>
           <div className="flex gap-6">
             <Link href="/login"    className="transition-colors hover:text-[#EDE6DD]">Sign in</Link>
             <Link href="/register" className="transition-colors hover:text-[#EDE6DD]">Register</Link>
