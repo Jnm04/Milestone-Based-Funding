@@ -143,10 +143,13 @@ function combineResults(results: { model: string; result: AIVerificationResult }
     majorityVoters.reduce((sum, r) => sum + r.result.confidence, 0) / majorityVoters.length
   );
 
-  const yesNames = yesVoters.map((r) => r.model).join(", ") || "none";
-  const noNames = noVoters.map((r) => r.model).join(", ") || "none";
+  const yesNames = yesVoters.map((r) => r.model).join(", ");
+  const noNames = noVoters.map((r) => r.model).join(", ");
   const primaryReasoning = majorityVoters[0]?.result.reasoning ?? "";
-  const reasoning = `${yesVoters.length}/5 models approved (YES: ${yesNames} | NO: ${noNames}). ${primaryReasoning}`;
+  const votesummary = noNames
+    ? `YES: ${yesNames} | NO: ${noNames}`
+    : `YES: ${yesNames}`;
+  const reasoning = `${yesVoters.length}/5 models approved (${votesummary}). ${primaryReasoning}`;
 
   return { decision, reasoning, confidence };
 }
@@ -286,7 +289,7 @@ async function callCerebrasText(userMessage: string): Promise<AIVerificationResu
     ],
   });
   const text = response.choices[0]?.message?.content ?? "";
-  return parseAIResponse(text, "Cerebras/Llama");
+  return parseAIResponse(text, "Cerebras/Qwen3");
 }
 
 // Cerebras doesn't support vision — fall back to text-only with a note
@@ -304,7 +307,7 @@ async function callCerebrasImage(
     ],
   });
   const text = response.choices[0]?.message?.content ?? "";
-  return parseAIResponse(text, "Cerebras/Llama");
+  return parseAIResponse(text, "Cerebras/Qwen3");
 }
 
 // ─── Safe wrappers (log error, return null on failure) ───────────────────────
@@ -349,7 +352,7 @@ export async function verifyMilestone(params: {
     safeCall(() => callGeminiText(userMessage), "Gemini"),
     safeCall(() => callOpenAIText(userMessage), "OpenAI"),
     safeCall(() => callMistralText(userMessage), "Mistral"),
-    safeCall(() => callCerebrasText(userMessage), "Cerebras/Llama"),
+    safeCall(() => callCerebrasText(userMessage), "Cerebras/Qwen3"),
   ]);
 
   const results = raw.filter((r): r is { model: string; result: AIVerificationResult } => r !== null);
@@ -385,7 +388,7 @@ export async function verifyMilestoneImage(params: {
     safeCall(() => callGeminiImage(base64, params.mimeType, userMessage), "Gemini"),
     safeCall(() => callOpenAIImage(base64, params.mimeType, userMessage), "OpenAI"),
     safeCall(() => callMistralImage(base64, params.mimeType, userMessage), "Mistral"),
-    safeCall(() => callCerebrasImage(base64, params.mimeType, userMessage), "Cerebras/Llama"),
+    safeCall(() => callCerebrasImage(base64, params.mimeType, userMessage), "Cerebras/Qwen3"),
   ]);
 
   const results = raw.filter((r): r is { model: string; result: AIVerificationResult } => r !== null);
