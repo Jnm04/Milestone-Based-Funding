@@ -62,7 +62,7 @@ To verify a proof wasn't tampered with: compute `sha256sum` of the original file
 
 Being transparent about the remaining trust assumptions:
 
-- **AI verdict.** The platform chooses the AI models and constructs the prompt. 5 independent models from 4 different companies (Anthropic, Google, OpenAI, Mistral + Meta/Groq) must reach a 3/5 majority — no single provider can unilaterally determine the outcome. The prompt hash is locked on-chain so prompt changes are detectable.
+- **AI verdict.** The platform chooses the AI models and constructs the prompt. 5 independent models from 5 different companies (Anthropic, Google, OpenAI, Mistral, Alibaba/Cerebras) must reach a 3/5 majority — no single provider can unilaterally determine the outcome. The prompt hash is locked on-chain so prompt changes are detectable.
 - **PENDING_REVIEW escalation.** When AI confidence is between 60–85%, the grant giver decides manually. The receiver can resubmit a stronger proof at any time to bypass manual review. If the grant giver takes no action for 14 days, funds are automatically released. If the grant giver rejects, the deadline is automatically extended by the exact duration of the review — so the receiver never loses time they spent waiting.
 - **Proof storage.** Files are stored in Vercel Blob (private). The SHA-256 hash is locked on-chain, so tampering is detectable — but access to the file itself depends on the platform remaining operational.
 
