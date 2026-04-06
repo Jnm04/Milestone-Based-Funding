@@ -309,15 +309,21 @@ async function callCerebrasImage(
 
 // ─── Safe wrappers (log error, return null on failure) ───────────────────────
 
+/** Per-model timeout — prevents a hanging API call from blocking the whole vote. */
+const MODEL_TIMEOUT_MS = 30_000;
+
 async function safeCall(
   fn: () => Promise<AIVerificationResult>,
   model: string
 ): Promise<{ model: string; result: AIVerificationResult } | null> {
   try {
-    const result = await fn();
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Timed out after ${MODEL_TIMEOUT_MS / 1000}s`)), MODEL_TIMEOUT_MS)
+    );
+    const result = await Promise.race([fn(), timeout]);
     return { model, result };
   } catch (err) {
-    console.warn(`[verify] ${model} failed:`, err);
+    console.warn(`[verify] ${model} failed:`, err instanceof Error ? err.message : err);
     return null;
   }
 }
