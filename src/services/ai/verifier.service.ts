@@ -5,21 +5,34 @@ import { Mistral } from "@mistralai/mistralai";
 import { AIVerificationResult } from "@/types";
 import crypto from "crypto";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+// Lazy-initialized clients — avoids constructor throws during Next.js build
+// when env vars are only available at runtime (not build time).
+let _anthropic: Anthropic | null = null;
+let _gemini: GoogleGenAI | null = null;
+let _openai: OpenAI | null = null;
+let _mistral: Mistral | null = null;
+let _cerebras: OpenAI | null = null;
 
-const gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-const mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY });
-
-// Cerebras uses an OpenAI-compatible API
-const cerebras = new OpenAI({
-  apiKey: process.env.CEREBRAS_API_KEY,
-  baseURL: "https://api.cerebras.ai/v1",
-});
+function getAnthropic() {
+  if (!_anthropic) _anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  return _anthropic;
+}
+function getGemini() {
+  if (!_gemini) _gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  return _gemini;
+}
+function getOpenAI() {
+  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return _openai;
+}
+function getMistral() {
+  if (!_mistral) _mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY });
+  return _mistral;
+}
+function getCerebras() {
+  if (!_cerebras) _cerebras = new OpenAI({ apiKey: process.env.CEREBRAS_API_KEY, baseURL: "https://api.cerebras.ai/v1" });
+  return _cerebras;
+}
 
 const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
 const GEMINI_MODEL = "gemini-2.5-flash";
@@ -144,7 +157,7 @@ async function callClaude(
   messages: Anthropic.MessageParam[],
   system: string
 ): Promise<AIVerificationResult> {
-  const message = await anthropic.messages.create({
+  const message = await getAnthropic().messages.create({
     model: CLAUDE_MODEL,
     max_tokens: 512,
     system,
@@ -156,7 +169,7 @@ async function callClaude(
 }
 
 async function callGeminiText(userMessage: string): Promise<AIVerificationResult> {
-  const response = await gemini.models.generateContent({
+  const response = await getGemini().models.generateContent({
     model: GEMINI_MODEL,
     contents: [
       { role: "user", parts: [{ text: VERIFICATION_SYSTEM_PROMPT + "\n\n" + userMessage }] },
@@ -171,7 +184,7 @@ async function callGeminiImage(
   mimeType: string,
   userMessage: string
 ): Promise<AIVerificationResult> {
-  const response = await gemini.models.generateContent({
+  const response = await getGemini().models.generateContent({
     model: GEMINI_MODEL,
     contents: [
       {
@@ -188,7 +201,7 @@ async function callGeminiImage(
 }
 
 async function callOpenAIText(userMessage: string): Promise<AIVerificationResult> {
-  const response = await openai.chat.completions.create({
+  const response = await getOpenAI().chat.completions.create({
     model: OPENAI_MODEL,
     max_tokens: 512,
     messages: [
@@ -205,7 +218,7 @@ async function callOpenAIImage(
   mimeType: string,
   userMessage: string
 ): Promise<AIVerificationResult> {
-  const response = await openai.chat.completions.create({
+  const response = await getOpenAI().chat.completions.create({
     model: OPENAI_MODEL,
     max_tokens: 512,
     messages: [
@@ -224,7 +237,7 @@ async function callOpenAIImage(
 }
 
 async function callMistralText(userMessage: string): Promise<AIVerificationResult> {
-  const response = await mistral.chat.complete({
+  const response = await getMistral().chat.complete({
     model: MISTRAL_MODEL,
     maxTokens: 512,
     messages: [
@@ -243,7 +256,7 @@ async function callMistralImage(
   mimeType: string,
   userMessage: string
 ): Promise<AIVerificationResult> {
-  const response = await mistral.chat.complete({
+  const response = await getMistral().chat.complete({
     model: "pixtral-12b-2409",
     maxTokens: 512,
     messages: [
@@ -264,7 +277,7 @@ async function callMistralImage(
 }
 
 async function callCerebrasText(userMessage: string): Promise<AIVerificationResult> {
-  const response = await cerebras.chat.completions.create({
+  const response = await getCerebras().chat.completions.create({
     model: CEREBRAS_MODEL,
     max_tokens: 512,
     messages: [
@@ -282,7 +295,7 @@ async function callCerebrasImage(
   _mimeType: string,
   userMessage: string
 ): Promise<AIVerificationResult> {
-  const response = await cerebras.chat.completions.create({
+  const response = await getCerebras().chat.completions.create({
     model: CEREBRAS_MODEL,
     max_tokens: 512,
     messages: [
