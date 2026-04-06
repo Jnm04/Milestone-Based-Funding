@@ -20,6 +20,8 @@ Claude + Gemini both verify the proof — both must return YES, NO, or UNCERTAIN
               ↓
   YES       → funds automatically released to receiver
   UNCERTAIN → Grant Giver manually reviews and decides
+            → Receiver can also resubmit improved proof (bypasses manual review if AI becomes confident)
+            → After 14 days without investor action → funds auto-released
   NO        → Receiver can resubmit (until deadline)
               ↓
   Deadline passed → cron job cancels escrow, RLUSD returned
@@ -50,7 +52,7 @@ Every event is written to two independent chains (XRPL EVM Sidechain + native XR
 |---|---|
 | `ESCROW_FUNDED` | `keccak256(milestoneTitle)` — the agreed criteria at the moment money was locked |
 | `PROOF_SUBMITTED` | `sha256(file)` — the exact file the AI evaluated; receiver can verify their file wasn't swapped |
-| `AI_DECISION` | AI verdict, confidence score, and reasoning hash |
+| `AI_DECISION` | AI verdict, confidence score, and `sha256(system_prompt)` — proves the evaluation criteria wasn't changed |
 | `FUNDS_RELEASED` | Transaction hash of the on-chain RLUSD transfer |
 
 To verify a proof wasn't tampered with: compute `sha256sum` of the original file locally and compare it against the `PROOF_SUBMITTED` record on either chain.
@@ -60,7 +62,7 @@ To verify a proof wasn't tampered with: compute `sha256sum` of the original file
 Being transparent about the remaining trust assumptions:
 
 - **AI verdict.** The platform chooses the AI models and constructs the prompt. The AI's reasoning is logged on-chain but the model itself is not decentralized.
-- **PENDING_REVIEW escalation.** When AI confidence is between 60–85%, the grant giver decides manually. There is no on-chain timeout forcing a decision — this is a known limitation of the current governance model.
+- **PENDING_REVIEW escalation.** When AI confidence is between 60–85%, the grant giver decides manually. The receiver can resubmit a stronger proof at any time to bypass manual review. If the grant giver takes no action for 14 days, funds are automatically released.
 - **Proof storage.** Files are stored in Vercel Blob (private). The SHA-256 hash is locked on-chain, so tampering is detectable — but access to the file itself depends on the platform remaining operational.
 
 ---
@@ -236,8 +238,8 @@ Every contract lifecycle event is written to both chains simultaneously and stor
 | `CONTRACT_CREATED` | Investor creates a new contract |
 | `ESCROW_FUNDED` | Grant giver funds milestone via MetaMask |
 | `PROOF_SUBMITTED` | Receiver uploads proof document |
-| `AI_DECISION` | Claude + Gemini return a verdict |
-| `MANUAL_REVIEW_APPROVED` | Grant giver manually approves |
+| `AI_DECISION` | Claude + Gemini return a combined verdict |
+| `MANUAL_REVIEW_APPROVED` | Grant giver manually approves — or auto-approved after 14 days inactivity |
 | `MANUAL_REVIEW_REJECTED` | Grant giver manually rejects |
 | `FUNDS_RELEASED` | RLUSD released to receiver |
 | `ESCROW_CANCELLED` | Deadline passed, RLUSD returned |
@@ -262,6 +264,8 @@ DRAFT
                                                                                                 └─ AI UNCERTAIN ──→ PENDING_REVIEW
                                                                                                 │                       └─ investor APPROVE ──→ VERIFIED ──→ COMPLETED
                                                                                                 │                       └─ investor REJECT  ──→ REJECTED
+                                                                                                │                       └─ receiver resubmits better proof ──→ PROOF_SUBMITTED (loop)
+                                                                                                │                       └─ 14 days no action (cron) ──→ VERIFIED ──→ COMPLETED
                                                                                                 └─ AI NO        ──→ REJECTED
                                                                                                                         └─ resubmit ──→ FUNDED (loop)
                                                             └─ deadline passed (cron) ──→ EXPIRED
