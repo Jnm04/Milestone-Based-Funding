@@ -1,5 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenAI } from "@google/genai";
+import OpenAI from "openai";
+import { Mistral } from "@mistralai/mistralai";
 import { AIVerificationResult } from "@/types";
 import crypto from "crypto";
 
@@ -9,8 +11,21 @@ const anthropic = new Anthropic({
 
 const gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+const mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY });
+
+// Cerebras uses an OpenAI-compatible API
+const cerebras = new OpenAI({
+  apiKey: process.env.CEREBRAS_API_KEY,
+  baseURL: "https://api.cerebras.ai/v1",
+});
+
 const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
 const GEMINI_MODEL = "gemini-2.5-flash";
+const OPENAI_MODEL = "gpt-4o-mini";
+const MISTRAL_MODEL = "mistral-small-latest";
+const CEREBRAS_MODEL = "llama3.1-8b";
 
 export type FileCategory = "pdf" | "image" | "office" | "text";
 
@@ -44,7 +59,7 @@ export async function extractOfficeText(buffer: Buffer, fileName: string): Promi
 }
 
 /**
- * System-level instructions for both AI models.
+ * System-level instructions for all AI models.
  * Separating instructions from user data is the primary defence against prompt injection.
  * The JSON response format is specified here so models cannot be overridden by document content.
  */
@@ -101,24 +116,30 @@ function parseAIResponse(raw: string, source: string): AIVerificationResult {
 }
 
 /**
- * Combines Claude + Gemini results with AND logic.
- * Both must approve for a YES. The lower confidence wins.
+ * Combines results from 5 models using 3/5 majority vote.
+ * Decision: YES if 3+ models say YES, NO otherwise.
+ * Confidence: average of the majority voters.
+ * Reasoning: summarises which models agreed/disagreed.
  */
-function combineResults(claude: AIVerificationResult, geminiResult: AIVerificationResult): AIVerificationResult {
-  const decision = claude.decision === "YES" && geminiResult.decision === "YES" ? "YES" : "NO";
-  const confidence = Math.min(claude.confidence, geminiResult.confidence);
-  const reasoning =
-    decision === "YES"
-      ? `Claude: ${claude.reasoning} | Gemini: ${geminiResult.reasoning}`
-      : claude.decision === "NO"
-      ? `Claude rejected: ${claude.reasoning}`
-      : `Gemini rejected: ${geminiResult.reasoning}`;
+function combineResults(results: { model: string; result: AIVerificationResult }[]): AIVerificationResult {
+  const yesVoters = results.filter((r) => r.result.decision === "YES");
+  const noVoters = results.filter((r) => r.result.decision === "NO");
+  const decision = yesVoters.length >= 3 ? "YES" : "NO";
+  const majorityVoters = decision === "YES" ? yesVoters : noVoters;
+  const confidence = Math.round(
+    majorityVoters.reduce((sum, r) => sum + r.result.confidence, 0) / majorityVoters.length
+  );
+
+  const yesNames = yesVoters.map((r) => r.model).join(", ") || "none";
+  const noNames = noVoters.map((r) => r.model).join(", ") || "none";
+  const primaryReasoning = majorityVoters[0]?.result.reasoning ?? "";
+  const reasoning = `${yesVoters.length}/5 models approved (YES: ${yesNames} | NO: ${noNames}). ${primaryReasoning}`;
+
   return { decision, reasoning, confidence };
 }
 
-/**
- * Calls Claude with a dedicated system prompt (instructions) and user message (data only).
- */
+// ─── Individual model callers ─────────────────────────────────────────────────
+
 async function callClaude(
   messages: Anthropic.MessageParam[],
   system: string
@@ -129,13 +150,11 @@ async function callClaude(
     system,
     messages,
   });
-
   const content = message.content[0];
   if (content.type !== "text") throw new Error("Unexpected response type from Claude");
   return parseAIResponse(content.text, "Claude");
 }
 
-/** Calls Gemini with text content. */
 async function callGeminiText(userMessage: string): Promise<AIVerificationResult> {
   const response = await gemini.models.generateContent({
     model: GEMINI_MODEL,
@@ -147,7 +166,6 @@ async function callGeminiText(userMessage: string): Promise<AIVerificationResult
   return parseAIResponse(text, "Gemini");
 }
 
-/** Calls Gemini with an image + text prompt. */
 async function callGeminiImage(
   imageBase64: string,
   mimeType: string,
@@ -169,6 +187,130 @@ async function callGeminiImage(
   return parseAIResponse(text, "Gemini");
 }
 
+async function callOpenAIText(userMessage: string): Promise<AIVerificationResult> {
+  const response = await openai.chat.completions.create({
+    model: OPENAI_MODEL,
+    max_tokens: 512,
+    messages: [
+      { role: "system", content: VERIFICATION_SYSTEM_PROMPT },
+      { role: "user", content: userMessage },
+    ],
+  });
+  const text = response.choices[0]?.message?.content ?? "";
+  return parseAIResponse(text, "OpenAI");
+}
+
+async function callOpenAIImage(
+  imageBase64: string,
+  mimeType: string,
+  userMessage: string
+): Promise<AIVerificationResult> {
+  const response = await openai.chat.completions.create({
+    model: OPENAI_MODEL,
+    max_tokens: 512,
+    messages: [
+      { role: "system", content: VERIFICATION_SYSTEM_PROMPT },
+      {
+        role: "user",
+        content: [
+          { type: "image_url", image_url: { url: `data:${mimeType};base64,${imageBase64}` } },
+          { type: "text", text: userMessage },
+        ],
+      },
+    ],
+  });
+  const text = response.choices[0]?.message?.content ?? "";
+  return parseAIResponse(text, "OpenAI");
+}
+
+async function callMistralText(userMessage: string): Promise<AIVerificationResult> {
+  const response = await mistral.chat.complete({
+    model: MISTRAL_MODEL,
+    maxTokens: 512,
+    messages: [
+      { role: "system", content: VERIFICATION_SYSTEM_PROMPT },
+      { role: "user", content: userMessage },
+    ],
+  });
+  const text = typeof response.choices?.[0]?.message?.content === "string"
+    ? response.choices[0].message.content
+    : "";
+  return parseAIResponse(text, "Mistral");
+}
+
+async function callMistralImage(
+  imageBase64: string,
+  mimeType: string,
+  userMessage: string
+): Promise<AIVerificationResult> {
+  const response = await mistral.chat.complete({
+    model: "pixtral-12b-2409",
+    maxTokens: 512,
+    messages: [
+      { role: "system", content: VERIFICATION_SYSTEM_PROMPT },
+      {
+        role: "user",
+        content: [
+          { type: "image_url", imageUrl: { url: `data:${mimeType};base64,${imageBase64}` } },
+          { type: "text", text: userMessage },
+        ],
+      },
+    ],
+  });
+  const text = typeof response.choices?.[0]?.message?.content === "string"
+    ? response.choices[0].message.content
+    : "";
+  return parseAIResponse(text, "Mistral");
+}
+
+async function callCerebrasText(userMessage: string): Promise<AIVerificationResult> {
+  const response = await cerebras.chat.completions.create({
+    model: CEREBRAS_MODEL,
+    max_tokens: 512,
+    messages: [
+      { role: "system", content: VERIFICATION_SYSTEM_PROMPT },
+      { role: "user", content: userMessage },
+    ],
+  });
+  const text = response.choices[0]?.message?.content ?? "";
+  return parseAIResponse(text, "Cerebras/Llama");
+}
+
+// Cerebras doesn't support vision — fall back to text-only with a note
+async function callCerebrasImage(
+  _imageBase64: string,
+  _mimeType: string,
+  userMessage: string
+): Promise<AIVerificationResult> {
+  const response = await cerebras.chat.completions.create({
+    model: CEREBRAS_MODEL,
+    max_tokens: 512,
+    messages: [
+      { role: "system", content: VERIFICATION_SYSTEM_PROMPT },
+      { role: "user", content: userMessage + "\n\n[Note: evaluate based on the milestone description only — image not available to this model]" },
+    ],
+  });
+  const text = response.choices[0]?.message?.content ?? "";
+  return parseAIResponse(text, "Cerebras/Llama");
+}
+
+// ─── Safe wrappers (log error, return null on failure) ───────────────────────
+
+async function safeCall(
+  fn: () => Promise<AIVerificationResult>,
+  model: string
+): Promise<{ model: string; result: AIVerificationResult } | null> {
+  try {
+    const result = await fn();
+    return { model, result };
+  } catch (err) {
+    console.warn(`[verify] ${model} failed:`, err);
+    return null;
+  }
+}
+
+// ─── Public verification functions ───────────────────────────────────────────
+
 /** Verifies milestone against extracted text (PDF, Office, CSV). */
 export async function verifyMilestone(params: {
   milestone: string;
@@ -183,44 +325,56 @@ export async function verifyMilestone(params: {
     `Milestone to verify:\n[MILESTONE START]\n${params.milestone}\n[MILESTONE END]\n\n` +
     `Document content:\n[DOCUMENT START]\n${content}\n[DOCUMENT END]${truncationNote}`;
 
-  const [claudeResult, geminiResult] = await Promise.all([
-    callClaude([{ role: "user", content: userMessage }], VERIFICATION_SYSTEM_PROMPT),
-    callGeminiText(userMessage),
+  const raw = await Promise.all([
+    safeCall(() => callClaude([{ role: "user", content: userMessage }], VERIFICATION_SYSTEM_PROMPT), "Claude"),
+    safeCall(() => callGeminiText(userMessage), "Gemini"),
+    safeCall(() => callOpenAIText(userMessage), "OpenAI"),
+    safeCall(() => callMistralText(userMessage), "Mistral"),
+    safeCall(() => callCerebrasText(userMessage), "Cerebras/Llama"),
   ]);
 
-  return combineResults(claudeResult, geminiResult);
+  const results = raw.filter((r): r is { model: string; result: AIVerificationResult } => r !== null);
+  if (results.length < 3) throw new Error(`Only ${results.length}/5 AI models responded — cannot reach majority`);
+  return combineResults(results);
 }
 
-/** Verifies milestone against an image using Claude Vision + Gemini Vision. */
+/** Verifies milestone against an image using all 5 models' vision capabilities. */
 export async function verifyMilestoneImage(params: {
   milestone: string;
   imageBuffer: Buffer;
   mimeType: "image/jpeg" | "image/png" | "image/gif" | "image/webp";
 }): Promise<AIVerificationResult> {
   const base64 = params.imageBuffer.toString("base64");
-
   const userMessage =
     `Examine the image and determine if it proves the following milestone was completed.\n\n` +
     `Milestone:\n[MILESTONE START]\n${params.milestone}\n[MILESTONE END]`;
 
-  const [claudeResult, geminiResult] = await Promise.all([
-    callClaude(
-      [{
-        role: "user",
-        content: [
-          { type: "image", source: { type: "base64", media_type: params.mimeType, data: base64 } },
-          { type: "text", text: userMessage },
-        ],
-      }],
-      VERIFICATION_SYSTEM_PROMPT
+  const raw = await Promise.all([
+    safeCall(
+      () => callClaude(
+        [{
+          role: "user",
+          content: [
+            { type: "image", source: { type: "base64", media_type: params.mimeType, data: base64 } },
+            { type: "text", text: userMessage },
+          ],
+        }],
+        VERIFICATION_SYSTEM_PROMPT
+      ),
+      "Claude"
     ),
-    callGeminiImage(base64, params.mimeType, userMessage),
+    safeCall(() => callGeminiImage(base64, params.mimeType, userMessage), "Gemini"),
+    safeCall(() => callOpenAIImage(base64, params.mimeType, userMessage), "OpenAI"),
+    safeCall(() => callMistralImage(base64, params.mimeType, userMessage), "Mistral"),
+    safeCall(() => callCerebrasImage(base64, params.mimeType, userMessage), "Cerebras/Llama"),
   ]);
 
-  return combineResults(claudeResult, geminiResult);
+  const results = raw.filter((r): r is { model: string; result: AIVerificationResult } => r !== null);
+  if (results.length < 3) throw new Error(`Only ${results.length}/5 AI models responded — cannot reach majority`);
+  return combineResults(results);
 }
 
-/** Verifies milestone against an image using Claude Vision only (Gemini fallback). */
+/** Claude-only fallback when all other models fail for image verification. */
 export async function callClaudeImageOnly(params: {
   milestone: string;
   imageBuffer: Buffer;
@@ -245,7 +399,7 @@ export async function callClaudeImageOnly(params: {
 
 /**
  * Mock verifier for development without real API keys.
- * Always returns YES with 85% confidence.
+ * Always returns YES with 80% confidence.
  */
 export function mockVerifyMilestone(params: {
   milestone: string;

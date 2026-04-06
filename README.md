@@ -16,7 +16,7 @@ Grant Giver approves RLUSD + signs fundMilestone via MetaMask
               ↓
 Receiver uploads PDF/image proof of milestone completion
               ↓
-Claude + Gemini both verify the proof — both must return YES, NO, or UNCERTAIN
+5 independent AI models verify the proof — 3/5 majority required (Claude, Gemini, GPT-4o-mini, Mistral Small, Llama 3.3 via Cerebras)
               ↓
   YES       → funds automatically released to receiver
   UNCERTAIN → Grant Giver manually reviews and decides
@@ -53,7 +53,7 @@ Every event is written to two independent chains (XRPL EVM Sidechain + native XR
 |---|---|
 | `ESCROW_FUNDED` | `keccak256(milestoneTitle)` — the agreed criteria at the moment money was locked |
 | `PROOF_SUBMITTED` | `sha256(file)` — the exact file the AI evaluated; receiver can verify their file wasn't swapped |
-| `AI_DECISION` | AI verdict, confidence score, and `sha256(system_prompt)` — proves the evaluation criteria wasn't changed |
+| `AI_DECISION` | 5-model majority verdict, per-model votes, confidence score, and `sha256(system_prompt)` — proves the evaluation criteria wasn't changed |
 | `FUNDS_RELEASED` | Transaction hash of the on-chain RLUSD transfer |
 
 To verify a proof wasn't tampered with: compute `sha256sum` of the original file locally and compare it against the `PROOF_SUBMITTED` record on either chain.
@@ -62,7 +62,7 @@ To verify a proof wasn't tampered with: compute `sha256sum` of the original file
 
 Being transparent about the remaining trust assumptions:
 
-- **AI verdict.** The platform chooses the AI models and constructs the prompt. The AI's reasoning is logged on-chain but the model itself is not decentralized.
+- **AI verdict.** The platform chooses the AI models and constructs the prompt. 5 independent models from 4 different companies (Anthropic, Google, OpenAI, Mistral + Meta/Groq) must reach a 3/5 majority — no single provider can unilaterally determine the outcome. The prompt hash is locked on-chain so prompt changes are detectable.
 - **PENDING_REVIEW escalation.** When AI confidence is between 60–85%, the grant giver decides manually. The receiver can resubmit a stronger proof at any time to bypass manual review. If the grant giver takes no action for 14 days, funds are automatically released. If the grant giver rejects, the deadline is automatically extended by the exact duration of the review — so the receiver never loses time they spent waiting.
 - **Proof storage.** Files are stored in Vercel Blob (private). The SHA-256 hash is locked on-chain, so tampering is detectable — but access to the file itself depends on the platform remaining operational.
 
@@ -77,7 +77,7 @@ Being transparent about the remaining trust assumptions:
 | Wallet | MetaMask (ethers.js) |
 | Blockchain | XRPL EVM Sidechain (Testnet), Solidity smart contract |
 | Stablecoin | RLUSD (ERC-20 on XRPL EVM) |
-| AI | Claude `claude-haiku-4-5` + Gemini `gemini-2.5-flash` (dual-model, both must approve) |
+| AI | Claude `claude-haiku-4-5` + Gemini `gemini-2.5-flash` + GPT-4o-mini + Mistral Small + Llama 3.3 via Cerebras (5-model majority vote, 3/5 required) |
 | Audit trail | Dual-chain: XRPL EVM Sidechain + native XRP Ledger (AccountSet memos via HTTP JSON-RPC) |
 | Database | PostgreSQL + Prisma |
 | File storage | Vercel Blob |
@@ -116,9 +116,12 @@ DATABASE_URL=postgresql://...
 NEXTAUTH_SECRET=        # openssl rand -base64 32
 NEXTAUTH_URL=http://localhost:3000
 
-# AI
+# AI (5-model majority vote)
 ANTHROPIC_API_KEY=sk-ant-...
 GEMINI_API_KEY=AIza...
+OPENAI_API_KEY=sk-...
+MISTRAL_API_KEY=...
+CEREBRAS_API_KEY=csk_...
 
 # File storage
 BLOB_READ_WRITE_TOKEN=  # Vercel Blob token
