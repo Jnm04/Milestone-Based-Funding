@@ -605,10 +605,10 @@ export default function LandingPage() {
           </ScrollReveal>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 items-stretch">
             {[
-              { stat: "EVM +",   label: "native XRPL",     desc: "Smart contract escrow on the XRPL EVM Sidechain, with every event written as an immutable audit memo on the native XRP Ledger." },
-              { stat: "3-5 sec", label: "settlement",      desc: "Transactions confirm in seconds, not minutes or hours." },
-              { stat: "<$0.01",  label: "per transaction", desc: "Near-zero fees make frequent settlements economically viable." },
-              { stat: "100%",    label: "transparent",     desc: "All escrows are visible on-chain. Every action is dual-verified on both the EVM Sidechain and the XRP Ledger." },
+              { stat: "EVM + XRP Ledger", statSize: 34, label: "Smart Contract · Dual Audit-Trail", desc: "Smart contract escrow on the XRPL EVM Sidechain, with every event written as an immutable audit memo on the native XRP Ledger." },
+              { stat: "3-5 sec",          statSize: 48, label: "settlement",                        desc: "Transactions confirm in seconds, not minutes or hours." },
+              { stat: "<$0.01",           statSize: 48, label: "per transaction",                   desc: "Near-zero fees make frequent settlements economically viable." },
+              { stat: "100%",             statSize: 48, label: "transparent",                       desc: "All escrows are visible on-chain. Every action is dual-verified on both the EVM Sidechain and the XRP Ledger." },
             ].map((item, i) => (
               <ScrollReveal key={item.label} delay={i * 80} className="h-full">
                 <div className="cs-card h-full" style={{ minHeight: "220px" }}>
@@ -616,7 +616,7 @@ export default function LandingPage() {
                     style={{
                       fontFamily: "var(--font-libre-franklin)",
                       fontWeight: 300,
-                      fontSize: 48,
+                      fontSize: item.statSize,
                       color: "#C4704B",
                       lineHeight: 1.1,
                       marginBottom: 4,
