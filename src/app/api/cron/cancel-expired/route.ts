@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { cancelMilestone, getMilestoneEscrowState } from "@/services/evm/escrow.service";
+import { cancelMilestone, getMilestoneEscrowState, releaseMilestone } from "@/services/evm/escrow.service";
+import { writeAuditLog } from "@/services/evm/audit.service";
+import { sendVerifiedEmail, sendMilestoneCompletedInvestorEmail, sendFulfillmentKeyEmail } from "@/lib/email";
+import { contractIdToBytes32 } from "@/services/evm/escrow.service";
 
 /**
  * GET /api/cron/cancel-expired
  * Vercel Cron Job — runs every hour.
- * Finds all FUNDED milestones past their deadline and cancels them on-chain,
- * returning RLUSD to the investor.
+ * 1. Cancels FUNDED/PROOF_SUBMITTED/REJECTED milestones past their deadline.
+ * 2. Auto-approves PENDING_REVIEW milestones stalled for >14 days (no investor action).
  */
 export async function GET(request: NextRequest) {
   // Protect against external calls — Vercel sets this header on cron invocations
@@ -16,8 +19,9 @@ export async function GET(request: NextRequest) {
   }
 
   const now = new Date();
+  const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
 
-  // Find all expired funded milestones
+  // ── 1. Cancel expired funded milestones ──────────────────────────────────
   const expiredMilestones = await prisma.milestone.findMany({
     where: {
       status: { in: ["FUNDED", "PROOF_SUBMITTED", "REJECTED"] },
@@ -26,11 +30,7 @@ export async function GET(request: NextRequest) {
     include: { contract: true },
   });
 
-  if (expiredMilestones.length === 0) {
-    return NextResponse.json({ ok: true, cancelled: 0 });
-  }
-
-  const results = await Promise.allSettled(
+  const cancelResults = await Promise.allSettled(
     expiredMilestones.map(async (milestone) => {
       try {
         const onChain = await getMilestoneEscrowState(milestone.contractId, milestone.order);
@@ -53,10 +53,101 @@ export async function GET(request: NextRequest) {
     })
   );
 
-  const succeeded = results.filter((r) => r.status === "fulfilled").length;
-  const failed = results.filter((r) => r.status === "rejected").length;
+  // ── 2. Auto-approve stalled PENDING_REVIEW milestones (>14 days) ─────────
+  const stalledMilestones = await prisma.milestone.findMany({
+    where: {
+      status: "PENDING_REVIEW",
+      updatedAt: { lt: fourteenDaysAgo },
+    },
+    include: {
+      contract: { include: { investor: true, startup: true } },
+    },
+  });
 
-  console.log(`[cron/cancel-expired] Processed ${expiredMilestones.length} milestones — ${succeeded} ok, ${failed} failed`);
+  const approveResults = await Promise.allSettled(
+    stalledMilestones.map(async (milestone) => {
+      const { contract } = milestone;
+      try {
+        const fulfillment = milestone.escrowFulfillment ?? contract.escrowFulfillment;
+        if (!fulfillment) {
+          throw new Error(`No fulfillment key for milestone ${milestone.id}`);
+        }
 
-  return NextResponse.json({ ok: true, cancelled: succeeded, failed });
+        const milestoneTitle = milestone.title;
+        const amountUSD = milestone.amountUSD.toString();
+
+        // Send fulfillment key to startup before attempting release
+        if (contract.startup?.email) {
+          void sendFulfillmentKeyEmail({
+            to: contract.startup.email,
+            contractId: contract.id,
+            milestoneTitle,
+            fulfillment,
+            contractIdHash: contractIdToBytes32(contract.id),
+            milestoneOrder: milestone.order,
+          });
+        }
+
+        const txHash = await releaseMilestone(contract.id, milestone.order, fulfillment);
+
+        const completedMilestone = await prisma.milestone.update({
+          where: { id: milestone.id },
+          data: { status: "COMPLETED", evmTxHash: txHash },
+          include: { contract: { include: { milestones: { orderBy: { order: "asc" } } } } },
+        });
+
+        const milestones = completedMilestone.contract.milestones;
+        const remaining = milestones.find(
+          (m) => m.id !== milestone.id && !["COMPLETED", "EXPIRED"].includes(m.status)
+        );
+        const nextStatus = !remaining ? "COMPLETED" : remaining.status === "FUNDED" ? "FUNDED" : "AWAITING_ESCROW";
+        await prisma.contract.update({ where: { id: contract.id }, data: { status: nextStatus as never } });
+
+        await writeAuditLog({
+          contractId: contract.id,
+          milestoneId: milestone.id,
+          event: "MANUAL_REVIEW_APPROVED",
+          actor: "SYSTEM",
+          metadata: { auto: true, reason: "No investor action within 14 days" },
+        });
+
+        await writeAuditLog({
+          contractId: contract.id,
+          milestoneId: milestone.id,
+          event: "FUNDS_RELEASED",
+          metadata: { txHash, amountUSD, auto: true },
+        });
+
+        if (contract.startup?.notifyVerified) {
+          void sendVerifiedEmail({ to: contract.startup.email, contractId: contract.id, milestoneTitle, amountUSD, txHash });
+        }
+        if (contract.investor.notifyMilestoneCompleted) {
+          void sendMilestoneCompletedInvestorEmail({ to: contract.investor.email, contractId: contract.id, milestoneTitle, amountUSD });
+        }
+
+        return { id: milestone.id, action: "auto-approved", txHash };
+      } catch (err) {
+        console.error(`[cron/auto-approve] Failed for milestone ${milestone.id}:`, err);
+        throw err;
+      }
+    })
+  );
+
+  const cancelSucceeded = cancelResults.filter((r) => r.status === "fulfilled").length;
+  const cancelFailed = cancelResults.filter((r) => r.status === "rejected").length;
+  const approveSucceeded = approveResults.filter((r) => r.status === "fulfilled").length;
+  const approveFailed = approveResults.filter((r) => r.status === "rejected").length;
+
+  console.log(
+    `[cron] Cancelled: ${cancelSucceeded} ok, ${cancelFailed} failed | ` +
+    `Auto-approved: ${approveSucceeded} ok, ${approveFailed} failed`
+  );
+
+  return NextResponse.json({
+    ok: true,
+    cancelled: cancelSucceeded,
+    cancelFailed,
+    autoApproved: approveSucceeded,
+    approveFailed,
+  });
 }

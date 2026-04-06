@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
-import { verifyMilestone, verifyMilestoneImage, mockVerifyMilestone, categorizeFile } from "@/services/ai/verifier.service";
+import { verifyMilestone, verifyMilestoneImage, mockVerifyMilestone, categorizeFile, VERIFICATION_PROMPT_HASH } from "@/services/ai/verifier.service";
 import { releaseMilestone } from "@/services/evm/escrow.service";
 import { sendPendingReviewEmail, sendRejectedEmail, sendVerifiedEmail, sendMilestoneCompletedInvestorEmail, sendFulfillmentKeyEmail } from "@/lib/email";
 import { contractIdToBytes32 } from "@/services/evm/escrow.service";
@@ -41,9 +41,9 @@ export async function POST(request: NextRequest) {
 
     const { contract } = proof;
 
-    if (contract.status !== "PROOF_SUBMITTED") {
+    if (!["PROOF_SUBMITTED", "PENDING_REVIEW"].includes(contract.status)) {
       return NextResponse.json(
-        { error: `Contract is in status ${contract.status}, expected PROOF_SUBMITTED` },
+        { error: `Contract is in status ${contract.status}, expected PROOF_SUBMITTED or PENDING_REVIEW` },
         { status: 409 }
       );
     }
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
       milestoneId: proof.milestoneId ?? undefined,
       event: "AI_DECISION",
       actor: "AI",
-      metadata: { decision: result.decision, confidence: result.confidence, action, proofId },
+      metadata: { decision: result.decision, confidence: result.confidence, action, proofId, promptHash: VERIFICATION_PROMPT_HASH },
     });
 
     if (action === "PENDING_REVIEW" && contract.investor.notifyPendingReview) {

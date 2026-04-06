@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenAI } from "@google/genai";
 import { AIVerificationResult } from "@/types";
+import crypto from "crypto";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -62,6 +63,16 @@ Respond with ONLY a valid JSON object — no markdown, no explanation outside th
   "reasoning": "Brief explanation (2-3 sentences)",
   "confidence": 0-100
 }`;
+
+/**
+ * SHA-256 hash of the verification system prompt.
+ * Written on-chain with every AI_DECISION — allows anyone to verify the prompt
+ * hasn't changed by hashing the publicly documented prompt and comparing.
+ */
+export const VERIFICATION_PROMPT_HASH = crypto
+  .createHash("sha256")
+  .update(VERIFICATION_SYSTEM_PROMPT)
+  .digest("hex");
 
 /** Maximum characters sent to AI models. Claude Haiku supports ~200k tokens (~800k chars). */
 const MAX_TEXT_CHARS = 50_000;
