@@ -415,13 +415,13 @@ export default function LandingPage() {
               The trust gap in funding
             </h2>
             <p style={{ color: "#A89B8C", fontSize: 18, fontWeight: 300 }}>
-              Traditional funding processes are broken.
+              Any time money is tied to a promised outcome, both sides are exposed.
             </p>
           </ScrollReveal>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {[
-              { Icon: IconShield, title: "No payment security",          desc: "Grant Givers risk funding unfinished projects. Receivers risk delivering without getting paid." },
+              { Icon: IconShield, title: "No payment security",          desc: "Whoever pays risks funding unmet promises. Whoever delivers risks completing work without getting paid. Every grant, subsidy, insurance payout, or corporate milestone runs on blind trust." },
               { Icon: IconClock,  title: "Escrow is slow and expensive",  desc: "Banks and lawyers add days of delay and thousands in fees to every deal." },
               { Icon: IconScale,  title: "Verification is subjective",    desc: "Milestone completion is judged manually with no neutral, automated decision-making." },
             ].map((item, i) => (
