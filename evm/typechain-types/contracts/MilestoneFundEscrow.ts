@@ -29,6 +29,7 @@ export declare namespace MilestoneFundEscrow {
     startup: AddressLike;
     amount: BigNumberish;
     deadline: BigNumberish;
+    condition: BytesLike;
     funded: boolean;
     completed: boolean;
     cancelled: boolean;
@@ -39,6 +40,7 @@ export declare namespace MilestoneFundEscrow {
     startup: string,
     amount: bigint,
     deadline: bigint,
+    condition: string,
     funded: boolean,
     completed: boolean,
     cancelled: boolean
@@ -47,6 +49,7 @@ export declare namespace MilestoneFundEscrow {
     startup: string;
     amount: bigint;
     deadline: bigint;
+    condition: string;
     funded: boolean;
     completed: boolean;
     cancelled: boolean;
@@ -87,7 +90,14 @@ export interface MilestoneFundEscrowInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "fundMilestone",
-    values: [BytesLike, BigNumberish, AddressLike, BigNumberish, BigNumberish]
+    values: [
+      BytesLike,
+      BigNumberish,
+      AddressLike,
+      BigNumberish,
+      BigNumberish,
+      BytesLike
+    ]
   ): string;
   encodeFunctionData(
     functionFragment: "getMilestoneEscrow",
@@ -97,7 +107,7 @@ export interface MilestoneFundEscrowInterface extends Interface {
   encodeFunctionData(functionFragment: "platform", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "releaseMilestone",
-    values: [BytesLike, BigNumberish]
+    values: [BytesLike, BigNumberish, BytesLike]
   ): string;
   encodeFunctionData(
     functionFragment: "renounceOwnership",
@@ -287,11 +297,12 @@ export interface MilestoneFundEscrow extends BaseContract {
   escrows: TypedContractMethod<
     [arg0: BytesLike, arg1: BigNumberish],
     [
-      [string, string, bigint, bigint, boolean, boolean, boolean] & {
+      [string, string, bigint, bigint, string, boolean, boolean, boolean] & {
         investor: string;
         startup: string;
         amount: bigint;
         deadline: bigint;
+        condition: string;
         funded: boolean;
         completed: boolean;
         cancelled: boolean;
@@ -306,7 +317,8 @@ export interface MilestoneFundEscrow extends BaseContract {
       milestoneOrder: BigNumberish,
       startup: AddressLike,
       amount: BigNumberish,
-      deadline: BigNumberish
+      deadline: BigNumberish,
+      condition: BytesLike
     ],
     [void],
     "nonpayable"
@@ -323,7 +335,11 @@ export interface MilestoneFundEscrow extends BaseContract {
   platform: TypedContractMethod<[], [string], "view">;
 
   releaseMilestone: TypedContractMethod<
-    [contractId: BytesLike, milestoneOrder: BigNumberish],
+    [
+      contractId: BytesLike,
+      milestoneOrder: BigNumberish,
+      fulfillment: BytesLike
+    ],
     [void],
     "nonpayable"
   >;
@@ -360,11 +376,12 @@ export interface MilestoneFundEscrow extends BaseContract {
   ): TypedContractMethod<
     [arg0: BytesLike, arg1: BigNumberish],
     [
-      [string, string, bigint, bigint, boolean, boolean, boolean] & {
+      [string, string, bigint, bigint, string, boolean, boolean, boolean] & {
         investor: string;
         startup: string;
         amount: bigint;
         deadline: bigint;
+        condition: string;
         funded: boolean;
         completed: boolean;
         cancelled: boolean;
@@ -380,7 +397,8 @@ export interface MilestoneFundEscrow extends BaseContract {
       milestoneOrder: BigNumberish,
       startup: AddressLike,
       amount: BigNumberish,
-      deadline: BigNumberish
+      deadline: BigNumberish,
+      condition: BytesLike
     ],
     [void],
     "nonpayable"
@@ -401,7 +419,11 @@ export interface MilestoneFundEscrow extends BaseContract {
   getFunction(
     nameOrSignature: "releaseMilestone"
   ): TypedContractMethod<
-    [contractId: BytesLike, milestoneOrder: BigNumberish],
+    [
+      contractId: BytesLike,
+      milestoneOrder: BigNumberish,
+      fulfillment: BytesLike
+    ],
     [void],
     "nonpayable"
   >;
