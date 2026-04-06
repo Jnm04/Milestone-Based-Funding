@@ -263,23 +263,24 @@ export function CinematicIntro() {
           visibility:    ww === 0 ? "hidden" : "visible",
         }}
       >
-        {/* ── 3 centred bars ─────────────────────────────── */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 9 }}>
+        {/* ── 3 bars — same pattern as the logo mark ─────── */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 9, marginLeft: -15 }}>
           {[
-            { delay: 0,   w: 80, baseOpacity: 1    },
-            { delay: 150, w: 56, baseOpacity: 0.55 },
-            { delay: 300, w: 32, baseOpacity: 0.22 },
-          ].map(({ delay, w, baseOpacity }, idx) => (
+            { delay: 0,   ml: 0,  baseOpacity: 1    },
+            { delay: 150, ml: 15, baseOpacity: 0.55 },
+            { delay: 300, ml: 29, baseOpacity: 0.22 },
+          ].map(({ delay, ml, baseOpacity }, idx) => (
             <div
               key={idx}
               style={{
-                width:           w,
+                width:           80,
                 height:          5,
                 borderRadius:    3,
                 background:      "#C4704B",
+                marginLeft:      ml,
                 opacity:         phase >= 1 ? baseOpacity : 0,
                 transform:       phase >= 1 ? "scaleX(1)" : "scaleX(0)",
-                transformOrigin: "center",
+                transformOrigin: "left center",
                 transition:      `transform 0.75s cubic-bezier(0.22,1,0.36,1) ${delay}ms, opacity 0.5s ease ${delay}ms`,
               }}
             />
