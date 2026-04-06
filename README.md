@@ -31,6 +31,40 @@ Every key event is written to **both chains** as an immutable audit entry:
 
 ---
 
+## Trustless by design
+
+Cascrow is built so that neither party needs to trust the platform. Every critical guarantee is enforced on-chain — the platform cannot block payments, redirect funds, swap proof files, or falsify the agreed milestone criteria.
+
+### What the smart contract enforces
+
+- **Funds go to one address only.** The receiver's wallet address is written into the escrow at funding time and cannot be changed. The platform has no ability to redirect RLUSD to itself.
+- **Anyone with the fulfillment key can release.** `releaseMilestone(contractId, order, fulfillment)` is callable by any address — not just the platform. When AI approves, the platform emails the fulfillment key directly to the receiver. If the platform disappears, the receiver can self-execute on-chain using any EVM wallet (MetaMask, etc.) without involving us.
+- **The investor can cancel without us.** After the deadline, `cancelMilestone` can be called directly by the investor — no platform action required.
+- **The condition is locked on-chain.** The smart contract stores `keccak256(fulfillment)` at funding time. The platform cannot generate a different fulfillment key later and claim it works — the hash must match exactly.
+
+### What the audit trail proves
+
+Every event is written to two independent chains (XRPL EVM Sidechain + native XRP Ledger) before the platform responds. The metadata in each on-chain record includes:
+
+| Event | What's locked on-chain |
+|---|---|
+| `ESCROW_FUNDED` | `keccak256(milestoneTitle)` — the agreed criteria at the moment money was locked |
+| `PROOF_SUBMITTED` | `sha256(file)` — the exact file the AI evaluated; receiver can verify their file wasn't swapped |
+| `AI_DECISION` | AI verdict, confidence score, and reasoning hash |
+| `FUNDS_RELEASED` | Transaction hash of the on-chain RLUSD transfer |
+
+To verify a proof wasn't tampered with: compute `sha256sum` of the original file locally and compare it against the `PROOF_SUBMITTED` record on either chain.
+
+### What the platform still controls
+
+Being transparent about the remaining trust assumptions:
+
+- **AI verdict.** The platform chooses the AI models and constructs the prompt. The AI's reasoning is logged on-chain but the model itself is not decentralized.
+- **PENDING_REVIEW escalation.** When AI confidence is between 60–85%, the grant giver decides manually. There is no on-chain timeout forcing a decision — this is a known limitation of the current governance model.
+- **Proof storage.** Files are stored in Vercel Blob (private). The SHA-256 hash is locked on-chain, so tampering is detectable — but access to the file itself depends on the platform remaining operational.
+
+---
+
 ## Tech stack
 
 | Layer | Technology |
