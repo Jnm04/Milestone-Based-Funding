@@ -5,27 +5,35 @@ import { useState, useRef, useEffect } from "react";
 const ITEMS = [
   {
     q: "Who controls the funds?",
-    a: "No one — the smart contract does. Once the grant giver funds the milestone, the RLUSD is locked on-chain and can only be released by the contract logic itself. Neither the grant giver nor Cascrow can withdraw funds arbitrarily.",
+    a: "No one — the smart contract does. Once the grant giver funds the milestone, RLUSD is locked in a smart contract on the XRPL EVM Sidechain. Neither the grant giver nor Cascrow can withdraw funds arbitrarily. Only the contract logic itself can release them.",
   },
   {
-    q: "What happens if the AI rejects my proof?",
-    a: "You'll receive an email with the AI's reasoning explaining exactly why it was rejected. You can then revise your proof documents and resubmit — there's no limit on resubmission attempts before the deadline.",
+    q: "Which wallet do I need?",
+    a: "MetaMask or any EVM-compatible wallet. Cascrow runs on the XRPL EVM Sidechain, so you sign transactions directly in your browser — no mobile app required. Your private keys never leave your wallet.",
+  },
+  {
+    q: "How does AI verification work?",
+    a: "When you upload your proof PDF, five independent AI models — Claude, Gemini, OpenAI, Mistral and Qwen — each evaluate it against the agreed milestone criteria. A confidence score above 85% triggers automatic approval. Below 60% triggers automatic rejection. In between, the grant giver is notified to make a manual decision.",
   },
   {
     q: "What types of proof does the AI accept?",
-    a: "Claude AI can read PDFs, Word documents, spreadsheets, and analyze images (screenshots, charts, photos). You can upload multiple files at once to strengthen your case.",
+    a: "Cascrow currently accepts PDF documents. You can include screenshots, data exports, reports, and charts — anything packaged into a single PDF. The richer and more specific the evidence, the higher the AI's confidence score.",
   },
   {
-    q: "Can the grant giver cancel the contract after funding?",
-    a: "Not arbitrarily. Contracts have a defined deadline (cancelAfter date). If the receiver doesn't submit proof before the deadline, the grant giver can reclaim the funds. Before that date, the funds remain locked.",
+    q: "What happens if the AI rejects my proof?",
+    a: "You'll see the AI's detailed reasoning directly on the contract page. You can revise your proof and resubmit — there's no limit on resubmission attempts before the deadline. If you believe the verdict is incorrect, the grant giver can also override it manually.",
   },
   {
-    q: "Is RLUSD a real currency? What's the exchange rate?",
-    a: "RLUSD is a USD-pegged stablecoin issued by Ripple. 1 RLUSD = $1 USD, with no volatility risk. On the testnet, RLUSD has no real monetary value — it's used for development and testing purposes only.",
+    q: "Can the grant giver cancel after funding?",
+    a: "Not before the deadline. Once funds are locked in escrow they stay locked — until either the milestone is verified or the deadline passes. If no proof is submitted in time, the grant giver can reclaim the RLUSD automatically.",
   },
   {
-    q: "What happens if the AI is unsure about my proof?",
-    a: "If Claude AI's confidence is below a threshold, the milestone moves to a 'Pending Review' state and the grant giver is notified to make a manual decision. This ensures edge cases are handled fairly.",
+    q: "What is RLUSD and is it safe?",
+    a: "RLUSD is a USD-pegged stablecoin issued by Ripple. 1 RLUSD = $1 USD, no volatility risk. It runs as an ERC-20 token on the XRPL EVM Sidechain, backed by USD deposits and US Treasuries with monthly third-party reserve attestations. On testnet, RLUSD carries no real monetary value.",
+  },
+  {
+    q: "What is the dual audit trail?",
+    a: "Every escrow action — create, release, cancel — executes on the XRPL EVM Sidechain and is simultaneously written as an immutable memo on the native XRP Ledger. Your contract history is verifiable on two independent chains at the same time.",
   },
 ];
 
