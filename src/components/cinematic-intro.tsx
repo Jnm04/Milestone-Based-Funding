@@ -31,9 +31,9 @@ export function CinematicIntro() {
   const [gone, setGone]               = useState(false);
   const [autoProgress, setAutoProgress] = useState(0);
 
-  const traceCanvasRef    = useRef<HTMLCanvasElement>(null);
-  const traceAnimRef      = useRef<number>(0);
-  const canvasStartedRef  = useRef(false);
+  const traceCanvasRef  = useRef<HTMLCanvasElement>(null);
+  const traceAnimRef    = useRef<number>(0);
+  const navTargetRef    = useRef({ x: 96, y: 28 });
 
   // ── Window size ────────────────────────────────────────────
   useEffect(() => {
@@ -76,6 +76,12 @@ export function CinematicIntro() {
 
     let rafId = 0;
     const timer = setTimeout(() => {
+      // Measure actual nav logo center so the landing position is pixel-perfect
+      const navEl = document.querySelector<HTMLElement>("[data-nav-logo]");
+      if (navEl) {
+        const r = navEl.getBoundingClientRect();
+        navTargetRef.current = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      }
       const start = performance.now();
       const tick = (now: number) => {
         const raw    = Math.min((now - start) / DURATION_MS, 1);
@@ -103,9 +109,8 @@ export function CinematicIntro() {
 
   // ── Canvas: converging energy traces ──────────────────────
   useEffect(() => {
-    if (phase < 1) return;
-    if (canvasStartedRef.current) return;
-    canvasStartedRef.current = true;
+    // Delay matches phase 1 (500ms) — runs once, independent of phase changes
+    const boot = setTimeout(() => {
     const canvas = traceCanvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -186,8 +191,12 @@ export function CinematicIntro() {
     };
 
     traceAnimRef.current = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(traceAnimRef.current);
-  }, [phase]);
+    }, 490);
+    return () => {
+      clearTimeout(boot);
+      cancelAnimationFrame(traceAnimRef.current);
+    };
+  }, []);
 
   if (gone) return null;
 
@@ -195,15 +204,12 @@ export function CinematicIntro() {
   const scrollProgress = Math.min(scrollY / 280, 1);
   const progress       = Math.max(scrollProgress, autoProgress);
 
-  // Nav logo target (px from viewport edge)
-  const navX = 96;
-  const navY = 28;
-  const cx   = ww / 2 || 600;
-  const cy   = wh / 2 || 400;
+  const cx = ww / 2 || 600;
+  const cy = wh / 2 || 400;
 
-  const logoX     = cx + (navX - cx) * progress;
-  const logoY     = cy + (navY - cy) * progress;
-  const logoScale = 1 - progress * 0.74;
+  const logoX     = cx + (navTargetRef.current.x - cx) * progress;
+  const logoY     = cy + (navTargetRef.current.y - cy) * progress;
+  const logoScale = 1 - progress * 0.7;
 
   // Auto-resolve: logo travels at full opacity (bg fades instead)
   // Scroll-driven: logo fades as user scrolls
@@ -257,24 +263,23 @@ export function CinematicIntro() {
           visibility:    ww === 0 ? "hidden" : "visible",
         }}
       >
-        {/* ── 3 staggered bars ───────────────────────────── */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 9, alignSelf: "flex-start" }}>
+        {/* ── 3 centred bars ─────────────────────────────── */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 9 }}>
           {[
-            { delay: 0,   ml: 0,  baseOpacity: 1    },
-            { delay: 150, ml: 16, baseOpacity: 0.55 },
-            { delay: 300, ml: 32, baseOpacity: 0.22 },
-          ].map(({ delay, ml, baseOpacity }, idx) => (
+            { delay: 0,   w: 80, baseOpacity: 1    },
+            { delay: 150, w: 56, baseOpacity: 0.55 },
+            { delay: 300, w: 32, baseOpacity: 0.22 },
+          ].map(({ delay, w, baseOpacity }, idx) => (
             <div
               key={idx}
               style={{
-                width:           80,
+                width:           w,
                 height:          5,
                 borderRadius:    3,
                 background:      "#C4704B",
-                marginLeft:      ml,
                 opacity:         phase >= 1 ? baseOpacity : 0,
                 transform:       phase >= 1 ? "scaleX(1)" : "scaleX(0)",
-                transformOrigin: "left center",
+                transformOrigin: "center",
                 transition:      `transform 0.75s cubic-bezier(0.22,1,0.36,1) ${delay}ms, opacity 0.5s ease ${delay}ms`,
               }}
             />
