@@ -767,8 +767,8 @@ export default function LandingPage() {
         className="px-6 border-t"
         style={{ borderColor: "rgba(196,112,75,0.12)", position: "relative", zIndex: 1 }}
       >
-        {/* Top row */}
         <div className="max-w-6xl mx-auto flex items-center justify-between py-6 text-sm" style={{ color: "#A89B8C" }}>
+          {/* Left — logo */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               <div style={{ width: 20, height: 3, borderRadius: 2, background: "#C4704B" }} />
@@ -787,18 +787,8 @@ export default function LandingPage() {
               cascrow
             </span>
           </div>
-          <div className="flex gap-6">
-            <Link href="/login"    className="transition-colors hover:text-[#EDE6DD]">Sign in</Link>
-            <Link href="/register" className="transition-colors hover:text-[#EDE6DD]">Register</Link>
-          </div>
-        </div>
 
-        {/* Bottom row — copyright + powered by */}
-        <div
-          className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 py-4 border-t"
-          style={{ borderColor: "rgba(196,112,75,0.06)" }}
-        >
-          <span style={{ fontSize: 11, color: "#3D342C" }}>© 2026 Cascrow</span>
+          {/* Center — powered by */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 10, color: "#3D342C", letterSpacing: "0.08em", textTransform: "uppercase" }}>
               Powered by
@@ -807,6 +797,15 @@ export default function LandingPage() {
               {FOOTER_LOGOS.map((logo) => (
                 <FooterLogo key={logo.name} logo={logo} />
               ))}
+            </div>
+          </div>
+
+          {/* Right — copyright + nav */}
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            <span style={{ fontSize: 11, color: "#3D342C" }}>© 2026 Cascrow</span>
+            <div className="flex gap-6">
+              <Link href="/login"    className="transition-colors hover:text-[#EDE6DD]">Sign in</Link>
+              <Link href="/register" className="transition-colors hover:text-[#EDE6DD]">Register</Link>
             </div>
           </div>
         </div>
