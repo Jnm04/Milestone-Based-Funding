@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     let milestoneOrder: number;
+    let fulfillment: string | null;
 
     if (milestoneId) {
       const milestone = contract.milestones.find((m) => m.id === milestoneId);
@@ -67,12 +68,19 @@ export async function POST(request: NextRequest) {
         );
       }
       milestoneOrder = milestone.order;
+      fulfillment = milestone.escrowFulfillment;
     } else {
       milestoneOrder = 0;
+      fulfillment = contract.escrowFulfillment;
     }
 
-    // Platform wallet releases funds on-chain — no user signing needed
-    const txHash = await releaseMilestone(contractId, milestoneOrder);
+    if (!fulfillment) {
+      return NextResponse.json({ error: "Fulfillment key not found" }, { status: 500 });
+    }
+
+    // Platform wallet releases funds on-chain using the fulfillment key.
+    // The smart contract verifies keccak256(fulfillment) == stored condition.
+    const txHash = await releaseMilestone(contractId, milestoneOrder, fulfillment);
     console.log("[escrow/finish] Released on-chain:", txHash);
 
     if (milestoneId) {

@@ -165,7 +165,15 @@ export async function POST(request: NextRequest) {
     if (action === "VERIFIED") {
       try {
         const milestoneOrder = proof.milestone?.order ?? 0;
-        const txHash = await releaseMilestone(contract.id, milestoneOrder);
+
+        // Retrieve the fulfillment key — stored server-side when escrow was created.
+        // The smart contract verifies keccak256(fulfillment) == stored condition.
+        const fulfillment = proof.milestone?.escrowFulfillment ?? contract.escrowFulfillment;
+        if (!fulfillment) {
+          throw new Error("Fulfillment key not found — cannot release escrow");
+        }
+
+        const txHash = await releaseMilestone(contract.id, milestoneOrder, fulfillment);
         console.log("[verify] Auto-released on-chain:", txHash);
 
         if (proof.milestoneId) {

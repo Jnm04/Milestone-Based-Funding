@@ -1,6 +1,7 @@
 import { ethers } from "ethers";
 import { getEVMProvider, getPlatformSigner, withRetry } from "./client";
 import { ESCROW_ABI, ERC20_ABI, toRLUSDUnits } from "@/lib/evm-abi";
+import crypto from "crypto";
 
 const ESCROW_CONTRACT = process.env.NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS!;
 const RLUSD_CONTRACT = process.env.NEXT_PUBLIC_RLUSD_CONTRACT_ADDRESS!;
@@ -11,6 +12,20 @@ const RLUSD_CONTRACT = process.env.NEXT_PUBLIC_RLUSD_CONTRACT_ADDRESS!;
  */
 export function contractIdToBytes32(contractId: string): string {
   return ethers.id(contractId);
+}
+
+/**
+ * Generate a cryptographically random fulfillment key and its condition hash.
+ * - fulfillment: 32 random bytes (hex string, server-side secret)
+ * - condition:   keccak256(fulfillment) — stored on-chain in the escrow
+ *
+ * Trustless design: anyone who knows the fulfillment can call releaseMilestone.
+ * The platform reveals it to the startup upon AI approval.
+ */
+export function generateFulfillment(): { fulfillment: string; condition: string } {
+  const fulfillment = "0x" + crypto.randomBytes(32).toString("hex");
+  const condition = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(["bytes32"], [fulfillment]));
+  return { fulfillment, condition };
 }
 
 /**
@@ -25,6 +40,7 @@ export function buildApproveCalldata(amountUSD: string): string {
 
 /**
  * Build ABI-encoded calldata for MilestoneFundEscrow.fundMilestone(...).
+ * Includes the condition (keccak256 of the fulfillment) for trustless release.
  */
 export function buildFundMilestoneCalldata(params: {
   contractId: string;
@@ -32,6 +48,7 @@ export function buildFundMilestoneCalldata(params: {
   startupAddress: string;
   amountUSD: string;
   deadline: Date;
+  condition: string;
 }): string {
   const iface = new ethers.Interface(ESCROW_ABI);
   const contractIdHash = contractIdToBytes32(params.contractId);
@@ -43,30 +60,34 @@ export function buildFundMilestoneCalldata(params: {
     params.startupAddress,
     amount,
     deadline,
+    params.condition,
   ]);
 }
 
 /**
- * Platform wallet calls releaseMilestone — sends RLUSD to the startup.
- * No user signing required.
+ * Release escrowed RLUSD to the startup by providing the fulfillment key.
+ * The smart contract verifies keccak256(fulfillment) == stored condition.
+ * Can be called by anyone who knows the fulfillment — no platform trust needed.
  */
 export async function releaseMilestone(
   contractId: string,
-  milestoneOrder: number
+  milestoneOrder: number,
+  fulfillment: string
 ): Promise<string> {
   return withRetry(async () => {
     const signer = getPlatformSigner();
     const contract = new ethers.Contract(ESCROW_CONTRACT, ESCROW_ABI, signer);
     const contractIdHash = contractIdToBytes32(contractId);
-    const tx = await contract.releaseMilestone(contractIdHash, milestoneOrder);
+    const tx = await contract.releaseMilestone(contractIdHash, milestoneOrder, fulfillment);
     const receipt = await tx.wait();
     return receipt.hash;
   });
 }
 
 /**
- * Platform wallet calls cancelMilestone — returns RLUSD to the investor.
- * Only succeeds after the milestone deadline has passed.
+ * Cancel an expired escrow and return RLUSD to the investor.
+ * The investor can call this directly on-chain after the deadline without
+ * needing platform involvement. This is a convenience wrapper for our cron job.
  */
 export async function cancelMilestone(
   contractId: string,
@@ -101,7 +122,6 @@ export async function verifyFundTx(txHash: string, contractId: string): Promise<
     try {
       const parsed = iface.parseLog({ topics: [...log.topics], data: log.data });
       if (parsed?.name === "MilestoneFunded") {
-        // Verify the event belongs to this specific contract
         if (parsed.args.contractId !== expectedContractIdHash) return { ok: false };
         return {
           ok: true,

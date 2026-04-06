@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import {
   buildApproveCalldata,
   buildFundMilestoneCalldata,
+  generateFulfillment,
 } from "@/services/evm/escrow.service";
 
 const ESCROW_CONTRACT = process.env.NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS!;
@@ -75,19 +76,28 @@ export async function POST(request: NextRequest) {
       deadline = milestone.cancelAfter;
       milestoneOrder = milestone.order;
 
-      // Store the RLUSD amount on the milestone for display
-      await prisma.milestone.update({
-        where: { id: milestoneId },
-        data: { amountRLUSD: amountUSD },
-      });
     } else {
       amountUSD = contract.amountUSD.toString();
       deadline = contract.cancelAfter;
       milestoneOrder = 0;
+    }
 
+    // Generate a fresh fulfillment key for this escrow.
+    // fulfillment = secret preimage (stored server-side only)
+    // condition   = keccak256(fulfillment) — stored on-chain in the smart contract
+    // Upon AI approval, we reveal the fulfillment to the startup so they can
+    // self-execute releaseMilestone without needing to trust the platform.
+    const { fulfillment, condition } = generateFulfillment();
+
+    if (milestoneId) {
+      await prisma.milestone.update({
+        where: { id: milestoneId },
+        data: { amountRLUSD: amountUSD, escrowFulfillment: fulfillment, escrowCondition: condition },
+      });
+    } else {
       await prisma.contract.update({
         where: { id: contractId },
-        data: { amountRLUSD: amountUSD },
+        data: { amountRLUSD: amountUSD, escrowFulfillment: fulfillment, escrowCondition: condition },
       });
     }
 
@@ -98,6 +108,7 @@ export async function POST(request: NextRequest) {
       startupAddress: contract.startup.walletAddress,
       amountUSD,
       deadline,
+      condition,
     });
 
     return NextResponse.json({

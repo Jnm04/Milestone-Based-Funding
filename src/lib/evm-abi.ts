@@ -5,10 +5,10 @@
  */
 
 export const ESCROW_ABI = [
-  "function fundMilestone(bytes32 contractId, uint256 milestoneOrder, address startup, uint256 amount, uint256 deadline) external",
-  "function releaseMilestone(bytes32 contractId, uint256 milestoneOrder) external",
+  "function fundMilestone(bytes32 contractId, uint256 milestoneOrder, address startup, uint256 amount, uint256 deadline, bytes32 condition) external",
+  "function releaseMilestone(bytes32 contractId, uint256 milestoneOrder, bytes32 fulfillment) external",
   "function cancelMilestone(bytes32 contractId, uint256 milestoneOrder) external",
-  "function getMilestoneEscrow(bytes32 contractId, uint256 milestoneOrder) external view returns (tuple(address investor, address startup, uint256 amount, uint256 deadline, bool funded, bool completed, bool cancelled))",
+  "function getMilestoneEscrow(bytes32 contractId, uint256 milestoneOrder) external view returns (tuple(address investor, address startup, uint256 amount, uint256 deadline, bytes32 condition, bool funded, bool completed, bool cancelled))",
   "event MilestoneFunded(bytes32 indexed contractId, uint256 indexed milestoneOrder, address indexed investor, uint256 amount)",
   "event MilestoneReleased(bytes32 indexed contractId, uint256 indexed milestoneOrder, address startup, uint256 amount)",
   "event MilestoneCancelled(bytes32 indexed contractId, uint256 indexed milestoneOrder, address investor, uint256 amount)",
