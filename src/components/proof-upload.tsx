@@ -103,10 +103,16 @@ export function ProofUpload({ contractId, milestoneId, onUploaded, replaceMode }
   }
 
   return (
-    <div className="flex flex-col gap-4 p-6 border-2 border-dashed rounded-xl bg-zinc-50">
+    <div
+      className="flex flex-col gap-4 p-6 rounded-xl"
+      style={{
+        background: "rgba(255,255,255,0.03)",
+        border: "2px dashed rgba(196,112,75,0.3)",
+      }}
+    >
       <div className="text-center">
-        <p className="text-sm font-medium text-zinc-700">Upload Milestone Proof</p>
-        <p className="text-xs text-zinc-500 mt-1">
+        <p className="text-sm font-medium" style={{ color: "#EDE6DD" }}>Upload Milestone Proof</p>
+        <p className="text-xs mt-1" style={{ color: "#A89B8C" }}>
           PDF, DOCX, PPTX, XLSX · Images (JPG, PNG, WEBP) · CSV, TXT · Max 20 MB · Multiple files supported
         </p>
       </div>
@@ -123,14 +129,22 @@ export function ProofUpload({ contractId, milestoneId, onUploaded, replaceMode }
       {files.length > 0 && (
         <div className="flex flex-col gap-2">
           {files.map((file) => (
-            <div key={file.name} className="flex items-center gap-3 bg-white rounded-lg border px-4 py-3">
-              <span className="text-xs font-mono bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded">
+            <div
+              key={file.name}
+              className="flex items-center gap-3 rounded-lg px-4 py-3"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(196,112,75,0.2)" }}
+            >
+              <span
+                className="text-xs font-mono px-1.5 py-0.5 rounded"
+                style={{ background: "rgba(196,112,75,0.15)", color: "#C4704B" }}
+              >
                 {fileTypeLabel(file)}
               </span>
-              <span className="text-sm text-zinc-700 flex-1 truncate">{file.name}</span>
+              <span className="text-sm flex-1 truncate" style={{ color: "#EDE6DD" }}>{file.name}</span>
               <button
                 type="button"
-                className="text-xs text-red-500 hover:underline"
+                className="text-xs hover:underline"
+                style={{ color: "#ef4444" }}
                 onClick={() => removeFile(file.name)}
               >
                 Remove
@@ -141,34 +155,48 @@ export function ProofUpload({ contractId, milestoneId, onUploaded, replaceMode }
       )}
 
       {!uploaded && (
-        <Button
-          variant="outline"
-          onClick={() => inputRef.current?.click()}
+        <button
           type="button"
           disabled={loading}
+          onClick={() => inputRef.current?.click()}
+          className="w-full rounded-lg py-2 text-sm font-medium transition-colors disabled:opacity-50"
+          style={{
+            background: "rgba(196,112,75,0.1)",
+            border: "1px solid rgba(196,112,75,0.35)",
+            color: "#C4704B",
+          }}
         >
           {files.length > 0 ? "Add Another File" : "Select File"}
-        </Button>
+        </button>
       )}
 
       {files.length > 0 && !uploaded && (
-        <Button onClick={handleUpload} disabled={loading}>
+        <button
+          type="button"
+          onClick={handleUpload}
+          disabled={loading}
+          className="w-full rounded-lg py-2.5 text-sm font-semibold transition-colors disabled:opacity-50"
+          style={{ background: "#C4704B", color: "#171311" }}
+        >
           {loading
             ? "Uploading…"
             : `Upload ${files.length} file${files.length > 1 ? "s" : ""} & start AI verification`}
-        </Button>
+        </button>
       )}
 
       {uploaded && (
-        <Button
-          variant="outline"
-          onClick={() => {
-            setFiles([]);
-            setUploaded(false);
+        <button
+          type="button"
+          onClick={() => { setFiles([]); setUploaded(false); }}
+          className="w-full rounded-lg py-2 text-sm font-medium transition-colors"
+          style={{
+            background: "rgba(196,112,75,0.1)",
+            border: "1px solid rgba(196,112,75,0.35)",
+            color: "#C4704B",
           }}
         >
           Upload Other Documents
-        </Button>
+        </button>
       )}
     </div>
   );

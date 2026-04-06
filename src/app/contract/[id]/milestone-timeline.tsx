@@ -29,15 +29,15 @@ interface MilestoneTimelineProps {
 }
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  PENDING:         { bg: "#f4f4f5", text: "#71717a", border: "#e4e4e7" },
-  AWAITING_ESCROW: { bg: "#fef3c7", text: "#92400e", border: "#fde68a" },
-  FUNDED:          { bg: "#dbeafe", text: "#1e40af", border: "#bfdbfe" },
-  PROOF_SUBMITTED: { bg: "#ede9fe", text: "#5b21b6", border: "#ddd6fe" },
-  PENDING_REVIEW:  { bg: "#fef3c7", text: "#92400e", border: "#fde68a" },
-  VERIFIED:        { bg: "#dcfce7", text: "#166534", border: "#bbf7d0" },
-  REJECTED:        { bg: "#fee2e2", text: "#991b1b", border: "#fecaca" },
-  EXPIRED:         { bg: "#f4f4f5", text: "#71717a", border: "#e4e4e7" },
-  COMPLETED:       { bg: "#dcfce7", text: "#166534", border: "#bbf7d0" },
+  PENDING:         { bg: "rgba(168,155,140,0.12)", text: "#A89B8C",  border: "rgba(168,155,140,0.25)" },
+  AWAITING_ESCROW: { bg: "rgba(196,112,75,0.15)",  text: "#E8935A",  border: "rgba(196,112,75,0.35)"  },
+  FUNDED:          { bg: "rgba(96,165,250,0.12)",  text: "#7DB8F7",  border: "rgba(96,165,250,0.3)"   },
+  PROOF_SUBMITTED: { bg: "rgba(167,139,250,0.12)", text: "#C4ADFA",  border: "rgba(167,139,250,0.3)"  },
+  PENDING_REVIEW:  { bg: "rgba(196,112,75,0.15)",  text: "#E8935A",  border: "rgba(196,112,75,0.35)"  },
+  VERIFIED:        { bg: "rgba(74,222,128,0.12)",  text: "#6EE09A",  border: "rgba(74,222,128,0.3)"   },
+  REJECTED:        { bg: "rgba(248,113,113,0.12)", text: "#F87171",  border: "rgba(248,113,113,0.3)"  },
+  EXPIRED:         { bg: "rgba(168,155,140,0.12)", text: "#A89B8C",  border: "rgba(168,155,140,0.25)" },
+  COMPLETED:       { bg: "rgba(74,222,128,0.12)",  text: "#6EE09A",  border: "rgba(74,222,128,0.3)"   },
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -59,7 +59,7 @@ export function MilestoneTimeline({ milestones, activeMilestoneId }: MilestoneTi
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-zinc-700 uppercase tracking-wide">Milestones</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-widest" style={{ color: "#C4704B" }}>Milestones</h2>
       <div className="flex flex-col gap-2">
         {milestones.map((ms, idx) => {
           const isActive = activeMilestoneId === ms.id;
@@ -79,16 +79,20 @@ export function MilestoneTimeline({ milestones, activeMilestoneId }: MilestoneTi
                   alignItems: "flex-start",
                   gap: "12px",
                   padding: "14px 16px",
-                  background: isActive ? "#fffbeb" : isCompleted ? "#f0fdf4" : "#fff",
-                  border: isExpanded
-                    ? "1.5px solid #a1a1aa"
-                    : isActive
-                    ? "1.5px solid #fde68a"
+                  background: isActive
+                    ? "rgba(196,112,75,0.08)"
                     : isCompleted
-                    ? "1px solid #bbf7d0"
-                    : "1px solid #e4e4e7",
+                    ? "rgba(74,222,128,0.05)"
+                    : "rgba(255,255,255,0.03)",
+                  border: isExpanded
+                    ? "1.5px solid rgba(196,112,75,0.5)"
+                    : isActive
+                    ? "1.5px solid rgba(196,112,75,0.4)"
+                    : isCompleted
+                    ? "1px solid rgba(74,222,128,0.25)"
+                    : "1px solid rgba(196,112,75,0.15)",
                   borderRadius: isExpanded ? "12px 12px 0 0" : "12px",
-                  opacity: isPending ? 0.75 : 1,
+                  opacity: isPending ? 0.6 : 1,
                   transition: "border-color 0.15s",
                   userSelect: "none",
                 }}
@@ -100,8 +104,8 @@ export function MilestoneTimeline({ milestones, activeMilestoneId }: MilestoneTi
                     width: "28px",
                     height: "28px",
                     borderRadius: "50%",
-                    background: isCompleted ? "#16a34a" : isActive ? "#d97706" : "#e4e4e7",
-                    color: isCompleted || isActive ? "#fff" : "#71717a",
+                    background: isCompleted ? "#16a34a" : isActive ? "#C4704B" : "rgba(168,155,140,0.2)",
+                    color: isCompleted || isActive ? "#fff" : "#A89B8C",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -115,7 +119,7 @@ export function MilestoneTimeline({ milestones, activeMilestoneId }: MilestoneTi
                 {/* Content */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", flexWrap: "wrap" }}>
-                    <span style={{ fontSize: "14px", fontWeight: 600, color: "#18181b" }}>
+                    <span style={{ fontSize: "14px", fontWeight: 600, color: "#EDE6DD" }}>
                       {ms.title}
                     </span>
                     <span
@@ -133,13 +137,13 @@ export function MilestoneTimeline({ milestones, activeMilestoneId }: MilestoneTi
                       {STATUS_LABELS[ms.status] ?? ms.status}
                     </span>
                   </div>
-                  <div style={{ display: "flex", gap: "16px", marginTop: "4px", fontSize: "12px", color: "#71717a" }}>
+                  <div style={{ display: "flex", gap: "16px", marginTop: "4px", fontSize: "12px", color: "#A89B8C" }}>
                     <span>
-                      <strong style={{ color: "#18181b" }}>${Number(ms.amountUSD).toLocaleString()}</strong>{" "}RLUSD
+                      <strong style={{ color: "#D4B896" }}>${Number(ms.amountUSD).toLocaleString()}</strong>{" "}RLUSD
                     </span>
                     <span>
                       Due:{" "}
-                      <strong style={{ color: "#18181b" }}>
+                      <strong style={{ color: "#D4B896" }}>
                         {new Date(ms.cancelAfter).toLocaleDateString()}
                       </strong>
                     </span>
@@ -147,7 +151,7 @@ export function MilestoneTimeline({ milestones, activeMilestoneId }: MilestoneTi
                 </div>
 
                 {/* Expand indicator */}
-                <span style={{ fontSize: "11px", color: "#a1a1aa", marginTop: "6px", flexShrink: 0 }}>
+                <span style={{ fontSize: "11px", color: "#A89B8C", marginTop: "6px", flexShrink: 0 }}>
                   {isExpanded ? "▲" : "▼"}
                 </span>
               </div>
@@ -157,8 +161,8 @@ export function MilestoneTimeline({ milestones, activeMilestoneId }: MilestoneTi
                 <div
                   style={{
                     padding: "16px",
-                    background: "#fafafa",
-                    border: "1.5px solid #a1a1aa",
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1.5px solid rgba(196,112,75,0.5)",
                     borderTop: "none",
                     borderRadius: "0 0 12px 12px",
                     display: "flex",
@@ -168,8 +172,8 @@ export function MilestoneTimeline({ milestones, activeMilestoneId }: MilestoneTi
                 >
                   {/* Escrow info */}
                   {ms.escrowSequence && (
-                    <div style={{ fontSize: "12px", color: "#52525b" }}>
-                      <span style={{ fontWeight: 600 }}>Escrow Sequence:</span>{" "}
+                    <div style={{ fontSize: "12px", color: "#A89B8C" }}>
+                      <span style={{ fontWeight: 600, color: "#EDE6DD" }}>Escrow Sequence:</span>{" "}
                       <code style={{ fontFamily: "monospace" }}>{ms.escrowSequence}</code>
                     </div>
                   )}
@@ -177,7 +181,7 @@ export function MilestoneTimeline({ milestones, activeMilestoneId }: MilestoneTi
                   {/* Proofs */}
                   {ms.proofs.length > 0 ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                      <p style={{ fontSize: "12px", fontWeight: 600, color: "#52525b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                      <p style={{ fontSize: "12px", fontWeight: 600, color: "#C4704B", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                         Proofs Submitted
                       </p>
                       {ms.proofs.map((proof) => (
@@ -185,8 +189,8 @@ export function MilestoneTimeline({ milestones, activeMilestoneId }: MilestoneTi
                           key={proof.id}
                           style={{
                             padding: "10px 12px",
-                            background: "#fff",
-                            border: "1px solid #e4e4e7",
+                            background: "rgba(255,255,255,0.04)",
+                            border: "1px solid rgba(196,112,75,0.15)",
                             borderRadius: "8px",
                             display: "flex",
                             flexDirection: "column",
@@ -194,14 +198,14 @@ export function MilestoneTimeline({ milestones, activeMilestoneId }: MilestoneTi
                           }}
                         >
                           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <span style={{ fontSize: "11px", fontFamily: "monospace", background: "#f4f4f5", padding: "2px 6px", borderRadius: "4px", color: "#52525b" }}>
+                            <span style={{ fontSize: "11px", fontFamily: "monospace", background: "rgba(196,112,75,0.15)", padding: "2px 6px", borderRadius: "4px", color: "#C4704B" }}>
                               {proof.fileName.split(".").pop()?.toUpperCase() ?? "FILE"}
                             </span>
                             <a
                               href={proof.fileUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              style={{ fontSize: "13px", color: "#2563eb", textDecoration: "underline", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                              style={{ fontSize: "13px", color: "#7DB8F7", textDecoration: "underline", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
                               onClick={(e) => e.stopPropagation()}
                             >
                               {proof.fileName}
@@ -213,8 +217,8 @@ export function MilestoneTimeline({ milestones, activeMilestoneId }: MilestoneTi
                                   fontWeight: 700,
                                   padding: "2px 8px",
                                   borderRadius: "999px",
-                                  background: proof.aiDecision === "YES" ? "#dcfce7" : proof.aiDecision === "NO" ? "#fee2e2" : "#fef3c7",
-                                  color: proof.aiDecision === "YES" ? "#166534" : proof.aiDecision === "NO" ? "#991b1b" : "#92400e",
+                                  background: proof.aiDecision === "YES" ? "rgba(74,222,128,0.12)" : proof.aiDecision === "NO" ? "rgba(248,113,113,0.12)" : "rgba(196,112,75,0.15)",
+                                  color: proof.aiDecision === "YES" ? "#6EE09A" : proof.aiDecision === "NO" ? "#F87171" : "#E8935A",
                                 }}
                               >
                                 AI: {proof.aiDecision === "YES" ? "Approved" : proof.aiDecision === "NO" ? "Rejected" : "Review"}
@@ -223,18 +227,18 @@ export function MilestoneTimeline({ milestones, activeMilestoneId }: MilestoneTi
                             )}
                           </div>
                           {proof.aiReasoning && (
-                            <p style={{ fontSize: "12px", color: "#71717a", lineHeight: 1.5, margin: 0 }}>
+                            <p style={{ fontSize: "12px", color: "#A89B8C", lineHeight: 1.5, margin: 0 }}>
                               {proof.aiReasoning}
                             </p>
                           )}
-                          <p style={{ fontSize: "11px", color: "#a1a1aa", margin: 0 }}>
+                          <p style={{ fontSize: "11px", color: "#6B5E52", margin: 0 }}>
                             {new Date(proof.createdAt).toLocaleString()}
                           </p>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p style={{ fontSize: "12px", color: "#a1a1aa" }}>No proofs submitted yet for this milestone.</p>
+                    <p style={{ fontSize: "12px", color: "#6B5E52" }}>No proofs submitted yet for this milestone.</p>
                   )}
                 </div>
               )}

@@ -33,31 +33,34 @@ export function EscrowStatus({
   const daysLeft = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
   return (
-    <div className="flex flex-col gap-3 p-5 rounded-xl border bg-white">
+    <div
+      className="flex flex-col gap-3 p-5 rounded-xl"
+      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.15)" }}
+    >
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-zinc-500">Escrow Status</span>
+        <span className="text-sm font-medium" style={{ color: "#A89B8C" }}>Escrow Status</span>
         <Badge variant={config.variant}>{config.label}</Badge>
       </div>
 
       {amountRLUSD && (
         <div className="flex items-center justify-between">
-          <span className="text-sm text-zinc-500">Amount Locked</span>
-          <span className="font-semibold text-zinc-900">{amountRLUSD} RLUSD</span>
+          <span className="text-sm" style={{ color: "#A89B8C" }}>Amount Locked</span>
+          <span className="font-semibold" style={{ color: "#EDE6DD" }}>{amountRLUSD} RLUSD</span>
         </div>
       )}
 
       {evmTxHash && (
         <div className="flex items-center justify-between gap-4">
-          <span className="text-sm text-zinc-500 shrink-0">Fund Tx</span>
-          <code className="text-xs font-mono text-right break-all text-zinc-600">
+          <span className="text-sm shrink-0" style={{ color: "#A89B8C" }}>Fund Tx</span>
+          <code className="text-xs font-mono text-right break-all" style={{ color: "#A89B8C" }}>
             {evmTxHash.slice(0, 12)}…{evmTxHash.slice(-8)}
           </code>
         </div>
       )}
 
       <div className="flex items-center justify-between">
-        <span className="text-sm text-zinc-500">Deadline</span>
-        <span className={`text-sm font-medium ${daysLeft < 3 ? "text-red-500" : "text-zinc-900"}`}>
+        <span className="text-sm" style={{ color: "#A89B8C" }}>Deadline</span>
+        <span className="text-sm font-medium" style={{ color: daysLeft < 3 ? "#F87171" : "#EDE6DD" }}>
           {deadline.toLocaleDateString()} ({daysLeft > 0 ? `${daysLeft}d left` : "expired"})
         </span>
       </div>
