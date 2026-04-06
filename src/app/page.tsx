@@ -430,7 +430,7 @@ export default function LandingPage() {
       <section
         id="how"
         className="py-32 px-6"
-        style={{ background: "rgba(28,25,23,0.85)", backdropFilter: "blur(0px)", position: "relative", zIndex: 1 }}
+        style={{ position: "relative", zIndex: 1 }}
       >
         <div className="max-w-5xl mx-auto">
           <ScrollReveal className="text-center mb-20">
@@ -571,7 +571,7 @@ export default function LandingPage() {
       ═══════════════════════════════════════════════════ */}
       <section
         className="py-32 px-6"
-        style={{ background: "rgba(28,25,23,0.85)", position: "relative", zIndex: 1 }}
+        style={{ position: "relative", zIndex: 1 }}
       >
         <div className="max-w-5xl mx-auto">
           <ScrollReveal className="text-center mb-16">
@@ -590,7 +590,7 @@ export default function LandingPage() {
               { stat: "100%",    label: "transparent",     desc: "All escrows are visible on-chain. Every action is dual-verified on both the EVM Sidechain and the XRP Ledger." },
             ].map((item, i) => (
               <ScrollReveal key={item.label} delay={i * 80} className="h-full">
-                <div className="cs-card h-full">
+                <div className="cs-card h-full" style={{ minHeight: "220px" }}>
                   <p
                     style={{
                       fontFamily: "var(--font-libre-franklin)",
@@ -668,7 +668,7 @@ export default function LandingPage() {
       ═══════════════════════════════════════════════════ */}
       <section
         className="py-14 px-6 border-y"
-        style={{ borderColor: "rgba(196,112,75,0.1)", background: "rgba(28,25,23,0.8)", position: "relative", zIndex: 1 }}
+        style={{ borderColor: "rgba(196,112,75,0.1)", position: "relative", zIndex: 1 }}
       >
         <ScrollReveal className="max-w-4xl mx-auto flex flex-col items-center gap-7">
           <p
@@ -737,7 +737,7 @@ export default function LandingPage() {
       {/* ══════════════════════════════════════════════════
           CTA
       ═══════════════════════════════════════════════════ */}
-      <section className="py-32 px-6" style={{ background: "rgba(28,25,23,0.85)", position: "relative", zIndex: 1 }}>
+      <section className="py-32 px-6" style={{ position: "relative", zIndex: 1 }}>
         {/* Glow divider */}
         <div
           className="w-full h-px mb-20"
