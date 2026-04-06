@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyFundTx } from "@/services/evm/escrow.service";
 import { sendFundedEmail } from "@/lib/email";
 import { writeAuditLog } from "@/services/evm/audit.service";
+import { ethers } from "ethers";
 
 /**
  * POST /api/escrow/confirm
@@ -88,12 +89,15 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // keccak256 of the milestone title — anyone can verify the agreed criteria on-chain
+    const milestoneHash = ethers.keccak256(ethers.toUtf8Bytes(fundedMilestoneTitle));
+
     await writeAuditLog({
       contractId,
       milestoneId: milestoneId ?? undefined,
       event: "ESCROW_FUNDED",
       actor: session.user.walletAddress ?? session.user.id,
-      metadata: { txHash, amountUSD: fundedAmountUSD },
+      metadata: { txHash, amountUSD: fundedAmountUSD, milestoneHash },
     });
 
     // Email startup: milestone funded

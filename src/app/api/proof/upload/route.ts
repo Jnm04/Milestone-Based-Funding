@@ -6,6 +6,7 @@ import { extractPdfText, extractOfficeText, categorizeFile } from "@/services/ai
 import { sendProofSubmittedEmail } from "@/lib/email";
 import { put } from "@vercel/blob";
 import path from "path";
+import crypto from "crypto";
 import { writeAuditLog } from "@/services/evm/audit.service";
 
 async function triggerVerification(proofId: string) {
@@ -86,6 +87,7 @@ export async function POST(request: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
+    const fileHash = crypto.createHash("sha256").update(buffer).digest("hex");
     const category = categorizeFile(effectiveMime, fileName);
     // Sanitize filename for use in Blob storage paths (keep original for display)
     const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -129,7 +131,7 @@ export async function POST(request: NextRequest) {
       const fileUrl = blob.url;
 
       const proof = await prisma.proof.create({
-        data: { contractId: milestone.contractId, milestoneId, fileUrl, fileName, extractedText },
+        data: { contractId: milestone.contractId, milestoneId, fileUrl, fileName, fileHash, extractedText },
       });
 
       await prisma.milestone.update({
@@ -157,7 +159,7 @@ export async function POST(request: NextRequest) {
         milestoneId,
         event: "PROOF_SUBMITTED",
         actor: session.user.id,
-        metadata: { proofId: proof.id, fileName },
+        metadata: { proofId: proof.id, fileName, fileHash },
       });
 
       // Auto-trigger AI verification after response is sent
@@ -189,7 +191,7 @@ export async function POST(request: NextRequest) {
       const fileUrl = blob.url;
 
       const proof = await prisma.proof.create({
-        data: { contractId: resolvedContractId, fileUrl, fileName, extractedText },
+        data: { contractId: resolvedContractId, fileUrl, fileName, fileHash, extractedText },
       });
 
       await prisma.contract.update({
@@ -211,7 +213,7 @@ export async function POST(request: NextRequest) {
         contractId: resolvedContractId,
         event: "PROOF_SUBMITTED",
         actor: session.user.id,
-        metadata: { proofId: proof.id, fileName },
+        metadata: { proofId: proof.id, fileName, fileHash },
       });
 
       // Auto-trigger AI verification after response is sent

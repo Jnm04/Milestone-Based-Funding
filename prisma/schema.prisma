@@ -87,6 +87,7 @@ model Proof {
   milestone     Milestone? @relation(fields: [milestoneId], references: [id])
   fileUrl       String
   fileName      String
+  fileHash      String?    // SHA-256 of the uploaded file — written on-chain via audit log
   extractedText String?    @db.Text
   aiDecision    String?
   aiReasoning   String?    @db.Text
