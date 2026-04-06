@@ -83,18 +83,23 @@ export function CinematicIntro() {
         navTargetRef.current = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
       }
       const start = performance.now();
+      const navLogoEl = document.querySelector<HTMLElement>("[data-nav-logo]");
       const tick = (now: number) => {
-        const raw    = Math.min((now - start) / DURATION_MS, 1);
-        const eased  = ease(raw);
+        const raw   = Math.min((now - start) / DURATION_MS, 1);
+        const eased = ease(raw);
         setAutoProgress(eased);
+
+        // Cross-fade: nav logo fades IN during the last 35% of travel
+        if (navLogoEl) {
+          const fade = Math.max(0, (eased - 0.65) / 0.35);
+          navLogoEl.style.opacity = String(fade);
+        }
 
         if (raw < 1) {
           rafId = requestAnimationFrame(tick);
         } else {
-          // Transition complete — hand off to nav logo
           setGone(true);
-          document.querySelector<HTMLElement>("[data-nav-logo]")
-            ?.style.setProperty("opacity", "1");
+          if (navLogoEl) navLogoEl.style.opacity = "1";
           window.dispatchEvent(new Event("cascrow:intro-done"));
         }
       };
@@ -211,9 +216,13 @@ export function CinematicIntro() {
   const logoY     = cy + (navTargetRef.current.y - cy) * progress;
   const logoScale = 1 - progress * 0.7;
 
-  // Auto-resolve: logo travels at full opacity (bg fades instead)
-  // Scroll-driven: logo fades as user scrolls
-  const logoAlpha = scrollY > 0 ? Math.max(0, 1 - scrollProgress * 1.6) : 1;
+  // Auto-resolve: cross-fade out during last 35% of travel
+  // Scroll-driven: fade as user scrolls
+  const logoAlpha = autoProgress > 0
+    ? Math.max(0, 1 - Math.max(0, autoProgress - 0.65) / 0.35)
+    : scrollY > 0
+      ? Math.max(0, 1 - scrollProgress * 1.6)
+      : 1;
   const bgAlpha   = Math.max(0, 1 - progress * 2.5);
 
   return (
