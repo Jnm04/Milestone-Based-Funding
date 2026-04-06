@@ -31,8 +31,9 @@ export function CinematicIntro() {
   const [gone, setGone]               = useState(false);
   const [autoProgress, setAutoProgress] = useState(0);
 
-  const traceCanvasRef = useRef<HTMLCanvasElement>(null);
-  const traceAnimRef   = useRef<number>(0);
+  const traceCanvasRef    = useRef<HTMLCanvasElement>(null);
+  const traceAnimRef      = useRef<number>(0);
+  const canvasStartedRef  = useRef(false);
 
   // ── Window size ────────────────────────────────────────────
   useEffect(() => {
@@ -103,6 +104,8 @@ export function CinematicIntro() {
   // ── Canvas: converging energy traces ──────────────────────
   useEffect(() => {
     if (phase < 1) return;
+    if (canvasStartedRef.current) return;
+    canvasStartedRef.current = true;
     const canvas = traceCanvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
