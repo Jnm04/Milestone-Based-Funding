@@ -16,7 +16,7 @@ Grant Giver approves RLUSD + signs fundMilestone via MetaMask
               ↓
 Receiver uploads PDF/image proof of milestone completion
               ↓
-5 independent AI models verify the proof — 3/5 majority required (Claude, Gemini, GPT-4o-mini, Mistral Small, Llama 3.3 via Cerebras)
+5 independent AI models verify the proof — 3/5 majority required (Claude, Gemini, GPT-4o-mini, Mistral Small, Qwen3-235B via Cerebras)
               ↓
   YES       → funds automatically released to receiver
   UNCERTAIN → Grant Giver manually reviews and decides
@@ -77,7 +77,7 @@ Being transparent about the remaining trust assumptions:
 | Wallet | MetaMask (ethers.js) |
 | Blockchain | XRPL EVM Sidechain (Testnet), Solidity smart contract |
 | Stablecoin | RLUSD (ERC-20 on XRPL EVM) |
-| AI | Claude `claude-haiku-4-5` + Gemini `gemini-2.5-flash` + GPT-4o-mini + Mistral Small + Llama 3.3 via Cerebras (5-model majority vote, 3/5 required) |
+| AI | Claude `claude-haiku-4-5` + Gemini `gemini-2.5-flash` + GPT-4o-mini + Mistral Small + Qwen3-235B via Cerebras (5-model majority vote, 3/5 required) |
 | Audit trail | Dual-chain: XRPL EVM Sidechain + native XRP Ledger (AccountSet memos via HTTP JSON-RPC) |
 | Database | PostgreSQL + Prisma |
 | File storage | Vercel Blob |

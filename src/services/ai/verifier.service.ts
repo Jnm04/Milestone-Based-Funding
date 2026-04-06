@@ -38,7 +38,7 @@ const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
 const GEMINI_MODEL = "gemini-2.5-flash";
 const OPENAI_MODEL = "gpt-4o-mini";
 const MISTRAL_MODEL = "mistral-small-latest";
-const CEREBRAS_MODEL = "llama3.1-8b";
+const CEREBRAS_MODEL = "qwen-3-235b-a22b-instruct-2507";
 
 export type FileCategory = "pdf" | "image" | "office" | "text";
 
