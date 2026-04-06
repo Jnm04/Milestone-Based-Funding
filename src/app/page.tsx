@@ -1,9 +1,10 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { FAQ } from "@/components/faq";
-import { FOOTER_LOGOS } from "@/components/brand-icons";
+import { FOOTER_LOGOS, type FooterLogoItem } from "@/components/brand-icons";
 import { NodeBackground } from "@/components/node-background";
 import { CinematicIntro } from "@/components/cinematic-intro";
 
@@ -90,6 +91,21 @@ function IconCheck() {
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="20 6 9 17 4 12" />
     </svg>
+  );
+}
+
+/* ── Footer logo with hover colour ───────────────────────────── */
+function FooterLogo({ logo }: { logo: FooterLogoItem }) {
+  const [hovered, setHovered] = React.useState(false);
+  return (
+    <div
+      title={logo.name}
+      style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, cursor: "default", transition: "filter 0.2s ease" }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {logo.renderIcon(hovered)}
+    </div>
   );
 }
 
@@ -789,24 +805,7 @@ export default function LandingPage() {
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {FOOTER_LOGOS.map((logo) => (
-                <div
-                  key={logo.name}
-                  title={logo.name}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: 22,
-                    height: 22,
-                    opacity: 0.55,
-                    transition: "opacity 0.2s ease",
-                    cursor: "default",
-                  }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.opacity = "0.9"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.opacity = "0.55"; }}
-                >
-                  {logo.icon}
-                </div>
+                <FooterLogo key={logo.name} logo={logo} />
               ))}
             </div>
           </div>

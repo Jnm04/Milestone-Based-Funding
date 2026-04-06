@@ -86,15 +86,17 @@ export const TECH_LOGOS = [
   },
 ];
 
-const ICON_COLOR = "rgba(107,94,82,0.65)";
+const MUTED = "rgba(107,94,82,0.55)";
 
-export const FOOTER_LOGOS: { name: string; icon: React.ReactNode }[] = [
-  { name: "XRPL EVM Sidechain", icon: <SimpleIcon path={siXrp.path}          size={13} color={ICON_COLOR} /> },
-  { name: "XRP Ledger",         icon: <SimpleIcon path={siRipple.path}        size={13} color={ICON_COLOR} /> },
-  { name: "MetaMask",           icon: <span style={{ opacity: 0.45 }}><MetaMaskIcon size={13} /></span> },
-  { name: "Claude",             icon: <SimpleIcon path={siAnthropic.path}     size={13} color={ICON_COLOR} /> },
-  { name: "Gemini",             icon: <SimpleIcon path={siGooglegemini.path}  size={13} color={ICON_COLOR} /> },
-  { name: "OpenAI",             icon: <span style={{ fontSize: 10, fontWeight: 700, color: ICON_COLOR, lineHeight: 1, fontFamily: "monospace" }}>O</span> },
-  { name: "Mistral",            icon: <SimpleIcon path={siMistralai.path}     size={13} color={ICON_COLOR} /> },
-  { name: "Qwen",               icon: <span style={{ fontSize: 10, fontWeight: 700, color: ICON_COLOR, lineHeight: 1, fontFamily: "monospace" }}>Q</span> },
+export type FooterLogoItem = { name: string; renderIcon: (hovered: boolean) => React.ReactNode };
+
+export const FOOTER_LOGOS: FooterLogoItem[] = [
+  { name: "XRPL EVM Sidechain", renderIcon: (h) => <SimpleIcon path={siXrp.path}         size={13} color={h ? "#00AAE4" : MUTED} /> },
+  { name: "XRP Ledger",         renderIcon: (h) => <SimpleIcon path={siRipple.path}       size={13} color={h ? "#0085C0" : MUTED} /> },
+  { name: "MetaMask",           renderIcon: (h) => <span style={{ opacity: h ? 1 : 0.45 }}><MetaMaskIcon size={13} /></span> },
+  { name: "Claude",             renderIcon: (h) => <SimpleIcon path={siAnthropic.path}    size={13} color={h ? "#C1654A" : MUTED} /> },
+  { name: "Gemini",             renderIcon: (h) => <SimpleIcon path={siGooglegemini.path} size={13} color={h ? "#4285F4" : MUTED} /> },
+  { name: "OpenAI",             renderIcon: (h) => <span style={{ fontSize: 10, fontWeight: 700, color: h ? "#10A37F" : MUTED, lineHeight: 1, fontFamily: "monospace" }}>O</span> },
+  { name: "Mistral",            renderIcon: (h) => <SimpleIcon path={siMistralai.path}    size={13} color={h ? "#FF7000" : MUTED} /> },
+  { name: "Qwen",               renderIcon: (h) => <span style={{ fontSize: 10, fontWeight: 700, color: h ? "#7C3AED" : MUTED, lineHeight: 1, fontFamily: "monospace" }}>Q</span> },
 ];
