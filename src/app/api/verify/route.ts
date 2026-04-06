@@ -4,7 +4,8 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { verifyMilestone, verifyMilestoneImage, mockVerifyMilestone, categorizeFile } from "@/services/ai/verifier.service";
 import { releaseMilestone } from "@/services/evm/escrow.service";
-import { sendPendingReviewEmail, sendRejectedEmail, sendVerifiedEmail, sendMilestoneCompletedInvestorEmail } from "@/lib/email";
+import { sendPendingReviewEmail, sendRejectedEmail, sendVerifiedEmail, sendMilestoneCompletedInvestorEmail, sendFulfillmentKeyEmail } from "@/lib/email";
+import { contractIdToBytes32 } from "@/services/evm/escrow.service";
 import { writeAuditLog } from "@/services/evm/audit.service";
 
 export async function POST(request: NextRequest) {
@@ -171,6 +172,19 @@ export async function POST(request: NextRequest) {
         const fulfillment = proof.milestone?.escrowFulfillment ?? contract.escrowFulfillment;
         if (!fulfillment) {
           throw new Error("Fulfillment key not found — cannot release escrow");
+        }
+
+        // Reveal fulfillment key to startup before attempting auto-release.
+        // Even if releaseMilestone fails, the startup can self-execute on-chain.
+        if (contract.startup?.email) {
+          void sendFulfillmentKeyEmail({
+            to: contract.startup.email,
+            contractId: contract.id,
+            milestoneTitle,
+            fulfillment,
+            contractIdHash: contractIdToBytes32(contract.id),
+            milestoneOrder,
+          });
         }
 
         const txHash = await releaseMilestone(contract.id, milestoneOrder, fulfillment);

@@ -187,3 +187,41 @@ export async function sendRejectedEmail({
     `,
   });
 }
+
+export async function sendFulfillmentKeyEmail({
+  to,
+  contractId,
+  milestoneTitle,
+  fulfillment,
+  contractIdHash,
+  milestoneOrder,
+}: {
+  to: string;
+  contractId: string;
+  milestoneTitle: string;
+  fulfillment: string;
+  contractIdHash: string;
+  milestoneOrder: number;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  const escrowAddress = process.env.NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Escrow release key: ${milestoneTitle}`,
+    html: `
+      <p>Hi,</p>
+      <p>Your milestone <strong>${milestoneTitle}</strong> has been approved. Payment is being automatically released to your wallet.</p>
+      <p>As a trustless backup, here is your <strong>escrow release key</strong>. If the automatic payment does not arrive, you can release the funds yourself directly on-chain — no platform involvement needed.</p>
+      <hr />
+      <p><strong>Escrow Contract:</strong> <code>${escrowAddress}</code></p>
+      <p><strong>Contract ID (bytes32):</strong> <code>${contractIdHash}</code></p>
+      <p><strong>Milestone Order:</strong> <code>${milestoneOrder}</code></p>
+      <p><strong>Fulfillment Key:</strong> <code>${fulfillment}</code></p>
+      <hr />
+      <p>To release manually, call <code>releaseMilestone(contractId, milestoneOrder, fulfillment)</code> on the escrow contract above using any EVM wallet (e.g. MetaMask).</p>
+      <p><strong>Keep this key secure.</strong> Anyone who has it can trigger the release.</p>
+      <p><a href="${contractLink(contractId)}">View contract →</a></p>
+    `,
+  });
+}
