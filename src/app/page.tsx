@@ -93,6 +93,21 @@ function IconCheck() {
   );
 }
 
+/* ── Section divider ─────────────────────────────────────────── */
+function GlowDivider() {
+  return (
+    <div
+      aria-hidden
+      style={{
+        position: "relative",
+        zIndex: 1,
+        height: "1px",
+        background: "radial-gradient(ellipse 50% 100% at 50%, rgba(196,112,75,0.22) 0%, transparent 100%)",
+      }}
+    />
+  );
+}
+
 /* ── Mockup Cards ────────────────────────────────────────────── */
 function EscrowMockup() {
   return (
@@ -424,6 +439,8 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <GlowDivider />
+
       {/* ══════════════════════════════════════════════════
           HOW IT WORKS
       ═══════════════════════════════════════════════════ */}
@@ -496,6 +513,8 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <GlowDivider />
+
       {/* ══════════════════════════════════════════════════
           FEATURES
       ═══════════════════════════════════════════════════ */}
@@ -566,6 +585,8 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <GlowDivider />
+
       {/* ══════════════════════════════════════════════════
           WHY XRPL EVM SIDECHAIN
       ═══════════════════════════════════════════════════ */}
@@ -611,6 +632,8 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      <GlowDivider />
 
       {/* ══════════════════════════════════════════════════
           YOUR FUNDS, YOUR CONTROL
@@ -734,15 +757,12 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <GlowDivider />
+
       {/* ══════════════════════════════════════════════════
           CTA
       ═══════════════════════════════════════════════════ */}
       <section className="py-32 px-6" style={{ position: "relative", zIndex: 1 }}>
-        {/* Glow divider */}
-        <div
-          className="w-full h-px mb-20"
-          style={{ background: "radial-gradient(ellipse 60% 100% at 50%, rgba(196,112,75,0.28) 0%, transparent 100%)" }}
-        />
 
         <ScrollReveal className="max-w-3xl mx-auto text-center flex flex-col items-center gap-7">
           <h2
