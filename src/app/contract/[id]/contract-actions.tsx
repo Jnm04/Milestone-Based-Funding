@@ -438,7 +438,7 @@ export function ContractActions({
       <ProofUpload
         contractId={contractId}
         milestoneId={milestoneId}
-        onUploaded={(proofId) => handleVerify(proofId)}
+        onUploaded={() => window.location.reload()}
       />
     );
   }
@@ -473,7 +473,7 @@ export function ContractActions({
             <ProofUpload
               contractId={contractId}
               milestoneId={milestoneId}
-              onUploaded={(proofId) => handleVerify(proofId)}
+              onUploaded={() => window.location.reload()}
               replaceMode
             />
           </div>
