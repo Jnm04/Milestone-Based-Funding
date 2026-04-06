@@ -19,7 +19,10 @@ export async function POST(request: NextRequest) {
 
     const contract = await prisma.contract.findUnique({
       where: { id: contractId },
-      include: { investor: true },
+      include: {
+        investor: true,
+        milestones: { where: { status: "PENDING_REVIEW" } },
+      },
     });
 
     if (!contract) {
@@ -35,22 +38,57 @@ export async function POST(request: NextRequest) {
     }
 
     const newStatus = decision === "APPROVE" ? "VERIFIED" : "REJECTED";
-    await prisma.contract.update({
-      where: { id: contractId },
-      data: { status: newStatus },
-    });
+    const now = new Date();
 
-    // Also update any milestone currently in PENDING_REVIEW
-    await prisma.milestone.updateMany({
-      where: { contractId, status: "PENDING_REVIEW" },
-      data: { status: newStatus as never },
-    });
+    if (decision === "REJECT" && contract.milestones.length > 0) {
+      // Extend each rejected milestone's deadline by however long the review took.
+      // The milestone's updatedAt records when it entered PENDING_REVIEW.
+      for (const milestone of contract.milestones) {
+        const reviewDurationMs = now.getTime() - milestone.updatedAt.getTime();
+        const newCancelAfter = new Date(milestone.cancelAfter.getTime() + reviewDurationMs);
 
-    await writeAuditLog({
-      contractId,
-      event: decision === "APPROVE" ? "MANUAL_REVIEW_APPROVED" : "MANUAL_REVIEW_REJECTED",
-      actor: session.user.id,
-    });
+        await prisma.milestone.update({
+          where: { id: milestone.id },
+          data: { status: "REJECTED", cancelAfter: newCancelAfter },
+        });
+
+        await writeAuditLog({
+          contractId,
+          milestoneId: milestone.id,
+          event: "MANUAL_REVIEW_REJECTED",
+          actor: session.user.id,
+          metadata: {
+            reviewDurationDays: Math.round(reviewDurationMs / (1000 * 60 * 60 * 24) * 10) / 10,
+            deadlineExtendedTo: newCancelAfter.toISOString(),
+          },
+        });
+      }
+
+      // Extend contract deadline by the same duration as the first milestone
+      const firstMilestone = contract.milestones[0];
+      const reviewDurationMs = now.getTime() - firstMilestone.updatedAt.getTime();
+      await prisma.contract.update({
+        where: { id: contractId },
+        data: { status: "REJECTED", cancelAfter: new Date(contract.cancelAfter.getTime() + reviewDurationMs) },
+      });
+    } else {
+      // APPROVE — no deadline change needed
+      await prisma.contract.update({
+        where: { id: contractId },
+        data: { status: newStatus },
+      });
+
+      await prisma.milestone.updateMany({
+        where: { contractId, status: "PENDING_REVIEW" },
+        data: { status: newStatus as never },
+      });
+
+      await writeAuditLog({
+        contractId,
+        event: "MANUAL_REVIEW_APPROVED",
+        actor: session.user.id,
+      });
+    }
 
     return NextResponse.json({ status: newStatus });
   } catch (err) {
