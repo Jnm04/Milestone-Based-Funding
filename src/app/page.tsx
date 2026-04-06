@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { FAQ } from "@/components/faq";
-import { TECH_LOGOS } from "@/components/brand-icons";
+import { FOOTER_LOGOS } from "@/components/brand-icons";
 import { NodeBackground } from "@/components/node-background";
 import { CinematicIntro } from "@/components/cinematic-intro";
 
@@ -687,48 +687,6 @@ export default function LandingPage() {
       </section>
 
       {/* ══════════════════════════════════════════════════
-          TECH STACK
-      ═══════════════════════════════════════════════════ */}
-      <section
-        className="py-14 px-6 border-y"
-        style={{ borderColor: "rgba(196,112,75,0.1)", position: "relative", zIndex: 1 }}
-      >
-        <ScrollReveal className="max-w-4xl mx-auto flex flex-col items-center gap-7">
-          <p
-            className="text-xs uppercase tracking-widest font-medium"
-            style={{ color: "#A89B8C", fontFamily: "var(--font-libre-franklin)" }}
-          >
-            Powered by
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {TECH_LOGOS.map((t) => (
-              <div
-                key={t.name}
-                className="flex items-center gap-2.5 px-4 py-2 rounded-full border transition-all"
-                style={{ borderColor: "rgba(196,112,75,0.15)", background: "rgba(255,255,255,0.02)" }}
-                onMouseOver={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(196,112,75,0.35)";
-                  (e.currentTarget as HTMLDivElement).style.background  = "rgba(196,112,75,0.06)";
-                }}
-                onMouseOut={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(196,112,75,0.15)";
-                  (e.currentTarget as HTMLDivElement).style.background  = "rgba(255,255,255,0.02)";
-                }}
-              >
-                <div
-                  className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 overflow-hidden"
-                  style={{ background: t.bgColor }}
-                >
-                  {t.icon}
-                </div>
-                <span className="text-sm" style={{ color: "#A89B8C" }}>{t.name}</span>
-              </div>
-            ))}
-          </div>
-        </ScrollReveal>
-      </section>
-
-      {/* ══════════════════════════════════════════════════
           FAQ
       ═══════════════════════════════════════════════════ */}
       <section className="py-32 px-6" style={{ position: "relative", zIndex: 1 }}>
@@ -790,10 +748,11 @@ export default function LandingPage() {
           FOOTER
       ═══════════════════════════════════════════════════ */}
       <footer
-        className="py-8 px-6 border-t"
+        className="px-6 border-t"
         style={{ borderColor: "rgba(196,112,75,0.12)", position: "relative", zIndex: 1 }}
       >
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm" style={{ color: "#A89B8C" }}>
+        {/* Top row */}
+        <div className="max-w-6xl mx-auto flex items-center justify-between py-6 text-sm" style={{ color: "#A89B8C" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               <div style={{ width: 20, height: 3, borderRadius: 2, background: "#C4704B" }} />
@@ -812,10 +771,44 @@ export default function LandingPage() {
               cascrow
             </span>
           </div>
-          <span>© 2025 Cascrow · Built on XRPL · RLUSD · Claude · Gemini · OpenAI · Mistral · Qwen</span>
           <div className="flex gap-6">
             <Link href="/login"    className="transition-colors hover:text-[#EDE6DD]">Sign in</Link>
             <Link href="/register" className="transition-colors hover:text-[#EDE6DD]">Register</Link>
+          </div>
+        </div>
+
+        {/* Bottom row — copyright + powered by */}
+        <div
+          className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 py-4 border-t"
+          style={{ borderColor: "rgba(196,112,75,0.06)" }}
+        >
+          <span style={{ fontSize: 11, color: "#3D342C" }}>© 2026 Cascrow</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 10, color: "#3D342C", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              Powered by
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {FOOTER_LOGOS.map((logo) => (
+                <div
+                  key={logo.name}
+                  title={logo.name}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 22,
+                    height: 22,
+                    opacity: 0.55,
+                    transition: "opacity 0.2s ease",
+                    cursor: "default",
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.opacity = "0.9"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.opacity = "0.55"; }}
+                >
+                  {logo.icon}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </footer>

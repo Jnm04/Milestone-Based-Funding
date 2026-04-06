@@ -1,4 +1,5 @@
-import { siXrp, siAnthropic, siRipple } from "simple-icons";
+import type React from "react";
+import { siXrp, siAnthropic, siRipple, siGooglegemini, siMistralai } from "simple-icons";
 
 interface BrandIconProps {
   path: string;
@@ -83,4 +84,17 @@ export const TECH_LOGOS = [
     bgColor: "#0085C0",
     icon: <SimpleIcon path={siRipple.path} size={16} color="#ffffff" />,
   },
+];
+
+const ICON_COLOR = "rgba(107,94,82,0.65)";
+
+export const FOOTER_LOGOS: { name: string; icon: React.ReactNode }[] = [
+  { name: "XRPL EVM Sidechain", icon: <SimpleIcon path={siXrp.path}          size={13} color={ICON_COLOR} /> },
+  { name: "XRP Ledger",         icon: <SimpleIcon path={siRipple.path}        size={13} color={ICON_COLOR} /> },
+  { name: "MetaMask",           icon: <span style={{ opacity: 0.45 }}><MetaMaskIcon size={13} /></span> },
+  { name: "Claude",             icon: <SimpleIcon path={siAnthropic.path}     size={13} color={ICON_COLOR} /> },
+  { name: "Gemini",             icon: <SimpleIcon path={siGooglegemini.path}  size={13} color={ICON_COLOR} /> },
+  { name: "OpenAI",             icon: <span style={{ fontSize: 10, fontWeight: 700, color: ICON_COLOR, lineHeight: 1, fontFamily: "monospace" }}>O</span> },
+  { name: "Mistral",            icon: <SimpleIcon path={siMistralai.path}     size={13} color={ICON_COLOR} /> },
+  { name: "Qwen",               icon: <span style={{ fontSize: 10, fontWeight: 700, color: ICON_COLOR, lineHeight: 1, fontFamily: "monospace" }}>Q</span> },
 ];
