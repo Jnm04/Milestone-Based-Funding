@@ -155,10 +155,12 @@ async function waitForReceipt(txHash: string): Promise<void> {
     const receipt = (await window.ethereum!.request({
       method: "eth_getTransactionReceipt",
       params: [txHash],
-    })) as { status: string } | null;
+    })) as { status: string | number } | null;
 
     if (receipt) {
-      if (receipt.status !== "0x1") {
+      // Normalize: some RPCs return 1 (number), "0x1", or "0x01" for success
+      const statusOk = parseInt(String(receipt.status), 16) === 1;
+      if (!statusOk) {
         throw new Error("Transaction reverted on-chain.");
       }
       return;
@@ -166,6 +168,23 @@ async function waitForReceipt(txHash: string): Promise<void> {
     await new Promise((r) => setTimeout(r, 4000));
   }
   throw new Error("Transaction not mined within 5 minutes.");
+}
+
+/** Simulate a call via eth_call to get the revert reason before sending. */
+async function simulateCall(from: string, to: string, data: string): Promise<void> {
+  try {
+    await window.ethereum!.request({
+      method: "eth_call",
+      params: [{ from, to, data }, "latest"],
+    });
+  } catch (err: unknown) {
+    const msg = extractError(err);
+    // Surface the actual Solidity require message if present
+    if (msg.includes("execution reverted") || msg.includes("revert")) {
+      throw new Error(`Contract would revert: ${msg}`);
+    }
+    throw new Error(`Pre-flight check failed: ${msg}`);
+  }
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -261,8 +280,9 @@ export function ContractActions({
       // Small delay so the RPC rate-limiter resets between the two transactions
       await new Promise((r) => setTimeout(r, 4000));
 
-      // 3. Step 2 — Fund milestone on-chain
+      // 3. Step 2 — Simulate first to get a readable revert reason if it fails
       setFundingStep("funding");
+      await simulateCall(account, escrowContractAddress, fundCalldata);
       const fundTxHash = await sendTx(account, escrowContractAddress, fundCalldata);
       await waitForReceipt(fundTxHash);
 
