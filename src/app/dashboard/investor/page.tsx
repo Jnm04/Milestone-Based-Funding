@@ -68,11 +68,50 @@ function IconPlus() {
   );
 }
 
+const LS_KEY = "cascrow_hidden_contracts";
+
+function IconEyeOff() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+      <line x1="1" y1="1" x2="23" y2="23"/>
+    </svg>
+  );
+}
+
 export default function InvestorDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loadingContracts, setLoadingContracts] = useState(false);
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+  const [showHidden, setShowHidden] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(LS_KEY);
+      if (stored) setHiddenIds(new Set(JSON.parse(stored)));
+    } catch {}
+  }, []);
+
+  function hideContract(id: string) {
+    setHiddenIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      localStorage.setItem(LS_KEY, JSON.stringify([...next]));
+      return next;
+    });
+  }
+
+  function unhideContract(id: string) {
+    setHiddenIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      localStorage.setItem(LS_KEY, JSON.stringify([...next]));
+      return next;
+    });
+  }
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -201,7 +240,18 @@ export default function InvestorDashboard() {
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold" style={{ color: "#EDE6DD" }}>Your Contracts</h2>
-                <span className="text-sm" style={{ color: "#A89B8C" }}>{contracts.length} total</span>
+                <div className="flex items-center gap-3">
+                  {hiddenIds.size > 0 && (
+                    <button
+                      onClick={() => setShowHidden((v) => !v)}
+                      className="text-xs"
+                      style={{ color: "#A89B8C" }}
+                    >
+                      {showHidden ? "Hide archived" : `Show archived (${hiddenIds.size})`}
+                    </button>
+                  )}
+                  <span className="text-sm" style={{ color: "#A89B8C" }}>{contracts.length} total</span>
+                </div>
               </div>
 
               {loadingContracts && (
@@ -237,7 +287,7 @@ export default function InvestorDashboard() {
                 >
                   {/* Table header row */}
                   <div
-                    className="hidden md:grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 px-5 py-3 text-xs uppercase tracking-wide"
+                    className="hidden md:grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-4 px-5 py-3 text-xs uppercase tracking-wide"
                     style={{ background: "rgba(255,255,255,0.02)", color: "#A89B8C", borderBottom: "1px solid rgba(196,112,75,0.08)" }}
                   >
                     <span>Contract</span>
@@ -245,9 +295,11 @@ export default function InvestorDashboard() {
                     <span>Amount</span>
                     <span>Status</span>
                     <span>Actions</span>
+                    <span></span>
                   </div>
 
-                  {contracts.map((c, idx) => {
+                  {contracts.filter((c) => showHidden || !hiddenIds.has(c.id)).map((c, idx, arr) => {
+                    const isHidden    = hiddenIds.has(c.id);
                     const totalMs     = c.milestones.length;
                     const completedMs = c.milestones.filter((m) => m.status === "COMPLETED").length;
                     const pct         = totalMs > 0 ? Math.round((completedMs / totalMs) * 100) : 0;
@@ -256,19 +308,29 @@ export default function InvestorDashboard() {
                         key={c.id}
                         className="group px-5 py-4 transition-all"
                         style={{
-                          background: "transparent",
-                          borderBottom: idx < contracts.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
+                          background: isHidden ? "rgba(255,255,255,0.01)" : "transparent",
+                          borderBottom: idx < arr.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
+                          opacity: isHidden ? 0.4 : 1,
                         }}
-                        onMouseOver={(e) => { (e.currentTarget as HTMLDivElement).style.background = "rgba(196,112,75,0.04)"; }}
-                        onMouseOut={(e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+                        onMouseOver={(e) => { if (!isHidden) (e.currentTarget as HTMLDivElement).style.background = "rgba(196,112,75,0.04)"; }}
+                        onMouseOut={(e) => { (e.currentTarget as HTMLDivElement).style.background = isHidden ? "rgba(255,255,255,0.01)" : "transparent"; }}
                       >
                         {/* Mobile layout */}
                         <div className="flex flex-col gap-2 md:hidden">
                           <div className="flex items-start justify-between gap-2">
                             <p className="text-sm font-medium line-clamp-2 flex-1" style={{ color: "#EDE6DD" }}>{c.milestone}</p>
-                            <span className={STATUS_CLASS[c.status] ?? "cs-badge cs-badge-draft"}>
-                              {STATUS_LABELS[c.status] ?? c.status}
-                            </span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className={STATUS_CLASS[c.status] ?? "cs-badge cs-badge-draft"}>
+                                {STATUS_LABELS[c.status] ?? c.status}
+                              </span>
+                              <button
+                                onClick={() => isHidden ? unhideContract(c.id) : hideContract(c.id)}
+                                title={isHidden ? "Unhide" : "Hide from list"}
+                                style={{ color: "#6B5E52", lineHeight: 1 }}
+                              >
+                                <IconEyeOff />
+                              </button>
+                            </div>
                           </div>
                           <div className="flex items-center gap-4 text-xs" style={{ color: "#A89B8C" }}>
                             <span><strong style={{ color: "#EDE6DD" }}>${Number(c.amountUSD).toLocaleString()}</strong> RLUSD</span>
@@ -279,17 +341,19 @@ export default function InvestorDashboard() {
                               <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: "linear-gradient(90deg,#C4704B,#D4B896)" }} />
                             </div>
                           )}
-                          <Link
-                            href={`/contract/${c.id}?investor=${walletAddress}`}
-                            className="text-xs font-medium self-start"
-                            style={{ color: "#C4704B" }}
-                          >
-                            View →
-                          </Link>
+                          {!isHidden && (
+                            <Link
+                              href={`/contract/${c.id}?investor=${walletAddress}`}
+                              className="text-xs font-medium self-start"
+                              style={{ color: "#C4704B" }}
+                            >
+                              View →
+                            </Link>
+                          )}
                         </div>
 
                         {/* Desktop layout */}
-                        <div className="hidden md:grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 items-center">
+                        <div className="hidden md:grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-4 items-center">
                           <div className="flex flex-col gap-1.5 min-w-0">
                             <p className="text-sm font-medium truncate" style={{ color: "#EDE6DD" }}>{c.milestone}</p>
                             {totalMs > 1 && (
@@ -313,13 +377,26 @@ export default function InvestorDashboard() {
                           <span className={STATUS_CLASS[c.status] ?? "cs-badge cs-badge-draft"}>
                             {STATUS_LABELS[c.status] ?? c.status}
                           </span>
-                          <Link
-                            href={`/contract/${c.id}?investor=${walletAddress}`}
-                            className="text-sm font-medium transition-colors hover:underline"
-                            style={{ color: "#C4704B" }}
+                          {!isHidden ? (
+                            <Link
+                              href={`/contract/${c.id}?investor=${walletAddress}`}
+                              className="text-sm font-medium transition-colors hover:underline"
+                              style={{ color: "#C4704B" }}
+                            >
+                              View
+                            </Link>
+                          ) : (
+                            <span />
+                          )}
+                          <button
+                            onClick={() => isHidden ? unhideContract(c.id) : hideContract(c.id)}
+                            title={isHidden ? "Unhide" : "Hide from list"}
+                            style={{ color: "#6B5E52", lineHeight: 1, transition: "color 0.15s" }}
+                            onMouseOver={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#A89B8C"; }}
+                            onMouseOut={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#6B5E52"; }}
                           >
-                            View
-                          </Link>
+                            <IconEyeOff />
+                          </button>
                         </div>
                       </div>
                     );
