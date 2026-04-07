@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  body { font-family: Georgia, serif; max-width: 760px; margin: 60px auto; color: #1a1a1a; line-height: 1.7; font-size: 14px; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  h2 { font-size: 15px; margin-top: 32px; margin-bottom: 8px; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+  .meta { color: #666; font-size: 13px; margin-bottom: 40px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+  th { background: #f5f5f5; padding: 8px 10px; text-align: left; border: 1px solid #ddd; }
+  td { padding: 7px 10px; border: 1px solid #ddd; vertical-align: top; }
+  code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-size: 12px; font-family: monospace; }
+  pre { background: #f4f4f4; padding: 14px; border-radius: 4px; font-size: 12px; overflow-x: auto; font-family: monospace; line-height: 1.5; }
+  p { margin: 8px 0; }
+  ul { margin: 6px 0; padding-left: 20px; }
+</style>
+</head>
+<body>
+
+<h1>Technical Architecture Documentation — ClimateLedger Data Pipeline</h1>
+<div class="meta">
+  Prepared by: ClimateLedger GmbH — Engineering Team &nbsp;|&nbsp; Date: March 2026 &nbsp;|&nbsp; Version: 2.1<br>
+  Submitted as proof of Milestone 2: Technical Architecture Documentation
+</div>
+
+<h2>1. System Overview</h2>
+<p>The ClimateLedger platform consists of three core layers: (1) a data ingestion pipeline that aggregates carbon credit data from multiple registries and satellite sources, (2) a processing layer that normalizes, validates, and scores carbon credit quality, and (3) a settlement layer on the XRP Ledger that issues, transfers, and retires tokenized carbon credits.</p>
+
+<h2>2. Data Sources</h2>
+<table>
+  <tr><th>Source</th><th>Type</th><th>Update Frequency</th><th>Integration Method</th></tr>
+  <tr><td>Verra Registry API</td><td>Credit issuance &amp; retirement</td><td>Daily</td><td>REST API + webhook</td></tr>
+  <tr><td>Gold Standard API</td><td>Project certification data</td><td>Weekly</td><td>REST API</td></tr>
+  <tr><td>NASA MODIS (satellite)</td><td>Forest cover / NDVI data</td><td>16-day composite</td><td>S3 bucket sync</td></tr>
+  <tr><td>Sentinel-2 (ESA)</td><td>High-res land use imagery</td><td>5-day revisit</td><td>Copernicus API</td></tr>
+  <tr><td>UNFCCC NDC database</td><td>Country commitments</td><td>Annual</td><td>CSV bulk download</td></tr>
+</table>
+
+<h2>3. Processing Logic</h2>
+<p>Raw data enters the pipeline via Apache Kafka topic queues. Processing follows a three-stage flow:</p>
+<ul>
+  <li><strong>Stage 1 – Normalization:</strong> Converts heterogeneous registry formats into a unified <code>CarbonCredit</code> schema (ISO 14064-compliant fields)</li>
+  <li><strong>Stage 2 – Validation:</strong> Cross-references satellite imagery with reported project boundaries; flags discrepancies above 5% deviation</li>
+  <li><strong>Stage 3 – Quality Scoring:</strong> ML model assigns a 0–100 quality score based on additionality, permanence, and verification vintage</li>
+</ul>
+
+<h2>4. Core Data Schema</h2>
+<pre>
+CarbonCredit {
+  id:             UUID
+  registry:       "VERRA" | "GOLD_STANDARD" | "CLIMATELEDGER"
+  projectId:      string
+  vintage:        year (YYYY)
+  methodology:    string          // e.g. "VM0007", "ACM0002"
+  country:        ISO 3166-1 alpha-2
+  tCO2e:          decimal(18,6)   // tonnes CO2 equivalent
+  qualityScore:   integer 0–100
+  status:         "ISSUED" | "TRANSFERRED" | "RETIRED"
+  onChainTxHash:  string | null   // XRPL transaction hash
+  createdAt:      timestamp
+  retiredAt:      timestamp | null
+}
+</pre>
+
+<h2>5. API Endpoints</h2>
+<table>
+  <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+  <tr><td>GET</td><td><code>/api/v1/credits</code></td><td>List credits with filter/pagination</td></tr>
+  <tr><td>GET</td><td><code>/api/v1/credits/:id</code></td><td>Fetch single credit detail + on-chain proof</td></tr>
+  <tr><td>POST</td><td><code>/api/v1/credits/issue</code></td><td>Issue new tokenized credit on XRPL</td></tr>
+  <tr><td>POST</td><td><code>/api/v1/credits/:id/retire</code></td><td>Retire credit (burns token, records on-chain)</td></tr>
+  <tr><td>GET</td><td><code>/api/v1/projects/:id/satellite</code></td><td>Latest satellite analysis for project area</td></tr>
+  <tr><td>GET</td><td><code>/api/v1/portfolio/:wallet</code></td><td>Aggregated portfolio by XRPL wallet address</td></tr>
+  <tr><td>POST</td><td><code>/api/v1/webhook/registry</code></td><td>Inbound webhook from Verra / Gold Standard</td></tr>
+</table>
+
+<h2>6. XRPL Settlement Layer</h2>
+<p>Carbon credits are represented as XRPL Fungible Tokens (XLS-20 compatible) issued from the ClimateLedger issuer account. Each retirement is recorded as an irreversible on-chain burn transaction, providing a tamper-proof audit trail. Smart escrow conditions ensure credits cannot be double-counted across jurisdictions.</p>
+<p>Settlement latency averages <strong>3.5 seconds</strong> per transaction at a cost of <strong>~$0.0003</strong> per operation, making micro-credit markets viable for the first time.</p>
+
+<h2>7. Infrastructure</h2>
+<ul>
+  <li>Backend: Node.js 20 (TypeScript) on AWS ECS Fargate</li>
+  <li>Database: PostgreSQL 15 (RDS) + TimescaleDB for time-series satellite data</li>
+  <li>Message queue: Apache Kafka (MSK managed)</li>
+  <li>ML inference: Python FastAPI microservice on SageMaker</li>
+  <li>XRPL node: Dedicated rippled instance (mainnet + testnet)</li>
+  <li>Monitoring: Datadog APM + custom XRPL transaction dashboard</li>
+</ul>
+
+<p style="margin-top:40px; color:#888; font-size:12px;">— End of Technical Architecture Document — &nbsp; ClimateLedger GmbH, March 2026</p>
+
+</body>
+</html>

@@ -9,6 +9,7 @@ import { ContractActions } from "./contract-actions";
 import { MilestoneTimeline } from "./milestone-timeline";
 import { ContractPoller } from "./contract-poller";
 import { NodeBackground } from "@/components/node-background";
+import { NftCertificate } from "@/components/nft-certificate";
 
 interface ContractPageProps {
   params: Promise<{ id: string }>;
@@ -249,6 +250,63 @@ export default async function ContractPage({ params, searchParams }: ContractPag
             submittedAt={latestProof.createdAt}
           />
         )}
+
+        {/* XRPL Completion Certificates */}
+        {(() => {
+          // Collect all completed milestones with NFTs, or contract-level NFT
+          const certs: Array<{
+            tokenId: string;
+            txHash: string;
+            title: string;
+            amountUSD: string;
+            completedAt: string;
+          }> = [];
+
+          if (contract.milestones.length > 0) {
+            for (const ms of contract.milestones) {
+              if (ms.nftTokenId && ms.nftTxHash) {
+                certs.push({
+                  tokenId: ms.nftTokenId,
+                  txHash: ms.nftTxHash,
+                  title: ms.title,
+                  amountUSD: ms.amountUSD.toString(),
+                  completedAt: ms.updatedAt.toISOString(),
+                });
+              }
+            }
+          } else if (contract.nftTokenId && contract.nftTxHash) {
+            certs.push({
+              tokenId: contract.nftTokenId,
+              txHash: contract.nftTxHash,
+              title: contract.milestone,
+              amountUSD: contract.amountUSD.toString(),
+              completedAt: contract.updatedAt.toISOString(),
+            });
+          }
+
+          if (certs.length === 0) return null;
+
+          return (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <span
+                className="text-xs uppercase tracking-widest font-medium"
+                style={{ color: "#D4B896" }}
+              >
+                Completion Certificates
+              </span>
+              {certs.map((c) => (
+                <NftCertificate
+                  key={c.tokenId}
+                  tokenId={c.tokenId}
+                  txHash={c.txHash}
+                  milestoneTitle={c.title}
+                  amountUSD={c.amountUSD}
+                  completedAt={c.completedAt}
+                />
+              ))}
+            </div>
+          );
+        })()}
       </div>
     </main>
   );

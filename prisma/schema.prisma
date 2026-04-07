@@ -57,6 +57,8 @@ model Contract {
   escrowCondition     String?
   escrowFulfillment   String?
   evmTxHash           String?   // EVM: tx hash of the fundMilestone transaction
+  nftTokenId          String?   // XRPL: NFT token ID minted on completion
+  nftTxHash           String?   // XRPL: tx hash of the NFTokenMint transaction
   cancelAfter         DateTime
   inviteLink          String?        @unique
   proofs              Proof[]
@@ -109,6 +111,8 @@ model Milestone {
   escrowCondition   String?
   escrowFulfillment String?
   evmTxHash         String?   // EVM: tx hash of the fundMilestone transaction
+  nftTokenId        String?   // XRPL: NFT token ID minted on completion
+  nftTxHash         String?   // XRPL: tx hash of the NFTokenMint transaction
   proofs            Proof[]
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt

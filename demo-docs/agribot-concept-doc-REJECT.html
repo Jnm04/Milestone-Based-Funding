@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  body { font-family: Georgia, serif; max-width: 760px; margin: 60px auto; color: #1a1a1a; line-height: 1.7; font-size: 14px; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  h2 { font-size: 15px; margin-top: 32px; margin-bottom: 8px; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+  .meta { color: #666; font-size: 13px; margin-bottom: 40px; }
+  p { margin: 8px 0; }
+  ul { margin: 6px 0; padding-left: 20px; }
+</style>
+</head>
+<body>
+
+<h1>AgriBot — Automated Crop Monitoring System</h1>
+<div class="meta">
+  Prepared by: AgriBot Technologies Ltd. &nbsp;|&nbsp; Date: March 2026<br>
+  Milestone Submission: Functional Prototype with Aerial Imagery Analysis
+</div>
+
+<h2>1. Project Background</h2>
+<p>AgriBot is developing an automated crop monitoring system that uses drone-captured aerial imagery combined with machine learning to detect crop health anomalies. The long-term vision is to provide farmers with affordable, scalable access to precision agriculture insights previously only available to large agribusiness operators.</p>
+
+<h2>2. System Concept</h2>
+<p>The proposed system consists of three components: a drone fleet for aerial data capture, an onboard image processing module, and a cloud-based analytics dashboard. Drones would fly pre-programmed routes over agricultural fields and transmit imagery to the processing backend.</p>
+<p>We plan to use multispectral sensors to capture data across visible and near-infrared bands, which will be used to compute vegetation indices including NDVI (Normalized Difference Vegetation Index). Anomaly detection will flag areas where index values fall below crop-type-specific thresholds.</p>
+
+<h2>3. Technical Approach</h2>
+<p>Our team has been researching convolutional neural network architectures suitable for aerial agricultural imagery. We have reviewed published datasets including the PlantVillage dataset and several Kaggle agricultural competitions. The architecture we intend to use is based on a ResNet-50 backbone fine-tuned for multi-class crop stress detection.</p>
+<p>We are also exploring integration with existing drone platforms such as DJI Agras and Parrot Sequoia to avoid building custom hardware from scratch. This would significantly reduce time-to-market.</p>
+
+<h2>4. Current Status</h2>
+<p>The team has completed initial research and begun setting up the development environment. We have acquired access to two test fields through a partnership with a local farming cooperative in Brandenburg, Germany. Field trials are planned for April 2026 once weather conditions permit drone operations.</p>
+<p>The backend infrastructure is in early design phase. We are evaluating cloud providers and have shortlisted AWS and Google Cloud for the image processing pipeline. No final decision has been made yet.</p>
+
+<h2>5. Next Steps</h2>
+<ul>
+  <li>Finalize drone hardware selection (Q2 2026)</li>
+  <li>Complete backend infrastructure setup (Q2 2026)</li>
+  <li>Conduct first field data capture session (April 2026)</li>
+  <li>Train initial ML model on captured data (Q3 2026)</li>
+  <li>Build and deploy analytics dashboard (Q3 2026)</li>
+</ul>
+
+<h2>6. Team</h2>
+<p>The AgriBot team consists of four co-founders with backgrounds in agricultural science, software engineering, and drone operations. We are currently based at the Berlin startup hub Betahaus and have been accepted into the EXIST startup grant program.</p>
+
+<p style="margin-top:40px; color:#888; font-size:12px;">— AgriBot Technologies Ltd., March 2026</p>
+
+</body>
+</html>

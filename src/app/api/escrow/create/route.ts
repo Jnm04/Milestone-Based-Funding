@@ -82,23 +82,38 @@ export async function POST(request: NextRequest) {
       milestoneOrder = 0;
     }
 
-    // Generate a fresh fulfillment key for this escrow.
-    // fulfillment = secret preimage (stored server-side only)
-    // condition   = keccak256(fulfillment) — stored on-chain in the smart contract
-    // Upon AI approval, we reveal the fulfillment to the startup so they can
-    // self-execute releaseMilestone without needing to trust the platform.
-    const { fulfillment, condition } = generateFulfillment();
+    // Reuse an existing fulfillment if one was already generated for this escrow.
+    // This prevents a mismatch between the on-chain condition (set when the investor
+    // first signed fundMilestone) and the DB fulfillment (which would be overwritten
+    // if the user retried after a failed confirm step).
+    let fulfillment: string;
+    let condition: string;
 
-    if (milestoneId) {
-      await prisma.milestone.update({
-        where: { id: milestoneId },
-        data: { amountRLUSD: amountUSD, escrowFulfillment: fulfillment, escrowCondition: condition },
-      });
+    const existingFulfillment = milestoneId
+      ? contract.milestones.find((m) => m.id === milestoneId)?.escrowFulfillment
+      : contract.escrowFulfillment;
+
+    if (existingFulfillment) {
+      // Recompute condition from the stored fulfillment so both are always in sync.
+      const { ethers: ethersLib } = await import("ethers");
+      fulfillment = existingFulfillment;
+      condition = ethersLib.keccak256(
+        ethersLib.AbiCoder.defaultAbiCoder().encode(["bytes32"], [fulfillment])
+      );
     } else {
-      await prisma.contract.update({
-        where: { id: contractId },
-        data: { amountRLUSD: amountUSD, escrowFulfillment: fulfillment, escrowCondition: condition },
-      });
+      ({ fulfillment, condition } = generateFulfillment());
+
+      if (milestoneId) {
+        await prisma.milestone.update({
+          where: { id: milestoneId },
+          data: { amountRLUSD: amountUSD, escrowFulfillment: fulfillment, escrowCondition: condition },
+        });
+      } else {
+        await prisma.contract.update({
+          where: { id: contractId },
+          data: { amountRLUSD: amountUSD, escrowFulfillment: fulfillment, escrowCondition: condition },
+        });
+      }
     }
 
     const approveCalldata = buildApproveCalldata(amountUSD);

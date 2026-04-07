@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  body { font-family: Georgia, serif; max-width: 760px; margin: 60px auto; color: #1a1a1a; line-height: 1.7; font-size: 14px; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  h2 { font-size: 15px; margin-top: 32px; margin-bottom: 8px; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+  .meta { color: #666; font-size: 13px; margin-bottom: 40px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+  th { background: #f5f5f5; padding: 8px 10px; text-align: left; border: 1px solid #ddd; }
+  td { padding: 7px 10px; border: 1px solid #ddd; vertical-align: top; }
+  .compliant { color: #166534; font-weight: bold; }
+  .action { color: #92400e; }
+  p { margin: 8px 0; }
+  ul { margin: 6px 0; padding-left: 20px; }
+</style>
+</head>
+<body>
+
+<h1>Legal &amp; Compliance Assessment — MedVerify Platform</h1>
+<div class="meta">
+  Prepared by: MedVerify UG (haftungsbeschränkt) in collaboration with BioLegal Partners LLP &nbsp;|&nbsp; Date: February 2026<br>
+  Submitted as proof of Milestone 1: GDPR &amp; EU Medical Device Regulation Compliance Assessment
+</div>
+
+<h2>1. Scope &amp; Purpose</h2>
+<p>This assessment evaluates MedVerify's blockchain-based medical credential verification system against two primary regulatory frameworks: (1) the EU General Data Protection Regulation (GDPR, Regulation 2016/679) and (2) the EU Medical Device Regulation (MDR, Regulation 2017/745). The assessment covers data architecture, processing activities, storage mechanisms, and the classification of the software as a potential Medical Device Software (MDSW).</p>
+
+<h2>2. GDPR Compliance Assessment</h2>
+<table>
+  <tr><th>Requirement</th><th>Implementation</th><th>Status</th></tr>
+  <tr>
+    <td>Lawful basis for processing (Art. 6)</td>
+    <td>Legitimate interest (Art. 6(1)(f)) for verification; explicit consent (Art. 6(1)(a)) for credential holders</td>
+    <td class="compliant">COMPLIANT</td>
+  </tr>
+  <tr>
+    <td>Special category data (Art. 9 — health data)</td>
+    <td>Credentials treated as health-adjacent data; explicit consent obtained; processing limited to verification use case only</td>
+    <td class="compliant">COMPLIANT</td>
+  </tr>
+  <tr>
+    <td>Data minimization (Art. 5(1)(c))</td>
+    <td>On-chain storage limited to cryptographic hash of credential; no personal data stored on blockchain</td>
+    <td class="compliant">COMPLIANT</td>
+  </tr>
+  <tr>
+    <td>Right to erasure (Art. 17)</td>
+    <td>Personal data stored off-chain in GDPR-compliant EU database with deletion capability; on-chain hash is non-reversible and contains no PII</td>
+    <td class="compliant">COMPLIANT</td>
+  </tr>
+  <tr>
+    <td>Data transfers outside EU (Art. 46)</td>
+    <td>XRPL node infrastructure within EU jurisdiction; validator set includes EU-based operators; Standard Contractual Clauses in place for any US-based infrastructure</td>
+    <td class="compliant">COMPLIANT</td>
+  </tr>
+  <tr>
+    <td>Data Protection Impact Assessment (Art. 35)</td>
+    <td>DPIA completed February 2026; filed with BfDI (German federal DPA); no high-risk processing identified</td>
+    <td class="compliant">COMPLIANT</td>
+  </tr>
+  <tr>
+    <td>Data Processing Agreements with hospitals</td>
+    <td>DPA template drafted; pending execution with pilot institutions</td>
+    <td class="action">ACTION REQUIRED before go-live</td>
+  </tr>
+</table>
+
+<h2>3. EU Medical Device Regulation (MDR) Classification</h2>
+<p>Under MDR Article 2(1) and MDCG 2019-11 guidance on MDSW classification, MedVerify was assessed against the definition of "medical device software." The platform's primary function is administrative credential verification — it does not process physiological parameters, influence clinical decisions, or perform diagnostic functions.</p>
+<p><strong>Classification outcome: MedVerify does NOT qualify as Medical Device Software</strong> under MDR. The platform falls within the administrative software exclusion (MDCG 2019-11, Section 3.3). No CE marking, technical file, or notified body involvement is required.</p>
+
+<h2>4. Additional Applicable Regulations</h2>
+<table>
+  <tr><th>Regulation</th><th>Relevance</th><th>Status</th></tr>
+  <tr><td>eIDAS Regulation (EU 910/2014)</td><td>Digital signature validity for credential issuance</td><td class="compliant">Compliant — qualified electronic signatures supported</td></tr>
+  <tr><td>NIS2 Directive (EU 2022/2555)</td><td>Cybersecurity obligations for digital infrastructure</td><td class="compliant">Compliant — penetration test scheduled Q2 2026</td></tr>
+  <tr><td>German Berufsordnung (medical licensing law)</td><td>Verification of physician licenses (Approbation)</td><td class="compliant">Compliant — source verification via Bundesärztekammer API</td></tr>
+</table>
+
+<h2>5. Recommendations &amp; Next Steps</h2>
+<ul>
+  <li>Execute Data Processing Agreements with all three hospital pilot partners before platform launch</li>
+  <li>Appoint a Data Protection Officer (DPO) as processing scale increases beyond threshold</li>
+  <li>Conduct annual DPIA review as new data categories are added</li>
+  <li>Register as a Trust Service Provider under eIDAS if qualified signature volume exceeds 10,000/month</li>
+</ul>
+
+<h2>6. Conclusion</h2>
+<p>MedVerify's architecture is designed with privacy-by-design principles. The separation of personal data (off-chain) from verification proof (on-chain hash) is the key architectural decision that enables GDPR compliance without compromising the immutability benefits of blockchain-based credential management. The platform is cleared to proceed to Milestone 2 (testnet smart contract deployment) from a regulatory standpoint.</p>
+
+<p style="margin-top:40px; color:#888; font-size:12px;">— End of Compliance Assessment — &nbsp; MedVerify UG / BioLegal Partners LLP, February 2026</p>
+
+</body>
+</html>
