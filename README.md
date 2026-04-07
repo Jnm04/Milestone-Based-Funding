@@ -56,7 +56,7 @@ Every event is written to two independent chains (XRPL EVM Sidechain + native XR
 |---|---|
 | `ESCROW_FUNDED` | `keccak256(milestoneTitle)` — the agreed criteria at the moment money was locked |
 | `PROOF_SUBMITTED` | `sha256(file)` — the exact file the AI evaluated; receiver can verify their file wasn't swapped |
-| `AI_DECISION` | 5-model majority verdict, per-model votes, confidence score, and `sha256(system_prompt)` — proves the evaluation criteria wasn't changed |
+| `AI_DECISION` | 5-model majority verdict (Claude, Gemini, GPT-4o-mini, Mistral, Qwen), per-model votes, confidence score, and `sha256(system_prompt)` — proves the evaluation criteria wasn't changed |
 | `FUNDS_RELEASED` | Transaction hash of the on-chain RLUSD transfer |
 
 To verify a proof wasn't tampered with: compute `sha256sum` of the original file locally and compare it against the `PROOF_SUBMITTED` record on either chain.
@@ -84,15 +84,15 @@ The NFT is a permanent, tamper-proof record that a specific milestone was AI-ver
 ```json
 {
   "p": "cascrow",
-  "type": "milestone-certificate",
-  "v": "1",
-  "contract": "<contractId>",
-  "milestone": "Delivered market research report",
-  "amount": "500 RLUSD",
-  "completed": "2026-04-07T14:22:00Z",
-  "evmTx": "0xabc123..."
+  "c": "<contractId>",
+  "m": "Delivered market research report",
+  "a": "500",
+  "t": "2026-04-07",
+  "tx": "0xabc123ab"
 }
 ```
+
+*(Compact keys are required to stay within the XRPL 256-byte URI field limit.)*
 
 Even if Cascrow goes offline, the NFT remains on the XRPL Ledger and is publicly verifiable at `https://testnet.xrpl.org/nft/<tokenId>`. Useful for grant programs (KfW, NGOs, development aid) that require documented accountability — the proof is on a public ledger, not in a private database.
 
@@ -128,11 +128,10 @@ The `tokenId` and `txHash` are stored in the database and displayed as a certifi
 | Frontend | Next.js 16 (App Router), Tailwind CSS, shadcn/ui |
 | Auth | NextAuth.js — email/password with email verification |
 | Wallet | MetaMask (ethers.js) |
-| Blockchain | XRPL EVM Sidechain (Testnet), Solidity smart contract |
+| Escrow (smart contract) | XRPL EVM Sidechain (Testnet), Solidity — `MilestoneFundEscrow` |
+| NFT + Audit (native ledger) | Native XRP Ledger — `NFTokenMint` + `AccountSet` memos via xrpl.js |
 | Stablecoin | RLUSD (ERC-20 on XRPL EVM) |
 | AI | Claude `claude-haiku-4-5-20251001` + Gemini `gemini-2.5-flash` + GPT-4o-mini + Mistral Small + Qwen3-235B via Cerebras (5-model majority vote, 3/5 required) |
-| NFT certificates | Native XRPL Ledger — NFTokenMint via xrpl.js (non-transferable completion certificates) |
-| Audit trail | Dual-chain: XRPL EVM Sidechain + native XRP Ledger (AccountSet memos via HTTP JSON-RPC) |
 | Database | PostgreSQL + Prisma |
 | File storage | Vercel Blob |
 | Email | Resend |
@@ -274,7 +273,7 @@ src/
 │   ├── profile/           # Profile settings
 │   └── page.tsx           # Landing page
 ├── services/
-│   ├── ai/                # Claude + Gemini dual-model verifier (PDF + image)
+│   ├── ai/                # 5-model verifier (Claude, Gemini, GPT-4o-mini, Mistral, Qwen) — PDF + image
 │   ├── evm/               # EVM client, escrow calldata, release/cancel, audit
 │   └── xrpl/              # Native XRPL: audit memo writer + NFT certificate minter
 ├── components/
