@@ -14,6 +14,8 @@ import { mintCompletionNFT } from "@/services/xrpl/nft.service";
  *
  * Body: { contractId, milestoneId? }
  */
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -149,39 +151,42 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Mint XRPL completion certificate NFT (non-blocking)
-    void (async () => {
-      try {
-        const nft = await mintCompletionNFT({
+    // Mint XRPL completion certificate NFT — awaited with timeout so Vercel doesn't cut it off
+    try {
+      const nft = await Promise.race([
+        mintCompletionNFT({
           contractId,
           milestoneTitle: completedTitle,
           amountUSD: completedAmount,
           completedAt: new Date(),
           evmTxHash: txHash,
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("NFT mint timeout")), 15000)
+        ),
+      ]);
+      console.log("[escrow/finish] Minted XRPL NFT:", nft.tokenId);
+      if (milestoneId) {
+        await prisma.milestone.update({
+          where: { id: milestoneId },
+          data: { nftTokenId: nft.tokenId, nftTxHash: nft.txHash },
         });
-        console.log("[escrow/finish] Minted XRPL NFT:", nft.tokenId);
-        if (milestoneId) {
-          await prisma.milestone.update({
-            where: { id: milestoneId },
-            data: { nftTokenId: nft.tokenId, nftTxHash: nft.txHash },
-          });
-        } else {
-          await prisma.contract.update({
-            where: { id: contractId },
-            data: { nftTokenId: nft.tokenId, nftTxHash: nft.txHash },
-          });
-        }
-        await writeAuditLog({
-          contractId,
-          milestoneId: milestoneId ?? undefined,
-          event: "NFT_MINTED",
-          xrplTxHash: nft.txHash,
-          metadata: { tokenId: nft.tokenId, explorerUrl: nft.explorerUrl },
+      } else {
+        await prisma.contract.update({
+          where: { id: contractId },
+          data: { nftTokenId: nft.tokenId, nftTxHash: nft.txHash },
         });
-      } catch (nftErr) {
-        console.error("[escrow/finish] NFT minting failed (non-fatal):", nftErr);
       }
-    })();
+      await writeAuditLog({
+        contractId,
+        milestoneId: milestoneId ?? undefined,
+        event: "NFT_MINTED",
+        xrplTxHash: nft.txHash,
+        metadata: { tokenId: nft.tokenId, explorerUrl: nft.explorerUrl },
+      });
+    } catch (nftErr) {
+      console.error("[escrow/finish] NFT minting failed (non-fatal):", nftErr);
+    }
 
     return NextResponse.json({ ok: true, action: "completed", txHash });
   } catch (err) {
