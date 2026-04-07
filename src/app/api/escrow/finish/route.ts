@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { releaseMilestone } from "@/services/evm/escrow.service";
 import { sendVerifiedEmail, sendMilestoneCompletedInvestorEmail } from "@/lib/email";
 import { writeAuditLog } from "@/services/evm/audit.service";
-import { mintCompletionNFT } from "@/services/xrpl/nft.service";
 
 /**
  * POST /api/escrow/finish
@@ -151,42 +150,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Mint XRPL completion certificate NFT — awaited with timeout so Vercel doesn't cut it off
-    try {
-      const nft = await Promise.race([
-        mintCompletionNFT({
-          contractId,
-          milestoneTitle: completedTitle,
-          amountUSD: completedAmount,
-          completedAt: new Date(),
-          evmTxHash: txHash,
-        }),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("NFT mint timeout")), 15000)
-        ),
-      ]);
-      console.log("[escrow/finish] Minted XRPL NFT:", nft.tokenId);
-      if (milestoneId) {
-        await prisma.milestone.update({
-          where: { id: milestoneId },
-          data: { nftTokenId: nft.tokenId, nftTxHash: nft.txHash },
-        });
-      } else {
-        await prisma.contract.update({
-          where: { id: contractId },
-          data: { nftTokenId: nft.tokenId, nftTxHash: nft.txHash },
-        });
-      }
-      await writeAuditLog({
-        contractId,
-        milestoneId: milestoneId ?? undefined,
-        event: "NFT_MINTED",
-        xrplTxHash: nft.txHash,
-        metadata: { tokenId: nft.tokenId, explorerUrl: nft.explorerUrl },
-      });
-    } catch (nftErr) {
-      console.error("[escrow/finish] NFT minting failed (non-fatal):", nftErr);
-    }
+    // NFT minting is triggered by the frontend ContractPoller after COMPLETED status
+    // is detected — decoupled to avoid Vercel serverless timeout issues.
 
     return NextResponse.json({ ok: true, action: "completed", txHash });
   } catch (err) {
