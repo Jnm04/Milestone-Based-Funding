@@ -286,7 +286,7 @@ function StartupDashboardContent() {
               ? "Connect your wallet to accept the contract invitation."
               : walletAddress
               ? "Your active contracts and milestones."
-              : "Connect your XRPL wallet to get started."}
+              : "Connect your EVM wallet to get started."}
           </p>
         </div>
 
@@ -401,7 +401,7 @@ function StartupDashboardContent() {
               style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.15)" }}
             >
               <div>
-                <p className="text-sm font-semibold mb-1" style={{ color: "#EDE6DD" }}>Connect your XRPL wallet via Xaman</p>
+                <p className="text-sm font-semibold mb-1" style={{ color: "#EDE6DD" }}>Connect your EVM wallet via MetaMask</p>
                 <p className="text-xs" style={{ color: "#A89B8C" }}>You only need to do this once.</p>
               </div>
               <WalletConnect role="STARTUP" onConnected={handleWalletConnected} />
@@ -421,7 +421,7 @@ function StartupDashboardContent() {
               >
                 <div className="w-2 h-2 rounded-full animate-pulse-dot" style={{ background: "#34d399" }} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs" style={{ color: "#A89B8C" }}>XRPL Wallet</p>
+                  <p className="text-xs" style={{ color: "#A89B8C" }}>EVM Wallet (MetaMask)</p>
                   <code className="text-sm" style={{ color: "#EDE6DD", fontFamily: "monospace" }}>{walletAddress}</code>
                 </div>
                 <span className="cs-badge cs-badge-completed">Connected</span>
