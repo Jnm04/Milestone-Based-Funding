@@ -170,6 +170,20 @@ async function waitForReceipt(txHash: string): Promise<void> {
   throw new Error("Transaction not mined within 5 minutes.");
 }
 
+/** Decode an ABI-encoded revert reason (0x08c379a0 selector + string). */
+function decodeRevertReason(hexData: string): string | null {
+  try {
+    if (!hexData || !hexData.startsWith("0x08c379a0")) return null;
+    const decoded = ethers.AbiCoder.defaultAbiCoder().decode(
+      ["string"],
+      "0x" + hexData.slice(10)
+    );
+    return decoded[0] as string;
+  } catch {
+    return null;
+  }
+}
+
 /** Simulate a call via eth_call to get the revert reason before sending. */
 async function simulateCall(from: string, to: string, data: string): Promise<void> {
   try {
@@ -178,12 +192,21 @@ async function simulateCall(from: string, to: string, data: string): Promise<voi
       params: [{ from, to, data }, "latest"],
     });
   } catch (err: unknown) {
-    const msg = extractError(err);
-    // Surface the actual Solidity require message if present
-    if (msg.includes("execution reverted") || msg.includes("revert")) {
-      throw new Error(`Contract would revert: ${msg}`);
+    // Try to decode ABI-encoded revert reason from error.data first
+    let revertReason = "";
+    if (err && typeof err === "object") {
+      const e = err as Record<string, unknown>;
+      // MetaMask wraps it as error.data.data or error.data
+      const rawData =
+        typeof e.data === "string" ? e.data
+        : e.data && typeof e.data === "object"
+          ? (e.data as Record<string, unknown>).data as string | undefined
+          : undefined;
+      if (rawData) revertReason = decodeRevertReason(rawData) ?? "";
+      if (!revertReason && typeof e.message === "string") revertReason = e.message;
     }
-    throw new Error(`Pre-flight check failed: ${msg}`);
+    if (!revertReason) revertReason = String(err);
+    throw new Error(revertReason);
   }
 }
 
