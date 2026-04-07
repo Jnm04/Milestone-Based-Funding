@@ -282,7 +282,29 @@ export function ContractActions({
 
       // 3. Step 2 — Simulate first to get a readable revert reason if it fails
       setFundingStep("funding");
-      await simulateCall(account, escrowContractAddress, fundCalldata);
+      try {
+        await simulateCall(account, escrowContractAddress, fundCalldata);
+      } catch (simErr: unknown) {
+        const simMsg = extractError(simErr).toLowerCase();
+        if (simMsg.includes("already funded")) {
+          // On-chain is funded but DB wasn't updated — sync now
+          toast.info("Escrow already funded on-chain — syncing…");
+          const syncRes = await fetch("/api/escrow/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contractId, milestoneId }),
+          });
+          if (syncRes.ok) {
+            toast.success("Synced! Reloading…");
+            setTimeout(() => window.location.reload(), 1000);
+          } else {
+            toast.error("Sync failed — please reload the page.");
+          }
+          setFundingStep("idle");
+          return;
+        }
+        throw simErr;
+      }
       const fundTxHash = await sendTx(account, escrowContractAddress, fundCalldata);
       await waitForReceipt(fundTxHash);
 
