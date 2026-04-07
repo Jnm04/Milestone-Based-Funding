@@ -91,39 +91,30 @@ async function connectMetaMask(): Promise<string> {
   }
 
   const targetChainId = `0x${XRPL_EVM_CHAIN_ID.toString(16)}`;
+  const chainParams = {
+    chainId: targetChainId,
+    chainName: "XRPL EVM Sidechain Testnet",
+    nativeCurrency: { name: "XRP", symbol: "XRP", decimals: 18 },
+    rpcUrls: [process.env.NEXT_PUBLIC_EVM_RPC_URL ?? "https://rpc.testnet.xrplevm.org"],
+    blockExplorerUrls: ["https://explorer.xrplevm.org"],
+  };
 
-  // Check current chain first — only switch if needed
-  const currentChainId = (await window.ethereum.request({ method: "eth_chainId" })) as string;
-  if (parseInt(currentChainId, 16) !== XRPL_EVM_CHAIN_ID) {
-    // Try switching first
+  // Always call addEthereumChain to keep RPC up to date.
+  // If chain already exists MetaMask shows a one-time "update" prompt.
+  try {
+    await window.ethereum.request({ method: "wallet_addEthereumChain", params: [chainParams] });
+  } catch {
+    // User dismissed the update prompt or chain switch failed — try a plain switch
     try {
-      await window.ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: targetChainId }],
-      });
-    } catch (switchErr: unknown) {
-      // Chain not added yet — add it
-      const code = (switchErr as Record<string, unknown>)?.code;
-      if (code === 4902 || code === -32603) {
-        await window.ethereum.request({
-          method: "wallet_addEthereumChain",
-          params: [{
-            chainId: targetChainId,
-            chainName: "XRPL EVM Sidechain Testnet",
-            nativeCurrency: { name: "XRP", symbol: "XRP", decimals: 18 },
-            rpcUrls: [process.env.NEXT_PUBLIC_EVM_RPC_URL ?? "https://rpc.testnet.xrplevm.org"],
-            blockExplorerUrls: ["https://explorer.xrplevm.org"],
-          }],
-        });
-      } else {
-        throw new Error(`Failed to switch to XRPL EVM chain: ${extractError(switchErr)}`);
-      }
+      await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: targetChainId }] });
+    } catch (switchErr) {
+      throw new Error(`Failed to switch to XRPL EVM chain: ${extractError(switchErr)}`);
     }
-    // Confirm switch
-    const chainAfter = (await window.ethereum.request({ method: "eth_chainId" })) as string;
-    if (parseInt(chainAfter, 16) !== XRPL_EVM_CHAIN_ID) {
-      throw new Error("Wrong network selected in MetaMask. Please switch to XRPL EVM Sidechain Testnet.");
-    }
+  }
+
+  const chainAfter = (await window.ethereum.request({ method: "eth_chainId" })) as string;
+  if (parseInt(chainAfter, 16) !== XRPL_EVM_CHAIN_ID) {
+    throw new Error("Wrong network in MetaMask. Please switch to XRPL EVM Sidechain Testnet.");
   }
 
   return accounts[0].toLowerCase();
