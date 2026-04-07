@@ -40,12 +40,38 @@ declare global {
 
 /** Extract a human-readable message from any thrown value (Error or MetaMask object). */
 function extractError(err: unknown): string {
-  if (err instanceof Error) return err.message;
+  if (!err) return "Unknown error";
   if (err && typeof err === "object") {
     const e = err as Record<string, unknown>;
-    if (typeof e.message === "string") return e.message;
-    if (typeof e.error === "string") return e.error;
+    // MetaMask wraps the real reason in error.data.message or error.data
+    if (e.data && typeof e.data === "object") {
+      const d = e.data as Record<string, unknown>;
+      if (typeof d.message === "string") return d.message;
+    }
+    // Solidity revert strings come through error.reason
+    if (typeof e.reason === "string") return e.reason;
+    // ethers v6 nests them here
+    if (e.error && typeof e.error === "object") {
+      const inner = e.error as Record<string, unknown>;
+      if (typeof inner.message === "string") return inner.message;
+    }
+    if (typeof e.message === "string") {
+      // Strip the generic "Internal JSON-RPC error" wrapper if there's nested info
+      const msg = e.message as string;
+      if (msg.includes("Internal JSON-RPC error") || msg.includes("execution reverted")) {
+        try {
+          // Sometimes the revert reason is JSON-encoded inside the message
+          const jsonStart = msg.indexOf("{");
+          if (jsonStart !== -1) {
+            const parsed = JSON.parse(msg.slice(jsonStart)) as Record<string, unknown>;
+            if (typeof parsed.message === "string") return parsed.message;
+          }
+        } catch {}
+      }
+      return msg;
+    }
   }
+  if (err instanceof Error) return err.message;
   return String(err);
 }
 
