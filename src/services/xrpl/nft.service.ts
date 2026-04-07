@@ -1,6 +1,7 @@
-import { Client, Wallet } from "xrpl";
+import * as xrpl from "xrpl";
 
-const XRPL_WSS = process.env.XRPL_WSS_URL ?? "wss://s.altnet.rippletest.net:51233";
+const XRPL_HTTP =
+  process.env.XRPL_HTTP_URL ?? "https://s.altnet.rippletest.net:51234";
 const XRPL_EXPLORER = "https://testnet.xrpl.org";
 
 export interface MintResult {
@@ -9,16 +10,24 @@ export interface MintResult {
   explorerUrl: string;
 }
 
+async function rpc(method: string, params: Record<string, unknown>) {
+  const res = await fetch(XRPL_HTTP, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ method, params: [params] }),
+  });
+  return res.json() as Promise<{ result: Record<string, unknown> }>;
+}
+
 /**
- * Mint a non-transferable completion certificate NFT on the XRPL ledger.
- * The platform wallet mints and holds the NFT; it serves as an immutable
- * on-chain record that the milestone was AI-verified and funds released.
+ * Mint a non-transferable completion certificate NFT on the XRPL Ledger.
+ * Uses HTTP JSON-RPC (not WebSocket) so it works within Vercel serverless timeouts.
  *
  * URI contains JSON metadata encoded as uppercase hex:
  *   { p, type, v, contract, milestone, amount, completed, evmTx? }
  *
+ * After submit we poll account_nfts to find the new token ID.
  * Requires XRPL_PLATFORM_SEED in environment.
- * Fails gracefully — callers should catch and log, not crash.
  */
 export async function mintCompletionNFT(params: {
   contractId: string;
@@ -30,52 +39,95 @@ export async function mintCompletionNFT(params: {
   const seed = process.env.XRPL_PLATFORM_SEED;
   if (!seed) throw new Error("XRPL_PLATFORM_SEED not configured");
 
-  const client = new Client(XRPL_WSS);
-  await client.connect();
+  const wallet = xrpl.Wallet.fromSeed(seed);
 
-  try {
-    const wallet = Wallet.fromSeed(seed);
+  // Fetch account info + fee in parallel
+  const [accountInfo, feeInfo] = await Promise.all([
+    rpc("account_info", { account: wallet.address, ledger_index: "current" }),
+    rpc("fee", {}),
+  ]);
 
-    const metadata: Record<string, string> = {
-      p: "cascrow",
-      type: "milestone-certificate",
-      v: "1",
-      contract: params.contractId,
-      milestone: params.milestoneTitle,
-      amount: `${params.amountUSD} RLUSD`,
-      completed: params.completedAt.toISOString(),
-    };
-    if (params.evmTxHash) metadata.evmTx = params.evmTxHash;
+  const sequence = (
+    accountInfo.result as { account_data: { Sequence: number } }
+  ).account_data.Sequence;
 
-    const uri = Buffer.from(JSON.stringify(metadata))
-      .toString("hex")
-      .toUpperCase();
+  const fee =
+    (feeInfo.result as { drops: { open_ledger_fee?: string } }).drops
+      .open_ledger_fee ?? "12";
 
-    const prepared = await client.autofill({
-      TransactionType: "NFTokenMint",
-      Account: wallet.address,
-      URI: uri,
-      Flags: 0,        // non-transferable (tfTransferable not set)
-      NFTokenTaxon: 1, // cascrow milestone certificates
-    });
+  const metadata: Record<string, string> = {
+    p: "cascrow",
+    type: "milestone-certificate",
+    v: "1",
+    contract: params.contractId,
+    milestone: params.milestoneTitle,
+    amount: `${params.amountUSD} RLUSD`,
+    completed: params.completedAt.toISOString(),
+  };
+  if (params.evmTxHash) metadata.evmTx = params.evmTxHash;
 
-    const signed = wallet.sign(prepared);
-    const result = await client.submitAndWait(signed.tx_blob);
+  const uri = Buffer.from(JSON.stringify(metadata))
+    .toString("hex")
+    .toUpperCase();
 
-    const meta = result.result.meta;
-    if (!meta || typeof meta !== "object" || !("nftoken_id" in meta)) {
-      throw new Error("NFT minted but token ID missing in response");
-    }
+  const tx = {
+    TransactionType: "NFTokenMint" as const,
+    Account: wallet.address,
+    URI: uri,
+    Flags: 0,         // non-transferable (tfTransferable not set)
+    NFTokenTaxon: 1,  // cascrow milestone certificates
+    Fee: fee,
+    Sequence: sequence,
+  };
 
-    const tokenId = (meta as Record<string, unknown>).nftoken_id as string;
-    const txHash = result.result.hash;
+  const signed = wallet.sign(tx);
+  const txHash = signed.hash;
 
-    return {
-      tokenId,
-      txHash,
-      explorerUrl: `${XRPL_EXPLORER}/nft/${tokenId}`,
-    };
-  } finally {
-    await client.disconnect();
+  // Submit transaction
+  const submitRes = await fetch(XRPL_HTTP, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ method: "submit", params: [{ tx_blob: signed.tx_blob }] }),
+  });
+  const submitData = await submitRes.json() as { result?: { engine_result?: string } };
+
+  if (
+    submitData.result?.engine_result &&
+    submitData.result.engine_result !== "tesSUCCESS" &&
+    submitData.result.engine_result !== "terQUEUED"
+  ) {
+    throw new Error(`NFTokenMint rejected: ${submitData.result.engine_result}`);
   }
+
+  // Wait for ledger to close (~3-4s), then fetch the new NFT
+  await new Promise((r) => setTimeout(r, 5000));
+
+  // Find the newly minted token by scanning account_nfts
+  const nftsRes = await rpc("account_nfts", {
+    account: wallet.address,
+    ledger_index: "validated",
+  });
+
+  const nfts = (
+    nftsRes.result as { account_nfts?: Array<{ NFTokenID: string; URI?: string }> }
+  ).account_nfts ?? [];
+
+  // Find by matching URI
+  const match = nfts.find((n) => n.URI === uri);
+  if (!match) {
+    // Fallback: return most recently added (last in list)
+    const last = nfts[nfts.length - 1];
+    if (!last) throw new Error("NFT minted but could not find token ID");
+    return {
+      tokenId: last.NFTokenID,
+      txHash,
+      explorerUrl: `${XRPL_EXPLORER}/nft/${last.NFTokenID}`,
+    };
+  }
+
+  return {
+    tokenId: match.NFTokenID,
+    txHash,
+    explorerUrl: `${XRPL_EXPLORER}/nft/${match.NFTokenID}`,
+  };
 }
