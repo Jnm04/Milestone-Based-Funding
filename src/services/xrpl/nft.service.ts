@@ -55,16 +55,15 @@ export async function mintCompletionNFT(params: {
     (feeInfo.result as { drops: { open_ledger_fee?: string } }).drops
       .open_ledger_fee ?? "12";
 
+  // URI must be ≤ 256 bytes. Use short keys and truncate tx hash to stay within limit.
   const metadata: Record<string, string> = {
     p: "cascrow",
-    type: "milestone-certificate",
-    v: "1",
-    contract: params.contractId,
-    milestone: params.milestoneTitle,
-    amount: `${params.amountUSD} RLUSD`,
-    completed: params.completedAt.toISOString(),
+    c: params.contractId,
+    m: params.milestoneTitle.slice(0, 60),
+    a: params.amountUSD,
+    t: params.completedAt.toISOString().slice(0, 10),
   };
-  if (params.evmTxHash) metadata.evmTx = params.evmTxHash;
+  if (params.evmTxHash) metadata.tx = params.evmTxHash.slice(0, 20);
 
   const uri = Buffer.from(JSON.stringify(metadata))
     .toString("hex")
