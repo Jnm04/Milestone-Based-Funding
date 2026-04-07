@@ -19,14 +19,17 @@ Receiver uploads PDF/image proof of milestone completion
 5 independent AI models verify the proof — 3/5 majority required (Claude, Gemini, GPT-4o-mini, Mistral Small, Qwen3-235B via Cerebras)
               ↓
   YES       → funds automatically released to receiver
+            → non-transferable NFT minted on XRPL Ledger as permanent completion certificate
   UNCERTAIN → Grant Giver manually reviews and decides
             → Receiver can also resubmit improved proof (bypasses manual review if AI becomes confident)
-            → After 14 days without investor action → funds auto-released
+            → After 14 days without investor action → funds auto-released + NFT minted
             → If rejected: deadline extended by the exact review duration (receiver doesn't lose waiting time)
   NO        → Receiver can resubmit (until deadline)
               ↓
   Deadline passed → cron job cancels escrow, RLUSD returned
 ```
+
+Every completed milestone triggers a **non-transferable NFT mint on the native XRPL Ledger** — an immutable completion certificate that exists permanently on-chain, independent of Cascrow. See the [XRPL NFT Certificates](#xrpl-nft-completion-certificates) section below.
 
 Every key event is written to **both chains** as an immutable audit entry:
 - **XRPL EVM Sidechain** — hex-encoded JSON in an EVM transaction's `data` field
@@ -68,6 +71,56 @@ Being transparent about the remaining trust assumptions:
 
 ---
 
+## XRPL NFT Completion Certificates
+
+When a milestone is completed and RLUSD is released, Cascrow automatically mints a **non-transferable `NFTokenMint`** on the native XRPL Ledger as an immutable on-chain completion certificate.
+
+### Two purposes
+
+**1. Proof of completion**
+
+The NFT is a permanent, tamper-proof record that a specific milestone was AI-verified and funds were released. It contains all relevant metadata in its URI:
+
+```json
+{
+  "p": "cascrow",
+  "type": "milestone-certificate",
+  "v": "1",
+  "contract": "<contractId>",
+  "milestone": "Delivered market research report",
+  "amount": "500 RLUSD",
+  "completed": "2026-04-07T14:22:00Z",
+  "evmTx": "0xabc123..."
+}
+```
+
+Even if Cascrow goes offline, the NFT remains on the XRPL Ledger and is publicly verifiable at `https://testnet.xrpl.org/nft/<tokenId>`. Useful for grant programs (KfW, NGOs, development aid) that require documented accountability — the proof is on a public ledger, not in a private database.
+
+**2. On-chain reputation and track record**
+
+Over time, a startup, freelancer, or project team builds a collection of completion NFTs across different contracts and grant givers. This becomes a verifiable on-chain portfolio:
+
+> *"Here are 12 milestones I completed, each verified by AI and backed by real RLUSD payouts — all on the XRPL Ledger."*
+
+No resume, no references, no self-reported credentials. The ledger speaks for itself. Grant givers can look up a receiver's XRPL wallet address and see their full history of completed, AI-verified work before funding a new contract.
+
+### Technical details
+
+```
+Transaction type:   NFTokenMint
+Flags:              0  (tfTransferable NOT set — non-transferable)
+NFTokenTaxon:       1  (cascrow milestone certificates)
+URI:                hex-encoded JSON metadata
+Minted by:          platform wallet (XRPL_PLATFORM_SEED)
+Explorer:           https://testnet.xrpl.org/nft/<tokenId>
+```
+
+Non-transferable means the certificate cannot be sold, traded, or transferred to another wallet. It is a credential, not an asset — tied permanently to the platform wallet as proof that the work was done.
+
+The `tokenId` and `txHash` are stored in the database and displayed as a certificate card on the contract detail page, with direct links to the XRPL Explorer.
+
+---
+
 ## Tech stack
 
 | Layer | Technology |
@@ -78,6 +131,7 @@ Being transparent about the remaining trust assumptions:
 | Blockchain | XRPL EVM Sidechain (Testnet), Solidity smart contract |
 | Stablecoin | RLUSD (ERC-20 on XRPL EVM) |
 | AI | Claude `claude-haiku-4-5-20251001` + Gemini `gemini-2.5-flash` + GPT-4o-mini + Mistral Small + Qwen3-235B via Cerebras (5-model majority vote, 3/5 required) |
+| NFT certificates | Native XRPL Ledger — NFTokenMint via xrpl.js (non-transferable completion certificates) |
 | Audit trail | Dual-chain: XRPL EVM Sidechain + native XRP Ledger (AccountSet memos via HTTP JSON-RPC) |
 | Database | PostgreSQL + Prisma |
 | File storage | Vercel Blob |
@@ -222,7 +276,7 @@ src/
 ├── services/
 │   ├── ai/                # Claude + Gemini dual-model verifier (PDF + image)
 │   ├── evm/               # EVM client, escrow calldata, release/cancel, audit
-│   └── xrpl/              # Native XRPL audit memo writer (HTTP JSON-RPC)
+│   └── xrpl/              # Native XRPL: audit memo writer + NFT certificate minter
 ├── components/
 │   └── audit-trail.tsx    # On-chain audit trail UI with xrpscan.com links
 └── lib/
@@ -246,6 +300,7 @@ Every contract lifecycle event is written to both chains simultaneously and stor
 | `MANUAL_REVIEW_APPROVED` | Grant giver manually approves — or auto-approved after 14 days inactivity |
 | `MANUAL_REVIEW_REJECTED` | Grant giver manually rejects — deadline extended by review duration (logged in metadata) |
 | `FUNDS_RELEASED` | RLUSD released to receiver |
+| `NFT_MINTED` | Completion certificate minted on XRPL Ledger — `tokenId` + explorer URL in metadata |
 | `ESCROW_CANCELLED` | Deadline passed, RLUSD returned |
 | `PROOF_RESUBMITTED` | Receiver resubmits after rejection |
 
