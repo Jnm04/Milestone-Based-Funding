@@ -3,7 +3,7 @@
 AI-powered RLUSD escrow agent on the XRPL EVM Sidechain with dual-chain audit trail.  
 Grant givers lock RLUSD in a smart contract escrow; funds release automatically when an AI agent verifies the receiver has met the agreed milestone.
 
-Built at the **XRPL Student Builder Residency 2026** · **Claude AI** · **Gemini AI** · **MetaMask** · **Next.js 16**
+Built at the **XRPL Student Builder Residency 2026** 
 
 ---
 
