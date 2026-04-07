@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 
 interface BuyRlusdModalProps {
   walletAddress: string;
@@ -28,13 +27,13 @@ export function BuyRlusdModal({ walletAddress, defaultAmount = 100 }: BuyRlusdMo
 
   return (
     <>
-      <Button
+      <button
         onClick={() => setOpen(true)}
-        variant="outline"
-        className="w-full font-semibold"
+        className="cs-btn-ghost cs-btn-sm"
+        style={{ fontSize: 12 }}
       >
-        💳 Buy RLUSD with card
-      </Button>
+        Buy RLUSD
+      </button>
 
       {open && (
         <div
@@ -46,9 +45,7 @@ export function BuyRlusdModal({ walletAddress, defaultAmount = 100 }: BuyRlusdMo
             <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
               <div>
                 <p className="font-bold text-white text-sm">Buy RLUSD</p>
-                <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>
-                  Powered by Onramper
-                </p>
+                <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>Fiat on-ramp</p>
               </div>
               <button
                 onClick={() => setOpen(false)}
@@ -69,27 +66,25 @@ export function BuyRlusdModal({ walletAddress, defaultAmount = 100 }: BuyRlusdMo
               />
             ) : (
               <div className="flex flex-col items-center gap-5 px-8 py-12 text-center">
-                <div className="w-14 h-14 rounded-full flex items-center justify-center text-2xl" style={{ background: "rgba(193,101,74,0.15)" }}>
-                  🔑
+                <div
+                  className="w-14 h-14 rounded-full flex items-center justify-center"
+                  style={{ background: "rgba(196,112,75,0.12)" }}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C4704B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+                    <path d="M12 8v4M12 16h.01"/>
+                  </svg>
                 </div>
                 <div>
-                  <p className="font-bold text-white mb-2">API Key missing</p>
-                  <p className="text-sm" style={{ color: "#9CA3AF" }}>
-                    Add your Onramper API key in{" "}
-                    <code className="text-xs px-1.5 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.08)" }}>
-                      .env.local
-                    </code>{" "}
-                    ein:
+                  <p className="font-semibold mb-1" style={{ color: "#EDE6DD" }}>Coming soon</p>
+                  <p className="text-sm leading-relaxed" style={{ color: "#A89B8C" }}>
+                    Fiat on-ramping is currently in development.<br />
+                    Use testnet RLUSD for now.
                   </p>
                 </div>
-                <div className="w-full rounded-xl p-4 text-left" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                  <p className="text-xs font-mono" style={{ color: "#C1654A" }}>
-                    NEXT_PUBLIC_ONRAMPER_API_KEY=your-key-here
-                  </p>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => setOpen(false)} className="w-full">
+                <button onClick={() => setOpen(false)} className="cs-btn-ghost cs-btn-sm w-full">
                   Close
-                </Button>
+                </button>
               </div>
             )}
           </div>
