@@ -230,8 +230,27 @@ export function ContractActions({
         const err = await res.json();
         throw new Error(err.error ?? "Failed to prepare escrow transaction");
       }
-      const { rlusdAddress, escrowContractAddress, approveCalldata, fundCalldata } =
+      const { rlusdAddress, escrowContractAddress, approveCalldata, fundCalldata, amountUSD: amountNeeded } =
         await res.json();
+
+      // Pre-flight: check RLUSD balance
+      const iface = new (await import("ethers")).ethers.Interface([
+        "function balanceOf(address) view returns (uint256)",
+        "function decimals() view returns (uint8)",
+      ]);
+      const balData = iface.encodeFunctionData("balanceOf", [account]);
+      const balHex = await window.ethereum!.request({
+        method: "eth_call",
+        params: [{ to: rlusdAddress, data: balData }, "latest"],
+      }) as string;
+      const balance = BigInt(balHex);
+      const needed = BigInt(Math.round(parseFloat(amountNeeded) * 1_000_000));
+      if (balance < needed) {
+        const humanBal = (Number(balance) / 1_000_000).toFixed(2);
+        throw new Error(
+          `Insufficient RLUSD balance. You have ${humanBal} RLUSD but need ${amountNeeded}. Use the faucet link below first.`
+        );
+      }
 
       // 2. Step 1 — Approve RLUSD spending
       toast.info("Step 1/2: Approve RLUSD in MetaMask…");
