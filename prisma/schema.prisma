@@ -142,3 +142,53 @@ model AuditLog {
   metadata    Json?
   createdAt   DateTime @default(now())
 }
+
+// ── Brain / ML ───────────────────────────────────────────────────────────────
+
+/// Labeled training example. AUTO entries come from high-consensus AI votes (4-1 or 5-0).
+/// HUMAN entries come from internal manual labeling of 3-2 splits or flagged fraud.
+model TrainingEntry {
+  id             String   @id @default(cuid())
+  proofId        String
+  milestoneText  String   @db.Text
+  proofText      String   @db.Text
+  /// APPROVED | REJECTED | FAKED
+  label          String
+  /// AUTO_5_0 | AUTO_4_1 | HUMAN | GRANT_GIVER
+  labelSource    String
+  /// AI_GENERATED | MANIPULATED | RECYCLED | IMPLAUSIBLE — only set when label=FAKED
+  fraudType      String?
+  /// [{model, decision, confidence, reasoning}]
+  modelVotes     Json
+  /// Number of YES votes among the 5 models (0–5)
+  consensusLevel Int
+  notes          String?  @db.Text
+  createdAt      DateTime @default(now())
+}
+
+/// Holds 3-2 split verifications for internal human review before adding to TrainingEntry.
+model HumanReviewQueue {
+  id             String    @id @default(cuid())
+  proofId        String    @unique
+  milestoneText  String    @db.Text
+  proofText      String    @db.Text
+  modelVotes     Json
+  consensusLevel Int
+  reviewedAt     DateTime?
+  /// Set after human labels this entry
+  label          String?
+  fraudType      String?
+  notes          String?   @db.Text
+  createdAt      DateTime  @default(now())
+}
+
+/// Text embedding for each proof — used for RAG context in AI verification.
+/// Embedding stored as JSON-encoded float array (migrates to pgvector later).
+model ProofEmbedding {
+  id        String   @id @default(cuid())
+  proofId   String   @unique
+  /// JSON-encoded float[] from text-embedding-3-small (1536 dims)
+  embedding String   @db.Text
+  model     String   @default("text-embedding-3-small")
+  createdAt DateTime @default(now())
+}
