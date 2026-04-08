@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 function isAuthorized(req: NextRequest) {
-  const key = req.headers.get("x-internal-key");
-  return key === process.env.INTERNAL_SECRET;
+  const key = req.headers.get("x-internal-key")?.trim();
+  const secret = process.env.INTERNAL_SECRET?.trim();
+  return key && secret && key === secret;
 }
 
 export async function GET(req: NextRequest) {
