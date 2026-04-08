@@ -40,6 +40,10 @@ model User {
   // Brute-force protection
   loginAttempts   Int       @default(0)
   lockoutUntil    DateTime?
+
+  // Password reset
+  passwordResetToken       String?   @unique
+  passwordResetTokenExpiry DateTime?
 }
 
 enum Role {

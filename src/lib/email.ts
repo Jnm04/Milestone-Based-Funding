@@ -32,6 +32,30 @@ export async function sendVerificationEmail({
   });
 }
 
+// ── Password reset ──────────────────────────────────────────────────────────
+
+export async function sendPasswordResetEmail({
+  to,
+  token,
+}: {
+  to: string;
+  token: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  const link = `${BASE_URL}/reset-password?token=${token}`;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: "Reset your Cascrow password",
+    html: `
+      <p>Hi,</p>
+      <p>We received a request to reset your Cascrow password. Click the link below to set a new password.</p>
+      <p><a href="${link}">Reset password →</a></p>
+      <p>This link expires in 1 hour. If you did not request a password reset, you can safely ignore this email.</p>
+    `,
+  });
+}
+
 // ── Grant Giver notifications ───────────────────────────────────────────────
 
 export async function sendProofSubmittedEmail({

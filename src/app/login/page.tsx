@@ -80,6 +80,8 @@ function LoginForm() {
   useEffect(() => {
     if (searchParams.get("verified") === "1") {
       toast.success("Email verified! You can now sign in.");
+    } else if (searchParams.get("reset") === "1") {
+      toast.success("Password updated! You can now sign in.");
     } else if (searchParams.get("error") === "invalid_token") {
       toast.error("Invalid or expired verification link.");
     } else if (searchParams.get("error") === "token_expired") {
@@ -289,6 +291,13 @@ function LoginForm() {
                   <EyeIcon open={showPw} />
                 </button>
               </div>
+            </div>
+
+            {/* Forgot password */}
+            <div className="flex justify-end -mt-2">
+              <Link href="/forgot-password" className="text-xs hover:underline" style={{ color: "#A89B8C" }}>
+                Forgot password?
+              </Link>
             </div>
 
             {/* Submit */}
