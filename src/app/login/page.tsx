@@ -53,6 +53,11 @@ function LoginForm() {
         setUnverifiedEmail(email);
         return;
       }
+      if (res?.error?.startsWith("TooManyAttempts:")) {
+        const minutes = res.error.split(":")[1];
+        toast.error(`Too many failed attempts. Account locked for ${minutes} minute${minutes === "1" ? "" : "s"}.`);
+        return;
+      }
       if (res?.error) {
         toast.error("Invalid email or password.");
         return;

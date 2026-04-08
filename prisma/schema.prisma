@@ -36,6 +36,10 @@ model User {
   notifyFunded          Boolean @default(true)  // Startup: milestone was funded
   notifyVerified        Boolean @default(true)  // Startup: proof approved, funds released
   notifyRejected        Boolean @default(true)  // Startup: proof rejected by AI
+
+  // Brute-force protection
+  loginAttempts   Int       @default(0)
+  lockoutUntil    DateTime?
 }
 
 enum Role {

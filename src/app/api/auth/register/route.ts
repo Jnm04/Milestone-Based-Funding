@@ -12,6 +12,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "email, password and role are required" }, { status: 400 });
     }
 
+    // Reject oversized inputs
+    if (typeof email !== "string" || email.length > 254) {
+      return NextResponse.json({ error: "Invalid email" }, { status: 400 });
+    }
+    if (typeof password !== "string" || password.length > 72) {
+      return NextResponse.json({ error: "Password must be at most 72 characters" }, { status: 400 });
+    }
+    if (typeof name === "string" && name.length > 200) {
+      return NextResponse.json({ error: "Name too long" }, { status: 400 });
+    }
+
+    // Basic email format check
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
+    }
+
     if (!["INVESTOR", "STARTUP"].includes(role)) {
       return NextResponse.json({ error: "role must be INVESTOR or STARTUP" }, { status: 400 });
     }
