@@ -299,6 +299,8 @@ function CheckItem({ children }: { children: React.ReactNode }) {
    PAGE
 ═══════════════════════════════════════════════════════════════ */
 export default function LandingPage() {
+  const [menuOpen, setMenuOpen] = React.useState(false);
+
   return (
     <main className="flex flex-col min-h-screen overflow-x-hidden" style={{ background: "#171311", color: "#EDE6DD" }}>
 
@@ -325,13 +327,52 @@ export default function LandingPage() {
             <a href="#problem" className="transition-colors hover:text-[#EDE6DD]">Why us</a>
             <a href="#how"     className="transition-colors hover:text-[#EDE6DD]">How it works</a>
             <a href="#features" className="transition-colors hover:text-[#EDE6DD]">Features</a>
+            <Link href="/guide" className="transition-colors hover:text-[#EDE6DD]">Guide</Link>
           </div>
 
           <div className="flex items-center gap-4">
-            <Link href="/login"    className="text-sm transition-colors" style={{ color: "#A89B8C" }}>Login</Link>
-            <Link href="/register" className="cs-btn-primary cs-btn-sm">Register</Link>
+            <Link href="/login"    className="hidden md:block text-sm transition-colors" style={{ color: "#A89B8C" }}>Login</Link>
+            <Link href="/register" className="hidden md:block cs-btn-primary cs-btn-sm">Register</Link>
+            {/* Hamburger — mobile only */}
+            <button
+              className="md:hidden flex flex-col justify-center items-center gap-1.5 w-8 h-8"
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-label="Toggle menu"
+            >
+              <span style={{ display: "block", width: 20, height: 2, borderRadius: 2, background: "#EDE6DD", transition: "transform 0.2s, opacity 0.2s", transform: menuOpen ? "translateY(6px) rotate(45deg)" : "none" }} />
+              <span style={{ display: "block", width: 20, height: 2, borderRadius: 2, background: "#EDE6DD", transition: "opacity 0.2s", opacity: menuOpen ? 0 : 1 }} />
+              <span style={{ display: "block", width: 20, height: 2, borderRadius: 2, background: "#EDE6DD", transition: "transform 0.2s, opacity 0.2s", transform: menuOpen ? "translateY(-6px) rotate(-45deg)" : "none" }} />
+            </button>
           </div>
         </div>
+
+        {/* Mobile dropdown */}
+        {menuOpen && (
+          <div
+            className="md:hidden border-t px-6 py-4 flex flex-col gap-1"
+            style={{ background: "rgba(23,19,17,0.97)", borderColor: "rgba(196,112,75,0.12)" }}
+          >
+            {[
+              { href: "#problem", label: "Why us" },
+              { href: "#how",     label: "How it works" },
+              { href: "#features",label: "Features" },
+              { href: "/guide",   label: "Guide" },
+            ].map(({ href, label }) => (
+              <a
+                key={label}
+                href={href}
+                onClick={() => setMenuOpen(false)}
+                style={{ padding: "12px 4px", fontSize: 15, color: "#A89B8C", borderBottom: "1px solid rgba(196,112,75,0.07)", display: "block" }}
+              >
+                {label}
+              </a>
+            ))}
+            <div className="flex flex-col gap-3 pt-4">
+              <Link href="/login"    onClick={() => setMenuOpen(false)} className="text-sm text-center py-2.5 rounded-xl" style={{ color: "#A89B8C", border: "1px solid rgba(196,112,75,0.2)" }}>Login</Link>
+              <Link href="/register" onClick={() => setMenuOpen(false)} className="cs-btn-primary text-center">Register</Link>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* ══════════════════════════════════════════════════
@@ -698,6 +739,176 @@ export default function LandingPage() {
                 </div>
               </ScrollReveal>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <GlowDivider />
+
+      {/* ══════════════════════════════════════════════════
+          ROADMAP
+      ═══════════════════════════════════════════════════ */}
+      <section className="py-32 px-6" style={{ position: "relative", zIndex: 1 }}>
+        <div className="max-w-5xl mx-auto">
+          <ScrollReveal className="text-center mb-16">
+            <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: "#C4704B" }}>Roadmap</p>
+            <h2
+              className="text-4xl md:text-5xl tracking-tight"
+              style={{ fontFamily: "var(--font-libre-franklin)", fontWeight: 600, color: "#EDE6DD" }}
+            >
+              What&apos;s coming next
+            </h2>
+            <p className="mt-4 text-lg" style={{ color: "#A89B8C" }}>
+              Cascrow is live on testnet. Here&apos;s where we&apos;re taking it.
+            </p>
+          </ScrollReveal>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* KYC Tiers */}
+            <ScrollReveal delay={0}>
+              <div
+                className="rounded-2xl p-7 flex flex-col gap-5"
+                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.14)" }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.2)" }}>
+                    <IconShield />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#C4704B" }}>Compliance</p>
+                    <h3 className="font-semibold text-lg" style={{ color: "#EDE6DD" }}>Risk-based KYC</h3>
+                  </div>
+                </div>
+                <p className="text-sm leading-relaxed" style={{ color: "#A89B8C" }}>
+                  No unnecessary friction for small grants. Verification scales with the amount at stake.
+                </p>
+                <div className="flex flex-col gap-2">
+                  {[
+                    { tier: "Tier 0", label: "Email verified", limit: "up to $1K", note: "live now" },
+                    { tier: "Tier 1", label: "Name + Sanctions screening", limit: "up to $10K", note: "" },
+                    { tier: "Tier 2", label: "ID + Liveness check", limit: "up to $100K", note: "" },
+                    { tier: "Tier 3", label: "KYB + Source of funds", limit: "unlimited", note: "" },
+                  ].map((t) => (
+                    <div key={t.tier} className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ background: "rgba(255,255,255,0.02)" }}>
+                      <span className="text-xs font-bold w-12 shrink-0" style={{ color: "#C4704B" }}>{t.tier}</span>
+                      <span className="text-xs flex-1" style={{ color: "#A89B8C" }}>{t.label}</span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-xs font-medium" style={{ color: "#EDE6DD" }}>{t.limit}</span>
+                        {t.note && (
+                          <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "rgba(52,211,153,0.12)", color: "#34d399" }}>{t.note}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </ScrollReveal>
+
+            {/* Right column: two smaller cards */}
+            <div className="flex flex-col gap-6">
+              <ScrollReveal delay={100}>
+                <div
+                  className="rounded-2xl p-7 flex flex-col gap-4"
+                  style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.14)" }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.2)" }}>
+                      <IconLayers />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#C4704B" }}>Expert Review</p>
+                      <h3 className="font-semibold text-lg" style={{ color: "#EDE6DD" }}>Human-in-the-loop</h3>
+                    </div>
+                  </div>
+                  <p className="text-sm leading-relaxed" style={{ color: "#A89B8C" }}>
+                    For high-stakes decisions, AI generates a detailed report reviewed by a curated panel of domain experts. Double-blind, majority vote.
+                  </p>
+                </div>
+              </ScrollReveal>
+
+              <ScrollReveal delay={200}>
+                <div
+                  className="rounded-2xl p-7 flex flex-col gap-4"
+                  style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.14)" }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.2)" }}>
+                      <IconGlobe />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#C4704B" }}>Settlement</p>
+                      <h3 className="font-semibold text-lg" style={{ color: "#EDE6DD" }}>Choose your chain</h3>
+                    </div>
+                  </div>
+                  <p className="text-sm leading-relaxed" style={{ color: "#A89B8C" }}>
+                    Before creating a contract, choose where the escrow settles — native XRPL Ledger via XLS-85 (Xumm / Crossmark) or the XRPL EVM Sidechain (MetaMask). Same trustless flow, your call.
+                  </p>
+                </div>
+              </ScrollReveal>
+            </div>
+          </div>
+
+          {/* Second row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+            <ScrollReveal delay={0}>
+              <div
+                className="rounded-2xl p-7 flex flex-col gap-4 h-full"
+                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.14)" }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.2)" }}>
+                    <IconMonitor />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#C4704B" }}>Mainnet</p>
+                    <h3 className="font-semibold text-lg" style={{ color: "#EDE6DD" }}>Real money, real stakes</h3>
+                  </div>
+                </div>
+                <p className="text-sm leading-relaxed" style={{ color: "#A89B8C" }}>
+                  Mainnet launch with fiat on-ramp — fund escrows directly by card or bank transfer. Payouts go straight to a bank account, no crypto wallet required.
+                </p>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal delay={100}>
+              <div
+                className="rounded-2xl p-7 flex flex-col gap-4 h-full"
+                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.14)" }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.2)" }}>
+                    <IconScale />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#C4704B" }}>Disputes</p>
+                    <h3 className="font-semibold text-lg" style={{ color: "#EDE6DD" }}>Structured resolution</h3>
+                  </div>
+                </div>
+                <p className="text-sm leading-relaxed" style={{ color: "#A89B8C" }}>
+                  A formal dispute workflow with escalation paths, arbitration timelines, and binding decisions — so every edge case has a clear, fair outcome.
+                </p>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal delay={200}>
+              <div
+                className="rounded-2xl p-7 flex flex-col gap-4 h-full"
+                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.14)" }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.2)" }}>
+                    <IconEye />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#C4704B" }}>Verification</p>
+                    <h3 className="font-semibold text-lg" style={{ color: "#EDE6DD" }}>Active intelligence</h3>
+                  </div>
+                </div>
+                <p className="text-sm leading-relaxed" style={{ color: "#A89B8C" }}>
+                  AI that goes beyond uploaded documents — querying GitHub to analyse code, checking public APIs, and cross-referencing live data. Weighted confidence scores replace binary decisions as models improve.
+                </p>
+              </div>
+            </ScrollReveal>
           </div>
         </div>
       </section>
