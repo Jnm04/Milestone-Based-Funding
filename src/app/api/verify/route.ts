@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { verifyMilestone, verifyMilestoneImage, mockVerifyMilestone, categorizeFile, VERIFICATION_PROMPT_HASH } from "@/services/ai/verifier.service";
+import { storeBrainData } from "@/services/brain/training.service";
 import { releaseMilestone } from "@/services/evm/escrow.service";
 import { sendPendingReviewEmail, sendRejectedEmail, sendVerifiedEmail, sendMilestoneCompletedInvestorEmail, sendFulfillmentKeyEmail } from "@/lib/email";
 import { contractIdToBytes32 } from "@/services/evm/escrow.service";
@@ -100,6 +101,16 @@ export async function POST(request: NextRequest) {
         aiReasoning: result.reasoning,
         aiConfidence: result.confidence,
       },
+    });
+
+    // Store training data in the background — invisible to the user, never blocks response
+    void storeBrainData({
+      proofId,
+      milestoneText: milestoneTitle,
+      proofText: extractedText,
+      modelVotes: result.modelVotes,
+      consensusLevel: result.consensusLevel,
+      finalDecision: result.decision,
     });
 
     // Three-tier confidence logic

@@ -5,6 +5,18 @@ import { Mistral } from "@mistralai/mistralai";
 import { AIVerificationResult } from "@/types";
 import crypto from "crypto";
 
+export interface ModelVote {
+  model: string;
+  decision: "YES" | "NO";
+  confidence: number;
+  reasoning: string;
+}
+
+export interface AIVerificationResultWithVotes extends AIVerificationResult {
+  modelVotes: ModelVote[];
+  consensusLevel: number; // number of YES votes (0–5)
+}
+
 // Lazy-initialized clients — avoids constructor throws during Next.js build
 // when env vars are only available at runtime (not build time).
 let _anthropic: Anthropic | null = null;
@@ -133,8 +145,9 @@ function parseAIResponse(raw: string, source: string): AIVerificationResult {
  * Decision: YES if 3+ models say YES, NO otherwise.
  * Confidence: average of the majority voters.
  * Reasoning: summarises which models agreed/disagreed.
+ * Also returns individual model votes for brain/training storage.
  */
-function combineResults(results: { model: string; result: AIVerificationResult }[]): AIVerificationResult {
+function combineResults(results: { model: string; result: AIVerificationResult }[]): AIVerificationResultWithVotes {
   const yesVoters = results.filter((r) => r.result.decision === "YES");
   const noVoters = results.filter((r) => r.result.decision === "NO");
   const decision = yesVoters.length >= 3 ? "YES" : "NO";
@@ -151,7 +164,14 @@ function combineResults(results: { model: string; result: AIVerificationResult }
     : `YES: ${yesNames}`;
   const reasoning = `${yesVoters.length}/5 models approved (${votesummary}). ${primaryReasoning}`;
 
-  return { decision, reasoning, confidence };
+  const modelVotes: ModelVote[] = results.map((r) => ({
+    model: r.model,
+    decision: r.result.decision,
+    confidence: r.result.confidence,
+    reasoning: r.result.reasoning,
+  }));
+
+  return { decision, reasoning, confidence, modelVotes, consensusLevel: yesVoters.length };
 }
 
 // ─── Individual model callers ─────────────────────────────────────────────────
@@ -337,7 +357,7 @@ async function safeCall(
 export async function verifyMilestone(params: {
   milestone: string;
   extractedText: string;
-}): Promise<AIVerificationResult> {
+}): Promise<AIVerificationResultWithVotes> {
   const { content, truncated } = truncateText(params.extractedText);
   const truncationNote = truncated
     ? `\n\n[NOTE: Document exceeds ${MAX_TEXT_CHARS.toLocaleString()} characters and has been truncated. Evaluate only the visible portion.]`
@@ -365,7 +385,7 @@ export async function verifyMilestoneImage(params: {
   milestone: string;
   imageBuffer: Buffer;
   mimeType: "image/jpeg" | "image/png" | "image/gif" | "image/webp";
-}): Promise<AIVerificationResult> {
+}): Promise<AIVerificationResultWithVotes> {
   const base64 = params.imageBuffer.toString("base64");
   const userMessage =
     `Examine the image and determine if it proves the following milestone was completed.\n\n` +
@@ -401,13 +421,13 @@ export async function callClaudeImageOnly(params: {
   milestone: string;
   imageBuffer: Buffer;
   mimeType: "image/jpeg" | "image/png" | "image/gif" | "image/webp";
-}): Promise<AIVerificationResult> {
+}): Promise<AIVerificationResultWithVotes> {
   const base64 = params.imageBuffer.toString("base64");
   const userMessage =
     `Examine the image and determine if it proves the following milestone was completed.\n\n` +
     `Milestone:\n[MILESTONE START]\n${params.milestone}\n[MILESTONE END]`;
 
-  return callClaude(
+  const result = await callClaude(
     [{
       role: "user",
       content: [
@@ -417,6 +437,11 @@ export async function callClaudeImageOnly(params: {
     }],
     VERIFICATION_SYSTEM_PROMPT
   );
+  return {
+    ...result,
+    modelVotes: [{ model: "Claude", decision: result.decision, confidence: result.confidence, reasoning: result.reasoning }],
+    consensusLevel: result.decision === "YES" ? 1 : 0,
+  };
 }
 
 /**
@@ -426,11 +451,13 @@ export async function callClaudeImageOnly(params: {
 export function mockVerifyMilestone(params: {
   milestone: string;
   extractedText: string;
-}): AIVerificationResult {
+}): AIVerificationResultWithVotes {
   console.warn("[AI] Using mock verifier — set ANTHROPIC_API_KEY for real verification");
   return {
     decision: "YES",
     reasoning: "Mock: Document uploaded successfully. Set ANTHROPIC_API_KEY for real AI verification.",
     confidence: 80,
+    modelVotes: [{ model: "Mock", decision: "YES", confidence: 80, reasoning: "Mock verifier" }],
+    consensusLevel: 5,
   };
 }
