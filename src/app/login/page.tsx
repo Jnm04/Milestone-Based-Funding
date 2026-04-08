@@ -32,6 +32,50 @@ function LoginForm() {
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendDone, setResendDone] = useState(false);
+  const [autoSigningIn, setAutoSigningIn] = useState(false);
+
+  // Poll for email verification every 3s — auto-login when verified on any device
+  useEffect(() => {
+    if (!unverifiedEmail) return;
+    const savedPassword = password;
+    const savedEmail = unverifiedEmail;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/auth/check-verified?email=${encodeURIComponent(savedEmail)}`);
+        const { verified } = await res.json();
+        if (!verified) return;
+
+        clearInterval(interval);
+        setAutoSigningIn(true);
+        const signInRes = await signIn("credentials", { email: savedEmail, password: savedPassword, redirect: false });
+        if (signInRes?.ok && !signInRes?.error) {
+          const sessionRes = await fetch("/api/auth/session");
+          const session = await sessionRes.json();
+          const role = session?.user?.role;
+          if (callbackUrl && callbackUrl.startsWith("/")) {
+            router.push(callbackUrl);
+          } else if (role === "INVESTOR") {
+            router.push("/dashboard/investor");
+          } else if (role === "STARTUP") {
+            router.push("/dashboard/startup");
+          } else {
+            router.push("/");
+          }
+        } else {
+          // Verified but sign-in failed (edge case) — send back to login
+          setAutoSigningIn(false);
+          setUnverifiedEmail(null);
+          toast.success("Email verified! Please sign in.");
+        }
+      } catch {
+        // Network error — keep polling silently
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unverifiedEmail]);
 
   useEffect(() => {
     if (searchParams.get("verified") === "1") {
@@ -113,33 +157,56 @@ function LoginForm() {
             className="flex flex-col gap-5 p-8 rounded-2xl"
             style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.15)" }}
           >
-            <h1 className="text-2xl" style={{ fontFamily: "var(--font-libre-franklin)", fontWeight: 300, color: "#EDE6DD" }}>
-              Verify your email
-            </h1>
-            <p className="text-sm" style={{ color: "#A89B8C" }}>
-              Your account is not yet verified. Check your inbox at{" "}
-              <strong style={{ color: "#EDE6DD" }}>{unverifiedEmail}</strong> or request a new link.
-            </p>
-            {resendDone ? (
-              <p className="text-sm font-medium" style={{ color: "#6EAF7C" }}>
-                Verification email sent! Check your inbox.
-              </p>
+            {autoSigningIn ? (
+              <>
+                <div className="flex flex-col items-center gap-4 py-4">
+                  <div style={{ width: 32, height: 32, border: "2px solid rgba(196,112,75,0.2)", borderTopColor: "#C4704B", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+                  <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+                  <h1 className="text-xl" style={{ fontFamily: "var(--font-libre-franklin)", fontWeight: 300, color: "#EDE6DD" }}>
+                    Email verified!
+                  </h1>
+                  <p className="text-sm" style={{ color: "#A89B8C" }}>Signing you in…</p>
+                </div>
+              </>
             ) : (
-              <button
-                onClick={handleResend}
-                disabled={resendLoading}
-                className="cs-btn-primary w-full"
-              >
-                {resendLoading ? "Sending…" : "Resend verification email"}
-              </button>
+              <>
+                <h1 className="text-2xl" style={{ fontFamily: "var(--font-libre-franklin)", fontWeight: 300, color: "#EDE6DD" }}>
+                  Verify your email
+                </h1>
+                <p className="text-sm" style={{ color: "#A89B8C" }}>
+                  Your account is not yet verified. Check your inbox at{" "}
+                  <strong style={{ color: "#EDE6DD" }}>{unverifiedEmail}</strong> or request a new link.
+                </p>
+
+                {/* Waiting indicator */}
+                <div className="flex items-center justify-center gap-2 py-1">
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#C4704B", animation: "pulse 1.4s ease-in-out infinite" }} />
+                  <style>{`@keyframes pulse{0%,100%{opacity:0.3}50%{opacity:1}}`}</style>
+                  <span className="text-xs" style={{ color: "#A89B8C" }}>Waiting for verification on any device…</span>
+                </div>
+
+                {resendDone ? (
+                  <p className="text-sm font-medium" style={{ color: "#6EAF7C" }}>
+                    Verification email sent! Check your inbox.
+                  </p>
+                ) : (
+                  <button
+                    onClick={handleResend}
+                    disabled={resendLoading}
+                    className="cs-btn-primary w-full"
+                  >
+                    {resendLoading ? "Sending…" : "Resend verification email"}
+                  </button>
+                )}
+                <button
+                  onClick={() => setUnverifiedEmail(null)}
+                  className="text-sm hover:underline"
+                  style={{ color: "#A89B8C" }}
+                >
+                  Back to sign in
+                </button>
+              </>
             )}
-            <button
-              onClick={() => setUnverifiedEmail(null)}
-              className="text-sm hover:underline"
-              style={{ color: "#A89B8C" }}
-            >
-              Back to sign in
-            </button>
           </div>
         </div>
       </main>
