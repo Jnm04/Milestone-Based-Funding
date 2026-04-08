@@ -1,8 +1,24 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import { NodeBackground } from "@/components/node-background";
 import { ScrollReveal } from "@/components/scroll-reveal";
+import { FOOTER_LOGOS, type FooterLogoItem } from "@/components/brand-icons";
+
+function FooterLogo({ logo }: { logo: FooterLogoItem }) {
+  const [hovered, setHovered] = React.useState(false);
+  return (
+    <div
+      title={logo.name}
+      style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, cursor: "default", transition: "filter 0.2s ease" }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {logo.renderIcon(hovered)}
+    </div>
+  );
+}
 
 const RLUSD_ADDRESS = "0xF717cC3a7ae4a8839e7d964B64A622Dae523a348";
 const ESCROW_ADDRESS = "0x7d0B1119c3b2b6e9aAc025ae6A051C67eF40d8c4";
@@ -378,8 +394,38 @@ export default function GuidePage() {
       {/* Footer */}
       <footer className="px-6 border-t" style={{ borderColor: "rgba(196,112,75,0.12)", position: "relative", zIndex: 1 }}>
         <div className="max-w-6xl mx-auto flex items-center justify-between py-6 text-sm" style={{ color: "#A89B8C" }}>
-          <span>Cascrow — XRPL Student Builder Residency 2026</span>
-          <Link href="/" style={{ color: "#C4704B" }}>← Back to home</Link>
+          {/* Left — logo */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <div style={{ width: 20, height: 3, borderRadius: 2, background: "#C4704B" }} />
+              <div style={{ width: 20, height: 3, borderRadius: 2, background: "#C4704B", opacity: 0.55, marginLeft: 4 }} />
+              <div style={{ width: 20, height: 3, borderRadius: 2, background: "#C4704B", opacity: 0.22, marginLeft: 8 }} />
+            </div>
+            <span style={{ fontFamily: "var(--font-libre-franklin), sans-serif", fontWeight: 300, fontSize: 16, color: "#EDE6DD", letterSpacing: "4px" }}>
+              cascrow
+            </span>
+          </div>
+
+          {/* Center — powered by */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 10, color: "#3D342C", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              Powered by
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {FOOTER_LOGOS.map((logo) => (
+                <FooterLogo key={logo.name} logo={logo} />
+              ))}
+            </div>
+          </div>
+
+          {/* Right — copyright + nav */}
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            <span style={{ fontSize: 11, color: "#3D342C" }}>© 2026 Cascrow</span>
+            <div className="flex gap-6">
+              <Link href="/login" className="transition-colors hover:text-[#EDE6DD]">Sign in</Link>
+              <Link href="/register" className="transition-colors hover:text-[#EDE6DD]">Register</Link>
+            </div>
+          </div>
         </div>
       </footer>
     </main>
