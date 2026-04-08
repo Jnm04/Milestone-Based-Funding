@@ -524,8 +524,8 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8" style={{ alignItems: "stretch" }}>
             {[
-              { num: "01", title: "Agree & lock",          desc: "Grant Giver and receiver agree on a milestone and amount. Funds are locked in RLUSD escrow on the XRPL EVM Sidechain." },
-              { num: "02", title: "Deliver & upload",       desc: "The receiver completes the milestone and uploads proof as a PDF document." },
+              { num: "01", title: "Agree & lock",          desc: "Grant Giver and Receiver agree on a milestone and amount. Funds are locked in RLUSD escrow on the XRPL EVM Sidechain." },
+              { num: "02", title: "Deliver & upload",       desc: "The Receiver completes the milestone and uploads proof as a PDF document." },
               { num: "03", title: "AI verifies & releases", desc: "Our AI evaluates the proof against the milestone criteria. If approved, funds are released instantly." },
             ].map((step, i) => (
               <ScrollReveal key={step.num} delay={i * 120} className="h-full">
@@ -611,7 +611,7 @@ export default function LandingPage() {
               <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#D4956A" }}>AI-powered milestone verification</p>
               <h3 className="text-2xl font-semibold" style={{ color: "#EDE6DD" }}>No human gatekeepers</h3>
               <p className="text-base leading-relaxed" style={{ color: "#A89B8C" }}>
-                Upload your proof as a PDF. Five independent AI models — Claude, Gemini, OpenAI, Mistral and Qwen — analyse it against the agreed milestone
+                Upload your proof as a PDF. Five independent AI models — Claude, Gemini, OpenAI, Mistral and Qwen — analyze it against the agreed milestone
                 criteria and deliver an objective verdict in seconds.
               </p>
               <div className="flex flex-col gap-2.5">
@@ -628,7 +628,7 @@ export default function LandingPage() {
               <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#C4704B" }}>Instant settlement</p>
               <h3 className="text-2xl font-semibold" style={{ color: "#EDE6DD" }}>Payment in seconds, not days</h3>
               <p className="text-base leading-relaxed" style={{ color: "#A89B8C" }}>
-                Once AI approves a milestone, funds release to the receiver&apos;s wallet via the XRP Ledger
+                Once AI approves a milestone, funds release to the Receiver&apos;s wallet via the XRP Ledger
                 in 3-5 seconds. No wire transfers, no waiting.
               </p>
               <div className="flex flex-col gap-2.5">
@@ -905,7 +905,7 @@ export default function LandingPage() {
                   </div>
                 </div>
                 <p className="text-sm leading-relaxed" style={{ color: "#A89B8C" }}>
-                  AI that goes beyond uploaded documents — querying GitHub to analyse code, checking public APIs, and cross-referencing live data. Weighted confidence scores replace binary decisions as models improve.
+                  AI that goes beyond uploaded documents — querying GitHub to analyze code, checking public APIs, and cross-referencing live data. Weighted confidence scores replace binary decisions as models improve.
                 </p>
               </div>
             </ScrollReveal>

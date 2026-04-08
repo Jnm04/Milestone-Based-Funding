@@ -81,7 +81,7 @@ function NewContractContent() {
           New Contract
         </h1>
         <p className="text-sm mt-1" style={{ color: "#A89B8C" }}>
-          Define the milestone criteria and lock RLUSD in escrow for the receiver.
+          Define the milestone criteria and lock RLUSD in escrow for the Receiver.
         </p>
       </div>
 

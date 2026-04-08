@@ -75,7 +75,7 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
       }
 
       const { contractId, directlyLinked } = await res.json();
-      toast.success(directlyLinked ? "Contract created and receiver linked!" : "Contract created! Share the invite link with the receiver.");
+      toast.success(directlyLinked ? "Contract created and Receiver linked!" : "Contract created! Share the invite link with the Receiver.");
       router.push(`/contract/${contractId}?investor=${investorAddress}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong.");
@@ -111,8 +111,8 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
         />
         <p style={{ fontSize: "12px", color: "#71717a" }}>
           {receiverWallet.trim()
-            ? "The receiver will be linked directly — no invite link needed."
-            : "You will get an invite link to share with the receiver after creation."}
+            ? "The Receiver will be linked directly — no invite link needed."
+            : "You will get an invite link to share with the Receiver after creation."}
         </p>
       </div>
 

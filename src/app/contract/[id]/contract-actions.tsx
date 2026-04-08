@@ -412,7 +412,7 @@ export function ContractActions({
       if (data.action === "already_closed") {
         toast.success("Escrow already settled. Contract marked as expired.");
       } else {
-        toast.success("Escrow cancelled. Funds returned to grant giver.");
+        toast.success("Escrow cancelled. Funds returned to Grant Giver.");
       }
       setTimeout(() => window.location.reload(), 1200);
     } catch (err) {
@@ -478,7 +478,7 @@ export function ContractActions({
       return (
         <div className="flex flex-col gap-3 p-5 rounded-xl" style={{ background: "rgba(196,112,75,0.08)", border: "1px solid rgba(196,112,75,0.25)" }}>
           <p className="text-sm font-medium" style={{ color: "#E8935A" }}>
-            Waiting for the grant giver to fund the escrow.
+            Waiting for the Grant Giver to fund the escrow.
           </p>
         </div>
       );
@@ -534,7 +534,7 @@ export function ContractActions({
       return (
         <div className="flex flex-col gap-3 p-5 rounded-xl" style={{ background: "rgba(96,165,250,0.07)", border: "1px solid rgba(96,165,250,0.2)" }}>
           <p className="text-sm font-medium" style={{ color: "#7DB8F7" }}>
-            Waiting for the receiver to upload milestone proof.
+            Waiting for the Receiver to upload milestone proof.
           </p>
         </div>
       );
@@ -554,7 +554,7 @@ export function ContractActions({
     return (
       <div className="flex flex-col gap-3 p-5 rounded-xl" style={{ background: "rgba(96,165,250,0.07)", border: "1px solid rgba(96,165,250,0.2)" }}>
         <p className="text-sm" style={{ color: "#7DB8F7" }}>
-          {isStartup ? "Proof uploaded. Ready for AI verification." : "The receiver has submitted proof. AI verification is pending."}
+          {isStartup ? "Proof uploaded. Ready for AI verification." : "The Receiver has submitted proof. AI verification is pending."}
         </p>
         {latestProofFileUrl && isStartup && (
           <a
@@ -680,7 +680,7 @@ export function ContractActions({
           </div>
         ) : (
           <p className="text-sm" style={{ color: "#A89B8C" }}>
-            The grant giver is reviewing your proof. You will be notified once a decision has been made.
+            The Grant Giver is reviewing your proof. You will be notified once a decision has been made.
           </p>
         )}
       </div>
@@ -693,7 +693,7 @@ export function ContractActions({
       return (
         <div className="flex flex-col gap-3 p-5 rounded-xl" style={{ background: "rgba(74,222,128,0.07)", border: "1px solid rgba(74,222,128,0.2)" }}>
           <p className="text-sm font-medium" style={{ color: "#6EE09A" }}>
-            Milestone approved. The receiver can now withdraw the funds.
+            Milestone approved. The Receiver can now withdraw the funds.
           </p>
         </div>
       );
@@ -747,7 +747,7 @@ export function ContractActions({
           </button>
         ) : (
           <p className="text-xs" style={{ color: "#F87171", opacity: 0.8 }}>
-            The proof was rejected. The receiver will need to resubmit a new proof.
+            The proof was rejected. The Receiver will need to resubmit a new proof.
           </p>
         )}
       </div>

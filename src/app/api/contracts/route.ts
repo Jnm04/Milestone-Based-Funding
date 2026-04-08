@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       });
       if (!receiver) {
         return NextResponse.json(
-          { error: "No account found with that wallet address. The receiver must register first." },
+          { error: "No account found with that wallet address. The Receiver must register first." },
           { status: 404 }
         );
       }

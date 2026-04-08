@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from "react";
 const ITEMS = [
   {
     q: "Who controls the funds?",
-    a: "No one — the smart contract does. Once the grant giver funds the milestone, RLUSD is locked in a smart contract on the XRPL EVM Sidechain. Neither the grant giver nor Cascrow can withdraw funds arbitrarily. Only the contract logic itself can release them.",
+    a: "No one — the smart contract does. Once the Grant Giver funds the milestone, RLUSD is locked in a smart contract on the XRPL EVM Sidechain. Neither the Grant Giver nor Cascrow can withdraw funds arbitrarily. Only the contract logic itself can release them.",
   },
   {
     q: "Which wallet do I need?",
@@ -13,7 +13,7 @@ const ITEMS = [
   },
   {
     q: "How does AI verification work?",
-    a: "When you upload your proof PDF, five independent AI models — Claude, Gemini, OpenAI, Mistral and Qwen — each evaluate it against the agreed milestone criteria. A confidence score above 85% triggers automatic approval. Below 60% triggers automatic rejection. In between, the grant giver is notified to make a manual decision.",
+    a: "When you upload your proof PDF, five independent AI models — Claude, Gemini, OpenAI, Mistral and Qwen — each evaluate it against the agreed milestone criteria. A confidence score above 85% triggers automatic approval. Below 60% triggers automatic rejection. In between, the Grant Giver is notified to make a manual decision.",
   },
   {
     q: "What types of proof does the AI accept?",
@@ -21,11 +21,11 @@ const ITEMS = [
   },
   {
     q: "What happens if the AI rejects my proof?",
-    a: "You'll see the AI's detailed reasoning directly on the contract page. You can revise your proof and resubmit — there's no limit on resubmission attempts before the deadline. If you believe the verdict is incorrect, the grant giver can also override it manually.",
+    a: "You'll see the AI's detailed reasoning directly on the contract page. You can revise your proof and resubmit — there's no limit on resubmission attempts before the deadline. If you believe the verdict is incorrect, the Grant Giver can also override it manually.",
   },
   {
-    q: "Can the grant giver cancel after funding?",
-    a: "Not before the deadline. Once funds are locked in escrow they stay locked — until either the milestone is verified or the deadline passes. If no proof is submitted in time, the grant giver can reclaim the RLUSD automatically.",
+    q: "Can the Grant Giver cancel after funding?",
+    a: "Not before the deadline. Once funds are locked in escrow they stay locked — until either the milestone is verified or the deadline passes. If no proof is submitted in time, the Grant Giver can reclaim the RLUSD automatically.",
   },
   {
     q: "What is RLUSD and is it safe?",

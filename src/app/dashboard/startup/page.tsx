@@ -135,7 +135,7 @@ function StartupDashboardContent() {
     fetch("/api/contracts")
       .then((r) => r.json())
       .then((data) => setContracts(data.contracts ?? []))
-      .catch(() => toast.error("Contracts konnten nicht geladen werden."))
+      .catch(() => toast.error("Could not load contracts."))
       .finally(() => setLoadingContracts(false));
   }, [status]);
 

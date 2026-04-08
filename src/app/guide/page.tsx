@@ -318,7 +318,7 @@ export default function GuidePage() {
               'Click "New Contract" on your dashboard',
               'Enter a project title and describe the milestone clearly — this is what the AI will verify against',
               'Set the RLUSD amount and the deadline in days',
-              'Optionally enter the receiver\'s wallet address directly, or leave blank to get a shareable invite link',
+              'Optionally enter the Receiver\'s wallet address directly, or leave blank to get a shareable invite link',
               'Click "Create Contract"',
             ]} />
             <InfoBox>
@@ -345,7 +345,7 @@ export default function GuidePage() {
           <Step n={10} title="Submit proof (Receiver)">
             <P>As the Receiver (startup), upload evidence that the milestone was completed:</P>
             <Ol items={[
-              'Log in with the receiver account and open the contract',
+              'Log in with the Receiver account and open the contract',
               'Click "Upload Proof"',
               'Upload a PDF document describing what was delivered',
               'Click "Submit" — the AI verification starts automatically',
@@ -360,9 +360,9 @@ export default function GuidePage() {
             <P>Five AI models independently read the proof and vote. The result is immediate:</P>
             <Ol items={[
               'Watch the contract status — it updates in real time',
-              'If 3/5 models vote YES with high confidence → funds are released automatically to the receiver',
+              'If 3/5 models vote YES with high confidence → funds are released automatically to the Receiver',
               'If confidence is medium (60–85%) → the investor is notified to review manually',
-              'If 3/5 models vote NO → the receiver is notified with a rejection reason and can resubmit',
+              'If 3/5 models vote NO → the Receiver is notified with a rejection reason and can resubmit',
               'If the deadline passes without a verified proof → the investor can cancel and get a full refund',
             ]} />
             <SuccessBox>

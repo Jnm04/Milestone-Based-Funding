@@ -44,7 +44,7 @@ const STEPS = [
     statusColor: "#10B981",
     icon: "🎉",
     title: "Milestone verified!",
-    desc: "5,000 RLUSD released to receiver wallet instantly",
+    desc: "5,000 RLUSD released to Receiver wallet instantly",
     amount: "5,000 RLUSD",
     progress: 100,
   },

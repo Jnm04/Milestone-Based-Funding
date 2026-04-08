@@ -52,7 +52,7 @@ export async function sendProofSubmittedEmail({
     subject: `Proof submitted: ${milestoneTitle}`,
     html: `
       <p>Hi,</p>
-      <p><strong>${startupName ?? "The receiver"}</strong> has submitted proof for the milestone <strong>${milestoneTitle}</strong>.</p>
+      <p><strong>${startupName ?? "The Receiver"}</strong> has submitted proof for the milestone <strong>${milestoneTitle}</strong>.</p>
       <p>AI verification runs automatically. You will be notified if a manual review is required.</p>
       <p><a href="${contractLink(contractId)}">Open contract →</a></p>
     `,
