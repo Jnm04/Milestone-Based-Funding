@@ -1,7 +1,36 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, Component, ErrorInfo, ReactNode } from "react";
+
+// ─── Error boundary ───────────────────────────────────────────────────────────
+class GraphErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { error: error.message ?? "Unknown error" };
+  }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("[BrainMap] Graph render error:", error, info);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 32, textAlign: "center", color: "#A89B8C", border: "1px dashed rgba(196,112,75,0.2)", borderRadius: 12 }}>
+          <div style={{ fontSize: 20, marginBottom: 8 }}>⚠</div>
+          <strong style={{ color: "#EDE6DD" }}>Graph failed to render</strong>
+          <p style={{ fontSize: 12, marginTop: 6 }}>{this.state.error}</p>
+          <button onClick={() => this.setState({ error: null })} style={{ marginTop: 12, padding: "6px 16px", borderRadius: 8, background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.3)", color: "#C4704B", cursor: "pointer", fontSize: 13 }}>
+            Retry
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // ForceGraph2D uses browser APIs — must be loaded client-side only
 const ForceGraph2D = dynamic(
@@ -157,12 +186,9 @@ export default function BrainMapPage() {
     return () => ro.disconnect();
   }, []);
 
-  // Zoom to fit after data loads
-  useEffect(() => {
-    if (data && fgRef.current) {
-      setTimeout(() => fgRef.current?.zoomToFit(600, 60), 800);
-    }
-  }, [data]);
+  const handleEngineStop = useCallback(() => {
+    fgRef.current?.zoomToFit(600, 60);
+  }, []);
 
   // ── Node interactions ──
 
@@ -438,28 +464,31 @@ export default function BrainMapPage() {
             overflow: "hidden",
           }}
         >
-          <ForceGraph2D
-            ref={fgRef}
-            graphData={data}
-            width={dims.width}
-            height={dims.height}
-            backgroundColor="#0d0b09"
-            nodeCanvasObject={nodeCanvasObject}
-            nodeCanvasObjectMode={() => "replace"}
-            nodePointerAreaPaint={nodePointerAreaPaint}
-            linkColor={getLinkColor}
-            linkWidth={getLinkWidth}
-            linkCurvature={0.08}
-            onNodeClick={handleNodeClick}
-            onBackgroundClick={handleBackgroundClick}
-            onNodeHover={(node) => setHoverNode(node as GraphNode | null)}
-            cooldownTicks={120}
-            d3AlphaDecay={0.025}
-            d3VelocityDecay={0.35}
-            enableNodeDrag
-            enableZoomInteraction
-            enablePanInteraction
-          />
+          <GraphErrorBoundary>
+            <ForceGraph2D
+              ref={fgRef}
+              graphData={data}
+              width={dims.width}
+              height={dims.height}
+              backgroundColor="#0d0b09"
+              nodeCanvasObject={nodeCanvasObject}
+              nodeCanvasObjectMode={() => "replace"}
+              nodePointerAreaPaint={nodePointerAreaPaint}
+              linkColor={getLinkColor}
+              linkWidth={getLinkWidth}
+              linkCurvature={0.08}
+              onNodeClick={handleNodeClick}
+              onBackgroundClick={handleBackgroundClick}
+              onNodeHover={(node) => setHoverNode(node as GraphNode | null)}
+              onEngineStop={handleEngineStop}
+              cooldownTicks={120}
+              d3AlphaDecay={0.025}
+              d3VelocityDecay={0.35}
+              enableNodeDrag
+              enableZoomInteraction
+              enablePanInteraction
+            />
+          </GraphErrorBoundary>
 
           {/* Legend — bottom-left overlay */}
           <div style={{
