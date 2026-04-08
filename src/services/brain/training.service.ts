@@ -128,16 +128,40 @@ export async function labelQueueEntry(params: {
 
 /** Stats for the internal dashboard. */
 export async function getBrainStats() {
-  const [trainingCount, queueCount, embeddingCount, labelBreakdown] = await Promise.all([
+  const [trainingCount, queueCount, embeddingCount, labelBreakdown, consensusBreakdown, recentEntries] = await Promise.all([
     prisma.trainingEntry.count(),
     prisma.humanReviewQueue.count({ where: { reviewedAt: null } }),
     prisma.proofEmbedding.count(),
     prisma.trainingEntry.groupBy({ by: ["label"], _count: true }),
+    prisma.trainingEntry.groupBy({ by: ["consensusLevel"], _count: true }),
+    // Last 90 days of entries for time-series
+    prisma.trainingEntry.findMany({
+      orderBy: { createdAt: "asc" },
+      select: { createdAt: true, label: true },
+      where: { createdAt: { gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } },
+    }),
   ]);
+
+  // Group by day for time-series chart
+  const byDay = new Map<string, { date: string; total: number; approved: number; rejected: number; faked: number }>();
+  for (const e of recentEntries) {
+    const day = e.createdAt.toISOString().slice(0, 10);
+    if (!byDay.has(day)) byDay.set(day, { date: day, total: 0, approved: 0, rejected: 0, faked: 0 });
+    const d = byDay.get(day)!;
+    d.total++;
+    if (e.label === "APPROVED") d.approved++;
+    else if (e.label === "REJECTED") d.rejected++;
+    else if (e.label === "FAKED") d.faked++;
+  }
+
   return {
     trainingCount,
     pendingReviewCount: queueCount,
     embeddingCount,
     labelBreakdown: Object.fromEntries(labelBreakdown.map((b) => [b.label, b._count])),
+    consensusBreakdown: consensusBreakdown
+      .sort((a, b) => a.consensusLevel - b.consensusLevel)
+      .map((b) => ({ consensus: `${b.consensusLevel}/5`, count: b._count })),
+    timeSeries: Array.from(byDay.values()),
   };
 }
