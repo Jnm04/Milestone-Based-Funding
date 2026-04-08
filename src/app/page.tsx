@@ -476,13 +476,13 @@ export default function LandingPage() {
             </p>
           </ScrollReveal>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
             {[
               { Icon: IconShield, title: "No payment security",          desc: "Whoever pays risks funding unmet promises. Whoever delivers risks completing work without getting paid. Every grant, subsidy, insurance payout, or corporate milestone runs on blind trust." },
               { Icon: IconClock,  title: "Escrow is slow and expensive",  desc: "Banks and lawyers add days of delay and thousands in fees to every deal." },
               { Icon: IconScale,  title: "Verification is subjective",    desc: "Milestone completion is judged manually with no neutral, automated decision-making." },
             ].map((item, i) => (
-              <ScrollReveal key={item.title} delay={i * 100}>
+              <ScrollReveal key={item.title} delay={i * 100} className="h-full">
                 <div className="cs-card flex flex-col gap-5 h-full">
                   <item.Icon />
                   <div>
@@ -705,13 +705,13 @@ export default function LandingPage() {
               Your funds, your control
             </h2>
           </ScrollReveal>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-stretch">
             {[
               { Icon: IconLock,  title: "Self-custody",          desc: "Private keys never leave your wallet. You sign every transaction yourself via MetaMask." },
               { Icon: IconEye,   title: "On-chain transparency",  desc: "Every escrow is visible on the XRPL EVM Sidechain. Both parties can verify the status at any time." },
               { Icon: IconScale, title: "Automated fairness",     desc: "No human gatekeepers. AI decides based on the evidence, and the blockchain executes automatically." },
             ].map((item, i) => (
-              <ScrollReveal key={item.title} delay={i * 100}>
+              <ScrollReveal key={item.title} delay={i * 100} className="h-full">
                 <div
                   className="flex flex-col items-center text-center gap-5 p-6 rounded-xl transition-all"
                   style={{ background: "transparent", border: "1px solid transparent" }}
@@ -763,11 +763,11 @@ export default function LandingPage() {
             </p>
           </ScrollReveal>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
             {/* KYC Tiers */}
-            <ScrollReveal delay={0}>
+            <ScrollReveal delay={0} className="h-full">
               <div
-                className="rounded-2xl p-7 flex flex-col gap-5"
+                className="rounded-2xl p-7 flex flex-col gap-5 h-full"
                 style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.14)" }}
               >
                 <div className="flex items-center gap-3">
@@ -805,10 +805,10 @@ export default function LandingPage() {
             </ScrollReveal>
 
             {/* Right column: two smaller cards */}
-            <div className="flex flex-col gap-6">
-              <ScrollReveal delay={100}>
+            <div className="flex flex-col gap-6 h-full">
+              <ScrollReveal delay={100} className="flex-1">
                 <div
-                  className="rounded-2xl p-7 flex flex-col gap-4"
+                  className="rounded-2xl p-7 flex flex-col gap-4 h-full"
                   style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.14)" }}
                 >
                   <div className="flex items-center gap-3">
@@ -826,9 +826,9 @@ export default function LandingPage() {
                 </div>
               </ScrollReveal>
 
-              <ScrollReveal delay={200}>
+              <ScrollReveal delay={200} className="flex-1">
                 <div
-                  className="rounded-2xl p-7 flex flex-col gap-4"
+                  className="rounded-2xl p-7 flex flex-col gap-4 h-full"
                   style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.14)" }}
                 >
                   <div className="flex items-center gap-3">
@@ -849,8 +849,8 @@ export default function LandingPage() {
           </div>
 
           {/* Second row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-            <ScrollReveal delay={0}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6 items-stretch">
+            <ScrollReveal delay={0} className="h-full">
               <div
                 className="rounded-2xl p-7 flex flex-col gap-4 h-full"
                 style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.14)" }}
@@ -870,7 +870,7 @@ export default function LandingPage() {
               </div>
             </ScrollReveal>
 
-            <ScrollReveal delay={100}>
+            <ScrollReveal delay={100} className="h-full">
               <div
                 className="rounded-2xl p-7 flex flex-col gap-4 h-full"
                 style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.14)" }}
@@ -890,7 +890,7 @@ export default function LandingPage() {
               </div>
             </ScrollReveal>
 
-            <ScrollReveal delay={200}>
+            <ScrollReveal delay={200} className="h-full">
               <div
                 className="rounded-2xl p-7 flex flex-col gap-4 h-full"
                 style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.14)" }}
