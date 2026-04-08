@@ -198,11 +198,12 @@ export default function InternalDashboard() {
         </p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
         {[
           { href: "/internal/review", title: "Review Queue", desc: "Label 3-2 split decisions and flag fraud" },
           { href: "/internal/sandbox", title: "Sandbox", desc: "Test milestone/proof pairs without real contracts" },
           { href: "/internal/dataset", title: "Dataset", desc: "Browse and export all labeled training entries" },
+          { href: "/internal/graph", title: "Brain Map", desc: "Interactive similarity graph of all training entries" },
         ].map(({ href, title, desc }) => (
           <a key={href} href={href} style={{ textDecoration: "none" }}>
             <div style={{ padding: 20, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.15)", borderRadius: 12, cursor: "pointer" }}
