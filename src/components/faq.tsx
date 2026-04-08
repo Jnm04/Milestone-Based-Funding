@@ -32,6 +32,10 @@ const ITEMS = [
     a: "RLUSD is a USD-pegged stablecoin issued by Ripple. 1 RLUSD = $1 USD, no volatility risk. It runs as an ERC-20 token on the XRPL EVM Sidechain, backed by USD deposits and US Treasuries with monthly third-party reserve attestations. On testnet, RLUSD carries no real monetary value.",
   },
   {
+    q: "Where does each chain fit in?",
+    a: "Cascrow uses two chains for different jobs. The XRPL EVM Sidechain handles all the money logic: RLUSD (as an ERC-20 token) is locked here, milestone payouts are triggered here, and MetaMask is the wallet you use for every signing step. The native XRP Ledger is used for transparency and proof: every escrow event (fund, release, cancel) is written as an immutable memo on-chain, and completed milestones receive an NFT certificate minted on the XRPL as permanent, verifiable proof of delivery.",
+  },
+  {
     q: "What is the dual audit trail?",
     a: "Every escrow action — create, release, cancel — executes on the XRPL EVM Sidechain and is simultaneously written as an immutable memo on the native XRP Ledger. Your contract history is verifiable on two independent chains at the same time.",
   },
