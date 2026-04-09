@@ -142,7 +142,6 @@ export default async function ContractPage({ params, searchParams }: ContractPag
             <span className="text-xs uppercase tracking-widest font-medium" style={{ color: "#C4704B" }}>Project</span>
             <a
               href={`/api/contracts/calendar?contractId=${contract.id}`}
-              download
               className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full transition-colors"
               style={{
                 background: "rgba(196,112,75,0.08)",

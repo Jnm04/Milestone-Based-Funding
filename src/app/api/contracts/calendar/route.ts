@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: {
         "Content-Type": "text/calendar; charset=utf-8",
-        "Content-Disposition": `attachment; filename="cascrow-${safeTitle}.ics"`,
+        "Content-Disposition": `inline; filename="cascrow-${safeTitle}.ics"`,
         "Cache-Control": "no-store",
       },
     });

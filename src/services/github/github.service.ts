@@ -26,14 +26,8 @@
 
 const FETCH_TIMEOUT_MS = 10_000;
 
-interface GitHubHeaders {
-  Accept: string;
-  "User-Agent": string;
-  Authorization?: string;
-}
-
-function githubHeaders(): GitHubHeaders {
-  const h: GitHubHeaders = {
+function githubHeaders(): Record<string, string> {
+  const h: Record<string, string> = {
     Accept: "application/vnd.github.v3+json",
     "User-Agent": "Cascrow-Verifier/1.0",
   };

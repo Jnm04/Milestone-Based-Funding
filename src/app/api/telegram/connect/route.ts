@@ -22,6 +22,14 @@ export async function POST() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const botUsername = BOT_USERNAME();
+  if (!botUsername) {
+    return NextResponse.json(
+      { error: "Telegram bot is not configured (TELEGRAM_BOT_USERNAME missing)" },
+      { status: 503 }
+    );
+  }
+
   const token = crypto.randomBytes(32).toString("hex");
   const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
@@ -41,13 +49,6 @@ export async function POST() {
     },
   });
 
-  const botUsername = BOT_USERNAME();
-  if (!botUsername) {
-    return NextResponse.json(
-      { error: "Telegram bot is not configured (TELEGRAM_BOT_USERNAME missing)" },
-      { status: 503 }
-    );
-  }
 
   const deepLink = `https://t.me/${botUsername}?start=${token}`;
   return NextResponse.json({ deepLink, expiresInMinutes: 15 });
@@ -63,6 +64,7 @@ export async function GET() {
   });
 
   return NextResponse.json({
+    configured: !!BOT_USERNAME(),
     connected: !!chat?.active,
     connectedAt: chat?.active ? chat.createdAt : null,
   });

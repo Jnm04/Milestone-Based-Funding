@@ -33,18 +33,23 @@ function fileTypeLabel(file: File): string {
   return file.name.split(".").pop()?.toUpperCase() ?? "FILE";
 }
 
-type ProofTab = "file" | "github";
+function GitHubIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.335-1.755-1.335-1.755-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12z" />
+    </svg>
+  );
+}
 
 export function ProofUpload({ contractId, milestoneId, onUploaded, replaceMode }: ProofUploadProps) {
-  const [tab, setTab] = useState<ProofTab>("file");
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [uploaded, setUploaded] = useState(false);
   const [showReplace, setShowReplace] = useState(false);
 
-  // GitHub tab
+  // GitHub optional field
   const [repoUrl, setRepoUrl] = useState("");
-  const [ghUploaded, setGhUploaded] = useState(false);
+  const [showGitHub, setShowGitHub] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -66,11 +71,14 @@ export function ProofUpload({ contractId, milestoneId, onUploaded, replaceMode }
     setFiles((prev) => prev.filter((f) => f.name !== name));
   }
 
-  async function handleUpload() {
-    if (files.length === 0) return;
+  const canSubmit = files.length > 0 || (showGitHub && repoUrl.trim().startsWith("https://github.com/"));
+
+  async function handleSubmit() {
+    if (!canSubmit) return;
     setLoading(true);
     let lastProofId = "";
     try {
+      // Upload files first
       for (const file of files) {
         const formData = new FormData();
         formData.append("file", file);
@@ -91,41 +99,38 @@ export function ProofUpload({ contractId, milestoneId, onUploaded, replaceMode }
         lastProofId = proofId;
       }
 
+      // Submit GitHub repo if provided
+      const url = repoUrl.trim();
+      if (showGitHub && url) {
+        if (!url.startsWith("https://github.com/")) {
+          toast.error("Please enter a valid GitHub repository URL.");
+          setLoading(false);
+          return;
+        }
+        const res = await fetch("/api/proof/github", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            repoUrl: url,
+            contractId,
+            ...(milestoneId ? { milestoneId } : {}),
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Failed to submit GitHub repo");
+        lastProofId = data.proofId;
+      }
+
+      if (!lastProofId) return;
+
       setUploaded(true);
-      toast.success(`${files.length} file${files.length > 1 ? "s" : ""} uploaded! AI verification is starting…`);
+      const parts: string[] = [];
+      if (files.length > 0) parts.push(`${files.length} file${files.length > 1 ? "s" : ""}`);
+      if (showGitHub && repoUrl.trim()) parts.push("GitHub repo");
+      toast.success(`${parts.join(" + ")} submitted! AI verification is starting…`);
       onUploaded(lastProofId);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Upload failed.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleGitHubSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const url = repoUrl.trim();
-    if (!url.startsWith("https://github.com/")) {
-      toast.error("Please enter a valid GitHub repository URL.");
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await fetch("/api/proof/github", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          repoUrl: url,
-          contractId,
-          ...(milestoneId ? { milestoneId } : {}),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed");
-      setGhUploaded(true);
-      toast.success("GitHub repo submitted! AI verification is starting…");
-      onUploaded(data.proofId);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to fetch GitHub repo.");
     } finally {
       setLoading(false);
     }
@@ -145,188 +150,153 @@ export function ProofUpload({ contractId, milestoneId, onUploaded, replaceMode }
       className="flex flex-col gap-0 rounded-xl overflow-hidden"
       style={{ border: "1px solid rgba(196,112,75,0.3)" }}
     >
-      {/* Tab bar */}
-      <div className="flex" style={{ borderBottom: "1px solid rgba(196,112,75,0.2)", background: "rgba(255,255,255,0.02)" }}>
-        {(["file", "github"] as ProofTab[]).map((t) => (
+      {/* File upload section */}
+      <div
+        className="flex flex-col gap-4 p-6"
+        style={{ background: "rgba(255,255,255,0.03)" }}
+      >
+        <div className="text-center">
+          <p className="text-sm font-medium" style={{ color: "#EDE6DD" }}>Upload Milestone Proof</p>
+          <p className="text-xs mt-1" style={{ color: "#A89B8C" }}>
+            PDF, DOCX, PPTX, XLSX · Images (JPG, PNG, WEBP) · CSV, TXT · Max 20 MB · Multiple files supported
+          </p>
+        </div>
+
+        <input
+          ref={inputRef}
+          type="file"
+          accept={ACCEPTED_TYPES}
+          multiple
+          className="hidden"
+          onChange={handleFileChange}
+        />
+
+        {files.length > 0 && (
+          <div className="flex flex-col gap-2">
+            {files.map((file) => (
+              <div
+                key={file.name}
+                className="flex items-center gap-3 rounded-lg px-4 py-3"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(196,112,75,0.2)" }}
+              >
+                <span
+                  className="text-xs font-mono px-1.5 py-0.5 rounded"
+                  style={{ background: "rgba(196,112,75,0.15)", color: "#C4704B" }}
+                >
+                  {fileTypeLabel(file)}
+                </span>
+                <span className="text-sm flex-1 truncate" style={{ color: "#EDE6DD" }}>{file.name}</span>
+                <button
+                  type="button"
+                  className="text-xs hover:underline"
+                  style={{ color: "#ef4444" }}
+                  onClick={() => removeFile(file.name)}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!uploaded && (
           <button
-            key={t}
             type="button"
-            onClick={() => setTab(t)}
-            className="flex-1 py-2.5 text-xs font-medium uppercase tracking-widest transition-colors"
+            disabled={loading}
+            onClick={() => inputRef.current?.click()}
+            className="w-full rounded-lg py-2 text-sm font-medium transition-colors disabled:opacity-50"
             style={{
-              color: tab === t ? "#C4704B" : "#A89B8C",
-              background: tab === t ? "rgba(196,112,75,0.08)" : "transparent",
-              borderBottom: tab === t ? "2px solid #C4704B" : "2px solid transparent",
+              background: "rgba(196,112,75,0.1)",
+              border: "1px solid rgba(196,112,75,0.35)",
+              color: "#C4704B",
             }}
           >
-            {t === "file" ? "📄 File / Image" : "🐙 GitHub Repo"}
+            {files.length > 0 ? "Add Another File" : "Select File"}
           </button>
-        ))}
+        )}
       </div>
 
-      {/* File tab */}
-      {tab === "file" && (
-        <div
-          className="flex flex-col gap-4 p-6"
-          style={{ background: "rgba(255,255,255,0.03)" }}
-        >
-          <div className="text-center">
-            <p className="text-sm font-medium" style={{ color: "#EDE6DD" }}>Upload Milestone Proof</p>
-            <p className="text-xs mt-1" style={{ color: "#A89B8C" }}>
-              PDF, DOCX, PPTX, XLSX · Images (JPG, PNG, WEBP) · CSV, TXT · Max 20 MB · Multiple files supported
-            </p>
-          </div>
-
-          <input
-            ref={inputRef}
-            type="file"
-            accept={ACCEPTED_TYPES}
-            multiple
-            className="hidden"
-            onChange={handleFileChange}
-          />
-
-          {files.length > 0 && (
-            <div className="flex flex-col gap-2">
-              {files.map((file) => (
-                <div
-                  key={file.name}
-                  className="flex items-center gap-3 rounded-lg px-4 py-3"
-                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(196,112,75,0.2)" }}
-                >
-                  <span
-                    className="text-xs font-mono px-1.5 py-0.5 rounded"
-                    style={{ background: "rgba(196,112,75,0.15)", color: "#C4704B" }}
-                  >
-                    {fileTypeLabel(file)}
-                  </span>
-                  <span className="text-sm flex-1 truncate" style={{ color: "#EDE6DD" }}>{file.name}</span>
-                  <button
-                    type="button"
-                    className="text-xs hover:underline"
-                    style={{ color: "#ef4444" }}
-                    onClick={() => removeFile(file.name)}
-                  >
-                    Remove
-                  </button>
+      {/* GitHub optional section */}
+      {!uploaded && (
+        <div style={{ borderTop: "1px solid rgba(196,112,75,0.15)" }}>
+          {!showGitHub ? (
+            <button
+              type="button"
+              onClick={() => setShowGitHub(true)}
+              className="w-full flex items-center justify-center gap-2 py-3 text-xs font-medium transition-colors"
+              style={{ color: "#A89B8C", background: "rgba(255,255,255,0.02)" }}
+            >
+              <GitHubIcon />
+              Also attach a GitHub repository (optional)
+            </button>
+          ) : (
+            <div className="flex flex-col gap-3 p-5" style={{ background: "rgba(255,255,255,0.02)" }}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <GitHubIcon />
+                  <span className="text-xs font-medium uppercase tracking-widest" style={{ color: "#A89B8C" }}>GitHub Repository</span>
+                  <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "rgba(196,112,75,0.1)", color: "#C4704B" }}>optional</span>
                 </div>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => { setShowGitHub(false); setRepoUrl(""); }}
+                  className="text-xs"
+                  style={{ color: "#A89B8C" }}
+                >
+                  Remove
+                </button>
+              </div>
+              <input
+                type="url"
+                value={repoUrl}
+                onChange={(e) => setRepoUrl(e.target.value)}
+                placeholder="https://github.com/your-org/your-repo"
+                className="cs-input"
+                disabled={loading}
+              />
+              <p className="text-xs" style={{ color: "#A89B8C" }}>
+                Must be a <strong style={{ color: "#D4B896" }}>public</strong> repository. The AI will analyze commits, README, file structure and activity since the contract start.
+              </p>
             </div>
-          )}
-
-          {!uploaded && (
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => inputRef.current?.click()}
-              className="w-full rounded-lg py-2 text-sm font-medium transition-colors disabled:opacity-50"
-              style={{
-                background: "rgba(196,112,75,0.1)",
-                border: "1px solid rgba(196,112,75,0.35)",
-                color: "#C4704B",
-              }}
-            >
-              {files.length > 0 ? "Add Another File" : "Select File"}
-            </button>
-          )}
-
-          {files.length > 0 && !uploaded && (
-            <button
-              type="button"
-              onClick={handleUpload}
-              disabled={loading}
-              className="w-full rounded-lg py-2.5 text-sm font-semibold transition-colors disabled:opacity-50"
-              style={{ background: "#C4704B", color: "#171311" }}
-            >
-              {loading
-                ? "Uploading…"
-                : `Upload ${files.length} file${files.length > 1 ? "s" : ""} & start AI verification`}
-            </button>
-          )}
-
-          {uploaded && (
-            <button
-              type="button"
-              onClick={() => { setFiles([]); setUploaded(false); }}
-              className="w-full rounded-lg py-2 text-sm font-medium transition-colors"
-              style={{
-                background: "rgba(196,112,75,0.1)",
-                border: "1px solid rgba(196,112,75,0.35)",
-                color: "#C4704B",
-              }}
-            >
-              Upload Other Documents
-            </button>
           )}
         </div>
       )}
 
-      {/* GitHub tab */}
-      {tab === "github" && (
-        <div
-          className="flex flex-col gap-5 p-6"
-          style={{ background: "rgba(255,255,255,0.03)" }}
-        >
-          <div>
-            <p className="text-sm font-medium" style={{ color: "#EDE6DD" }}>Submit a GitHub Repository</p>
-            <p className="text-xs mt-1" style={{ color: "#A89B8C" }}>
-              The AI will fetch commits, README, file structure and activity since the contract start to verify your milestone — no PDF required.
-            </p>
-          </div>
+      {/* Submit button */}
+      {!uploaded && canSubmit && (
+        <div className="px-6 pb-6 pt-2" style={{ background: "rgba(255,255,255,0.03)" }}>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={loading}
+            className="w-full rounded-lg py-2.5 text-sm font-semibold transition-colors disabled:opacity-50"
+            style={{ background: "#C4704B", color: "#171311" }}
+          >
+            {loading
+              ? "Uploading…"
+              : files.length > 0 && showGitHub && repoUrl.trim()
+                ? `Upload ${files.length} file${files.length > 1 ? "s" : ""} + GitHub repo & start AI verification`
+                : files.length > 0
+                  ? `Upload ${files.length} file${files.length > 1 ? "s" : ""} & start AI verification`
+                  : "Submit GitHub repo & start AI verification"}
+          </button>
+        </div>
+      )}
 
-          {ghUploaded ? (
-            <div className="flex flex-col gap-3 p-4 rounded-xl text-center" style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
-              <span className="text-sm font-medium" style={{ color: "#22c55e" }}>✓ Repository submitted</span>
-              <span className="text-xs" style={{ color: "#A89B8C" }}>AI verification is running in the background.</span>
-              <button
-                type="button"
-                onClick={() => { setGhUploaded(false); setRepoUrl(""); }}
-                className="text-xs self-center"
-                style={{ color: "#A89B8C" }}
-              >
-                Submit a different repo
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={handleGitHubSubmit} className="flex flex-col gap-3">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs uppercase tracking-widest font-medium" style={{ color: "#A89B8C" }}>
-                  Repository URL
-                </label>
-                <input
-                  type="url"
-                  value={repoUrl}
-                  onChange={(e) => setRepoUrl(e.target.value)}
-                  placeholder="https://github.com/your-org/your-repo"
-                  className="cs-input"
-                  required
-                  disabled={loading}
-                />
-                <p className="text-xs" style={{ color: "#A89B8C" }}>
-                  Must be a <strong style={{ color: "#D4B896" }}>public</strong> repository.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-2 p-3 rounded-lg text-xs" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.12)" }}>
-                <span className="font-medium" style={{ color: "#D4B896" }}>What the AI checks:</span>
-                <ul className="flex flex-col gap-1" style={{ color: "#A89B8C" }}>
-                  <li>• Commits & activity since contract start</li>
-                  <li>• README contents and project description</li>
-                  <li>• Top-level file structure and languages</li>
-                  <li>• Latest release (if any)</li>
-                </ul>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading || !repoUrl.trim()}
-                className="w-full rounded-lg py-2.5 text-sm font-semibold transition-colors disabled:opacity-50"
-                style={{ background: "#C4704B", color: "#171311" }}
-              >
-                {loading ? "Fetching repo…" : "Submit GitHub Repo & start AI verification"}
-              </button>
-            </form>
-          )}
+      {uploaded && (
+        <div className="px-6 pb-6 pt-2" style={{ background: "rgba(255,255,255,0.03)" }}>
+          <button
+            type="button"
+            onClick={() => { setFiles([]); setUploaded(false); setRepoUrl(""); setShowGitHub(false); }}
+            className="w-full rounded-lg py-2 text-sm font-medium transition-colors"
+            style={{
+              background: "rgba(196,112,75,0.1)",
+              border: "1px solid rgba(196,112,75,0.35)",
+              color: "#C4704B",
+            }}
+          >
+            Upload Other Documents
+          </button>
         </div>
       )}
     </div>

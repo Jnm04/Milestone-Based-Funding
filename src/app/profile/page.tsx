@@ -9,7 +9,7 @@ import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { NodeBackground } from "@/components/node-background";
 
 // ── Telegram state ─────────────────────────────────────────────────────────
-interface TelegramStatus { connected: boolean; connectedAt: string | null }
+interface TelegramStatus { configured: boolean; connected: boolean; connectedAt: string | null }
 
 // ── Webhook state ──────────────────────────────────────────────────────────
 interface WebhookEndpoint {
@@ -228,7 +228,7 @@ export default function ProfilePage() {
     setTgLoading(true);
     try {
       await fetch("/api/telegram/connect", { method: "DELETE" });
-      setTgStatus({ connected: false, connectedAt: null });
+      setTgStatus((prev) => ({ configured: prev?.configured ?? false, connected: false, connectedAt: null }));
       setTgDeepLink(null);
       toast.success("Telegram disconnected.");
     } catch {
@@ -591,7 +591,14 @@ export default function ProfilePage() {
 
           {/* Telegram Notifications */}
           <SectionCard title="Telegram Notifications" subtitle="Get instant push notifications directly in Telegram — no inbox required.">
-            {tgStatus?.connected ? (
+            {tgStatus && !tgStatus.configured ? (
+              <div className="flex flex-col gap-2 p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.15)" }}>
+                <span className="text-sm font-medium" style={{ color: "#D4B896" }}>Coming soon</span>
+                <p className="text-xs" style={{ color: "#A89B8C" }}>
+                  Telegram notifications will be available once the bot is activated. Check back soon!
+                </p>
+              </div>
+            ) : tgStatus?.connected ? (
               <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
                   <div className="w-2 h-2 rounded-full shrink-0" style={{ background: "#22c55e" }} />
