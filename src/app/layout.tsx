@@ -14,9 +14,68 @@ const libreFranklin = Libre_Franklin({
 });
 
 export const metadata: Metadata = {
-  title: "Cascrow — AI Escrow on XRPL",
+  title: {
+    default: "Cascrow — AI-Powered Escrow on XRPL",
+    template: "%s | Cascrow",
+  },
   description:
-    "Lock RLUSD in escrow. AI verifies milestones. Instant trustless settlement on the XRP Ledger.",
+    "Cascrow locks RLUSD in native XRPL escrow and releases funds only when AI verifies milestone completion. Trustless, instant, no middlemen.",
+  keywords: [
+    "cascrow",
+    "xrpl escrow",
+    "rlusd escrow",
+    "xrpl milestone escrow",
+    "ai escrow",
+    "xls-85",
+    "crypto escrow platform",
+    "milestone based funding",
+    "trustless escrow",
+    "xrp ledger escrow",
+    "rlusd",
+    "decentralized escrow",
+    "smart escrow",
+    "startup investor escrow",
+  ],
+  authors: [{ name: "Cascrow" }],
+  creator: "Cascrow",
+  metadataBase: new URL("https://cascrow.xyz"),
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://cascrow.xyz",
+    siteName: "Cascrow",
+    title: "Cascrow — AI-Powered Escrow on XRPL",
+    description:
+      "Lock RLUSD in native XRPL escrow. AI verifies milestone completion. Instant trustless settlement — no lawyers, no middlemen.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Cascrow — AI Escrow on XRPL",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Cascrow — AI-Powered Escrow on XRPL",
+    description:
+      "Lock RLUSD in native XRPL escrow. AI verifies milestone completion. Instant trustless settlement.",
+    images: ["/og-image.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

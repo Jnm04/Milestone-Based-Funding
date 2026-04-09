@@ -301,8 +301,36 @@ function CheckItem({ children }: { children: React.ReactNode }) {
 export default function LandingPage() {
   const [menuOpen, setMenuOpen] = React.useState(false);
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Cascrow",
+    "url": "https://cascrow.xyz",
+    "description": "AI-powered escrow platform on the XRP Ledger. Locks RLUSD in native XRPL escrow and releases funds only when AI verifies milestone completion.",
+    "applicationCategory": "FinanceApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD",
+      "description": "Free up to $1,000. 0–0.5% protocol fee per release."
+    },
+    "featureList": [
+      "RLUSD escrow on XRP Ledger",
+      "AI milestone verification",
+      "Trustless settlement",
+      "Multi-milestone contracts",
+      "NFT completion certificates"
+    ],
+    "keywords": "xrpl escrow, rlusd escrow, ai escrow, milestone escrow, xls-85, crypto escrow"
+  };
+
   return (
     <main className="flex flex-col min-h-screen overflow-x-hidden" style={{ background: "#171311", color: "#EDE6DD" }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
 
       {/* ── Global node background (fixed, z-0) ─────────── */}
       <NodeBackground />
