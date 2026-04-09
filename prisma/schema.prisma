@@ -172,9 +172,13 @@ model HumanReviewQueue {
   proofId        String    @unique
   milestoneText  String    @db.Text
   proofText      String    @db.Text
+  /// Original file URL (S3/Blob) so reviewer can open the actual PDF/image
+  fileUrl        String?
   modelVotes     Json
   consensusLevel Int
   reviewedAt     DateTime?
+  /// Set when reviewer clicks Skip — excluded from pending list
+  skippedAt      DateTime?
   /// Set after human labels this entry
   label          String?
   fraudType      String?
