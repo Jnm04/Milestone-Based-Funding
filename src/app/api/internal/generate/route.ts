@@ -107,8 +107,6 @@ async function fetchArxivPairs(keyword: string, count: number, outcome: string):
     if (!title || !abstract || abstract.length < 100) continue;
 
     const milestone = await generateMilestoneForDocument({ title, proofText: abstract, outcome });
-    if (!milestone) continue;
-
     entries.push({
       milestoneText: milestone,
       proofText: `${title}\n\n${abstract}`,
@@ -156,8 +154,6 @@ async function fetchGithubPairs(keyword: string, count: number, outcome: string)
         proofText: readme,
         outcome,
       });
-      if (!milestone) continue;
-
       pairs.push({
         milestoneText: milestone,
         proofText: readme,
@@ -173,12 +169,23 @@ async function fetchGithubPairs(keyword: string, count: number, outcome: string)
 
 // ─── Generate milestone for a real document ───────────────────────────────────
 
+function fallbackMilestone(title: string, outcome: string): string {
+  if (outcome === "rejected") {
+    return `The team must deliver a fully completed and deployed implementation of ${title}. All core features must be live and user-facing, not merely planned or documented.`;
+  }
+  if (outcome === "approved") {
+    return `The team must deliver a complete, working implementation of ${title} with all stated objectives met. Results, metrics, or deliverables must be explicitly documented and verifiable.`;
+  }
+  return `The team must deliver a working prototype or functional version of ${title}. Core features must be implemented; some secondary items may remain in progress.`;
+}
+
 async function generateMilestoneForDocument(params: {
   title: string;
   proofText: string;
   outcome: string;
-}): Promise<string | null> {
+}): Promise<string> {
   try {
+    if (!process.env.ANTHROPIC_API_KEY) return fallbackMilestone(params.title, params.outcome);
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const { title, proofText, outcome } = params;
 
@@ -199,9 +206,9 @@ async function generateMilestoneForDocument(params: {
     });
 
     const raw = msg.content[0];
-    return raw.type === "text" ? raw.text.trim() : null;
+    return raw.type === "text" && raw.text.trim() ? raw.text.trim() : fallbackMilestone(title, outcome);
   } catch {
-    return null;
+    return fallbackMilestone(params.title, params.outcome);
   }
 }
 
@@ -239,12 +246,15 @@ export async function POST(req: NextRequest) {
   }
 
   if (pairs.length === 0) {
-    const hasKey = !!process.env.ANTHROPIC_API_KEY;
-    return NextResponse.json({
-      error: hasKey
-        ? "Generation failed — Claude returned invalid JSON or empty response. Try again."
-        : "ANTHROPIC_API_KEY is not configured on the server.",
-    }, { status: 422 });
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json({ error: "ANTHROPIC_API_KEY is not configured on the server." }, { status: 422 });
+    }
+    const msg = mode === "synthetic"
+      ? "Generation failed — Claude returned invalid JSON or empty response. Try again."
+      : source === "github"
+      ? `No GitHub repos found for "${keyword}". Try a different keyword.`
+      : `No arXiv papers found for "${keyword}". Try a different keyword or check your connection.`;
+    return NextResponse.json({ error: msg }, { status: 422 });
   }
 
   // Run all verifications in parallel
