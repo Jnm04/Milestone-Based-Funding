@@ -385,17 +385,6 @@ Every verification run contributes to a labeled dataset:
 - **Human review queue** — 3/2 splits (genuine disagreement) are routed to an internal review interface where a human labels the case as `APPROVED`, `REJECTED`, or `FAKED` before it enters the dataset.
 - **Fraud detection** — Human reviewers can flag entries as `FAKED` with a fraud type (`AI_GENERATED`, `MANIPULATED`, `RECYCLED`, `IMPLAUSIBLE`) to train the model to detect fabricated proofs.
 
-### Training data generator
-
-An internal tool generates synthetic and web-sourced milestone+proof pairs:
-
-- **Synthetic** — Claude generates realistic startup documents across legal, technical, business, and research domains with controlled outcomes (clearly approved, clearly rejected, ambiguous).
-- **From Web** — arXiv papers and GitHub repositories are fetched and paired with AI-generated milestones, then verified by all 5 models. Source is tracked per entry (Synthetic / arXiv / GitHub).
-
-### Brain Map
-
-A 3D force-directed graph visualization of the training dataset — nodes are training entries, colored by label (green = APPROVED, red = REJECTED, orange = FAKED), linked by embedding similarity. Hovering a node shows the milestone snippet, consensus score, and per-model votes. The graph makes it easy to spot clusters, outliers, and potential mislabels at a glance.
-
 ### Export
 
 The dataset can be exported as **JSONL** (ready for fine-tuning via OpenAI, Anthropic, or Hugging Face) or **CSV** at any time from the internal dashboard.
