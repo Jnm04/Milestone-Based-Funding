@@ -33,6 +33,35 @@ function decisionToLabel(decision: "YES" | "NO"): "APPROVED" | "REJECTED" {
 }
 
 /**
+ * Fire-and-forget webhook notification when a new entry lands in the human review queue.
+ * Uses REVIEW_QUEUE_WEBHOOK_URL env var (optional). Never throws.
+ */
+async function notifyReviewQueue(entry: {
+  proofId: string;
+  milestoneText: string;
+  consensusLevel: number;
+}): Promise<void> {
+  const url = process.env.REVIEW_QUEUE_WEBHOOK_URL;
+  if (!url) return;
+  try {
+    const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+    await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: `🔍 *Human review needed* — 3-2 split on proof \`${entry.proofId}\`\nMilestone: ${entry.milestoneText.slice(0, 120)}…\nConsensus: ${entry.consensusLevel}/5\n→ ${baseUrl}/internal/review`,
+        proofId: entry.proofId,
+        milestoneText: entry.milestoneText,
+        consensusLevel: entry.consensusLevel,
+        reviewUrl: `${baseUrl}/internal/review`,
+      }),
+    });
+  } catch {
+    // notification failure must never affect the main flow
+  }
+}
+
+/**
  * Called after every AI verification (fire-and-forget).
  * Stores training data and embeddings invisibly in the background.
  * Never throws — all errors are logged only.
@@ -44,21 +73,34 @@ export async function storeBrainData(params: StoreBrainDataParams): Promise<void
     const source = getLabelSource(yesCount);
 
     if (source === "HUMAN_QUEUE") {
-      // 3-2 split → queue for human review, don't auto-label
+      // Look up the original file URL so reviewers can open the actual document
+      const proof = await prisma.proof.findUnique({ where: { id: proofId }, select: { fileUrl: true } });
+      const fileUrl = proof?.fileUrl ?? null;
+
+      const isNew = !(await prisma.humanReviewQueue.findUnique({ where: { proofId }, select: { id: true } }));
+
       await prisma.humanReviewQueue.upsert({
         where: { proofId },
         create: {
           proofId,
           milestoneText,
           proofText: proofText.slice(0, 10_000),
+          fileUrl,
           modelVotes: modelVotes as never,
           consensusLevel,
         },
         update: {
           modelVotes: modelVotes as never,
           consensusLevel,
+          // Reset skipped/reviewed state if proof was re-verified
+          skippedAt: null,
         },
       });
+
+      // Only notify once per proof (not on re-verification)
+      if (isNew) {
+        notifyReviewQueue({ proofId, milestoneText, consensusLevel });
+      }
     } else {
       // High consensus → auto-label and store in training dataset
       await prisma.trainingEntry.create({
@@ -121,16 +163,44 @@ export async function labelQueueEntry(params: {
         fraudType: fraudType ?? null,
         notes: notes ?? null,
         reviewedAt: new Date(),
+        skippedAt: null,
       },
     }),
   ]);
+}
+
+/**
+ * Undo the last label on a queue entry.
+ * Deletes the TrainingEntry and resets the HumanReviewQueue row back to pending.
+ * Safe to call even if the TrainingEntry was already deleted.
+ */
+export async function undoLabelQueueEntry(proofId: string): Promise<void> {
+  await prisma.$transaction([
+    // deleteMany won't throw if the row doesn't exist
+    prisma.trainingEntry.deleteMany({ where: { proofId, labelSource: "HUMAN" } }),
+    prisma.humanReviewQueue.update({
+      where: { proofId },
+      data: { label: null, fraudType: null, notes: null, reviewedAt: null, skippedAt: null },
+    }),
+  ]);
+}
+
+/**
+ * Mark a queue entry as skipped so it doesn't appear in the pending list.
+ * The reviewer can still see it in the "Skipped" tab and un-skip it.
+ */
+export async function skipQueueEntry(proofId: string): Promise<void> {
+  await prisma.humanReviewQueue.update({
+    where: { proofId },
+    data: { skippedAt: new Date() },
+  });
 }
 
 /** Stats for the internal dashboard. */
 export async function getBrainStats() {
   const [trainingCount, queueCount, embeddingCount, labelBreakdown, consensusBreakdown, recentEntries] = await Promise.all([
     prisma.trainingEntry.count(),
-    prisma.humanReviewQueue.count({ where: { reviewedAt: null } }),
+    prisma.humanReviewQueue.count({ where: { reviewedAt: null, skippedAt: null } }),
     prisma.proofEmbedding.count(),
     prisma.trainingEntry.groupBy({ by: ["label"], _count: true }),
     prisma.trainingEntry.groupBy({ by: ["consensusLevel"], _count: true }),
