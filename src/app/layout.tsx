@@ -50,21 +50,12 @@ export const metadata: Metadata = {
     title: "Cascrow — AI-Powered Escrow on XRPL",
     description:
       "Lock RLUSD in native XRPL escrow. AI verifies milestone completion. Instant trustless settlement — no lawyers, no middlemen.",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "Cascrow — AI Escrow on XRPL",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Cascrow — AI-Powered Escrow on XRPL",
     description:
       "Lock RLUSD in native XRPL escrow. AI verifies milestone completion. Instant trustless settlement.",
-    images: ["/og-image.png"],
   },
   robots: {
     index: true,
