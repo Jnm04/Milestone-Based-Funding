@@ -17,11 +17,20 @@ const BrainGraph3D = dynamic(() => import("./BrainGraph3D"), {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+export interface ModelVote {
+  model: string;
+  decision: "YES" | "NO";
+  confidence: number;
+  reasoning: string;
+}
+
 export interface GraphNode {
   id: string;
   label: string;
   consensusLevel: number;
   milestoneText: string;
+  proofText?: string;
+  modelVotes?: ModelVote[];
   labelSource: string;
   fraudType: string | null;
   createdAt: string;
@@ -104,6 +113,7 @@ export default function BrainMapPage() {
   const [data, setData]           = useState<GraphData | null>(null);
   const [loading, setLoading]     = useState(true);
   const [selected, setSelected]   = useState<GraphNode | null>(null);
+  const [hovered, setHovered]     = useState<{ node: GraphNode; x: number; y: number } | null>(null);
 
   const resetRef = useRef<() => void>(() => {});
 
@@ -171,13 +181,49 @@ export default function BrainMapPage() {
       <div style={{ display:"grid", gridTemplateColumns: selected ? "1fr 300px" : "1fr", gap:16, alignItems:"start" }}>
 
         {/* Canvas */}
-        <div style={{ position:"relative", height:"calc(100vh - 210px)", minHeight:480, borderRadius:16, border:"1px solid rgba(196,112,75,0.12)", overflow:"hidden", background:"#060504" }}>
+        <div
+          id="brain-canvas-container"
+          style={{ position:"relative", height:"calc(100vh - 210px)", minHeight:480, borderRadius:16, border:"1px solid rgba(196,112,75,0.12)", overflow:"hidden", background:"#060504" }}
+        >
           <BrainGraph3D
             data={data}
-            onNodeSelect={setSelected}
+            onNodeSelect={(n) => { setSelected(n); setHovered(null); }}
             selectedId={selected?.id ?? null}
             onResetRef={resetRef}
+            onNodeHover={(node, clientX, clientY) => {
+              if (!node) { setHovered(null); return; }
+              if (selected) { setHovered(null); return; }
+              const container = document.getElementById("brain-canvas-container");
+              const rect = container?.getBoundingClientRect();
+              const x = rect ? clientX - rect.left : clientX;
+              const y = rect ? clientY - rect.top : clientY;
+              setHovered({ node, x, y });
+            }}
           />
+
+          {/* Hover tooltip */}
+          {hovered && (
+            <div style={{
+              position: "absolute",
+              left: hovered.x + 14,
+              top: hovered.y - 10,
+              maxWidth: 260,
+              padding: "10px 14px",
+              background: "rgba(10,8,7,0.95)",
+              border: `1px solid ${LABEL_COLORS[hovered.node.label] ?? "rgba(196,112,75,0.3)"}40`,
+              borderRadius: 10,
+              backdropFilter: "blur(8px)",
+              pointerEvents: "none",
+              zIndex: 10,
+            }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: LABEL_COLORS[hovered.node.label] ?? "#A89B8C", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 5 }}>
+                {LABEL_LABELS[hovered.node.label] ?? hovered.node.label} · {hovered.node.consensusLevel}/{(hovered.node.modelVotes?.length) || 5}
+              </div>
+              <p style={{ fontSize: 12, color: "#EDE6DD", margin: 0, lineHeight: 1.5 }}>
+                {hovered.node.milestoneText.slice(0, 120)}{hovered.node.milestoneText.length > 120 ? "…" : ""}
+              </p>
+            </div>
+          )}
 
           {/* Legend */}
           <div style={{ position:"absolute", bottom:20, left:20, padding:"12px 16px", background:"rgba(6,5,4,0.85)", border:"1px solid rgba(196,112,75,0.12)", borderRadius:10, backdropFilter:"blur(8px)", pointerEvents:"none" }}>
@@ -216,7 +262,7 @@ export default function BrainMapPage() {
 
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
               {[
-                { label:"Consensus", value:`${selected.consensusLevel}/5` },
+                { label:"Consensus", value:`${selected.consensusLevel}/${selected.modelVotes?.length || 5}` },
                 { label:"Source", value: SOURCE_LABELS[selected.labelSource] ?? selected.labelSource },
                 { label:"Date", value: new Date(selected.createdAt).toLocaleDateString("de-DE") },
                 { label:"Embedding", value: selected.hasEmbedding ? "✓ Indexed" : "— Missing" },
@@ -232,6 +278,30 @@ export default function BrainMapPage() {
               <div style={{ padding:"10px 14px", background:"rgba(249,115,22,0.07)", border:"1px solid rgba(249,115,22,0.2)", borderRadius:8 }}>
                 <div style={{ fontSize:10, color:"#f97316", letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:4 }}>Fraud type</div>
                 <div style={{ fontSize:13, color:"#EDE6DD" }}>{selected.fraudType}</div>
+              </div>
+            )}
+
+            {selected.proofText && (
+              <div>
+                <div style={{ fontSize:10, color:"#C4704B", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:6 }}>Proof Snippet</div>
+                <div style={{ fontSize:12, color:"#A89B8C", lineHeight:1.6, background:"rgba(0,0,0,0.25)", borderRadius:8, padding:"10px 12px", maxHeight:120, overflowY:"auto", whiteSpace:"pre-wrap", wordBreak:"break-word" }}>
+                  {selected.proofText}{selected.proofText.length >= 500 ? "…" : ""}
+                </div>
+              </div>
+            )}
+
+            {selected.modelVotes && selected.modelVotes.length > 0 && (
+              <div>
+                <div style={{ fontSize:10, color:"#C4704B", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:6 }}>Model Votes</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                  {selected.modelVotes.map((v) => (
+                    <div key={v.model} style={{ display:"grid", gridTemplateColumns:"80px 36px 1fr", gap:8, padding:"7px 10px", borderRadius:7, background:"rgba(0,0,0,0.2)", alignItems:"start" }}>
+                      <span style={{ fontSize:11, color:"#EDE6DD", fontWeight:500 }}>{v.model}</span>
+                      <span style={{ fontSize:11, fontWeight:700, color: v.decision === "YES" ? "#22c55e" : "#ef4444" }}>{v.decision}</span>
+                      <span style={{ fontSize:10, color:"#A89B8C", lineHeight:1.4 }}>{v.reasoning.slice(0, 80)}{v.reasoning.length > 80 ? "…" : ""}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

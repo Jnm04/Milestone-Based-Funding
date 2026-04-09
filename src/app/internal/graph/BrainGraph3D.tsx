@@ -34,7 +34,7 @@ interface NodeMeshProps {
   isHighlighted: boolean;
   hasSelection: boolean;
   onSelect: (n: GraphNode) => void;
-  onHover: (n: GraphNode | null) => void;
+  onHover: (n: GraphNode | null, x?: number, y?: number) => void;
 }
 
 function NodeMesh({ node, isSelected, isHighlighted, hasSelection, onSelect, onHover }: NodeMeshProps) {
@@ -67,7 +67,8 @@ function NodeMesh({ node, isSelected, isHighlighted, hasSelection, onSelect, onH
       <mesh
         ref={meshRef}
         onClick={(e) => { e.stopPropagation(); onSelect(node); }}
-        onPointerOver={(e) => { e.stopPropagation(); onHover(node); document.body.style.cursor = "pointer"; }}
+        onPointerOver={(e) => { e.stopPropagation(); onHover(node, e.clientX, e.clientY); document.body.style.cursor = "pointer"; }}
+        onPointerMove={(e) => { onHover(node, e.clientX, e.clientY); }}
         onPointerOut={() => { onHover(null); document.body.style.cursor = "default"; }}
       >
         <sphereGeometry args={[radius, 24, 24]} />
@@ -150,9 +151,10 @@ interface SceneProps {
   selectedId: string | null;
   onSelect: (n: GraphNode) => void;
   resetRef: MutableRefObject<() => void>;
+  onHoverChange?: (node: GraphNode | null, x: number, y: number) => void;
 }
 
-function Scene({ data, selectedId, onSelect, resetRef }: SceneProps) {
+function Scene({ data, selectedId, onSelect, resetRef, onHoverChange }: SceneProps) {
   const [hover, setHover] = useState<GraphNode | null>(null);
   const simDone = useRef(false);
 
@@ -227,7 +229,10 @@ function Scene({ data, selectedId, onSelect, resetRef }: SceneProps) {
           isHighlighted={!hasSelection || neighborIds.has(node.id)}
           hasSelection={hasSelection}
           onSelect={handleSelect}
-          onHover={setHover}
+          onHover={(n, x, y) => {
+            setHover(n);
+            onHoverChange?.(n, x ?? 0, y ?? 0);
+          }}
         />
       ))}
 
@@ -251,9 +256,10 @@ interface BrainGraph3DProps {
   selectedId: string | null;
   onNodeSelect: (n: GraphNode | null) => void;
   onResetRef: MutableRefObject<() => void>;
+  onNodeHover?: (node: GraphNode | null, x: number, y: number) => void;
 }
 
-export default function BrainGraph3D({ data, selectedId, onNodeSelect, onResetRef }: BrainGraph3DProps) {
+export default function BrainGraph3D({ data, selectedId, onNodeSelect, onResetRef, onNodeHover }: BrainGraph3DProps) {
   const handleSelect = useCallback((n: GraphNode) => {
     if ((n as unknown as { id: string }).id === "__deselect__") {
       onNodeSelect(null);
@@ -273,6 +279,7 @@ export default function BrainGraph3D({ data, selectedId, onNodeSelect, onResetRe
         selectedId={selectedId}
         onSelect={handleSelect}
         resetRef={onResetRef}
+        onHoverChange={onNodeHover}
       />
     </Canvas>
   );
