@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     precomputedDecision !== null
   ) {
     const sandboxProofId = `sandbox_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    void storeBrainData({
+    await storeBrainData({
       proofId: sandboxProofId,
       milestoneText,
       proofText: precomputedExtractedText,

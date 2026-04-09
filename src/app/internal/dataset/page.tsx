@@ -51,11 +51,14 @@ export default function DatasetPage() {
 
   const key = () => sessionStorage.getItem("cascrow_internal_key") ?? "";
 
-  useEffect(() => {
+  function loadEntries() {
+    setLoading(true);
     fetch("/api/internal/dataset", { headers: { "x-internal-key": key() } })
       .then((r) => (r.ok ? r.json() : { entries: [] }))
       .then((d) => { setEntries(d.entries ?? []); setLoading(false); });
-  }, []);
+  }
+
+  useEffect(() => { loadEntries(); }, []);
 
   function toggleExpand(id: string) {
     setExpanded((prev) => {
@@ -89,7 +92,12 @@ export default function DatasetPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 300, marginBottom: 4 }}>Training Dataset</h1>
-          <p style={{ color: "#A89B8C", fontSize: 13 }}>{entries.length} labeled entries (most recent first)</p>
+          <p style={{ color: "#A89B8C", fontSize: 13 }}>
+            {entries.length} labeled entries (most recent first){" "}
+            <button onClick={loadEntries} disabled={loading} style={{ background: "none", border: "none", color: "#C4704B", cursor: "pointer", fontSize: 13, padding: 0, marginLeft: 8 }}>
+              {loading ? "…" : "↻ Refresh"}
+            </button>
+          </p>
         </div>
         {entries.length > 0 && (
           <div style={{ display: "flex", gap: 8 }}>
