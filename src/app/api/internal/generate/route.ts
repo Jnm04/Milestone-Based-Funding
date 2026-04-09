@@ -31,6 +31,7 @@ async function generateOnePair(params: {
   index: number;
 }): Promise<{ milestoneText: string; proofText: string } | null> {
   try {
+    if (!process.env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not set");
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     const companies = ["Nexora GmbH", "BluePath Technologies", "VerdeTech UG", "Arkana Systems", "Solveig Labs",
@@ -40,7 +41,7 @@ async function generateOnePair(params: {
 
     const msg = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: `You generate realistic startup documents for a milestone verification training dataset.
 Always return ONLY valid JSON. No markdown, no explanation outside the JSON.`,
       messages: [{
@@ -52,22 +53,29 @@ Date: ${month} 2026
 Domain: ${DOMAIN_CONTEXT[params.domain] ?? params.domain}
 Outcome requirement: ${OUTCOME_INSTRUCTION[params.outcome] ?? OUTCOME_INSTRUCTION.mixed}
 
-Return ONLY this JSON structure:
+Return ONLY this JSON structure (keep proofText under 400 words to stay within limits):
 {
-  "milestoneText": "2-4 sentence milestone description with specific, measurable deliverable",
-  "proofText": "400-700 word realistic proof document matching the company and domain"
+  "milestoneText": "2-3 sentence milestone description with specific, measurable deliverable",
+  "proofText": "200-400 word realistic proof document matching the company and domain"
 }`,
       }],
     });
 
     const raw = msg.content[0];
     if (raw.type !== "text") return null;
-    const cleaned = raw.text.replace(/```json\n?|\n?```/g, "").trim();
-    const parsed = JSON.parse(cleaned) as { milestoneText: string; proofText: string };
+    // Strip markdown code fences if present
+    const cleaned = raw.text.replace(/```(?:json)?\n?/g, "").replace(/\n?```/g, "").trim();
+    // Extract JSON object if there's surrounding text
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error("[generate] no JSON object found in response:", cleaned.slice(0, 200));
+      return null;
+    }
+    const parsed = JSON.parse(jsonMatch[0]) as { milestoneText: string; proofText: string };
     if (!parsed.milestoneText || !parsed.proofText) return null;
     return parsed;
   } catch (err) {
-    console.warn("[generate] synthetic pair failed:", err);
+    console.error("[generate] synthetic pair failed:", err instanceof Error ? err.message : err);
     return null;
   }
 }
@@ -231,7 +239,12 @@ export async function POST(req: NextRequest) {
   }
 
   if (pairs.length === 0) {
-    return NextResponse.json({ error: "No pairs could be generated. Check API keys or try different settings." }, { status: 422 });
+    const hasKey = !!process.env.ANTHROPIC_API_KEY;
+    return NextResponse.json({
+      error: hasKey
+        ? "Generation failed — Claude returned invalid JSON or empty response. Try again."
+        : "ANTHROPIC_API_KEY is not configured on the server.",
+    }, { status: 422 });
   }
 
   // Run all verifications in parallel
