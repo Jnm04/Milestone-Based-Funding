@@ -9,6 +9,8 @@ import {
 } from "@/services/ai/verifier.service";
 import { storeBrainData } from "@/services/brain/training.service";
 import { ModelVote } from "@/services/brain/training.service";
+import { generateEmbedding, storeProofEmbedding } from "@/services/brain/embedding.service";
+import { prisma } from "@/lib/prisma";
 
 function isAuthorized(req: NextRequest) {
   const key = req.headers.get("x-internal-key")?.trim();
@@ -79,14 +81,55 @@ export async function POST(req: NextRequest) {
     precomputedDecision !== null
   ) {
     const sandboxProofId = `sandbox_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    await storeBrainData({
-      proofId: sandboxProofId,
-      milestoneText,
-      proofText: precomputedExtractedText,
-      modelVotes: precomputedVotes,
-      consensusLevel: precomputedConsensusLevel,
-      finalDecision: precomputedDecision,
-    });
+
+    // Determine label + source directly (bypasses storeBrainData's silent try/catch)
+    const yesCount = precomputedVotes.filter((v) => v.decision === "YES").length;
+    const labelSource = yesCount === 5 || yesCount === 0 ? "AUTO_5_0"
+      : yesCount === 4 || yesCount === 1 ? "AUTO_4_1"
+      : "HUMAN_QUEUE";
+    const label = precomputedDecision === "YES" ? "APPROVED" : "REJECTED";
+
+    try {
+      if (labelSource === "HUMAN_QUEUE") {
+        await prisma.humanReviewQueue.upsert({
+          where: { proofId: sandboxProofId },
+          create: {
+            proofId: sandboxProofId,
+            milestoneText,
+            proofText: precomputedExtractedText.slice(0, 10_000),
+            fileUrl: null,
+            modelVotes: precomputedVotes as never,
+            consensusLevel: precomputedConsensusLevel,
+          },
+          update: { modelVotes: precomputedVotes as never, consensusLevel: precomputedConsensusLevel },
+        });
+      } else {
+        await prisma.trainingEntry.create({
+          data: {
+            proofId: sandboxProofId,
+            milestoneText,
+            proofText: precomputedExtractedText.slice(0, 10_000),
+            label,
+            labelSource,
+            modelVotes: precomputedVotes as never,
+            consensusLevel: precomputedConsensusLevel,
+          },
+        });
+      }
+    } catch (err) {
+      console.error("[sandbox/save] DB write failed:", err);
+      return NextResponse.json({ error: "DB write failed", detail: String(err) }, { status: 500 });
+    }
+
+    // Fire-and-forget embedding (non-critical, no duplicate TrainingEntry)
+    void (async () => {
+      try {
+        const combinedText = `Milestone: ${milestoneText}\n\nProof:\n${precomputedExtractedText.slice(0, 3_000)}`;
+        const embedding = await generateEmbedding(combinedText);
+        if (embedding) await storeProofEmbedding(sandboxProofId, embedding);
+      } catch { /* embedding failure is non-fatal */ }
+    })();
+
     return NextResponse.json({ saved: true });
   }
 

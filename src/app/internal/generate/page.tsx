@@ -107,8 +107,9 @@ export default function GeneratePage() {
   async function saveSelected() {
     if (selected.size === 0) return;
     setSaving(true);
+    setError("");
     const toSave = [...selected].map(i => results[i]);
-    await Promise.all(toSave.map(r =>
+    const responses = await Promise.all(toSave.map(r =>
       fetch("/api/internal/sandbox", {
         method: "POST",
         headers: { "content-type": "application/json", "x-internal-key": key() },
@@ -123,7 +124,12 @@ export default function GeneratePage() {
         }),
       })
     ));
-    setSavedCount(toSave.length);
+    const failed = responses.filter(r => !r.ok).length;
+    if (failed > 0) {
+      const bodies = await Promise.all(responses.filter(r => !r.ok).map(r => r.json().catch(() => ({}))));
+      setError(`${failed} save(s) failed: ${bodies.map((b: { detail?: string; error?: string }) => b.detail ?? b.error ?? "unknown").join("; ")}`);
+    }
+    setSavedCount(toSave.length - failed);
     setSaving(false);
     setSelected(new Set());
   }
