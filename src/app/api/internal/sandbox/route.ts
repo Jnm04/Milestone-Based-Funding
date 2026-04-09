@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
   let precomputedExtractedText: string | null = null;
   let precomputedConsensusLevel: number | null = null;
   let precomputedDecision: "YES" | "NO" | null = null;
+  let notes: string | null = null;
 
   if (contentType.includes("multipart/form-data")) {
     const formData = await req.formData();
@@ -67,6 +68,7 @@ export async function POST(req: NextRequest) {
     if (body.precomputedExtractedText != null) precomputedExtractedText = body.precomputedExtractedText;
     if (body.precomputedConsensusLevel != null) precomputedConsensusLevel = Number(body.precomputedConsensusLevel);
     if (body.precomputedDecision === "YES" || body.precomputedDecision === "NO") precomputedDecision = body.precomputedDecision;
+    if (body.notes) notes = String(body.notes);
   }
 
   if (!milestoneText) return NextResponse.json({ error: "milestoneText required" }, { status: 400 });
@@ -113,6 +115,7 @@ export async function POST(req: NextRequest) {
             labelSource,
             modelVotes: precomputedVotes as never,
             consensusLevel: precomputedConsensusLevel,
+            notes: notes ?? undefined,
           },
         });
       }

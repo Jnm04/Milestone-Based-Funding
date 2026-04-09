@@ -43,6 +43,27 @@ const SOURCE_LABELS: Record<string, string> = {
   GRANT_GIVER: "Grant Giver",
 };
 
+const GEN_SOURCE_LABEL: Record<string, string> = {
+  "source:synthetic": "Synthetic",
+  "source:arxiv":     "arXiv",
+  "source:github":    "GitHub",
+};
+const GEN_SOURCE_COLOR: Record<string, string> = {
+  "source:synthetic": "#a855f7",
+  "source:arxiv":     "#3b82f6",
+  "source:github":    "#6b7280",
+};
+
+function parseSource(notes: string | null): { tag: string | null; rest: string | null } {
+  if (!notes) return { tag: null, rest: null };
+  const key = Object.keys(GEN_SOURCE_LABEL).find((k) => notes.startsWith(k));
+  if (key) {
+    const rest = notes.slice(key.length).replace(/^[\s\-–:]+/, "").trim() || null;
+    return { tag: key, rest };
+  }
+  return { tag: null, rest: notes };
+}
+
 export default function DatasetPage() {
   const [entries, setEntries] = useState<TrainingEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -129,6 +150,7 @@ export default function DatasetPage() {
         {entries.map((e) => {
           const isOpen = expanded.has(e.id);
           const votes: ModelVote[] = Array.isArray(e.modelVotes) ? e.modelVotes : [];
+          const { tag: srcTag, rest: srcRest } = parseSource(e.notes);
           return (
             <div
               key={e.id}
@@ -161,6 +183,16 @@ export default function DatasetPage() {
                     <span style={{ fontSize: 11, color: "#A89B8C" }}>{new Date(e.createdAt).toLocaleDateString()}</span>
                     <span style={{ fontSize: 11, color: "#A89B8C" }}>Consensus: {e.consensusLevel}/{e.modelVotes.length || 5}</span>
                     <span style={{ fontSize: 11, color: "#A89B8C" }}>{SOURCE_LABELS[e.labelSource] ?? e.labelSource}</span>
+                    {srcTag && (
+                      <span style={{
+                        fontSize: 10, fontWeight: 600, color: GEN_SOURCE_COLOR[srcTag],
+                        background: `${GEN_SOURCE_COLOR[srcTag]}18`,
+                        border: `1px solid ${GEN_SOURCE_COLOR[srcTag]}40`,
+                        borderRadius: 4, padding: "1px 6px", letterSpacing: "0.05em",
+                      }}>
+                        {GEN_SOURCE_LABEL[srcTag]}
+                      </span>
+                    )}
                     {e.fraudType && <span style={{ fontSize: 11, color: "#f97316" }}>{e.fraudType}</span>}
                   </div>
                 </div>
@@ -231,10 +263,10 @@ export default function DatasetPage() {
                   )}
 
                   {/* Notes */}
-                  {e.notes && (
+                  {srcRest && (
                     <div>
                       <p style={{ fontSize: 11, color: "#A89B8C", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: 1 }}>Notes</p>
-                      <p style={{ fontSize: 13, color: "#EDE6DD", margin: 0, lineHeight: 1.6 }}>{e.notes}</p>
+                      <p style={{ fontSize: 13, color: "#EDE6DD", margin: 0, lineHeight: 1.6 }}>{srcRest}</p>
                     </div>
                   )}
                 </div>

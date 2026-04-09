@@ -121,6 +121,7 @@ export default function GeneratePage() {
           precomputedConsensusLevel: r.consensusLevel,
           precomputedDecision: r.decision,
           precomputedExtractedText: r.proofText,
+          notes: tab === "synthetic" ? "source:synthetic" : `source:${source}`,
         }),
       })
     ));
