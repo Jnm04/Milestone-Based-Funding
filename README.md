@@ -331,6 +331,77 @@ DRAFT
 
 ---
 
+## Roadmap
+
+Cascrow is live on testnet. Here's where it's going.
+
+### Compliance — Risk-based KYC
+
+No unnecessary friction for small grants. Verification scales with the amount at stake.
+
+| Tier | Verification | Limit | Status |
+|------|-------------|-------|--------|
+| Tier 0 | Email verified | up to $1K | **live now** |
+| Tier 1 | Name + Sanctions screening | up to $10K | planned |
+| Tier 2 | ID + Liveness check | up to $100K | planned |
+| Tier 3 | KYB + Source of funds | unlimited | planned |
+
+### Expert Review — Human-in-the-loop
+
+For high-stakes decisions, AI generates a detailed report reviewed by a curated panel of domain experts. Double-blind, majority vote. This is the **Reviewer-as-a-Service** model: AI matched experts evaluate the milestone proof and cast binding votes — no single party has unilateral control.
+
+### Multi-chain Settlement
+
+Before creating a contract, choose where the escrow settles:
+- **Native XRPL Ledger** via XLS-85 amendment (Xumm / Crossmark) — RLUSD in native escrow, no smart contracts
+- **XRPL EVM Sidechain** (MetaMask) — Solidity escrow, currently live on testnet
+
+Same trustless flow, your chain.
+
+### Mainnet
+
+Mainnet launch with fiat on-ramp — fund escrows directly by card or bank transfer. Payouts go straight to a bank account, no crypto wallet required on the receiver side.
+
+### Structured Dispute Resolution
+
+A formal dispute workflow with escalation paths, arbitration timelines, and binding decisions — so every edge case has a clear, fair outcome.
+
+### Active Intelligence
+
+AI that goes beyond uploaded documents — querying GitHub to analyze code, checking public APIs, and cross-referencing live data. Weighted confidence scores replace binary YES/NO decisions as models improve.
+
+---
+
+## Cascrow Brain — Training a Custom Verification Model
+
+The long-term AI goal is a **fine-tuned verification model trained entirely on real milestone-proof pairs** — not generic LLMs prompted at inference time, but a model that has internalized what "proof of milestone completion" actually looks like across domains.
+
+### How training data is collected
+
+Every verification run contributes to a labeled dataset:
+
+- **5-model majority vote** — Claude, Gemini, GPT-4o-mini, Mistral Small, and Cerebras/Qwen3 each independently evaluate the proof. The majority verdict becomes the label.
+- **Automatic labeling** — 5/0 and 4/1 consensus results are written directly to the training dataset (`AUTO_5_0` / `AUTO_4_1` label sources).
+- **Human review queue** — 3/2 splits (genuine disagreement) are routed to an internal review interface where a human labels the case as `APPROVED`, `REJECTED`, or `FAKED` before it enters the dataset.
+- **Fraud detection** — Human reviewers can flag entries as `FAKED` with a fraud type (`AI_GENERATED`, `MANIPULATED`, `RECYCLED`, `IMPLAUSIBLE`) to train the model to detect fabricated proofs.
+
+### Training data generator
+
+An internal tool generates synthetic and web-sourced milestone+proof pairs:
+
+- **Synthetic** — Claude generates realistic startup documents across legal, technical, business, and research domains with controlled outcomes (clearly approved, clearly rejected, ambiguous).
+- **From Web** — arXiv papers and GitHub repositories are fetched and paired with AI-generated milestones, then verified by all 5 models. Source is tracked per entry (Synthetic / arXiv / GitHub).
+
+### Brain Map
+
+A 3D force-directed graph visualization of the training dataset — nodes are training entries, colored by label (green = APPROVED, red = REJECTED, orange = FAKED), linked by embedding similarity. Hovering a node shows the milestone snippet, consensus score, and per-model votes. The graph makes it easy to spot clusters, outliers, and potential mislabels at a glance.
+
+### Export
+
+The dataset can be exported as **JSONL** (ready for fine-tuning via OpenAI, Anthropic, or Hugging Face) or **CSV** at any time from the internal dashboard.
+
+---
+
 ## Key design decisions
 
 **Why dual-chain audit?**  
