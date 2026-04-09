@@ -8,6 +8,7 @@ import { put } from "@vercel/blob";
 import path from "path";
 import crypto from "crypto";
 import { writeAuditLog } from "@/services/evm/audit.service";
+import { fireWebhook } from "@/services/webhook/webhook.service";
 
 async function triggerVerification(proofId: string) {
   try {
@@ -151,6 +152,7 @@ export async function POST(request: NextRequest) {
           contractId: milestone.contractId,
           milestoneTitle: milestone.title,
           startupName: milestone.contract.startup?.companyName ?? milestone.contract.startup?.name,
+          investorId: milestone.contract.investorId,
         });
       }
 
@@ -160,6 +162,15 @@ export async function POST(request: NextRequest) {
         event: "PROOF_SUBMITTED",
         actor: session.user.id,
         metadata: { proofId: proof.id, fileName, fileHash },
+      });
+
+      void fireWebhook({
+        investorId: milestone.contract.investorId,
+        startupId: milestone.contract.startupId ?? undefined,
+        event: "proof.submitted",
+        contractId: milestone.contractId,
+        milestoneId,
+        data: { proofId: proof.id, fileName, milestoneTitle: milestone.title },
       });
 
       // Auto-trigger AI verification after response is sent
@@ -206,6 +217,7 @@ export async function POST(request: NextRequest) {
           contractId: resolvedContractId,
           milestoneTitle: contract.milestone,
           startupName: contract.startup?.companyName ?? contract.startup?.name,
+          investorId: contract.investorId,
         });
       }
 
@@ -214,6 +226,14 @@ export async function POST(request: NextRequest) {
         event: "PROOF_SUBMITTED",
         actor: session.user.id,
         metadata: { proofId: proof.id, fileName, fileHash },
+      });
+
+      void fireWebhook({
+        investorId: contract.investorId,
+        startupId: contract.startupId ?? undefined,
+        event: "proof.submitted",
+        contractId: resolvedContractId,
+        data: { proofId: proof.id, fileName, milestoneTitle: contract.milestone },
       });
 
       // Auto-trigger AI verification after response is sent

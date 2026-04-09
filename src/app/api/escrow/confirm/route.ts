@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyFundTx } from "@/services/evm/escrow.service";
 import { sendFundedEmail } from "@/lib/email";
 import { writeAuditLog } from "@/services/evm/audit.service";
+import { fireWebhook } from "@/services/webhook/webhook.service";
 import { ethers } from "ethers";
 
 /**
@@ -100,13 +101,23 @@ export async function POST(request: NextRequest) {
       metadata: { txHash, amountUSD: fundedAmountUSD, milestoneHash },
     });
 
-    // Email startup: milestone funded
+    // Email + webhook: milestone funded
+    void fireWebhook({
+      investorId: contract.investorId,
+      startupId: contract.startupId ?? undefined,
+      event: "contract.funded",
+      contractId,
+      milestoneId: milestoneId ?? undefined,
+      data: { txHash, amountUSD: fundedAmountUSD, milestoneTitle: fundedMilestoneTitle },
+    });
+
     if (contract.startup?.notifyFunded) {
       void sendFundedEmail({
         to: contract.startup.email,
         contractId,
         milestoneTitle: fundedMilestoneTitle,
         amountUSD: fundedAmountUSD,
+        startupId: contract.startupId ?? undefined,
       });
     }
 

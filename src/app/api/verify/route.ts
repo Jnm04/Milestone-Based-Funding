@@ -9,6 +9,7 @@ import { releaseMilestone } from "@/services/evm/escrow.service";
 import { sendPendingReviewEmail, sendRejectedEmail, sendVerifiedEmail, sendMilestoneCompletedInvestorEmail, sendFulfillmentKeyEmail } from "@/lib/email";
 import { contractIdToBytes32 } from "@/services/evm/escrow.service";
 import { writeAuditLog } from "@/services/evm/audit.service";
+import { fireWebhook } from "@/services/webhook/webhook.service";
 
 // Allow up to 60s — XRPL WebSocket + NFT mint can take 10-20s (requires Vercel Pro for >10s)
 export const maxDuration = 60;
@@ -171,12 +172,50 @@ export async function POST(request: NextRequest) {
       metadata: { decision: result.decision, confidence: result.confidence, action, proofId, promptHash: VERIFICATION_PROMPT_HASH },
     });
 
+    // Fire webhooks for AI decision (fire-and-forget)
+    void fireWebhook({
+      investorId: contract.investorId,
+      startupId: contract.startupId,
+      event: "ai.decision",
+      contractId: contract.id,
+      milestoneId: proof.milestoneId ?? undefined,
+      data: {
+        decision: result.decision,
+        confidence: result.confidence,
+        action,
+        milestoneTitle,
+      },
+    });
+
+    if (action === "PENDING_REVIEW") {
+      void fireWebhook({
+        investorId: contract.investorId,
+        startupId: contract.startupId,
+        event: "manual_review.required",
+        contractId: contract.id,
+        milestoneId: proof.milestoneId ?? undefined,
+        data: { milestoneTitle, aiReasoning: result.reasoning },
+      });
+    }
+
     if (action === "PENDING_REVIEW" && contract.investor.notifyPendingReview) {
       void sendPendingReviewEmail({
         to: contract.investor.email,
         contractId: contract.id,
         milestoneTitle,
         aiReasoning: result.reasoning,
+        investorId: contract.investorId,
+      });
+    }
+
+    if (action === "REJECTED") {
+      void fireWebhook({
+        investorId: contract.investorId,
+        startupId: contract.startupId,
+        event: "contract.rejected",
+        contractId: contract.id,
+        milestoneId: proof.milestoneId ?? undefined,
+        data: { milestoneTitle, aiReasoning: result.reasoning },
       });
     }
 
@@ -186,6 +225,7 @@ export async function POST(request: NextRequest) {
         contractId: contract.id,
         milestoneTitle,
         aiReasoning: result.reasoning,
+        startupId: contract.startupId ?? undefined,
       });
     }
 
@@ -243,11 +283,20 @@ export async function POST(request: NextRequest) {
         // NFT minting is triggered by the frontend ContractPoller after COMPLETED status
         // is detected — decoupled to avoid Vercel serverless timeout issues.
 
+        void fireWebhook({
+          investorId: contract.investorId,
+          startupId: contract.startupId,
+          event: "funds.released",
+          contractId: contract.id,
+          milestoneId: proof.milestoneId ?? undefined,
+          data: { txHash, amountUSD, milestoneTitle, auto: true },
+        });
+
         if (contract.startup?.notifyVerified) {
-          void sendVerifiedEmail({ to: contract.startup.email, contractId: contract.id, milestoneTitle, amountUSD: amountUSD, txHash });
+          void sendVerifiedEmail({ to: contract.startup.email, contractId: contract.id, milestoneTitle, amountUSD: amountUSD, txHash, startupId: contract.startupId ?? undefined });
         }
         if (contract.investor.notifyMilestoneCompleted) {
-          void sendMilestoneCompletedInvestorEmail({ to: contract.investor.email, contractId: contract.id, milestoneTitle, amountUSD });
+          void sendMilestoneCompletedInvestorEmail({ to: contract.investor.email, contractId: contract.id, milestoneTitle, amountUSD, investorId: contract.investorId });
         }
 
         return NextResponse.json({ decision: result.decision, reasoning: result.reasoning, confidence: result.confidence, action: "COMPLETED", txHash });

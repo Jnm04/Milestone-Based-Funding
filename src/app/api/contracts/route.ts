@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { nanoid } from "nanoid";
 import { writeAuditLog } from "@/services/evm/audit.service";
+import { fireWebhook } from "@/services/webhook/webhook.service";
 
 export async function POST(request: NextRequest) {
   try {
@@ -99,6 +100,18 @@ export async function POST(request: NextRequest) {
       event: "CONTRACT_CREATED",
       actor: session.user.id,
       metadata: { milestoneCount: result.id ? 1 : 0 },
+    });
+
+    void fireWebhook({
+      investorId: investor.id,
+      startupId: receiver?.id ?? undefined,
+      event: "contract.created",
+      contractId: result.id,
+      data: {
+        milestone: milestone ?? result.milestone,
+        amountUSD: result.amountUSD.toString(),
+        cancelAfter: result.cancelAfter.toISOString(),
+      },
     });
 
     return NextResponse.json({

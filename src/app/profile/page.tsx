@@ -8,6 +8,24 @@ import { toast } from "sonner";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { NodeBackground } from "@/components/node-background";
 
+// ── Telegram state ─────────────────────────────────────────────────────────
+interface TelegramStatus { connected: boolean; connectedAt: string | null }
+
+// ── Webhook state ──────────────────────────────────────────────────────────
+interface WebhookEndpoint {
+  id: string;
+  url: string;
+  events: string[];
+  active: boolean;
+  createdAt: string;
+}
+
+const ALL_WEBHOOK_EVENTS = [
+  "contract.created", "contract.funded", "contract.expired",
+  "proof.submitted", "ai.decision", "manual_review.required",
+  "manual_review.resolved", "funds.released", "contract.rejected",
+];
+
 interface ProfileData {
   id: string;
   email: string;
@@ -145,6 +163,19 @@ export default function ProfilePage() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  // Telegram
+  const [tgStatus, setTgStatus] = useState<TelegramStatus | null>(null);
+  const [tgLoading, setTgLoading] = useState(false);
+  const [tgDeepLink, setTgDeepLink] = useState<string | null>(null);
+
+  // Webhooks
+  const [webhooks, setWebhooks] = useState<WebhookEndpoint[]>([]);
+  const [showNewWebhook, setShowNewWebhook] = useState(false);
+  const [whUrl, setWhUrl] = useState("");
+  const [whEvents, setWhEvents] = useState<string[]>(["contract.funded", "proof.submitted", "ai.decision", "funds.released"]);
+  const [whSaving, setWhSaving] = useState(false);
+  const [whSecret, setWhSecret] = useState<string | null>(null);
+
   useEffect(() => {
     if (status === "unauthenticated") { router.push("/login"); return; }
     if (status !== "authenticated") return;
@@ -166,7 +197,97 @@ export default function ProfilePage() {
         setNotifyVerified(user.notifyVerified);
         setNotifyRejected(user.notifyRejected);
       });
+    // Load Telegram status
+    fetch("/api/telegram/connect")
+      .then((r) => r.json())
+      .then((d) => setTgStatus(d))
+      .catch(() => {});
+    // Load webhooks
+    fetch("/api/webhooks")
+      .then((r) => r.json())
+      .then((d) => setWebhooks(d.endpoints ?? []))
+      .catch(() => {});
   }, [status, router]);
+
+  async function handleTelegramConnect() {
+    setTgLoading(true);
+    setTgDeepLink(null);
+    try {
+      const res = await fetch("/api/telegram/connect", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to generate link");
+      setTgDeepLink(data.deepLink);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setTgLoading(false);
+    }
+  }
+
+  async function handleTelegramDisconnect() {
+    setTgLoading(true);
+    try {
+      await fetch("/api/telegram/connect", { method: "DELETE" });
+      setTgStatus({ connected: false, connectedAt: null });
+      setTgDeepLink(null);
+      toast.success("Telegram disconnected.");
+    } catch {
+      toast.error("Failed to disconnect.");
+    } finally {
+      setTgLoading(false);
+    }
+  }
+
+  async function handleAddWebhook(e: React.FormEvent) {
+    e.preventDefault();
+    if (!whUrl.startsWith("https://")) { toast.error("URL must start with https://"); return; }
+    if (whEvents.length === 0) { toast.error("Select at least one event."); return; }
+    setWhSaving(true);
+    try {
+      const res = await fetch("/api/webhooks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: whUrl, events: whEvents }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed");
+      setWebhooks((prev) => [data.endpoint, ...prev]);
+      setWhSecret(data.secret);
+      setWhUrl("");
+      setWhEvents(["contract.funded", "proof.submitted", "ai.decision", "funds.released"]);
+      setShowNewWebhook(false);
+      toast.success("Webhook added.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setWhSaving(false);
+    }
+  }
+
+  async function handleDeleteWebhook(id: string) {
+    try {
+      const res = await fetch(`/api/webhooks?id=${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed");
+      setWebhooks((prev) => prev.filter((w) => w.id !== id));
+      toast.success("Webhook removed.");
+    } catch {
+      toast.error("Failed to remove webhook.");
+    }
+  }
+
+  async function handleToggleWebhook(id: string, active: boolean) {
+    try {
+      const res = await fetch(`/api/webhooks?id=${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      setWebhooks((prev) => prev.map((w) => w.id === id ? { ...w, active } : w));
+    } catch {
+      toast.error("Failed to update webhook.");
+    }
+  }
 
   async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();
@@ -466,6 +587,178 @@ export default function ProfilePage() {
                 </button>
               </div>
             </form>
+          </SectionCard>
+
+          {/* Telegram Notifications */}
+          <SectionCard title="Telegram Notifications" subtitle="Get instant push notifications directly in Telegram — no inbox required.">
+            {tgStatus?.connected ? (
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ background: "#22c55e" }} />
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm font-medium" style={{ color: "#EDE6DD" }}>Connected</span>
+                    {tgStatus.connectedAt && (
+                      <span className="text-xs" style={{ color: "#A89B8C" }}>
+                        Since {new Date(tgStatus.connectedAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={tgLoading}
+                  onClick={handleTelegramDisconnect}
+                  className="text-xs self-start transition-colors disabled:opacity-50"
+                  style={{ color: "#A89B8C" }}
+                  onMouseOver={(e) => (e.currentTarget.style.color = "#ef4444")}
+                  onMouseOut={(e) => (e.currentTarget.style.color = "#A89B8C")}
+                >
+                  {tgLoading ? "…" : "Disconnect Telegram"}
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                <p className="text-sm" style={{ color: "#A89B8C" }}>
+                  Click below to generate a one-time link. Open it in Telegram to connect your account.
+                </p>
+                {tgDeepLink ? (
+                  <div className="flex flex-col gap-3">
+                    <a
+                      href={tgDeepLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full text-center rounded-xl py-2.5 text-sm font-semibold transition-colors"
+                      style={{ background: "#229ED9", color: "#fff", display: "block" }}
+                    >
+                      Open in Telegram →
+                    </a>
+                    <p className="text-xs text-center" style={{ color: "#A89B8C" }}>Link expires in 15 minutes. Reload this page after connecting to see your status.</p>
+                    <button
+                      type="button"
+                      onClick={handleTelegramConnect}
+                      className="text-xs self-center"
+                      style={{ color: "#A89B8C" }}
+                    >
+                      Generate new link
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={tgLoading}
+                    onClick={handleTelegramConnect}
+                    className="w-full rounded-xl py-2.5 text-sm font-semibold transition-colors disabled:opacity-50"
+                    style={{ background: "#229ED9", color: "#fff" }}
+                  >
+                    {tgLoading ? "Generating link…" : "Connect Telegram"}
+                  </button>
+                )}
+              </div>
+            )}
+          </SectionCard>
+
+          {/* Webhooks */}
+          <SectionCard title="Webhooks" subtitle="Send signed POST requests to your systems on every contract event.">
+            {whSecret && (
+              <div className="flex flex-col gap-2 p-4 rounded-xl mb-2" style={{ background: "rgba(196,112,75,0.08)", border: "1px solid rgba(196,112,75,0.3)" }}>
+                <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#C4704B" }}>Save this secret — shown only once</span>
+                <code className="text-xs font-mono break-all select-all p-2 rounded" style={{ background: "rgba(0,0,0,0.3)", color: "#EDE6DD" }}>{whSecret}</code>
+                <p className="text-xs" style={{ color: "#A89B8C" }}>Verify incoming requests: <code style={{ color: "#D4B896" }}>HMAC-SHA256(secret, rawBody) === X-Cascrow-Signature</code></p>
+                <button type="button" onClick={() => setWhSecret(null)} className="text-xs self-end" style={{ color: "#A89B8C" }}>Dismiss</button>
+              </div>
+            )}
+
+            {webhooks.length > 0 && (
+              <div className="flex flex-col gap-2 mb-2">
+                {webhooks.map((wh) => (
+                  <div key={wh.id} className="flex items-start gap-3 p-3 rounded-xl text-sm" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.12)" }}>
+                    <div className="flex flex-col gap-1 flex-1 min-w-0">
+                      <code className="text-xs font-mono truncate" style={{ color: "#EDE6DD" }}>{wh.url}</code>
+                      <div className="flex flex-wrap gap-1 mt-0.5">
+                        {wh.events.map((ev) => (
+                          <span key={ev} className="text-xs px-1.5 py-0.5 rounded" style={{ background: "rgba(196,112,75,0.1)", color: "#C4704B" }}>{ev}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleWebhook(wh.id, !wh.active)}
+                        className="text-xs"
+                        style={{ color: wh.active ? "#22c55e" : "#A89B8C" }}
+                      >
+                        {wh.active ? "Active" : "Paused"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteWebhook(wh.id)}
+                        className="text-xs"
+                        style={{ color: "#A89B8C" }}
+                        onMouseOver={(e) => (e.currentTarget.style.color = "#ef4444")}
+                        onMouseOut={(e) => (e.currentTarget.style.color = "#A89B8C")}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {showNewWebhook ? (
+              <form onSubmit={handleAddWebhook} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="cs-label">HTTPS Endpoint URL</label>
+                  <input
+                    type="url"
+                    value={whUrl}
+                    onChange={(e) => setWhUrl(e.target.value)}
+                    placeholder="https://your-server.com/webhook"
+                    className="cs-input"
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="cs-label">Events to subscribe</label>
+                  <div className="flex flex-wrap gap-2">
+                    {ALL_WEBHOOK_EVENTS.map((ev) => {
+                      const checked = whEvents.includes(ev);
+                      return (
+                        <button
+                          key={ev}
+                          type="button"
+                          onClick={() => setWhEvents((prev) => checked ? prev.filter((e) => e !== ev) : [...prev, ev])}
+                          className="text-xs px-2.5 py-1 rounded-full transition-colors"
+                          style={{
+                            background: checked ? "rgba(196,112,75,0.2)" : "rgba(255,255,255,0.05)",
+                            border: `1px solid ${checked ? "#C4704B" : "rgba(196,112,75,0.2)"}`,
+                            color: checked ? "#C4704B" : "#A89B8C",
+                          }}
+                        >
+                          {ev}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button type="submit" disabled={whSaving} className="cs-btn-ghost cs-btn-sm">
+                    {whSaving ? "Adding…" : "Add Webhook"}
+                  </button>
+                  <button type="button" onClick={() => setShowNewWebhook(false)} className="cs-btn-ghost cs-btn-sm" style={{ opacity: 0.6 }}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowNewWebhook(true)}
+                className="cs-btn-ghost cs-btn-sm self-start"
+              >
+                + Add Endpoint
+              </button>
+            )}
           </SectionCard>
 
           {/* Account Info */}

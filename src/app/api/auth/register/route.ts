@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendVerificationEmail } from "@/lib/email";
+import { screenName } from "@/services/sanctions/sanctions.service";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
@@ -78,6 +79,29 @@ export async function POST(request: NextRequest) {
     } catch (err) {
       console.error("[register] Failed to send verification email:", err);
     }
+
+    // Sanctions screening — fire-and-forget, never blocks registration.
+    // Marks the user record with CLEAR or HIT for compliance review.
+    void (async () => {
+      try {
+        const screenTarget = name || email.split("@")[0];
+        const result = await screenName(screenTarget);
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            sanctionsCheckedAt: new Date(),
+            sanctionsStatus: result.hit ? "HIT" : "CLEAR",
+          },
+        });
+        if (result.hit) {
+          console.warn(
+            `[sanctions] Potential match for new user ${user.id} (${email}): ${result.matches.slice(0, 3).join(", ")}`
+          );
+        }
+      } catch (err) {
+        console.warn("[sanctions] Screening failed on registration (non-fatal):", err);
+      }
+    })();
 
     return NextResponse.json({ id: user.id, email: user.email, role: user.role });
   } catch (err) {

@@ -1,4 +1,12 @@
 import { Resend } from "resend";
+import {
+  tgProofSubmitted,
+  tgPendingReview,
+  tgMilestoneCompleted,
+  tgFunded,
+  tgVerified,
+  tgRejected,
+} from "@/services/telegram/telegram.service";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.EMAIL_FROM ?? "Cascrow <onboarding@resend.dev>";
@@ -63,12 +71,18 @@ export async function sendProofSubmittedEmail({
   contractId,
   milestoneTitle,
   startupName,
+  investorId,
 }: {
   to: string;
   contractId: string;
   milestoneTitle: string;
   startupName?: string | null;
+  investorId?: string;
 }) {
+  // Telegram — fire-and-forget
+  if (investorId) {
+    void tgProofSubmitted({ investorId, contractId, milestoneTitle, startupName });
+  }
   if (!process.env.RESEND_API_KEY) return;
   await resend.emails.send({
     from: FROM,
@@ -88,12 +102,17 @@ export async function sendPendingReviewEmail({
   contractId,
   milestoneTitle,
   aiReasoning,
+  investorId,
 }: {
   to: string;
   contractId: string;
   milestoneTitle: string;
   aiReasoning?: string | null;
+  investorId?: string;
 }) {
+  if (investorId) {
+    void tgPendingReview({ investorId, contractId, milestoneTitle, aiReasoning });
+  }
   if (!process.env.RESEND_API_KEY) return;
   await resend.emails.send({
     from: FROM,
@@ -113,12 +132,17 @@ export async function sendMilestoneCompletedInvestorEmail({
   contractId,
   milestoneTitle,
   amountUSD,
+  investorId,
 }: {
   to: string;
   contractId: string;
   milestoneTitle: string;
   amountUSD: string;
+  investorId?: string;
 }) {
+  if (investorId) {
+    void tgMilestoneCompleted({ investorId, contractId, milestoneTitle, amountUSD });
+  }
   if (!process.env.RESEND_API_KEY) return;
   await resend.emails.send({
     from: FROM,
@@ -139,12 +163,17 @@ export async function sendFundedEmail({
   contractId,
   milestoneTitle,
   amountUSD,
+  startupId,
 }: {
   to: string;
   contractId: string;
   milestoneTitle: string;
   amountUSD: string;
+  startupId?: string;
 }) {
+  if (startupId) {
+    void tgFunded({ startupId, contractId, milestoneTitle, amountUSD });
+  }
   if (!process.env.RESEND_API_KEY) return;
   await resend.emails.send({
     from: FROM,
@@ -165,13 +194,18 @@ export async function sendVerifiedEmail({
   milestoneTitle,
   amountUSD,
   txHash,
+  startupId,
 }: {
   to: string;
   contractId: string;
   milestoneTitle: string;
   amountUSD: string;
   txHash?: string | null;
+  startupId?: string;
 }) {
+  if (startupId) {
+    void tgVerified({ startupId, contractId, milestoneTitle, amountUSD, txHash });
+  }
   if (!process.env.RESEND_API_KEY) return;
   await resend.emails.send({
     from: FROM,
@@ -191,12 +225,17 @@ export async function sendRejectedEmail({
   contractId,
   milestoneTitle,
   aiReasoning,
+  startupId,
 }: {
   to: string;
   contractId: string;
   milestoneTitle: string;
   aiReasoning?: string | null;
+  startupId?: string;
 }) {
+  if (startupId) {
+    void tgRejected({ startupId, contractId, milestoneTitle, aiReasoning });
+  }
   if (!process.env.RESEND_API_KEY) return;
   await resend.emails.send({
     from: FROM,

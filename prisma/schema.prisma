@@ -44,6 +44,16 @@ model User {
   // Password reset
   passwordResetToken       String?   @unique
   passwordResetTokenExpiry DateTime?
+
+  // Sanctions screening (KYC Tier 1)
+  sanctionsCheckedAt DateTime?
+  sanctionsStatus    String?   // "CLEAR" | "HIT" | "PENDING"
+
+  // Telegram notifications
+  telegramChat     TelegramChat?
+
+  // Outbound webhooks
+  webhookEndpoints WebhookEndpoint[]
 }
 
 enum Role {
@@ -102,6 +112,10 @@ model Proof {
   aiDecision    String?
   aiReasoning   String?    @db.Text
   aiConfidence  Int?
+  /// "file" | "github_url" — how the proof was submitted
+  proofType     String     @default("file")
+  /// For github_url proofs: the submitted GitHub repo URL
+  proofUrl      String?
   createdAt     DateTime   @default(now())
 }
 
@@ -221,4 +235,55 @@ model ProofEmbedding {
   embedding String   @db.Text
   model     String   @default("text-embedding-3-small")
   createdAt DateTime @default(now())
+}
+
+// ── Webhooks ─────────────────────────────────────────────────────────────────
+
+/// Outbound webhook endpoint registered by a user.
+/// Cascrow sends a signed POST to this URL on every subscribed event.
+model WebhookEndpoint {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  url       String
+  /// HMAC-SHA256 secret — used to sign the request body
+  secret    String
+  /// JSON array of subscribed event names, e.g. ["contract.funded","proof.submitted"]
+  events    String   @db.Text
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ── Telegram ──────────────────────────────────────────────────────────────────
+
+/// One-to-one: a user's connected Telegram chat.
+/// Linked via a short-lived deep-link token at /api/telegram/connect.
+model TelegramChat {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatId      String    // Telegram numeric chat ID (stored as string)
+  active      Boolean   @default(true)
+  /// Pending connection token (hex, 32 bytes). Cleared after /start is confirmed.
+  connectToken       String?   @unique
+  connectTokenExpiry DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+// ── Sanctions ─────────────────────────────────────────────────────────────────
+
+/// Cached sanctions list snapshots.
+/// Updated daily by /api/cron/refresh-sanctions.
+model SanctionsCache {
+  id          String   @id @default(cuid())
+  /// "OFAC_SDN" | "EU_CONSOLIDATED" (reserved for future lists)
+  listName    String   @unique
+  /// JSON array of normalized name strings extracted from the list
+  entries     String   @db.Text
+  /// ISO timestamp of the list publication date (from the source)
+  publishedAt String?
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
 }
