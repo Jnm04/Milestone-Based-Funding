@@ -38,14 +38,14 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Cascrow" }],
   creator: "Cascrow",
-  metadataBase: new URL("https://cascrow.xyz"),
+  metadataBase: new URL("https://cascrow.com"),
   alternates: {
     canonical: "/",
   },
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://cascrow.xyz",
+    url: "https://cascrow.com",
     siteName: "Cascrow",
     title: "Cascrow — AI-Powered Escrow on XRPL",
     description:

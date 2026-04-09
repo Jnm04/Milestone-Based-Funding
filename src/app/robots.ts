@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: ["/api/", "/dashboard/", "/contract/", "/profile/"],
     },
-    sitemap: "https://cascrow.xyz/sitemap.xml",
+    sitemap: "https://cascrow.com/sitemap.xml",
   };
 }
