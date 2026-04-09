@@ -17,13 +17,30 @@ export async function GET(req: NextRequest) {
       id: true,
       proofId: true,
       milestoneText: true,
+      proofText: true,
       label: true,
       labelSource: true,
       consensusLevel: true,
       fraudType: true,
+      modelVotes: true,
+      notes: true,
       createdAt: true,
     },
   });
 
-  return NextResponse.json({ entries });
+  // Attach fileUrl from Proof table (no direct relation in schema)
+  const proofIds = entries.map((e) => e.proofId);
+  const proofs = await prisma.proof.findMany({
+    where: { id: { in: proofIds } },
+    select: { id: true, fileUrl: true, fileName: true },
+  });
+  const proofMap = new Map(proofs.map((p) => [p.id, p]));
+
+  const enriched = entries.map((e) => ({
+    ...e,
+    fileUrl: proofMap.get(e.proofId)?.fileUrl ?? null,
+    fileName: proofMap.get(e.proofId)?.fileName ?? null,
+  }));
+
+  return NextResponse.json({ entries: enriched });
 }
