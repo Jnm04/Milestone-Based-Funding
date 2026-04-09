@@ -213,6 +213,9 @@ export default function ProfilePage() {
     setTgLoading(true);
     setTgDeepLink(null);
     try {
+      // Auto-register webhook on first connect attempt (idempotent — safe to call multiple times)
+      await fetch("/api/telegram/setup-webhook", { method: "POST" });
+
       const res = await fetch("/api/telegram/connect", { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to generate link");
@@ -658,21 +661,8 @@ export default function ProfilePage() {
               </div>
             ) : (
               <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-2 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.12)" }}>
-                  <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#A89B8C" }}>Step 1 — Activate webhook (once)</span>
-                  <p className="text-xs" style={{ color: "#A89B8C" }}>Register the bot with Telegram so it can receive messages. Only needed once after deploying.</p>
-                  <button
-                    type="button"
-                    disabled={tgLoading}
-                    onClick={handleRegisterWebhook}
-                    className="self-start text-xs px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-50"
-                    style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.3)", color: "#C4704B" }}
-                  >
-                    {tgLoading ? "Activating…" : "Activate Webhook"}
-                  </button>
-                </div>
                 <p className="text-sm" style={{ color: "#A89B8C" }}>
-                  <strong style={{ color: "#EDE6DD" }}>Step 2</strong> — Generate a one-time link and open it in Telegram to connect your account.
+                  Click below to generate a one-time link. Open it in Telegram to connect your account.
                 </p>
                 {tgDeepLink ? (
                   <div className="flex flex-col gap-3">
