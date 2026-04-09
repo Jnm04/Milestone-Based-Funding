@@ -4,6 +4,25 @@ import OpenAI from "openai";
 import { Mistral } from "@mistralai/mistralai";
 import { AIVerificationResult } from "@/types";
 import crypto from "crypto";
+import { prisma } from "@/lib/prisma";
+
+// ─── Pricing per 1M tokens (USD) — update when providers change rates ─────────
+const MODEL_PRICING: Record<string, { input: number; output: number }> = {
+  "Claude Haiku":    { input: 0.80,  output: 4.00  },
+  "GPT-4o-mini":    { input: 0.15,  output: 0.60  },
+  "Gemini Flash":   { input: 0.15,  output: 0.60  },
+  "Mistral Small":  { input: 0.10,  output: 0.30  },
+  "Cerebras/Qwen3": { input: 0.77,  output: 0.77  },
+  "Embedding":      { input: 0.02,  output: 0.00  },
+};
+
+function logUsage(model: string, inputTokens: number, outputTokens: number, context = "verification") {
+  const p = MODEL_PRICING[model] ?? { input: 0, output: 0 };
+  const estimatedCostUsd = (p.input * inputTokens + p.output * outputTokens) / 1_000_000;
+  void prisma.apiUsage.create({
+    data: { model, inputTokens, outputTokens, estimatedCostUsd, context },
+  }).catch(() => { /* non-fatal */ });
+}
 
 export interface ModelVote {
   model: string;
@@ -193,6 +212,7 @@ async function callClaude(
     system,
     messages,
   });
+  logUsage("Claude Haiku", message.usage.input_tokens, message.usage.output_tokens);
   const content = message.content[0];
   if (content.type !== "text") throw new Error("Unexpected response type from Claude");
   return parseAIResponse(content.text, "Claude");
@@ -205,6 +225,7 @@ async function callGeminiText(userMessage: string): Promise<AIVerificationResult
       { role: "user", parts: [{ text: VERIFICATION_SYSTEM_PROMPT + "\n\n" + userMessage }] },
     ],
   });
+  logUsage("Gemini Flash", response.usageMetadata?.promptTokenCount ?? 0, response.usageMetadata?.candidatesTokenCount ?? 0);
   const text = response.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
   return parseAIResponse(text, "Gemini");
 }
@@ -226,6 +247,7 @@ async function callGeminiImage(
       },
     ],
   });
+  logUsage("Gemini Flash", response.usageMetadata?.promptTokenCount ?? 0, response.usageMetadata?.candidatesTokenCount ?? 0);
   const text = response.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
   return parseAIResponse(text, "Gemini");
 }
@@ -239,6 +261,7 @@ async function callOpenAIText(userMessage: string): Promise<AIVerificationResult
       { role: "user", content: userMessage },
     ],
   });
+  logUsage("GPT-4o-mini", response.usage?.prompt_tokens ?? 0, response.usage?.completion_tokens ?? 0);
   const text = response.choices[0]?.message?.content ?? "";
   return parseAIResponse(text, "OpenAI");
 }
@@ -262,6 +285,7 @@ async function callOpenAIImage(
       },
     ],
   });
+  logUsage("GPT-4o-mini", response.usage?.prompt_tokens ?? 0, response.usage?.completion_tokens ?? 0);
   const text = response.choices[0]?.message?.content ?? "";
   return parseAIResponse(text, "OpenAI");
 }
@@ -275,6 +299,7 @@ async function callMistralText(userMessage: string): Promise<AIVerificationResul
       { role: "user", content: userMessage },
     ],
   });
+  logUsage("Mistral Small", response.usage?.promptTokens ?? 0, response.usage?.completionTokens ?? 0);
   const text = typeof response.choices?.[0]?.message?.content === "string"
     ? response.choices[0].message.content
     : "";
@@ -300,6 +325,7 @@ async function callMistralImage(
       },
     ],
   });
+  logUsage("Mistral Small", response.usage?.promptTokens ?? 0, response.usage?.completionTokens ?? 0);
   const text = typeof response.choices?.[0]?.message?.content === "string"
     ? response.choices[0].message.content
     : "";
@@ -315,6 +341,7 @@ async function callCerebrasText(userMessage: string): Promise<AIVerificationResu
       { role: "user", content: userMessage },
     ],
   });
+  logUsage("Cerebras/Qwen3", response.usage?.prompt_tokens ?? 0, response.usage?.completion_tokens ?? 0);
   const text = response.choices[0]?.message?.content ?? "";
   return parseAIResponse(text, "Cerebras/Qwen3");
 }
@@ -333,6 +360,7 @@ async function callCerebrasImage(
       { role: "user", content: userMessage + "\n\n[Note: evaluate based on the milestone description only — image not available to this model]" },
     ],
   });
+  logUsage("Cerebras/Qwen3", response.usage?.prompt_tokens ?? 0, response.usage?.completion_tokens ?? 0);
   const text = response.choices[0]?.message?.content ?? "";
   return parseAIResponse(text, "Cerebras/Qwen3");
 }

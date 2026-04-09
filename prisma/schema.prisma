@@ -194,6 +194,24 @@ model HumanReviewQueue {
   createdAt      DateTime  @default(now())
 }
 
+/// Tracks token usage and estimated cost for every AI API call made by the platform.
+/// Used for the internal usage/cost dashboard.
+model ApiUsage {
+  id               String   @id @default(cuid())
+  /// Display name: "Claude Haiku" | "GPT-4o-mini" | "Gemini Flash" | "Mistral Small" | "Cerebras/Qwen3" | "Embedding"
+  model            String
+  inputTokens      Int
+  outputTokens     Int
+  /// Estimated cost in USD based on known pricing at time of implementation
+  estimatedCostUsd Float
+  /// "verification" | "generation" | "embedding"
+  context          String   @default("verification")
+  createdAt        DateTime @default(now())
+
+  @@index([model])
+  @@index([createdAt])
+}
+
 /// Text embedding for each proof — used for RAG context in AI verification.
 /// Embedding stored as JSON-encoded float array (migrates to pgvector later).
 model ProofEmbedding {

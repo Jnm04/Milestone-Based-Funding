@@ -84,6 +84,7 @@ export default function InternalLayout({ children }: { children: React.ReactNode
           { href: "/internal/generate", label: "Generate" },
           { href: "/internal/dataset", label: "Dataset" },
           { href: "/internal/graph", label: "Brain Map" },
+          { href: "/internal/usage", label: "Usage" },
         ].map(({ href, label }) => (
           <a key={href} href={href} style={{ color: "#A89B8C", fontSize: 13, textDecoration: "none" }}
             onMouseEnter={(e) => (e.currentTarget.style.color = "#EDE6DD")}
