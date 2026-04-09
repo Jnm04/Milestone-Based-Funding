@@ -224,6 +224,23 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleRegisterWebhook() {
+    setTgLoading(true);
+    try {
+      const res = await fetch("/api/telegram/setup-webhook", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed");
+      toast.success("Telegram webhook activated! You can now connect your account.");
+      // Reload status
+      const s = await fetch("/api/telegram/connect").then((r) => r.json());
+      setTgStatus(s);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to activate webhook");
+    } finally {
+      setTgLoading(false);
+    }
+  }
+
   async function handleTelegramDisconnect() {
     setTgLoading(true);
     try {
@@ -592,11 +609,27 @@ export default function ProfilePage() {
           {/* Telegram Notifications */}
           <SectionCard title="Telegram Notifications" subtitle="Get instant push notifications directly in Telegram — no inbox required.">
             {tgStatus && !tgStatus.configured ? (
-              <div className="flex flex-col gap-2 p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.15)" }}>
-                <span className="text-sm font-medium" style={{ color: "#D4B896" }}>Coming soon</span>
-                <p className="text-xs" style={{ color: "#A89B8C" }}>
-                  Telegram notifications will be available once the bot is activated. Check back soon!
-                </p>
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2 p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.15)" }}>
+                  <span className="text-sm font-medium" style={{ color: "#D4B896" }}>Bot not yet activated</span>
+                  <p className="text-xs leading-relaxed" style={{ color: "#A89B8C" }}>
+                    Set up in 2 minutes — completely free:
+                  </p>
+                  <ol className="flex flex-col gap-1.5 text-xs" style={{ color: "#A89B8C" }}>
+                    <li>1. Open Telegram → search <strong style={{ color: "#D4B896" }}>@BotFather</strong> → send <code style={{ color: "#C4704B" }}>/newbot</code></li>
+                    <li>2. Choose a name (e.g. <em>Cascrow</em>) and a username ending in <em>bot</em></li>
+                    <li>3. Copy the token BotFather gives you</li>
+                    <li>4. Add these 3 env vars in your Vercel project settings:</li>
+                  </ol>
+                  <div className="flex flex-col gap-1 p-3 rounded-lg font-mono text-xs select-all" style={{ background: "rgba(0,0,0,0.3)", color: "#EDE6DD" }}>
+                    <span>TELEGRAM_BOT_TOKEN=<span style={{ color: "#C4704B" }}>your-token-here</span></span>
+                    <span>TELEGRAM_BOT_USERNAME=<span style={{ color: "#C4704B" }}>YourBotUsername</span></span>
+                    <span>TELEGRAM_WEBHOOK_SECRET=<span style={{ color: "#C4704B" }}>any-random-string</span></span>
+                  </div>
+                  <p className="text-xs" style={{ color: "#A89B8C" }}>
+                    After adding the env vars and redeploying, come back here to activate the webhook with one click.
+                  </p>
+                </div>
               </div>
             ) : tgStatus?.connected ? (
               <div className="flex flex-col gap-4">
@@ -625,8 +658,21 @@ export default function ProfilePage() {
               </div>
             ) : (
               <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.12)" }}>
+                  <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#A89B8C" }}>Step 1 — Activate webhook (once)</span>
+                  <p className="text-xs" style={{ color: "#A89B8C" }}>Register the bot with Telegram so it can receive messages. Only needed once after deploying.</p>
+                  <button
+                    type="button"
+                    disabled={tgLoading}
+                    onClick={handleRegisterWebhook}
+                    className="self-start text-xs px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-50"
+                    style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.3)", color: "#C4704B" }}
+                  >
+                    {tgLoading ? "Activating…" : "Activate Webhook"}
+                  </button>
+                </div>
                 <p className="text-sm" style={{ color: "#A89B8C" }}>
-                  Click below to generate a one-time link. Open it in Telegram to connect your account.
+                  <strong style={{ color: "#EDE6DD" }}>Step 2</strong> — Generate a one-time link and open it in Telegram to connect your account.
                 </p>
                 {tgDeepLink ? (
                   <div className="flex flex-col gap-3">
