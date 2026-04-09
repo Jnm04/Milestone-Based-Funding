@@ -159,7 +159,7 @@ export default function DatasetPage() {
                   </p>
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 11, color: "#A89B8C" }}>{new Date(e.createdAt).toLocaleDateString()}</span>
-                    <span style={{ fontSize: 11, color: "#A89B8C" }}>Consensus: {e.consensusLevel}/5</span>
+                    <span style={{ fontSize: 11, color: "#A89B8C" }}>Consensus: {e.consensusLevel}/{e.modelVotes.length || 5}</span>
                     <span style={{ fontSize: 11, color: "#A89B8C" }}>{SOURCE_LABELS[e.labelSource] ?? e.labelSource}</span>
                     {e.fraudType && <span style={{ fontSize: 11, color: "#f97316" }}>{e.fraudType}</span>}
                   </div>

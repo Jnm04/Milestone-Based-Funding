@@ -166,7 +166,10 @@ function combineResults(results: { model: string; result: AIVerificationResult }
   const votesummary = noNames
     ? `YES: ${yesNames} | NO: ${noNames}`
     : `YES: ${yesNames}`;
-  const reasoning = `${yesVoters.length}/5 models approved (${votesummary}). ${primaryReasoning}`;
+  const totalResponded = results.length;
+  const failedCount = 5 - totalResponded;
+  const failedNote = failedCount > 0 ? ` (${failedCount} model${failedCount > 1 ? "s" : ""} failed to respond)` : "";
+  const reasoning = `${yesVoters.length}/${totalResponded} models approved${failedNote} (${votesummary}). ${primaryReasoning}`;
 
   const modelVotes: ModelVote[] = results.map((r) => ({
     model: r.model,

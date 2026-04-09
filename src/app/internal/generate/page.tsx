@@ -286,7 +286,7 @@ export default function GeneratePage() {
                     {r.decision}
                   </span>
                   <span style={{ fontSize: 12, fontWeight: 600, color: consensusColor(r.consensusLevel), whiteSpace: "nowrap" }}>
-                    {r.consensusLevel}/5
+                    {r.consensusLevel}/{r.modelVotes.length || 5}
                   </span>
                   <button onClick={() => toggleExpand(i)} style={{ background: "none", border: "none", color: "#A89B8C", cursor: "pointer", fontSize: 11, padding: "0 4px" }}>
                     {isOpen ? "▲" : "▼"}

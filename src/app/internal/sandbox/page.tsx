@@ -200,7 +200,7 @@ export default function SandboxPage() {
               </span>
               <div style={{ display: "flex", gap: 12 }}>
                 <span style={{ fontSize: 13, color: "#A89B8C" }}>Confidence: <strong style={{ color: "#EDE6DD" }}>{result.confidence}%</strong></span>
-                <span style={{ fontSize: 13, color: "#A89B8C" }}>Consensus: <strong style={{ color: "#EDE6DD" }}>{result.consensusLevel}/5</strong></span>
+                <span style={{ fontSize: 13, color: "#A89B8C" }}>Consensus: <strong style={{ color: "#EDE6DD" }}>{result.consensusLevel}/{result.modelVotes.length || 5}</strong></span>
               </div>
             </div>
             <p style={{ fontSize: 13, color: "#C8BEB4", lineHeight: 1.6, margin: 0 }}>{result.reasoning}</p>
