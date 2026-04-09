@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { verifyMilestone, verifyMilestoneImage, mockVerifyMilestone, categorizeFile, VERIFICATION_PROMPT_HASH } from "@/services/ai/verifier.service";
 import { storeBrainData } from "@/services/brain/training.service";
+import { buildEnrichmentContext } from "@/services/brain/proof-enrichment.service";
 import { releaseMilestone } from "@/services/evm/escrow.service";
 import { sendPendingReviewEmail, sendRejectedEmail, sendVerifiedEmail, sendMilestoneCompletedInvestorEmail, sendFulfillmentKeyEmail } from "@/lib/email";
 import { contractIdToBytes32 } from "@/services/evm/escrow.service";
@@ -60,6 +61,17 @@ export async function POST(request: NextRequest) {
     const hasApiKey = !!process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY !== "sk-ant-...";
     const category = categorizeFile("", proof.fileName);
 
+    // Build enrichment context in parallel (URL checks, GitHub analysis, duplicate detection).
+    // This runs regardless of file type since the milestone text may contain links.
+    // buildEnrichmentContext never throws — returns "" on any failure.
+    const enrichmentContext = hasApiKey
+      ? await buildEnrichmentContext({
+          proofText: extractedText,
+          milestoneText: milestoneTitle,
+          contractCreatedAt: contract.createdAt,
+        })
+      : "";
+
     let result;
     if (!hasApiKey) {
       result = mockVerifyMilestone({ milestone: milestoneTitle, extractedText });
@@ -79,7 +91,7 @@ export async function POST(request: NextRequest) {
       };
       const mimeType = mimeMap[ext] ?? "image/jpeg";
       try {
-        result = await verifyMilestoneImage({ milestone: milestoneTitle, imageBuffer, mimeType });
+        result = await verifyMilestoneImage({ milestone: milestoneTitle, imageBuffer, mimeType, enrichmentContext });
       } catch (imgErr) {
         // Gemini sometimes rejects images (format, size, transient error) — fall back to Claude-only
         console.warn("[verify] Image verification failed, falling back to Claude-only:", imgErr);
@@ -90,6 +102,7 @@ export async function POST(request: NextRequest) {
       result = await verifyMilestone({
         milestone: milestoneTitle,
         extractedText: extractedText || "(No text could be extracted from this document.)",
+        enrichmentContext,
       });
     }
 
