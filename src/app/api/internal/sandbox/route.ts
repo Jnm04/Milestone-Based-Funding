@@ -8,6 +8,7 @@ import {
   AIVerificationResultWithVotes,
 } from "@/services/ai/verifier.service";
 import { storeBrainData } from "@/services/brain/training.service";
+import { ModelVote } from "@/services/brain/training.service";
 
 function isAuthorized(req: NextRequest) {
   const key = req.headers.get("x-internal-key")?.trim();
@@ -27,6 +28,12 @@ export async function POST(req: NextRequest) {
   let fileName: string | null = null;
   let fileMimeType: string | null = null;
 
+  // Pre-computed result from a previous run — sent back by the frontend on save
+  let precomputedVotes: ModelVote[] | null = null;
+  let precomputedExtractedText: string | null = null;
+  let precomputedConsensusLevel: number | null = null;
+  let precomputedDecision: "YES" | "NO" | null = null;
+
   if (contentType.includes("multipart/form-data")) {
     const formData = await req.formData();
     milestoneText = (formData.get("milestoneText") as string) ?? "";
@@ -39,14 +46,51 @@ export async function POST(req: NextRequest) {
       fileName = file.name;
       fileMimeType = file.type;
     }
+    // Pre-computed fields (sent as form fields on save-only requests)
+    const votesRaw = formData.get("precomputedVotes") as string | null;
+    if (votesRaw) {
+      try { precomputedVotes = JSON.parse(votesRaw); } catch { /* ignore */ }
+    }
+    precomputedExtractedText = (formData.get("precomputedExtractedText") as string | null) ?? null;
+    const cl = formData.get("precomputedConsensusLevel");
+    if (cl !== null) precomputedConsensusLevel = Number(cl);
+    const dec = formData.get("precomputedDecision") as string | null;
+    if (dec === "YES" || dec === "NO") precomputedDecision = dec;
   } else {
     const body = await req.json();
     milestoneText = body.milestoneText ?? "";
     proofText = body.proofText ?? "";
     saveToDataset = body.saveToDataset ?? false;
+    if (body.precomputedVotes) precomputedVotes = body.precomputedVotes;
+    if (body.precomputedExtractedText != null) precomputedExtractedText = body.precomputedExtractedText;
+    if (body.precomputedConsensusLevel != null) precomputedConsensusLevel = Number(body.precomputedConsensusLevel);
+    if (body.precomputedDecision === "YES" || body.precomputedDecision === "NO") precomputedDecision = body.precomputedDecision;
   }
 
   if (!milestoneText) return NextResponse.json({ error: "milestoneText required" }, { status: 400 });
+
+  // ── Save-only path: frontend sends back the already-computed result ───────
+  // This avoids re-running verification (which could produce a different vote split).
+  if (
+    saveToDataset &&
+    precomputedVotes &&
+    precomputedExtractedText !== null &&
+    precomputedConsensusLevel !== null &&
+    precomputedDecision !== null
+  ) {
+    const sandboxProofId = `sandbox_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    void storeBrainData({
+      proofId: sandboxProofId,
+      milestoneText,
+      proofText: precomputedExtractedText,
+      modelVotes: precomputedVotes,
+      consensusLevel: precomputedConsensusLevel,
+      finalDecision: precomputedDecision,
+    });
+    return NextResponse.json({ saved: true });
+  }
+
+  // ── Verification path ─────────────────────────────────────────────────────
   if (!fileBuffer && !proofText) return NextResponse.json({ error: "file or proofText required" }, { status: 400 });
 
   let result: AIVerificationResultWithVotes;
@@ -73,7 +117,8 @@ export async function POST(req: NextRequest) {
     result = await verifyMilestone({ milestone: milestoneText, extractedText: proofText });
   }
 
-  if (saveToDataset) {
+  // Auto-save if requested (text-only, no file — result is deterministic enough)
+  if (saveToDataset && !fileBuffer) {
     const sandboxProofId = `sandbox_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     void storeBrainData({
       proofId: sandboxProofId,
@@ -91,6 +136,8 @@ export async function POST(req: NextRequest) {
     confidence: result.confidence,
     modelVotes: result.modelVotes,
     consensusLevel: result.consensusLevel,
+    // Return full extracted text so the frontend can send it back on save
+    extractedText,
     extractedTextPreview: extractedText.slice(0, 600),
   });
 }

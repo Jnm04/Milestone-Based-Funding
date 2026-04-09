@@ -9,6 +9,7 @@ interface SandboxResult {
   confidence: number;
   modelVotes: ModelVote[];
   consensusLevel: number;
+  extractedText?: string;
   extractedTextPreview?: string;
 }
 
@@ -75,27 +76,23 @@ export default function SandboxPage() {
   }
 
   async function saveToDataset() {
-    if (!milestoneText.trim() || (!file && !proofText.trim())) return;
+    if (!result) return;
     setSaving(true);
 
-    if (file) {
-      const fd = new FormData();
-      fd.append("milestoneText", milestoneText);
-      fd.append("proofText", proofText);
-      fd.append("saveToDataset", "true");
-      fd.append("file", file);
-      await fetch("/api/internal/sandbox", {
-        method: "POST",
-        headers: { "x-internal-key": key() },
-        body: fd,
-      });
-    } else {
-      await fetch("/api/internal/sandbox", {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-internal-key": key() },
-        body: JSON.stringify({ milestoneText, proofText, saveToDataset: true }),
-      });
-    }
+    // Send the already-computed result back — no re-verification, no vote drift.
+    await fetch("/api/internal/sandbox", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-internal-key": key() },
+      body: JSON.stringify({
+        milestoneText,
+        proofText: result.extractedText ?? proofText,
+        saveToDataset: true,
+        precomputedVotes: result.modelVotes,
+        precomputedConsensusLevel: result.consensusLevel,
+        precomputedDecision: result.decision,
+        precomputedExtractedText: result.extractedText ?? proofText,
+      }),
+    });
 
     setSaving(false);
     setSaved(true);
