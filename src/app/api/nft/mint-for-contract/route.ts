@@ -94,8 +94,7 @@ export async function POST(request: NextRequest) {
       contractId,
       milestoneId: milestoneId ?? undefined,
       event: "NFT_MINTED",
-      xrplTxHash: nft.txHash,
-      metadata: { tokenId: nft.tokenId, explorerUrl: nft.explorerUrl, manual: true },
+      metadata: { tokenId: nft.tokenId, txHash: nft.txHash, explorerUrl: nft.explorerUrl, manual: true },
     });
 
     return NextResponse.json({ ok: true, tokenId: nft.tokenId, explorerUrl: nft.explorerUrl });

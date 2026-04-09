@@ -11,7 +11,8 @@ export type AuditEvent =
   | "ESCROW_CANCELLED"
   | "PROOF_RESUBMITTED"
   | "MANUAL_REVIEW_APPROVED"
-  | "MANUAL_REVIEW_REJECTED";
+  | "MANUAL_REVIEW_REJECTED"
+  | "NFT_MINTED";
 
 interface AuditParams {
   contractId: string;
