@@ -11,8 +11,10 @@ export function middleware(request: NextRequest) {
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   // Disable browser features we don't use
   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-  // Force HTTPS for 1 year
-  response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  // Force HTTPS for 1 year + preload list eligibility
+  response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+  // Isolate browsing context from cross-origin windows
+  response.headers.set("Cross-Origin-Opener-Policy", "same-origin");
 
   return response;
 }
