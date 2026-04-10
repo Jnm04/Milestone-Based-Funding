@@ -32,7 +32,7 @@ export async function GET(
   const metadata = {
     name: `Cascrow Certificate — ${title.slice(0, 60)}`,
     description: `Milestone verified by Claude AI on ${completedAt}. Amount: $${amountUSD} RLUSD. Platform: Cascrow (cascrow.xyz).`,
-    image: `${base}/api/nft/cert-image/${contractId}`,
+    image: `${base}/api/nft/cert-image/${contractId}?format=png`,
     external_url: `${base}/contract/${contractId}`,
     attributes: [
       { trait_type: "Platform", value: "Cascrow" },

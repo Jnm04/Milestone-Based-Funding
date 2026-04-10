@@ -27,6 +27,7 @@ export function NftCertificate({
   const explorer = isMainnet ? "https://xrpl.org" : "https://testnet.xrpl.org";
   const explorerNft = `${explorer}/nft/${tokenId}`;
   const explorerTx = `${explorer}/transactions/${txHash}`;
+  const xrpCafeUrl = isMainnet ? `https://xrp.cafe/nft/${tokenId}` : null;
   const date = new Date(completedAt).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
@@ -252,6 +253,24 @@ export function NftCertificate({
             >
               View NFT ↗
             </a>
+            {xrpCafeUrl && (
+              <a
+                href={xrpCafeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontSize: 10,
+                  color: "#C4704B",
+                  textDecoration: "none",
+                  letterSpacing: "0.08em",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                xrp.cafe ↗
+              </a>
+            )}
           </div>
         </div>
       </div>
