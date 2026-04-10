@@ -342,7 +342,7 @@ export default function LandingPage() {
       <script dangerouslySetInnerHTML={{ __html: scrollNavScript }} />
       <nav
         id="cs-nav"
-        className="fixed top-0 left-0 right-0 z-40 transition-all duration-300"
+        className="fixed top-0 left-0 right-0 z-40 transition-[background-color,border-color] duration-300"
         style={{ background: "transparent", borderBottom: "1px solid transparent" }}
       >
         <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
@@ -558,7 +558,7 @@ export default function LandingPage() {
             ].map((step, i) => (
               <ScrollReveal key={step.num} delay={i * 120} className="h-full">
                 <div
-                  className="flex flex-col gap-5 p-6 rounded-xl transition-all"
+                  className="flex flex-col gap-5 p-6 rounded-xl transition-colors"
                   style={{
                     background: "rgba(255,255,255,0.02)",
                     border: "1px solid rgba(196,112,75,0.1)",
@@ -741,7 +741,7 @@ export default function LandingPage() {
             ].map((item, i) => (
               <ScrollReveal key={item.title} delay={i * 100} className="h-full">
                 <div
-                  className="flex flex-col items-center text-center gap-5 p-6 rounded-xl transition-all"
+                  className="flex flex-col items-center text-center gap-5 p-6 rounded-xl transition-colors"
                   style={{ background: "transparent", border: "1px solid transparent" }}
                   onMouseOver={(e) => {
                     const el = e.currentTarget as HTMLDivElement;

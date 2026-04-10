@@ -64,6 +64,12 @@
     "xrpl": "^4.6.0",
     "xumm-sdk": "^1.11.2"
   },
+  "browserslist": [
+    "chrome >= 90",
+    "firefox >= 90",
+    "safari >= 14",
+    "edge >= 90"
+  ],
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^7.0.0",
     "@openzeppelin/contracts": "^5.6.1",

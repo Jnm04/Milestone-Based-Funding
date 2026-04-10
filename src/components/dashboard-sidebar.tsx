@@ -97,7 +97,7 @@ export function DashboardSidebar({ role }: SidebarProps) {
             return (
               <Link key={item.href} href={getHref(item)}>
                 <div
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors"
                   style={{
                     background: isActive ? "rgba(196,112,75,0.1)" : "transparent",
                     color: isActive ? "#EDE6DD" : "#A89B8C",
@@ -132,7 +132,7 @@ export function DashboardSidebar({ role }: SidebarProps) {
           </div>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg w-full text-left transition-all"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg w-full text-left transition-colors"
             style={{ color: "#A89B8C" }}
             onMouseOver={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#EDE6DD"; }}
             onMouseOut={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#A89B8C"; }}

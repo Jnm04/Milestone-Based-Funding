@@ -42,7 +42,7 @@ function RoleCard({
     <button
       type="button"
       onClick={onClick}
-      className="flex-1 flex flex-col items-start gap-2 p-4 rounded-xl text-left transition-all"
+      className="flex-1 flex flex-col items-start gap-2 p-4 rounded-xl text-left transition-colors"
       style={{
         background: active ? "rgba(196,112,75,0.08)" : "rgba(255,255,255,0.02)",
         border: active ? "1px solid #C4704B" : "1px solid rgba(196,112,75,0.15)",
