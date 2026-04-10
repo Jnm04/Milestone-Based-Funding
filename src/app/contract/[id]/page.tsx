@@ -269,7 +269,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           const isCompleted = contract.status === "COMPLETED" ||
             contract.milestones.some((m) => m.status === "COMPLETED");
 
-          const isMainnet = process.env.NEXT_PUBLIC_XRPL_NETWORK === "mainnet";
+          const isMainnet = process.env.XRPL_NETWORK === "mainnet";
           const certs: Array<{
             tokenId: string; txHash: string; title: string;
             amountUSD: string; completedAt: string; imageUrl?: string;
