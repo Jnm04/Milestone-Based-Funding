@@ -1,13 +1,17 @@
 import * as xrpl from "xrpl";
+import { uploadCertificateAssets } from "./cert-image.service";
 
-const XRPL_HTTP =
-  process.env.XRPL_HTTP_URL ?? "https://s.altnet.rippletest.net:51234";
-const XRPL_EXPLORER = "https://testnet.xrpl.org";
+const IS_MAINNET = process.env.XRPL_NETWORK === "mainnet";
+const XRPL_HTTP = process.env.XRPL_HTTP_URL ?? (IS_MAINNET
+  ? "https://xrplcluster.com"
+  : "https://s.altnet.rippletest.net:51234");
+const XRPL_EXPLORER = IS_MAINNET ? "https://xrpl.org" : "https://testnet.xrpl.org";
 
 export interface MintResult {
   tokenId: string;
   txHash: string;
   explorerUrl: string;
+  imageUrl?: string;
 }
 
 async function rpc(method: string, params: Record<string, unknown>) {
@@ -55,19 +59,39 @@ export async function mintCompletionNFT(params: {
     (feeInfo.result as { drops: { open_ledger_fee?: string } }).drops
       .open_ledger_fee ?? "12";
 
-  // URI must be ≤ 256 bytes. Use short keys and truncate tx hash to stay within limit.
-  const metadata: Record<string, string> = {
-    p: "cascrow",
-    c: params.contractId,
-    m: params.milestoneTitle.slice(0, 60),
-    a: params.amountUSD,
-    t: params.completedAt.toISOString().slice(0, 10),
-  };
-  if (params.evmTxHash) metadata.tx = params.evmTxHash.slice(0, 20);
+  // Upload SVG certificate image + metadata JSON to Vercel Blob.
+  // If upload fails we fall back to inline JSON so minting still works.
+  const certAssets = await uploadCertificateAssets({
+    contractId: params.contractId,
+    milestoneTitle: params.milestoneTitle,
+    amountUSD: params.amountUSD,
+    completedAt: params.completedAt,
+    evmTxHash: params.evmTxHash,
+  });
 
-  const uri = Buffer.from(JSON.stringify(metadata))
-    .toString("hex")
-    .toUpperCase();
+  // URI: prefer metadata URL (enables visual display on XRPL marketplaces).
+  // Fallback: compact inline JSON (max 256 bytes via short keys).
+  let uriString: string;
+  if (certAssets?.metadataUrl) {
+    uriString = certAssets.metadataUrl;
+  } else {
+    const fallback: Record<string, string> = {
+      p: "cascrow",
+      c: params.contractId,
+      m: params.milestoneTitle.slice(0, 60),
+      a: params.amountUSD,
+      t: params.completedAt.toISOString().slice(0, 10),
+    };
+    if (params.evmTxHash) fallback.tx = params.evmTxHash.slice(0, 20);
+    uriString = JSON.stringify(fallback);
+  }
+
+  // XRPL URI field must be hex-encoded, max 512 hex chars (= 256 bytes).
+  const uriHex = Buffer.from(uriString).toString("hex").toUpperCase();
+  if (uriHex.length > 512) {
+    throw new Error(`NFT URI too long: ${uriHex.length} hex chars (max 512)`);
+  }
+  const uri = uriHex;
 
   const tx = {
     TransactionType: "NFTokenMint" as const,
@@ -113,6 +137,8 @@ export async function mintCompletionNFT(params: {
 
   // Find by matching URI
   const match = nfts.find((n) => n.URI === uri);
+  const imageUrl = certAssets?.imageUrl ?? undefined;
+
   if (!match) {
     // Fallback: return most recently added (last in list)
     const last = nfts[nfts.length - 1];
@@ -121,6 +147,7 @@ export async function mintCompletionNFT(params: {
       tokenId: last.NFTokenID,
       txHash,
       explorerUrl: `${XRPL_EXPLORER}/nft/${last.NFTokenID}`,
+      imageUrl,
     };
   }
 
@@ -128,5 +155,6 @@ export async function mintCompletionNFT(params: {
     tokenId: match.NFTokenID,
     txHash,
     explorerUrl: `${XRPL_EXPLORER}/nft/${match.NFTokenID}`,
+    imageUrl,
   };
 }

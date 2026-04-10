@@ -77,6 +77,7 @@ model Contract {
   evmTxHash           String?   // EVM: tx hash of the fundMilestone transaction
   nftTokenId          String?   // XRPL: NFT token ID minted on completion
   nftTxHash           String?   // XRPL: tx hash of the NFTokenMint transaction
+  nftImageUrl         String?   // XRPL: public URL of the certificate SVG image
   cancelAfter         DateTime
   inviteLink          String?        @unique
   proofs              Proof[]
@@ -135,6 +136,7 @@ model Milestone {
   evmTxHash         String?   // EVM: tx hash of the fundMilestone transaction
   nftTokenId        String?   // XRPL: NFT token ID minted on completion
   nftTxHash         String?   // XRPL: tx hash of the NFTokenMint transaction
+  nftImageUrl       String?   // XRPL: public URL of the certificate SVG image
   proofs            Proof[]
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt

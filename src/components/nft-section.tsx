@@ -9,6 +9,7 @@ interface Cert {
   title: string;
   amountUSD: string;
   completedAt: string;
+  imageUrl?: string;
 }
 
 interface NftSectionProps {
@@ -16,9 +17,10 @@ interface NftSectionProps {
   milestoneId?: string | null;
   certs: Cert[];
   isCompleted: boolean;
+  isMainnet?: boolean;
 }
 
-export function NftSection({ contractId, milestoneId, certs: initialCerts, isCompleted }: NftSectionProps) {
+export function NftSection({ contractId, milestoneId, certs: initialCerts, isCompleted, isMainnet }: NftSectionProps) {
   const [certs, setCerts] = useState<Cert[]>(initialCerts);
   const [minting, setMinting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +75,8 @@ export function NftSection({ contractId, milestoneId, certs: initialCerts, isCom
             milestoneTitle={c.title}
             amountUSD={c.amountUSD}
             completedAt={c.completedAt}
+            imageUrl={c.imageUrl}
+            isMainnet={isMainnet}
           />
         ))}
       </div>

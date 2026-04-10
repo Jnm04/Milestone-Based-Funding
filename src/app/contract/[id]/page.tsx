@@ -267,9 +267,10 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           const isCompleted = contract.status === "COMPLETED" ||
             contract.milestones.some((m) => m.status === "COMPLETED");
 
+          const isMainnet = process.env.NEXT_PUBLIC_XRPL_NETWORK === "mainnet";
           const certs: Array<{
             tokenId: string; txHash: string; title: string;
-            amountUSD: string; completedAt: string;
+            amountUSD: string; completedAt: string; imageUrl?: string;
           }> = [];
 
           if (contract.milestones.length > 0) {
@@ -279,6 +280,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
                   tokenId: ms.nftTokenId, txHash: ms.nftTxHash,
                   title: ms.title, amountUSD: ms.amountUSD.toString(),
                   completedAt: ms.updatedAt.toISOString(),
+                  imageUrl: ms.nftImageUrl ?? undefined,
                 });
               }
             }
@@ -287,6 +289,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
               tokenId: contract.nftTokenId, txHash: contract.nftTxHash,
               title: contract.milestone, amountUSD: contract.amountUSD.toString(),
               completedAt: contract.updatedAt.toISOString(),
+              imageUrl: contract.nftImageUrl ?? undefined,
             });
           }
 
@@ -302,6 +305,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
               milestoneId={completedMilestone?.id ?? null}
               certs={certs}
               isCompleted={isCompleted}
+              isMainnet={isMainnet}
             />
           );
         })()}

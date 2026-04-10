@@ -81,12 +81,12 @@ export async function POST(request: NextRequest) {
     if (milestoneId) {
       await prisma.milestone.update({
         where: { id: milestoneId },
-        data: { nftTokenId: nft.tokenId, nftTxHash: nft.txHash },
+        data: { nftTokenId: nft.tokenId, nftTxHash: nft.txHash, nftImageUrl: nft.imageUrl ?? null },
       });
     } else {
       await prisma.contract.update({
         where: { id: contractId },
-        data: { nftTokenId: nft.tokenId, nftTxHash: nft.txHash },
+        data: { nftTokenId: nft.tokenId, nftTxHash: nft.txHash, nftImageUrl: nft.imageUrl ?? null },
       });
     }
 
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
       metadata: { tokenId: nft.tokenId, txHash: nft.txHash, explorerUrl: nft.explorerUrl, manual: true },
     });
 
-    return NextResponse.json({ ok: true, tokenId: nft.tokenId, explorerUrl: nft.explorerUrl });
+    return NextResponse.json({ ok: true, tokenId: nft.tokenId, explorerUrl: nft.explorerUrl, imageUrl: nft.imageUrl ?? null });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[nft/mint-for-contract]", err);

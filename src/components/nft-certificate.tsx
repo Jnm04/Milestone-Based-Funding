@@ -6,6 +6,8 @@ interface NftCertificateProps {
   milestoneTitle: string;
   amountUSD: string;
   completedAt: string; // ISO string
+  imageUrl?: string;   // Public URL of the certificate SVG (from Vercel Blob)
+  isMainnet?: boolean;
 }
 
 function truncate(s: string, head = 8, tail = 6) {
@@ -19,9 +21,12 @@ export function NftCertificate({
   milestoneTitle,
   amountUSD,
   completedAt,
+  imageUrl,
+  isMainnet,
 }: NftCertificateProps) {
-  const explorerNft = `https://testnet.xrpl.org/nft/${tokenId}`;
-  const explorerTx = `https://testnet.xrpl.org/transactions/${txHash}`;
+  const explorer = isMainnet ? "https://xrpl.org" : "https://testnet.xrpl.org";
+  const explorerNft = `${explorer}/nft/${tokenId}`;
+  const explorerTx = `${explorer}/transactions/${txHash}`;
   const date = new Date(completedAt).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
@@ -71,7 +76,23 @@ export function NftCertificate({
         }}
       />
 
-      <div style={{ position: "relative", padding: "24px 24px 20px" }}>
+      {/* Certificate image — shown when available (enables visual display on XRPL marketplaces) */}
+      {imageUrl && (
+        <div style={{ padding: "20px 20px 0" }}>
+          <img
+            src={imageUrl}
+            alt={`Cascrow Certificate — ${milestoneTitle}`}
+            style={{
+              width: "100%",
+              borderRadius: 12,
+              border: "1px solid rgba(212,184,150,0.2)",
+              display: "block",
+            }}
+          />
+        </div>
+      )}
+
+      <div style={{ position: "relative", padding: imageUrl ? "16px 24px 20px" : "24px 24px 20px" }}>
         {/* Header row */}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -180,7 +201,7 @@ export function NftCertificate({
             <span style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#A89B8C" }}>
               Ledger
             </span>
-            <span style={{ fontSize: 11, color: "#EDE6DD" }}>XRPL Testnet</span>
+            <span style={{ fontSize: 11, color: "#EDE6DD" }}>{isMainnet ? "XRP Ledger" : "XRPL Testnet"}</span>
           </div>
         </div>
 
