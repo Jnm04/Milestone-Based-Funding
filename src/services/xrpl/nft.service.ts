@@ -1,11 +1,14 @@
 import * as xrpl from "xrpl";
 import { uploadCertificateAssets } from "./cert-image.service";
 
-const IS_MAINNET = process.env.XRPL_NETWORK === "mainnet";
-const XRPL_HTTP = process.env.XRPL_HTTP_URL ?? (IS_MAINNET
-  ? "https://xrplcluster.com"
-  : "https://s.altnet.rippletest.net:51234");
-const XRPL_EXPLORER = IS_MAINNET ? "https://xrpl.org" : "https://testnet.xrpl.org";
+function getXrplConfig() {
+  const isMainnet = process.env.XRPL_NETWORK === "mainnet";
+  const http = process.env.XRPL_HTTP_URL ?? (isMainnet
+    ? "https://xrplcluster.com"
+    : "https://s.altnet.rippletest.net:51234");
+  const explorer = isMainnet ? "https://xrpl.org" : "https://testnet.xrpl.org";
+  return { http, explorer };
+}
 
 export interface MintResult {
   tokenId: string;
@@ -14,8 +17,8 @@ export interface MintResult {
   imageUrl?: string;
 }
 
-async function rpc(method: string, params: Record<string, unknown>) {
-  const res = await fetch(XRPL_HTTP, {
+async function rpc(url: string, method: string, params: Record<string, unknown>) {
+  const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ method, params: [params] }),
@@ -40,6 +43,8 @@ export async function mintCompletionNFT(params: {
   completedAt: Date;
   evmTxHash?: string | null;
 }): Promise<MintResult> {
+  const { http: XRPL_HTTP, explorer: XRPL_EXPLORER } = getXrplConfig();
+
   const seed = process.env.XRPL_PLATFORM_SEED;
   if (!seed) throw new Error("XRPL_PLATFORM_SEED not configured");
 
@@ -47,8 +52,8 @@ export async function mintCompletionNFT(params: {
 
   // Fetch account info + fee in parallel
   const [accountInfo, feeInfo] = await Promise.all([
-    rpc("account_info", { account: wallet.address, ledger_index: "current" }),
-    rpc("fee", {}),
+    rpc(XRPL_HTTP, "account_info", { account: wallet.address, ledger_index: "current" }),
+    rpc(XRPL_HTTP, "fee", {}),
   ]);
 
   const sequence = (
@@ -59,9 +64,8 @@ export async function mintCompletionNFT(params: {
     (feeInfo.result as { drops: { open_ledger_fee?: string } }).drops
       .open_ledger_fee ?? "12";
 
-  // Upload SVG certificate image + metadata JSON to Vercel Blob.
-  // If upload fails we fall back to inline JSON so minting still works.
-  const certAssets = await uploadCertificateAssets({
+  // Build certificate image + metadata URLs (served dynamically, no storage needed).
+  const certAssets = uploadCertificateAssets({
     contractId: params.contractId,
     milestoneTitle: params.milestoneTitle,
     amountUSD: params.amountUSD,
@@ -69,22 +73,8 @@ export async function mintCompletionNFT(params: {
     evmTxHash: params.evmTxHash,
   });
 
-  // URI: prefer metadata URL (enables visual display on XRPL marketplaces).
-  // Fallback: compact inline JSON (max 256 bytes via short keys).
-  let uriString: string;
-  if (certAssets?.metadataUrl) {
-    uriString = certAssets.metadataUrl;
-  } else {
-    const fallback: Record<string, string> = {
-      p: "cascrow",
-      c: params.contractId,
-      m: params.milestoneTitle.slice(0, 60),
-      a: params.amountUSD,
-      t: params.completedAt.toISOString().slice(0, 10),
-    };
-    if (params.evmTxHash) fallback.tx = params.evmTxHash.slice(0, 20);
-    uriString = JSON.stringify(fallback);
-  }
+  // URI points to metadata JSON (enables visual display on XRPL marketplaces).
+  const uriString = certAssets.metadataUrl;
 
   // XRPL URI field must be hex-encoded, max 512 hex chars (= 256 bytes).
   const uriHex = Buffer.from(uriString).toString("hex").toUpperCase();
@@ -126,7 +116,7 @@ export async function mintCompletionNFT(params: {
   await new Promise((r) => setTimeout(r, 5000));
 
   // Find the newly minted token by scanning account_nfts
-  const nftsRes = await rpc("account_nfts", {
+  const nftsRes = await rpc(XRPL_HTTP, "account_nfts", {
     account: wallet.address,
     ledger_index: "validated",
   });
@@ -137,7 +127,7 @@ export async function mintCompletionNFT(params: {
 
   // Find by matching URI
   const match = nfts.find((n) => n.URI === uri);
-  const imageUrl = certAssets?.imageUrl ?? undefined;
+  const imageUrl = certAssets.imageUrl;
 
   if (!match) {
     // Fallback: return most recently added (last in list)

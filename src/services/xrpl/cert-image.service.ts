@@ -1,4 +1,4 @@
-import { put } from "@vercel/blob";
+const APP_URL = process.env.NEXTAUTH_URL ?? "https://cascrow.xyz";
 
 export interface CertImageParams {
   contractId: string;
@@ -34,7 +34,7 @@ function wrapText(text: string, maxLen: number): string[] {
   return lines.slice(0, 2); // max 2 lines
 }
 
-function generateCertificateSVG(params: CertImageParams): string {
+export function generateCertificateSVG(params: CertImageParams): string {
   const date = params.completedAt.toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
@@ -148,49 +148,14 @@ export interface CertAssets {
 }
 
 /**
- * Generates a certificate SVG + metadata JSON and uploads both to Vercel Blob.
- * Returns public URLs for both. Falls back gracefully if Blob is unavailable.
+ * Returns public URLs for the certificate image and metadata JSON.
+ * The image is served dynamically via /api/nft/cert-image/[contractId] — no storage needed.
+ * The metadata JSON is served via /api/nft/cert-metadata/[contractId].
  */
-export async function uploadCertificateAssets(params: CertImageParams): Promise<CertAssets | null> {
-  try {
-    const svg = generateCertificateSVG(params);
-    const slug = `${params.contractId.slice(0, 12)}-${Date.now()}`;
-
-    const [imageBlob, metaBlob] = await Promise.all([
-      put(`nft-certs/${slug}.svg`, svg, {
-        access: "public",
-        contentType: "image/svg+xml",
-      }),
-      // Temporary placeholder — we'll overwrite after we have the imageUrl
-      Promise.resolve(null as null),
-    ]);
-
-    const metadata = {
-      name: `Cascrow Certificate — ${params.milestoneTitle.slice(0, 60)}`,
-      description: `Milestone verified by Claude AI on ${params.completedAt.toISOString().slice(0, 10)}. Amount: $${params.amountUSD} RLUSD.`,
-      image: imageBlob.url,
-      external_url: `https://cascrow.xyz/contract/${params.contractId}`,
-      attributes: [
-        { trait_type: "Platform", value: "Cascrow" },
-        { trait_type: "Amount (RLUSD)", value: params.amountUSD },
-        { trait_type: "Milestone", value: params.milestoneTitle.slice(0, 80) },
-        { trait_type: "Completed", value: params.completedAt.toISOString().slice(0, 10) },
-        { trait_type: "Network", value: "XRP Ledger" },
-        { trait_type: "Type", value: "Completion Certificate" },
-      ],
-    };
-
-    void metaBlob; // unused placeholder resolved above
-
-    const metadataBlobResult = await put(
-      `nft-certs/${slug}.json`,
-      JSON.stringify(metadata),
-      { access: "public", contentType: "application/json" }
-    );
-
-    return { imageUrl: imageBlob.url, metadataUrl: metadataBlobResult.url };
-  } catch (err) {
-    console.error("[cert-image] Failed to upload certificate assets:", err);
-    return null;
-  }
+export function uploadCertificateAssets(params: CertImageParams): CertAssets {
+  const base = APP_URL.replace(/\/$/, "");
+  return {
+    imageUrl: `${base}/api/nft/cert-image/${params.contractId}`,
+    metadataUrl: `${base}/api/nft/cert-metadata/${params.contractId}`,
+  };
 }
