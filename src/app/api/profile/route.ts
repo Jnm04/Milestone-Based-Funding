@@ -32,16 +32,32 @@ export async function PUT(request: NextRequest) {
     notifyFunded, notifyVerified, notifyRejected,
   } = body;
 
+  // Input validation — max lengths and strip HTML tags
+  const strip = (v: unknown, max: number): string | null => {
+    if (typeof v !== "string") return null;
+    const trimmed = v.trim().replace(/<[^>]*>/g, "").slice(0, max);
+    return trimmed || null;
+  };
+  const validatedName = strip(name, 100);
+  const validatedCompany = strip(companyName, 100);
+  const validatedDepartment = strip(department, 100);
+  const validatedJobTitle = strip(jobTitle, 100);
+  const validatedPhone = strip(phone, 30);
+  const validatedBio = strip(bio, 500);
+  // Website: only allow http/https URLs
+  const rawWebsite = strip(website, 200);
+  const validatedWebsite = rawWebsite && /^https?:\/\/.+/.test(rawWebsite) ? rawWebsite : null;
+
   const user = await prisma.user.update({
     where: { id: session.user.id },
     data: {
-      name: name?.trim() || null,
-      companyName: companyName?.trim() || null,
-      department: department?.trim() || null,
-      jobTitle: jobTitle?.trim() || null,
-      phone: phone?.trim() || null,
-      bio: bio?.trim() || null,
-      website: website?.trim() || null,
+      name: validatedName,
+      companyName: validatedCompany,
+      department: validatedDepartment,
+      jobTitle: validatedJobTitle,
+      phone: validatedPhone,
+      bio: validatedBio,
+      website: validatedWebsite,
       ...(notifyProofSubmitted !== undefined && { notifyProofSubmitted }),
       ...(notifyPendingReview !== undefined && { notifyPendingReview }),
       ...(notifyMilestoneCompleted !== undefined && { notifyMilestoneCompleted }),

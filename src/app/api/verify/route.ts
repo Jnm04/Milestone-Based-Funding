@@ -14,6 +14,23 @@ import { fireWebhook } from "@/services/webhook/webhook.service";
 // Allow up to 60s — XRPL WebSocket + NFT mint can take 10-20s (requires Vercel Pro for >10s)
 export const maxDuration = 60;
 
+// Rate limiting: max 5 verify calls per user per 10 minutes
+const verifyRateLimit = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_MAX = 5;
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+
+function checkRateLimit(key: string): boolean {
+  const now = Date.now();
+  const entry = verifyRateLimit.get(key);
+  if (!entry || now > entry.resetAt) {
+    verifyRateLimit.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return false;
+  entry.count++;
+  return true;
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Accept either an internal server call (CRON_SECRET) or a logged-in session
@@ -23,6 +40,13 @@ export async function POST(request: NextRequest) {
       const session = await getServerSession(authOptions);
       if (!session) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      // Rate limit by user ID
+      if (!checkRateLimit(session.user.id)) {
+        return NextResponse.json(
+          { error: "Too many verification requests. Please wait 10 minutes." },
+          { status: 429, headers: { "Retry-After": "600" } }
+        );
       }
     }
 
