@@ -2,11 +2,12 @@ import * as xrpl from "xrpl";
 import { uploadCertificateAssets } from "./cert-image.service";
 
 function getXrplConfig() {
-  const isMainnet = process.env.XRPL_NETWORK === "mainnet";
-  const http = process.env.XRPL_HTTP_URL ?? (isMainnet
-    ? "https://xrplcluster.com"
-    : "https://s.altnet.rippletest.net:51234");
-  const explorer = isMainnet ? "https://xrpl.org" : "https://testnet.xrpl.org";
+  // Default to mainnet — only use testnet if explicitly set
+  const isTestnet = process.env.XRPL_NETWORK === "testnet" || process.env.NEXT_PUBLIC_XRPL_NETWORK === "testnet";
+  const http = process.env.XRPL_HTTP_URL ?? (isTestnet
+    ? "https://s.altnet.rippletest.net:51234"
+    : "https://xrplcluster.com");
+  const explorer = isTestnet ? "https://testnet.xrpl.org" : "https://xrpl.org";
   return { http, explorer };
 }
 
