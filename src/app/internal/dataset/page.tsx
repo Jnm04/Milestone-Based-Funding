@@ -69,6 +69,8 @@ export default function DatasetPage() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [exporting, setExporting] = useState<"jsonl" | "csv" | null>(null);
+  const [bootstrapping, setBootstrapping] = useState(false);
+  const [bootstrapResult, setBootstrapResult] = useState<{ saved: number; queued: number; generated: number } | null>(null);
 
   const key = () => sessionStorage.getItem("cascrow_internal_key") ?? "";
 
@@ -88,6 +90,24 @@ export default function DatasetPage() {
       else next.add(id);
       return next;
     });
+  }
+
+  async function runBootstrap() {
+    setBootstrapping(true);
+    setBootstrapResult(null);
+    try {
+      const res = await fetch("/api/internal/dataset/bootstrap", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-internal-key": key() },
+        body: JSON.stringify({ pairsPerCombo: 2 }),
+      });
+      const d = await res.json() as { saved?: number; queued?: number; generated?: number; error?: string };
+      if (d.error) { alert(d.error); return; }
+      setBootstrapResult({ saved: d.saved ?? 0, queued: d.queued ?? 0, generated: d.generated ?? 0 });
+      loadEntries();
+    } finally {
+      setBootstrapping(false);
+    }
   }
 
   async function downloadExport(format: "jsonl" | "csv") {
@@ -120,6 +140,24 @@ export default function DatasetPage() {
             </button>
           </p>
         </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <button
+            onClick={runBootstrap}
+            disabled={bootstrapping}
+            title="Generate 16 synthetic pairs across all domains and auto-save high-consensus results"
+            style={{
+              padding: "8px 16px", borderRadius: 8, background: bootstrapping ? "rgba(168,155,140,0.1)" : "rgba(196,112,75,0.15)",
+              color: bootstrapping ? "#A89B8C" : "#C4704B",
+              border: "1px solid rgba(196,112,75,0.3)", cursor: bootstrapping ? "default" : "pointer", fontSize: 13,
+            }}
+          >
+            {bootstrapping ? "Bootstrapping…" : "⚡ Bootstrap Brain"}
+          </button>
+          {bootstrapResult && (
+            <span style={{ fontSize: 12, color: "#6EE09A" }}>
+              ✓ {bootstrapResult.saved} saved, {bootstrapResult.queued} queued ({bootstrapResult.generated} generated)
+            </span>
+          )}
         {entries.length > 0 && (
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={() => downloadExport("jsonl")} disabled={exporting !== null} style={{
@@ -138,6 +176,7 @@ export default function DatasetPage() {
             </button>
           </div>
         )}
+        </div>
       </div>
 
       {entries.length === 0 && (

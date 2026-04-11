@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { isSuspiciousName } from "@/lib/validate-name";
 
 function isAuthorized(req: NextRequest) {
   const key = req.headers.get("x-internal-key")?.trim();
@@ -30,5 +31,10 @@ export async function GET(request: NextRequest) {
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json({ users });
+  const enriched = users.map((u) => ({
+    ...u,
+    nameFlagged: isSuspiciousName(u.name) || isSuspiciousName(u.companyName),
+  }));
+
+  return NextResponse.json({ users: enriched });
 }

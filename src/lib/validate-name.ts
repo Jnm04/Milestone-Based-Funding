@@ -38,6 +38,15 @@ export interface NameValidationResult {
  * Returns { valid: true } if acceptable, or { valid: false, reason } if not.
  * Pass `fieldLabel` to customise the error message (e.g. "Company name").
  */
+/**
+ * Returns true if a name looks like a placeholder/fake value.
+ * Useful for flagging existing DB records without rejecting them.
+ */
+export function isSuspiciousName(value: string | null | undefined): boolean {
+  if (!value || value.trim().length === 0) return false;
+  return !validateName(value).valid;
+}
+
 export function validateName(
   value: string | null | undefined,
   fieldLabel = "Name"

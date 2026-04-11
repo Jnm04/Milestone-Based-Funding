@@ -14,6 +14,7 @@ interface User {
   walletAddress: string | null;
   companyName: string | null;
   createdAt: string;
+  nameFlagged: boolean;
   _count: { contracts: number; startupContracts: number };
 }
 
@@ -236,7 +237,14 @@ export default function UsersPage() {
                   )}
                 </td>
                 <td style={{ padding: "10px 12px", color: "#A89B8C" }}>
-                  {u.companyName ?? u.name ?? <span style={{ color: "#6B5E52", fontStyle: "italic" }}>—</span>}
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    {u.companyName ?? u.name ?? <span style={{ color: "#6B5E52", fontStyle: "italic" }}>—</span>}
+                    {u.nameFlagged && (
+                      <span title="Name looks like a placeholder" style={{ fontSize: 10, padding: "1px 5px", borderRadius: 4, background: "rgba(251,191,36,0.15)", color: "#FBBF24", fontWeight: 600 }}>
+                        suspicious
+                      </span>
+                    )}
+                  </span>
                 </td>
                 <td style={{ padding: "10px 12px" }}>
                   <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999, background: "rgba(196,112,75,0.1)", color: ROLE_COLORS[u.role] ?? "#A89B8C" }}>

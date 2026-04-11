@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { validateName } from "@/lib/validate-name";
+import { screenName } from "@/services/sanctions/sanctions.service";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -93,6 +94,33 @@ export async function PUT(request: NextRequest) {
       dateOfBirth: true,
     },
   });
+
+  // Fire-and-forget sanctions recheck if name or DOB changed and tier is still low.
+  const nameChanged = name !== undefined && validatedName !== null;
+  const dobChanged = validatedDOB !== undefined && validatedDOB !== null;
+  if (nameChanged || dobChanged) {
+    void (async () => {
+      try {
+        const fresh = await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { name: true, email: true, dateOfBirth: true, kycTier: true },
+        });
+        if (!fresh || fresh.kycTier >= 2) return;
+        const target = fresh.name ?? fresh.email.split("@")[0];
+        const result = await screenName(target, fresh.dateOfBirth ?? null);
+        await prisma.user.update({
+          where: { id: session.user.id },
+          data: {
+            sanctionsCheckedAt: new Date(),
+            sanctionsStatus: result.hit ? "HIT" : "CLEAR",
+            ...(!result.hit ? { kycTier: Math.max(fresh.kycTier, 1) } : {}),
+          },
+        });
+      } catch (err) {
+        console.warn("[profile/recheck] Sanctions recheck failed (non-fatal):", err);
+      }
+    })();
+  }
 
   return NextResponse.json({ user });
 }

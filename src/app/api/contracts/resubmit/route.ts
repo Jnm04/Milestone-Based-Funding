@@ -52,6 +52,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Count how many rejected proofs already exist for this contract.
+    // After 3 rejections, escalate to manual review instead of allowing another AI attempt.
+    const MAX_RESUBMITS = 3;
+    const rejectedProofCount = await prisma.proof.count({
+      where: { contractId, aiDecision: "NO" },
+    });
+
+    if (rejectedProofCount >= MAX_RESUBMITS) {
+      // Escalate to manual review
+      await prisma.contract.update({
+        where: { id: contractId },
+        data: { status: "PENDING_REVIEW" },
+      });
+      await prisma.milestone.updateMany({
+        where: { contractId, status: "REJECTED" },
+        data: { status: "PENDING_REVIEW" },
+      });
+      await writeAuditLog({
+        contractId,
+        event: "MANUAL_REVIEW_REJECTED",
+        actor: session.user.id,
+        metadata: { reason: `${rejectedProofCount} AI rejections — escalated to manual review` },
+      });
+      return NextResponse.json({ ok: true, status: "PENDING_REVIEW", escalated: true });
+    }
+
     await prisma.contract.update({
       where: { id: contractId },
       data: { status: "FUNDED" },
