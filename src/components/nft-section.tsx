@@ -5,7 +5,7 @@ import { NftCertificate } from "./nft-certificate";
 
 interface Cert {
   tokenId: string;
-  txHash: string;
+  txHash?: string | null;
   title: string;
   amountUSD: string;
   completedAt: string;
@@ -55,7 +55,7 @@ export function NftSection({ contractId, milestoneId, certs: initialCerts, isCom
       if (data.tokenId) {
         setCerts([{
           tokenId: data.tokenId,
-          txHash: data.txHash ?? data.tokenId,
+          txHash: data.txHash ?? null,
           title: data.title ?? "Milestone Certificate",
           amountUSD: data.amountUSD ?? "0",
           completedAt: new Date().toISOString(),

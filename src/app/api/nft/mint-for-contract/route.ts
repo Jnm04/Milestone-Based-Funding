@@ -73,9 +73,9 @@ export async function POST(request: NextRequest) {
     const nft = await mintCompletionNFT({ contractId, milestoneTitle: title, amountUSD, completedAt: new Date(), evmTxHash });
 
     if (milestoneId) {
-      await prisma.milestone.update({ where: { id: milestoneId }, data: { nftTokenId: nft.tokenId, nftTxHash: nft.txHash, nftImageUrl: nft.imageUrl ?? null } });
+      await prisma.milestone.update({ where: { id: milestoneId }, data: { nftTokenId: nft.tokenId, nftTxHash: nft.txHash ?? null, nftImageUrl: nft.imageUrl ?? null } });
     } else {
-      await prisma.contract.update({ where: { id: contractId }, data: { nftTokenId: nft.tokenId, nftTxHash: nft.txHash, nftImageUrl: nft.imageUrl ?? null } });
+      await prisma.contract.update({ where: { id: contractId }, data: { nftTokenId: nft.tokenId, nftTxHash: nft.txHash ?? null, nftImageUrl: nft.imageUrl ?? null } });
     }
 
     await writeAuditLog({

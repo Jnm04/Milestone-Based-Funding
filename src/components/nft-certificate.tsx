@@ -2,7 +2,7 @@
 
 interface NftCertificateProps {
   tokenId: string;
-  txHash: string;
+  txHash?: string | null;
   milestoneTitle: string;
   amountUSD: string;
   completedAt: string; // ISO string
@@ -28,7 +28,7 @@ export function NftCertificate({
   const explorerNft = isMainnet
     ? `https://xrpscan.com/nft/${tokenId}`
     : `${explorerBase}/nfts/${tokenId}`;
-  const explorerTx = `${explorerBase}/transactions/${txHash}`;
+  const explorerTx = txHash ? `${explorerBase}/transactions/${txHash}` : null;
   const xrpCafeUrl = isMainnet ? `https://xrp.cafe/nft/${tokenId}` : null;
   const date = new Date(completedAt).toLocaleDateString("en-US", {
     year: "numeric",
@@ -223,22 +223,24 @@ export function NftCertificate({
             Non-transferable · Permanent record
           </span>
           <div style={{ display: "flex", gap: 12 }}>
-            <a
-              href={explorerTx}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                fontSize: 10,
-                color: "#C4704B",
-                textDecoration: "none",
-                letterSpacing: "0.08em",
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-              }}
-            >
-              Tx ↗
-            </a>
+            {explorerTx && (
+              <a
+                href={explorerTx}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontSize: 10,
+                  color: "#C4704B",
+                  textDecoration: "none",
+                  letterSpacing: "0.08em",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                Tx ↗
+              </a>
+            )}
             <a
               href={explorerNft}
               target="_blank"

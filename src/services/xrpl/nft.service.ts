@@ -13,7 +13,7 @@ function getXrplConfig() {
 
 export interface MintResult {
   tokenId: string;
-  txHash: string;
+  txHash?: string;
   explorerUrl: string;
   imageUrl?: string;
 }
@@ -74,7 +74,7 @@ export async function mintCompletionNFT(params: {
   if (alreadyMinted) {
     return {
       tokenId: alreadyMinted.NFTokenID,
-      txHash: alreadyMinted.NFTokenID, // no tx hash available after the fact
+      // txHash not available when looking up an already-minted NFT
       explorerUrl: `${XRPL_EXPLORER}/nfts/${alreadyMinted.NFTokenID}`,
       imageUrl: certAssets.imageUrl,
     };
