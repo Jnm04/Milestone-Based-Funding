@@ -39,7 +39,7 @@ export default function UsersPage() {
   useEffect(() => {
     const key = sessionStorage.getItem("cascrow_internal_key");
     fetch("/api/internal/users", {
-      headers: { Authorization: `Bearer ${key}` },
+      headers: { "x-internal-key": key ?? "" },
     })
       .then((r) => r.json())
       .then((d) => {
