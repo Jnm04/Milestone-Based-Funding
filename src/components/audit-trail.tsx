@@ -15,7 +15,7 @@ const EVENT_LABELS: Record<string, string> = {
 };
 
 const XRPL_EXPLORER = IS_MAINNET ? "https://xrpscan.com/tx" : "https://testnet.xrpscan.com/tx";
-const EVM_EXPLORER = "https://explorer.testnet.xrplevm.org/tx";
+const EVM_EXPLORER = "https://explorer.xrplevm.org/tx";
 
 export function AuditTrail({ logs }: { logs: AuditLog[] }) {
   if (logs.length === 0) return null;
@@ -45,7 +45,7 @@ export function AuditTrail({ logs }: { logs: AuditLog[] }) {
                 style={{
                   width: 8,
                   height: 8,
-                  background: log.xrplTxHash ? "#C4704B" : log.evmTxHash ? "#7c6a5c" : "#52525b",
+                  background: (log.xrplTxHash || log.evmTxHash) ? "#C4704B" : "#52525b",
                   marginTop: 6,
                 }}
               />
@@ -78,39 +78,43 @@ export function AuditTrail({ logs }: { logs: AuditLog[] }) {
                 )}
               </div>
 
-              <div className="flex flex-col items-end gap-0.5 shrink-0">
+              <div className="flex flex-col items-end gap-1 shrink-0">
                 <span className="text-xs" style={{ color: "#A89B8C" }}>
                   {new Date(log.createdAt).toLocaleString()}
                 </span>
 
-                {/* Chain explorer links */}
-                {log.xrplTxHash ? (
-                  <a
-                    href={`${XRPL_EXPLORER}/${log.xrplTxHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-mono hover:underline"
-                    title={log.xrplTxHash}
-                    style={{ color: "#C4704B" }}
-                  >
-                    {log.xrplTxHash.slice(0, 10)}… ↗
-                  </a>
-                ) : log.evmTxHash ? (
-                  <a
-                    href={`${EVM_EXPLORER}/${log.evmTxHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-mono hover:underline"
-                    title={log.evmTxHash}
-                    style={{ color: "#C4704B" }}
-                  >
-                    {log.evmTxHash.slice(0, 10)}… ↗
-                  </a>
-                ) : (
-                  <span className="text-xs" style={{ color: "#52525b" }}>
-                    off-chain only
-                  </span>
-                )}
+                {/* Dual-chain explorer links — show both when available */}
+                <div className="flex flex-col items-end gap-0.5">
+                  {log.evmTxHash && (
+                    <a
+                      href={`${EVM_EXPLORER}/${log.evmTxHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-mono hover:underline"
+                      title={`EVM: ${log.evmTxHash}`}
+                      style={{ color: "#C4704B" }}
+                    >
+                      EVM {log.evmTxHash.slice(0, 8)}… ↗
+                    </a>
+                  )}
+                  {log.xrplTxHash && (
+                    <a
+                      href={`${XRPL_EXPLORER}/${log.xrplTxHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-mono hover:underline"
+                      title={`XRPL: ${log.xrplTxHash}`}
+                      style={{ color: "#C4704B" }}
+                    >
+                      XRPL {log.xrplTxHash.slice(0, 8)}… ↗
+                    </a>
+                  )}
+                  {!log.evmTxHash && !log.xrplTxHash && (
+                    <span className="text-xs" style={{ color: "#52525b" }}>
+                      off-chain only
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
