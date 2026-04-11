@@ -7,7 +7,7 @@ function getXrplConfig() {
   const http = process.env.XRPL_HTTP_URL ?? (isTestnet
     ? "https://s.altnet.rippletest.net:51234"
     : "https://s1.ripple.com:51234");
-  const explorer = isTestnet ? "https://testnet.xrpl.org" : "https://xrpl.org";
+  const explorer = isTestnet ? "https://testnet.xrpl.org" : "https://livenet.xrpl.org";
   return { http, explorer };
 }
 
@@ -75,7 +75,7 @@ export async function mintCompletionNFT(params: {
     return {
       tokenId: alreadyMinted.NFTokenID,
       txHash: alreadyMinted.NFTokenID, // no tx hash available after the fact
-      explorerUrl: `${XRPL_EXPLORER}/nft/${alreadyMinted.NFTokenID}`,
+      explorerUrl: `${XRPL_EXPLORER}/nfts/${alreadyMinted.NFTokenID}`,
       imageUrl: certAssets.imageUrl,
     };
   }
@@ -127,7 +127,7 @@ export async function mintCompletionNFT(params: {
       const retryList = (retryNfts.result as { account_nfts?: Array<{ NFTokenID: string; URI?: string }> }).account_nfts ?? [];
       const found = retryList.find((n) => n.URI === uri);
       if (found) {
-        return { tokenId: found.NFTokenID, txHash, explorerUrl: `${XRPL_EXPLORER}/nft/${found.NFTokenID}`, imageUrl: certAssets.imageUrl };
+        return { tokenId: found.NFTokenID, txHash, explorerUrl: `${XRPL_EXPLORER}/nfts/${found.NFTokenID}`, imageUrl: certAssets.imageUrl };
       }
     }
     throw new Error(`NFTokenMint rejected: ${engineResult}`);
@@ -157,7 +157,7 @@ export async function mintCompletionNFT(params: {
     return {
       tokenId: last.NFTokenID,
       txHash,
-      explorerUrl: `${XRPL_EXPLORER}/nft/${last.NFTokenID}`,
+      explorerUrl: `${XRPL_EXPLORER}/nfts/${last.NFTokenID}`,
       imageUrl,
     };
   }
@@ -165,7 +165,7 @@ export async function mintCompletionNFT(params: {
   return {
     tokenId: match.NFTokenID,
     txHash,
-    explorerUrl: `${XRPL_EXPLORER}/nft/${match.NFTokenID}`,
+    explorerUrl: `${XRPL_EXPLORER}/nfts/${match.NFTokenID}`,
     imageUrl,
   };
 }

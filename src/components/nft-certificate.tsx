@@ -24,8 +24,8 @@ export function NftCertificate({
   imageUrl,
   isMainnet,
 }: NftCertificateProps) {
-  const explorer = isMainnet ? "https://xrpl.org" : "https://testnet.xrpl.org";
-  const explorerNft = `${explorer}/nft/${tokenId}`;
+  const explorer = isMainnet ? "https://livenet.xrpl.org" : "https://testnet.xrpl.org";
+  const explorerNft = `${explorer}/nfts/${tokenId}`;
   const explorerTx = `${explorer}/transactions/${txHash}`;
   const xrpCafeUrl = isMainnet ? `https://xrp.cafe/nft/${tokenId}` : null;
   const date = new Date(completedAt).toLocaleDateString("en-US", {
