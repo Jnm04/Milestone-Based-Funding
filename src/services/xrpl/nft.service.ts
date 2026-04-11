@@ -50,6 +50,35 @@ export async function mintCompletionNFT(params: {
 
   const wallet = xrpl.Wallet.fromSeed(seed);
 
+  // Build URI first so we can check for an existing NFT before minting
+  const certAssets = uploadCertificateAssets({
+    contractId: params.contractId,
+    milestoneTitle: params.milestoneTitle,
+    amountUSD: params.amountUSD,
+    completedAt: params.completedAt,
+    evmTxHash: params.evmTxHash,
+  });
+  const uriString = certAssets.metadataUrl;
+  const uriHex = Buffer.from(uriString).toString("hex").toUpperCase();
+  if (uriHex.length > 512) throw new Error(`NFT URI too long: ${uriHex.length} hex chars (max 512)`);
+  const uri = uriHex;
+
+  // Check if NFT was already minted (idempotency — handles double-click / retry)
+  const existingNfts = await rpc(XRPL_HTTP, "account_nfts", {
+    account: wallet.address,
+    ledger_index: "validated",
+  });
+  const existingList = (existingNfts.result as { account_nfts?: Array<{ NFTokenID: string; URI?: string }> }).account_nfts ?? [];
+  const alreadyMinted = existingList.find((n) => n.URI === uri);
+  if (alreadyMinted) {
+    return {
+      tokenId: alreadyMinted.NFTokenID,
+      txHash: alreadyMinted.NFTokenID, // no tx hash available after the fact
+      explorerUrl: `${XRPL_EXPLORER}/nft/${alreadyMinted.NFTokenID}`,
+      imageUrl: certAssets.imageUrl,
+    };
+  }
+
   // Fetch account info + fee in parallel
   const [accountInfo, feeInfo] = await Promise.all([
     rpc(XRPL_HTTP, "account_info", { account: wallet.address, ledger_index: "current" }),
@@ -63,25 +92,6 @@ export async function mintCompletionNFT(params: {
   const fee =
     (feeInfo.result as { drops: { open_ledger_fee?: string } }).drops
       .open_ledger_fee ?? "12";
-
-  // Build certificate image + metadata URLs (served dynamically, no storage needed).
-  const certAssets = uploadCertificateAssets({
-    contractId: params.contractId,
-    milestoneTitle: params.milestoneTitle,
-    amountUSD: params.amountUSD,
-    completedAt: params.completedAt,
-    evmTxHash: params.evmTxHash,
-  });
-
-  // URI points to metadata JSON (enables visual display on XRPL marketplaces).
-  const uriString = certAssets.metadataUrl;
-
-  // XRPL URI field must be hex-encoded, max 512 hex chars (= 256 bytes).
-  const uriHex = Buffer.from(uriString).toString("hex").toUpperCase();
-  if (uriHex.length > 512) {
-    throw new Error(`NFT URI too long: ${uriHex.length} hex chars (max 512)`);
-  }
-  const uri = uriHex;
 
   const tx = {
     TransactionType: "NFTokenMint" as const,
@@ -104,12 +114,19 @@ export async function mintCompletionNFT(params: {
   });
   const submitData = await submitRes.json() as { result?: { engine_result?: string } };
 
-  if (
-    submitData.result?.engine_result &&
-    submitData.result.engine_result !== "tesSUCCESS" &&
-    submitData.result.engine_result !== "terQUEUED"
-  ) {
-    throw new Error(`NFTokenMint rejected: ${submitData.result.engine_result}`);
+  const engineResult = submitData.result?.engine_result;
+  if (engineResult && engineResult !== "tesSUCCESS" && engineResult !== "terQUEUED") {
+    // tefPAST_SEQ means a previous attempt already consumed this sequence — check if NFT exists
+    if (engineResult === "tefPAST_SEQ") {
+      await new Promise((r) => setTimeout(r, 4000));
+      const retryNfts = await rpc(XRPL_HTTP, "account_nfts", { account: wallet.address, ledger_index: "validated" });
+      const retryList = (retryNfts.result as { account_nfts?: Array<{ NFTokenID: string; URI?: string }> }).account_nfts ?? [];
+      const found = retryList.find((n) => n.URI === uri);
+      if (found) {
+        return { tokenId: found.NFTokenID, txHash, explorerUrl: `${XRPL_EXPLORER}/nft/${found.NFTokenID}`, imageUrl: certAssets.imageUrl };
+      }
+    }
+    throw new Error(`NFTokenMint rejected: ${engineResult}`);
   }
 
   // Wait for ledger to close (~3-4s), then fetch the new NFT
