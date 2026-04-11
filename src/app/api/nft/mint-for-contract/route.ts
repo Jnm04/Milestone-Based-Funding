@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
       metadata: { tokenId: nft.tokenId, txHash: nft.txHash, explorerUrl: nft.explorerUrl, manual: true },
     });
 
-    return NextResponse.json({ ok: true, tokenId: nft.tokenId, explorerUrl: nft.explorerUrl, imageUrl: nft.imageUrl ?? null });
+    return NextResponse.json({ ok: true, tokenId: nft.tokenId, txHash: nft.txHash, explorerUrl: nft.explorerUrl, imageUrl: nft.imageUrl ?? null, title, amountUSD });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[nft/mint-for-contract]", err);

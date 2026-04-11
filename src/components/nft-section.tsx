@@ -51,13 +51,17 @@ export function NftSection({ contractId, milestoneId, certs: initialCerts, isCom
         setError(data.error ?? "Minting failed");
         return;
       }
-      if (data.alreadyMinted) {
-        // Reload to get the token data from DB
-        window.location.reload();
-        return;
+      // Update state directly — no page reload to avoid DB propagation race condition
+      if (data.tokenId) {
+        setCerts([{
+          tokenId: data.tokenId,
+          txHash: data.txHash ?? data.tokenId,
+          title: data.title ?? "Milestone Certificate",
+          amountUSD: data.amountUSD ?? "0",
+          completedAt: new Date().toISOString(),
+          imageUrl: data.imageUrl ?? undefined,
+        }]);
       }
-      // Reload to show the new certificate
-      window.location.reload();
     } catch {
       setError("Network error — please try again");
     } finally {
