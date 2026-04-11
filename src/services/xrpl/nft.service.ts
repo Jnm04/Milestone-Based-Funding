@@ -6,7 +6,7 @@ function getXrplConfig() {
   const isTestnet = process.env.XRPL_NETWORK === "testnet" || process.env.NEXT_PUBLIC_XRPL_NETWORK === "testnet";
   const http = process.env.XRPL_HTTP_URL ?? (isTestnet
     ? "https://s.altnet.rippletest.net:51234"
-    : "https://xrplcluster.com");
+    : "https://s1.ripple.com:51234");
   const explorer = isTestnet ? "https://testnet.xrpl.org" : "https://xrpl.org";
   return { http, explorer };
 }
@@ -86,9 +86,12 @@ export async function mintCompletionNFT(params: {
     rpc(XRPL_HTTP, "fee", {}),
   ]);
 
-  const sequence = (
-    accountInfo.result as { account_data: { Sequence: number } }
-  ).account_data.Sequence;
+  const accountData = (accountInfo.result as { account_data?: { Sequence: number }; error?: string; error_message?: string }).account_data;
+  if (!accountData) {
+    const errCode = (accountInfo.result as { error?: string }).error ?? "unknown";
+    throw new Error(`XRPL account_info failed: ${errCode} — wallet may not be funded on mainnet (${wallet.address})`);
+  }
+  const sequence = accountData.Sequence;
 
   const fee =
     (feeInfo.result as { drops: { open_ledger_fee?: string } }).drops

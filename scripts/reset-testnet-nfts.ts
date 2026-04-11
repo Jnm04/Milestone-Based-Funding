@@ -21,7 +21,7 @@ async function main() {
   });
 
   for (const c of contracts) {
-    if (!c.nftTokenId || MAINNET_TOKENS.has(c.nftTokenId)) {
+    if (!c.nftTokenId || (MAINNET_TOKENS.has(c.nftTokenId) && c.nftTokenId !== "PENDING")) {
       console.log(`Keep contract ${c.id} (${c.nftTokenId?.slice(0, 16)}...)`);
       continue;
     }
@@ -38,7 +38,7 @@ async function main() {
   });
 
   for (const m of milestones) {
-    if (!m.nftTokenId || MAINNET_TOKENS.has(m.nftTokenId)) {
+    if (!m.nftTokenId || (MAINNET_TOKENS.has(m.nftTokenId) && m.nftTokenId !== "PENDING")) {
       console.log(`Keep milestone ${m.id}`);
       continue;
     }
