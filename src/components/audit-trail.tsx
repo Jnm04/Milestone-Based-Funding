@@ -86,16 +86,13 @@ export function AuditTrail({ logs }: { logs: AuditLog[] }) {
                 {/* Dual-chain explorer links — show both when available */}
                 <div className="flex flex-col items-end gap-0.5">
                   {log.evmTxHash && (
-                    <a
-                      href={`${EVM_EXPLORER}/${log.evmTxHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-mono hover:underline"
+                    <span
+                      className="text-xs font-mono"
                       title={log.evmTxHash}
-                      style={{ color: "#C4704B" }}
+                      style={{ color: "#A89B8C" }}
                     >
-                      EVM {log.evmTxHash.slice(0, 10)}… ↗
-                    </a>
+                      EVM {log.evmTxHash.slice(0, 10)}…
+                    </span>
                   )}
                   {log.xrplTxHash && (
                     <a

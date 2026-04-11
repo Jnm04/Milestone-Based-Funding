@@ -290,48 +290,31 @@ export function ContractActions({
       toast.info("Step 1/2: Approve RLUSD in MetaMask…");
       const approveTxHash = await sendTx(account, rlusdAddress, approveCalldata);
       await waitForReceipt(approveTxHash);
-      toast.info("Approved! Step 2/2: Fund escrow in MetaMask…");
-      // Small delay so the RPC rate-limiter resets between the two transactions
-      await new Promise((r) => setTimeout(r, 4000));
 
-      // 3. Step 2 — Simulate first to get a readable revert reason if it fails
+      // 3. Step 2 — Fund escrow
       setFundingStep("funding");
-      try {
-        await simulateCall(account, escrowContractAddress, fundCalldata);
-      } catch (simErr: unknown) {
-        const simMsg = extractError(simErr).toLowerCase();
-        if (simMsg.includes("already funded")) {
-          // On-chain is funded but DB wasn't updated — sync now
-          toast.info("Escrow already funded on-chain — syncing…");
-          const syncRes = await fetch("/api/escrow/sync", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ contractId, milestoneId }),
-          });
-          if (syncRes.ok) {
-            toast.success("Synced! Reloading…");
-            setTimeout(() => window.location.reload(), 1000);
-          } else {
-            toast.error("Sync failed — please reload the page.");
-          }
-          setFundingStep("idle");
-          return;
-        }
-        throw simErr;
-      }
+      toast.info("Approved! Step 2/2: Check MetaMask to fund the escrow…");
       const fundTxHash = await sendTx(account, escrowContractAddress, fundCalldata);
       await waitForReceipt(fundTxHash);
 
-      // 4. Confirm with backend
+      // 4. Confirm with backend — retry a few times in case the RPC hasn't indexed the tx yet
       setFundingStep("confirming");
       toast.info("Confirming on server…");
-      const confirm = await fetch("/api/escrow/confirm", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contractId, milestoneId, txHash: fundTxHash }),
-      });
-      if (!confirm.ok) {
-        const e = await confirm.json();
+      let confirmRes: Response | null = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (attempt > 0) await new Promise((r) => setTimeout(r, 4000));
+        confirmRes = await fetch("/api/escrow/confirm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contractId, milestoneId, txHash: fundTxHash }),
+        });
+        if (confirmRes.ok) break;
+        const e = await confirmRes.json();
+        // Only retry on "not found / not mined yet" errors
+        if (!e.error?.includes("not found")) throw new Error(e.error ?? "Escrow confirm failed");
+      }
+      if (!confirmRes?.ok) {
+        const e = await confirmRes!.json();
         throw new Error(e.error ?? "Escrow confirm failed");
       }
 
