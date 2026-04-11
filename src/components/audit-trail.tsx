@@ -1,4 +1,5 @@
 import { AuditLog } from "@prisma/client";
+import { IS_MAINNET } from "@/lib/config";
 
 const EVENT_LABELS: Record<string, string> = {
   CONTRACT_CREATED: "Contract Created",
@@ -10,9 +11,11 @@ const EVENT_LABELS: Record<string, string> = {
   PROOF_RESUBMITTED: "Proof Resubmitted",
   MANUAL_REVIEW_APPROVED: "Manually Approved",
   MANUAL_REVIEW_REJECTED: "Manually Rejected",
+  NFT_MINTED: "NFT Minted",
 };
 
-const XRPL_EXPLORER = "https://testnet.xrpscan.com/tx";
+const XRPL_EXPLORER = IS_MAINNET ? "https://xrpscan.com/tx" : "https://testnet.xrpscan.com/tx";
+const EVM_EXPLORER = "https://explorer.testnet.xrplevm.org/tx";
 
 export function AuditTrail({ logs }: { logs: AuditLog[] }) {
   if (logs.length === 0) return null;
@@ -80,7 +83,7 @@ export function AuditTrail({ logs }: { logs: AuditLog[] }) {
                   {new Date(log.createdAt).toLocaleString()}
                 </span>
 
-                {/* XRPL native ledger link — full explorer support */}
+                {/* Chain explorer links */}
                 {log.xrplTxHash ? (
                   <a
                     href={`${XRPL_EXPLORER}/${log.xrplTxHash}`}
@@ -93,13 +96,16 @@ export function AuditTrail({ logs }: { logs: AuditLog[] }) {
                     {log.xrplTxHash.slice(0, 10)}… ↗
                   </a>
                 ) : log.evmTxHash ? (
-                  <span
-                    className="text-xs font-mono"
+                  <a
+                    href={`${EVM_EXPLORER}/${log.evmTxHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-mono hover:underline"
                     title={log.evmTxHash}
-                    style={{ color: "#7c6a5c" }}
+                    style={{ color: "#C4704B" }}
                   >
-                    {log.evmTxHash.slice(0, 10)}…
-                  </span>
+                    {log.evmTxHash.slice(0, 10)}… ↗
+                  </a>
                 ) : (
                   <span className="text-xs" style={{ color: "#52525b" }}>
                     off-chain only
