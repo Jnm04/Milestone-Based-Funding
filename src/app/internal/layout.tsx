@@ -79,6 +79,7 @@ export default function InternalLayout({ children }: { children: React.ReactNode
         </span>
         {[
           { href: "/internal", label: "Dashboard" },
+          { href: "/internal/users", label: "Users" },
           { href: "/internal/review", label: "Review Queue" },
           { href: "/internal/sandbox", label: "Sandbox" },
           { href: "/internal/generate", label: "Generate" },
