@@ -26,10 +26,14 @@ export function NftSection({ contractId, milestoneId, certs: initialCerts, isCom
   const [error, setError] = useState<string | null>(null);
   const hasCerts = certs.length > 0;
 
-  // Auto-trigger mint if completed but no NFT yet
+  // Auto-trigger mint if completed but no NFT yet.
+  // Uses sessionStorage to prevent duplicate mints on page reload.
   useEffect(() => {
     if (!isCompleted || hasCerts) return;
-    triggerMint();
+    const lockKey = `nft-minting-${contractId}`;
+    if (sessionStorage.getItem(lockKey)) return; // already in progress this session
+    sessionStorage.setItem(lockKey, "1");
+    triggerMint().finally(() => sessionStorage.removeItem(lockKey));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -111,7 +115,10 @@ export function NftSection({ contractId, milestoneId, certs: initialCerts, isCom
         )}
         {!minting && (
           <button
-            onClick={triggerMint}
+            onClick={() => {
+              sessionStorage.removeItem(`nft-minting-${contractId}`);
+              triggerMint();
+            }}
             className="cs-btn-ghost cs-btn-sm"
             style={{ alignSelf: "flex-start" }}
           >
