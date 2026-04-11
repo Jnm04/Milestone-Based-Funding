@@ -887,8 +887,11 @@ export default function LandingPage() {
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.2)" }}>
                     <IconMonitor />
                   </div>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#C4704B" }}>Mainnet</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#C4704B" }}>Mainnet</p>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.25)", color: "#34d399" }}>NFTs live on XRPL Mainnet</span>
+                    </div>
                     <h3 className="font-semibold text-lg" style={{ color: "#EDE6DD" }}>Real money, real stakes</h3>
                   </div>
                 </div>
