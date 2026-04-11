@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { ModelVote } from "@/components/ai-result";
 
 interface MilestoneProof {
   id: string;
@@ -9,8 +10,18 @@ interface MilestoneProof {
   aiDecision: string | null;
   aiReasoning: string | null;
   aiConfidence: number | null;
+  aiModelVotes?: ModelVote[] | null;
   createdAt: string;
 }
+
+const MODEL_SHORT: Record<string, string> = {
+  "Claude": "Claude", "Claude Haiku": "Claude",
+  "Gemini": "Gemini", "Gemini Flash": "Gemini",
+  "OpenAI": "GPT-4o", "GPT-4o-mini": "GPT-4o",
+  "Mistral": "Mistral", "Mistral Small": "Mistral",
+  "Cerebras/Qwen3": "Cerebras",
+};
+function shortName(m: string) { return MODEL_SHORT[m] ?? m.split(/[\s/]/)[0]; }
 
 interface MilestoneItem {
   id: string;
@@ -226,6 +237,37 @@ export function MilestoneTimeline({ milestones, activeMilestoneId }: MilestoneTi
                               </span>
                             )}
                           </div>
+                          {/* Per-model vote grid */}
+                          {proof.aiModelVotes && proof.aiModelVotes.length > 0 && (
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "4px", marginTop: "2px" }}>
+                              {proof.aiModelVotes.map((vote) => {
+                                const vYes = vote.decision === "YES";
+                                return (
+                                  <div
+                                    key={vote.model}
+                                    title={`${vote.model}: ${vote.decision} (${vote.confidence}%)`}
+                                    style={{
+                                      padding: "4px 2px",
+                                      borderRadius: "6px",
+                                      background: vYes ? "rgba(74,222,128,0.1)" : "rgba(248,113,113,0.1)",
+                                      border: `1px solid ${vYes ? "rgba(74,222,128,0.2)" : "rgba(248,113,113,0.2)"}`,
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      alignItems: "center",
+                                      gap: "2px",
+                                    }}
+                                  >
+                                    <span style={{ fontSize: "9px", fontWeight: 700, color: vYes ? "#6EE09A" : "#F87171" }}>
+                                      {vYes ? "YES" : "NO"}
+                                    </span>
+                                    <span style={{ fontSize: "8px", color: "#A89B8C", textAlign: "center", lineHeight: 1.1 }}>
+                                      {shortName(vote.model)}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                           {proof.aiReasoning && (
                             <p style={{ fontSize: "12px", color: "#A89B8C", lineHeight: 1.5, margin: 0 }}>
                               {proof.aiReasoning}

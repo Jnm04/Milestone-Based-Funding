@@ -813,7 +813,7 @@ export default function LandingPage() {
                 <div className="flex flex-col gap-2">
                   {[
                     { tier: "Tier 0", label: "Email verified", limit: "up to $1K", note: "live now" },
-                    { tier: "Tier 1", label: "Name + Sanctions screening", limit: "up to $10K", note: "" },
+                    { tier: "Tier 1", label: "Name + Sanctions screening", limit: "up to $10K", note: "live now" },
                     { tier: "Tier 2", label: "ID + Liveness check", limit: "up to $100K", note: "" },
                     { tier: "Tier 3", label: "KYB + Source of funds", limit: "unlimited", note: "" },
                   ].map((t) => (
@@ -927,8 +927,11 @@ export default function LandingPage() {
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.2)" }}>
                     <IconEye />
                   </div>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#C4704B" }}>Verification</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#C4704B" }}>Verification</p>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.25)", color: "#34d399" }}>live now</span>
+                    </div>
                     <h3 className="font-semibold text-lg" style={{ color: "#EDE6DD" }}>Active intelligence</h3>
                   </div>
                 </div>

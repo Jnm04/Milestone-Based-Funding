@@ -131,13 +131,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Persist AI result on proof
+    // Persist AI result on proof (including individual model votes)
     await prisma.proof.update({
       where: { id: proofId },
       data: {
         aiDecision: result.decision,
         aiReasoning: result.reasoning,
         aiConfidence: result.confidence,
+        aiModelVotes: result.modelVotes as never,
       },
     });
 

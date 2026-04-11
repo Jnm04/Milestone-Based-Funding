@@ -117,6 +117,8 @@ model Proof {
   aiDecision    String?
   aiReasoning   String?    @db.Text
   aiConfidence  Int?
+  /// [{model, decision, confidence, reasoning}] — individual votes from each AI model
+  aiModelVotes  Json?
   /// "file" | "github_url" — how the proof was submitted
   proofType     String     @default("file")
   /// For github_url proofs: the submitted GitHub repo URL

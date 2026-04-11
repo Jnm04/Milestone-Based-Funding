@@ -177,6 +177,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
                 aiDecision: p.aiDecision,
                 aiReasoning: p.aiReasoning,
                 aiConfidence: p.aiConfidence,
+                aiModelVotes: p.aiModelVotes as import("@/components/ai-result").ModelVote[] | null,
                 createdAt: p.createdAt.toISOString(),
               })),
             }))}
@@ -259,6 +260,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
             reasoning={latestProof.aiReasoning ?? ""}
             confidence={latestProof.aiConfidence ?? 0}
             submittedAt={latestProof.createdAt}
+            modelVotes={(latestProof.aiModelVotes as import("@/components/ai-result").ModelVote[] | null) ?? undefined}
           />
         )}
 
