@@ -174,9 +174,13 @@ export interface ScreenResult {
  *  3. Flag if ≥2 tokens overlap AND the overlap covers ≥40% of the query's tokens.
  *     This avoids flagging "John" alone while catching "John Smith" against "SMITH, John".
  *
+ * dateOfBirth is accepted as optional context. The current SDN CSV parser does not extract
+ * DOB entries, so it cannot be used for automatic de-confliction yet. It is stored on the
+ * user record so that manual reviewers can compare it against OFAC remarks when a HIT occurs.
+ *
  * Returns { hit: false } on any error — screening failure is never a hard block.
  */
-export async function screenName(name: string): Promise<ScreenResult> {
+export async function screenName(name: string, _dateOfBirth?: Date | null): Promise<ScreenResult> {
   try {
     if (!name || name.trim().length < 3) return { hit: false, matches: [] };
     const entries = await loadEntries();

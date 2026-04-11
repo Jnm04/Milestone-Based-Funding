@@ -16,6 +16,7 @@ export async function GET() {
       notifyProofSubmitted: true, notifyPendingReview: true, notifyMilestoneCompleted: true,
       notifyFunded: true, notifyVerified: true, notifyRejected: true,
       kycTier: true, sanctionsStatus: true, sanctionsCheckedAt: true,
+      dateOfBirth: true,
     },
   });
 
@@ -31,6 +32,7 @@ export async function PUT(request: NextRequest) {
     name, companyName, department, jobTitle, phone, bio, website,
     notifyProofSubmitted, notifyPendingReview, notifyMilestoneCompleted,
     notifyFunded, notifyVerified, notifyRejected,
+    dateOfBirth,
   } = body;
 
   // Input validation — max lengths and strip HTML tags
@@ -49,6 +51,17 @@ export async function PUT(request: NextRequest) {
   const rawWebsite = strip(website, 200);
   const validatedWebsite = rawWebsite && /^https?:\/\/.+/.test(rawWebsite) ? rawWebsite : null;
 
+  // Date of birth: optional, must be a valid past date
+  let validatedDOB: Date | null | undefined = undefined;
+  if (dateOfBirth !== undefined) {
+    if (dateOfBirth === null || dateOfBirth === "") {
+      validatedDOB = null;
+    } else {
+      const d = new Date(dateOfBirth);
+      validatedDOB = !isNaN(d.getTime()) && d < new Date() ? d : null;
+    }
+  }
+
   const user = await prisma.user.update({
     where: { id: session.user.id },
     data: {
@@ -65,12 +78,14 @@ export async function PUT(request: NextRequest) {
       ...(notifyFunded !== undefined && { notifyFunded }),
       ...(notifyVerified !== undefined && { notifyVerified }),
       ...(notifyRejected !== undefined && { notifyRejected }),
+      ...(validatedDOB !== undefined && { dateOfBirth: validatedDOB }),
     },
     select: {
       id: true, email: true, name: true, role: true, walletAddress: true,
       companyName: true, department: true, jobTitle: true, phone: true, bio: true, website: true,
       notifyProofSubmitted: true, notifyPendingReview: true, notifyMilestoneCompleted: true,
       notifyFunded: true, notifyVerified: true, notifyRejected: true,
+      dateOfBirth: true,
     },
   });
 

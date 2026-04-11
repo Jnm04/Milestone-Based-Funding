@@ -48,6 +48,7 @@ interface ProfileData {
   kycTier: number;
   sanctionsStatus: string | null;
   sanctionsCheckedAt: string | null;
+  dateOfBirth: string | null;
 }
 
 /* ── Password eye icon ────────────────────────────────────── */
@@ -150,6 +151,7 @@ export default function ProfilePage() {
   const [phone, setPhone] = useState("");
   const [bio, setBio] = useState("");
   const [website, setWebsite] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
 
   const [notifyProofSubmitted, setNotifyProofSubmitted] = useState(true);
   const [notifyPendingReview, setNotifyPendingReview] = useState(true);
@@ -199,6 +201,7 @@ export default function ProfilePage() {
         setNotifyFunded(user.notifyFunded);
         setNotifyVerified(user.notifyVerified);
         setNotifyRejected(user.notifyRejected);
+        setDateOfBirth(user.dateOfBirth ? user.dateOfBirth.split("T")[0] : "");
       });
     // Load Telegram status
     fetch("/api/telegram/connect")
@@ -319,7 +322,7 @@ export default function ProfilePage() {
       const res = await fetch("/api/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, companyName, department, jobTitle, phone, bio, website }),
+        body: JSON.stringify({ name, companyName, department, jobTitle, phone, bio, website, dateOfBirth: dateOfBirth || null }),
       });
       if (!res.ok) throw new Error((await res.json()).error);
       toast.success("Profile saved.");
@@ -600,6 +603,18 @@ export default function ProfilePage() {
                 <div className="flex flex-col gap-1.5">
                   <label className="cs-label">Phone</label>
                   <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 234 567 890" className="cs-input" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="cs-label">
+                    Date of birth <span style={{ color: "#A89B8C", fontWeight: 400 }}>(optional)</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={dateOfBirth}
+                    onChange={(e) => setDateOfBirth(e.target.value)}
+                    className="cs-input"
+                    max={new Date().toISOString().split("T")[0]}
+                  />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="cs-label">Website</label>

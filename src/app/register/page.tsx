@@ -74,6 +74,7 @@ function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"INVESTOR" | "STARTUP">("INVESTOR");
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [loading, setLoading] = useState(false);
   const [registered, setRegistered] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -88,7 +89,7 @@ function RegisterForm() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, name, role }),
+        body: JSON.stringify({ email, password, name, role, dateOfBirth: dateOfBirth || undefined }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -258,6 +259,19 @@ function RegisterForm() {
                 onChange={(e) => setName(e.target.value)}
                 className="cs-input"
                 placeholder="Your name or company"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="cs-label">
+                Date of birth <span style={{ color: "#A89B8C", fontWeight: 400 }}>(optional — improves sanctions screening accuracy)</span>
+              </label>
+              <input
+                type="date"
+                value={dateOfBirth}
+                onChange={(e) => setDateOfBirth(e.target.value)}
+                className="cs-input"
+                max={new Date().toISOString().split("T")[0]}
               />
             </div>
 

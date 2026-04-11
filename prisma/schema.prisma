@@ -49,6 +49,7 @@ model User {
   kycTier            Int       @default(0)
 
   // Sanctions screening (KYC Tier 1)
+  dateOfBirth        DateTime? // Optional — used to reduce false positives in sanctions screening
   sanctionsCheckedAt DateTime?
   sanctionsStatus    String?   // "CLEAR" | "HIT" | "PENDING"
 
