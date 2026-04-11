@@ -45,6 +45,9 @@ model User {
   passwordResetToken       String?   @unique
   passwordResetTokenExpiry DateTime?
 
+  // KYC tiers: 0=email only ($1k limit), 1=sanctions CLEAR ($10k), 2=manual KYC ($100k), 3=KYB (unlimited)
+  kycTier            Int       @default(0)
+
   // Sanctions screening (KYC Tier 1)
   sanctionsCheckedAt DateTime?
   sanctionsStatus    String?   // "CLEAR" | "HIT" | "PENDING"

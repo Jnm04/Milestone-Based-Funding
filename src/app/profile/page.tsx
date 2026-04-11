@@ -45,6 +45,9 @@ interface ProfileData {
   notifyFunded: boolean;
   notifyVerified: boolean;
   notifyRejected: boolean;
+  kycTier: number;
+  sanctionsStatus: string | null;
+  sanctionsCheckedAt: string | null;
 }
 
 /* ── Password eye icon ────────────────────────────────────── */
@@ -456,6 +459,108 @@ export default function ProfilePage() {
               </span>
             </div>
           </div>
+
+          {/* Verification / KYC */}
+          <SectionCard title="Verification" subtitle="Your identity verification level determines your contract limits.">
+            {(() => {
+              const tier = profile.kycTier ?? 0;
+              const tiers = [
+                { tier: 0, label: "Email verified", limit: "$1,000", status: tier >= 0 ? "active" : "locked" },
+                { tier: 1, label: "Name + Sanctions screening", limit: "$10,000", status: tier >= 1 ? "active" : "pending" },
+                { tier: 2, label: "ID + Liveness check", limit: "$100,000", status: "coming_soon" },
+                { tier: 3, label: "KYB + Source of funds", limit: "Unlimited", status: "coming_soon" },
+              ];
+              return (
+                <div className="flex flex-col gap-4">
+                  {/* Current tier badge */}
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="px-3 py-1.5 rounded-xl text-sm font-semibold"
+                      style={{ background: "rgba(196,112,75,0.15)", border: "1px solid rgba(196,112,75,0.3)", color: "#C4704B" }}
+                    >
+                      Tier {tier}
+                    </div>
+                    <span className="text-sm" style={{ color: "#EDE6DD" }}>
+                      {tier === 0 && "Email verified — up to $1,000 per contract"}
+                      {tier === 1 && "Sanctions cleared — up to $10,000 per contract"}
+                      {tier >= 2 && `Verified — up to ${tiers[tier]?.limit ?? "Unlimited"} per contract`}
+                    </span>
+                    {profile.sanctionsStatus === "CLEAR" && (
+                      <span
+                        className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                        style={{ background: "rgba(52,211,153,0.12)", color: "#34d399" }}
+                      >
+                        Sanctions: Clear
+                      </span>
+                    )}
+                    {profile.sanctionsStatus === "HIT" && (
+                      <span
+                        className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                        style={{ background: "rgba(248,113,113,0.12)", color: "#f87171" }}
+                      >
+                        Sanctions: Review required
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Tier list */}
+                  <div className="flex flex-col gap-2">
+                    {tiers.map((t) => {
+                      const isActive = tier >= t.tier && t.status !== "coming_soon";
+                      const isCurrent = tier === t.tier;
+                      const isComingSoon = t.status === "coming_soon";
+                      return (
+                        <div
+                          key={t.tier}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                          style={{
+                            background: isCurrent ? "rgba(196,112,75,0.08)" : "rgba(255,255,255,0.02)",
+                            border: isCurrent ? "1px solid rgba(196,112,75,0.25)" : "1px solid transparent",
+                            opacity: isComingSoon ? 0.5 : 1,
+                          }}
+                        >
+                          {/* Check / dot */}
+                          <div style={{ width: 18, height: 18, flexShrink: 0 }}>
+                            {isActive ? (
+                              <svg viewBox="0 0 18 18" fill="none">
+                                <circle cx="9" cy="9" r="9" fill="rgba(52,211,153,0.15)" />
+                                <path d="M5 9l3 3 5-5" stroke="#34d399" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            ) : (
+                              <svg viewBox="0 0 18 18" fill="none">
+                                <circle cx="9" cy="9" r="8.5" stroke="rgba(168,155,140,0.3)" />
+                              </svg>
+                            )}
+                          </div>
+                          <span className="text-xs font-bold w-12 shrink-0" style={{ color: "#C4704B" }}>Tier {t.tier}</span>
+                          <span className="text-xs flex-1" style={{ color: "#A89B8C" }}>{t.label}</span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-xs font-medium" style={{ color: "#EDE6DD" }}>{t.limit}</span>
+                            {isCurrent && (
+                              <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "rgba(196,112,75,0.15)", color: "#C4704B" }}>
+                                Current
+                              </span>
+                            )}
+                            {isComingSoon && (
+                              <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "rgba(168,155,140,0.08)", color: "#A89B8C" }}>
+                                Coming soon
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {tier < 1 && profile.sanctionsStatus !== "CLEAR" && (
+                    <p className="text-xs" style={{ color: "#A89B8C" }}>
+                      Tier 1 is granted automatically after sanctions screening — this usually completes within minutes of registration.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
+          </SectionCard>
 
           {/* Profile Information */}
           <SectionCard title="Profile Information" subtitle="Your personal and professional details">

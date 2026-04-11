@@ -91,6 +91,8 @@ export async function POST(request: NextRequest) {
           data: {
             sanctionsCheckedAt: new Date(),
             sanctionsStatus: result.hit ? "HIT" : "CLEAR",
+            // Auto-upgrade to Tier 1 when sanctions check passes
+            ...(result.hit ? {} : { kycTier: 1 }),
           },
         });
         if (result.hit) {
