@@ -136,6 +136,49 @@ function SectionCard({ title, subtitle, children }: { title: string; subtitle?: 
   );
 }
 
+function RecheckKycButton({ onSuccess }: { onSuccess: () => void }) {
+  const [loading, setLoading] = useState(false);
+
+  async function handleRecheck() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/user/recheck-kyc", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Screening failed. Please try again.");
+        return;
+      }
+      if (data.sanctionsStatus === "CLEAR") {
+        toast.success("Sanctions check passed — you are now Tier 1.");
+        onSuccess();
+      } else {
+        toast.error("A potential match was found. Our team will review your account.");
+      }
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-xs" style={{ color: "#A89B8C" }}>
+        Tier 1 is granted after sanctions screening. If your account was created before this feature launched, run the check manually.
+      </p>
+      <button
+        type="button"
+        onClick={handleRecheck}
+        disabled={loading}
+        className="cs-btn-ghost cs-btn-sm"
+        style={{ alignSelf: "flex-start" }}
+      >
+        {loading ? "Running check…" : "Run sanctions check now"}
+      </button>
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -181,9 +224,7 @@ export default function ProfilePage() {
   const [whSaving, setWhSaving] = useState(false);
   const [whSecret, setWhSecret] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (status === "unauthenticated") { router.push("/login"); return; }
-    if (status !== "authenticated") return;
+  function fetchProfile() {
     fetch("/api/profile")
       .then((r) => r.json())
       .then(({ user }) => {
@@ -203,6 +244,12 @@ export default function ProfilePage() {
         setNotifyRejected(user.notifyRejected);
         setDateOfBirth(user.dateOfBirth ? user.dateOfBirth.split("T")[0] : "");
       });
+  }
+
+  useEffect(() => {
+    if (status === "unauthenticated") { router.push("/login"); return; }
+    if (status !== "authenticated") return;
+    fetchProfile();
     // Load Telegram status
     fetch("/api/telegram/connect")
       .then((r) => r.json())
@@ -556,9 +603,7 @@ export default function ProfilePage() {
                   </div>
 
                   {tier < 1 && profile.sanctionsStatus !== "CLEAR" && (
-                    <p className="text-xs" style={{ color: "#A89B8C" }}>
-                      Tier 1 is granted automatically after sanctions screening — this usually completes within minutes of registration.
-                    </p>
+                    <RecheckKycButton onSuccess={() => fetchProfile()} />
                   )}
                 </div>
               );
