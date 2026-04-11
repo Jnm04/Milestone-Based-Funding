@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendVerificationEmail } from "@/lib/email";
 import { screenName } from "@/services/sanctions/sanctions.service";
+import { validateName } from "@/lib/validate-name";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
@@ -22,6 +23,12 @@ export async function POST(request: NextRequest) {
     }
     if (typeof name === "string" && name.length > 200) {
       return NextResponse.json({ error: "Name too long" }, { status: 400 });
+    }
+    if (typeof name === "string" && name.trim().length > 0) {
+      const nameCheck = validateName(name);
+      if (!nameCheck.valid) {
+        return NextResponse.json({ error: nameCheck.reason }, { status: 400 });
+      }
     }
 
     // Basic email format check

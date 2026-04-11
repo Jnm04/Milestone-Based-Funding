@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 interface User {
   id: string;
@@ -30,16 +30,113 @@ const ROLE_COLORS: Record<string, string> = {
   ADMIN: "#C4ADFA",
 };
 
+function TierSelect({ userId, current, apiKey, onUpdated }: {
+  userId: string;
+  current: number;
+  apiKey: string;
+  onUpdated: (newTier: number) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+
+  async function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const tier = Number(e.target.value);
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/internal/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-internal-key": apiKey },
+        body: JSON.stringify({ kycTier: tier }),
+      });
+      if (res.ok) onUpdated(tier);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <select
+      value={current}
+      onChange={handleChange}
+      disabled={loading}
+      style={{
+        background: "rgba(255,255,255,0.05)",
+        border: "1px solid rgba(196,112,75,0.2)",
+        borderRadius: 6,
+        padding: "2px 6px",
+        color: TIER_COLORS[current] ?? "#EDE6DD",
+        fontSize: 12,
+        fontWeight: 600,
+        cursor: "pointer",
+        outline: "none",
+        opacity: loading ? 0.5 : 1,
+      }}
+    >
+      {[0, 1, 2, 3].map((t) => (
+        <option key={t} value={t} style={{ background: "#1e1a18", color: TIER_COLORS[t] }}>
+          Tier {t}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function RecheckButton({ userId, apiKey, onUpdated }: {
+  userId: string;
+  apiKey: string;
+  onUpdated: (status: string, tier: number) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+
+  async function handle() {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/internal/users/${userId}`, {
+        method: "POST",
+        headers: { "x-internal-key": apiKey },
+      });
+      if (res.ok) {
+        const d = await res.json();
+        onUpdated(d.user.sanctionsStatus, d.user.kycTier);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <button
+      onClick={handle}
+      disabled={loading}
+      title="Re-run sanctions screening"
+      style={{
+        marginLeft: 6,
+        fontSize: 10,
+        padding: "1px 6px",
+        borderRadius: 4,
+        border: "1px solid rgba(196,112,75,0.3)",
+        background: "transparent",
+        color: "#A89B8C",
+        cursor: loading ? "default" : "pointer",
+        opacity: loading ? 0.5 : 1,
+      }}
+    >
+      {loading ? "…" : "recheck"}
+    </button>
+  );
+}
+
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [search, setSearch] = useState("");
+  const [apiKey, setApiKey] = useState("");
 
   useEffect(() => {
-    const key = sessionStorage.getItem("cascrow_internal_key");
+    const key = sessionStorage.getItem("cascrow_internal_key") ?? "";
+    setApiKey(key);
     fetch("/api/internal/users", {
-      headers: { "x-internal-key": key ?? "" },
+      headers: { "x-internal-key": key },
     })
       .then((r) => r.json())
       .then((d) => {
@@ -48,6 +145,10 @@ export default function UsersPage() {
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
+  }, []);
+
+  const updateUser = useCallback((id: string, patch: Partial<User>) => {
+    setUsers((prev) => prev.map((u) => u.id === id ? { ...u, ...patch } : u));
   }, []);
 
   const filtered = users.filter((u) => {
@@ -110,7 +211,7 @@ export default function UsersPage() {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(196,112,75,0.2)" }}>
-              {["Email", "Name", "Role", "KYC", "Sanctions", "Contracts", "Joined"].map((h) => (
+              {["Email", "Name", "Role", "KYC Tier", "Sanctions", "Contracts", "Joined"].map((h) => (
                 <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: "#A89B8C", fontWeight: 500, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>
                   {h}
                 </th>
@@ -143,22 +244,32 @@ export default function UsersPage() {
                   </span>
                 </td>
                 <td style={{ padding: "10px 12px" }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: TIER_COLORS[u.kycTier] ?? "#A89B8C" }}>
-                    Tier {u.kycTier}
-                  </span>
+                  <TierSelect
+                    userId={u.id}
+                    current={u.kycTier}
+                    apiKey={apiKey}
+                    onUpdated={(newTier) => updateUser(u.id, { kycTier: newTier })}
+                  />
                 </td>
                 <td style={{ padding: "10px 12px" }}>
-                  {u.sanctionsStatus ? (
-                    <span style={{
-                      fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999,
-                      background: u.sanctionsStatus === "CLEAR" ? "rgba(74,222,128,0.1)" : "rgba(248,113,113,0.1)",
-                      color: u.sanctionsStatus === "CLEAR" ? "#6EE09A" : "#F87171",
-                    }}>
-                      {u.sanctionsStatus}
-                    </span>
-                  ) : (
-                    <span style={{ fontSize: 11, color: "#6B5E52", fontStyle: "italic" }}>not checked</span>
-                  )}
+                  <div style={{ display: "flex", alignItems: "center" }}>
+                    {u.sanctionsStatus ? (
+                      <span style={{
+                        fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999,
+                        background: u.sanctionsStatus === "CLEAR" ? "rgba(74,222,128,0.1)" : "rgba(248,113,113,0.1)",
+                        color: u.sanctionsStatus === "CLEAR" ? "#6EE09A" : "#F87171",
+                      }}>
+                        {u.sanctionsStatus}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 11, color: "#6B5E52", fontStyle: "italic" }}>not checked</span>
+                    )}
+                    <RecheckButton
+                      userId={u.id}
+                      apiKey={apiKey}
+                      onUpdated={(status, tier) => updateUser(u.id, { sanctionsStatus: status, kycTier: tier })}
+                    />
+                  </div>
                 </td>
                 <td style={{ padding: "10px 12px", color: "#A89B8C", textAlign: "center" }}>
                   {u._count.contracts + u._count.startupContracts > 0 ? (

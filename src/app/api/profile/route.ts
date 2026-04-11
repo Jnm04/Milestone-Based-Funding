@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { validateName } from "@/lib/validate-name";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -42,7 +43,11 @@ export async function PUT(request: NextRequest) {
     return trimmed || null;
   };
   const validatedName = strip(name, 100);
+  const nameCheck = validateName(validatedName);
+  if (!nameCheck.valid) return NextResponse.json({ error: nameCheck.reason }, { status: 400 });
   const validatedCompany = strip(companyName, 100);
+  const companyCheck = validateName(validatedCompany, "Company name");
+  if (!companyCheck.valid) return NextResponse.json({ error: companyCheck.reason }, { status: 400 });
   const validatedDepartment = strip(department, 100);
   const validatedJobTitle = strip(jobTitle, 100);
   const validatedPhone = strip(phone, 30);
