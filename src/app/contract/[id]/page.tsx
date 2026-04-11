@@ -82,9 +82,6 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           contract.nftTokenId ||
           contract.milestones.some((m) => m.nftTokenId)
         )}
-        completedMilestoneId={
-          contract.milestones.find((m) => m.status === "COMPLETED" && !m.nftTokenId)?.id ?? null
-        }
       />
 
       {/* Nav */}

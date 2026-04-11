@@ -133,39 +133,26 @@ export async function mintCompletionNFT(params: {
     throw new Error(`NFTokenMint rejected: ${engineResult}`);
   }
 
-  // Wait for ledger to close (~3-4s), then fetch the new NFT
-  await new Promise((r) => setTimeout(r, 5000));
-
-  // Find the newly minted token by scanning account_nfts
-  const nftsRes = await rpc(XRPL_HTTP, "account_nfts", {
-    account: wallet.address,
-    ledger_index: "validated",
-  });
-
-  const nfts = (
-    nftsRes.result as { account_nfts?: Array<{ NFTokenID: string; URI?: string }> }
-  ).account_nfts ?? [];
-
-  // Find by matching URI
-  const match = nfts.find((n) => n.URI === uri);
+  // Poll account_nfts until the new NFT appears (up to 30s, checking every 4s)
   const imageUrl = certAssets.imageUrl;
-
-  if (!match) {
-    // Fallback: return most recently added (last in list)
-    const last = nfts[nfts.length - 1];
-    if (!last) throw new Error("NFT minted but could not find token ID");
-    return {
-      tokenId: last.NFTokenID,
-      txHash,
-      explorerUrl: `${XRPL_EXPLORER}/nfts/${last.NFTokenID}`,
-      imageUrl,
-    };
+  for (let attempt = 0; attempt < 7; attempt++) {
+    await new Promise((r) => setTimeout(r, 4000));
+    const nftsRes = await rpc(XRPL_HTTP, "account_nfts", {
+      account: wallet.address,
+      ledger_index: "validated",
+    });
+    const nfts = (
+      nftsRes.result as { account_nfts?: Array<{ NFTokenID: string; URI?: string }> }
+    ).account_nfts ?? [];
+    const match = nfts.find((n) => n.URI === uri);
+    if (match) {
+      return {
+        tokenId: match.NFTokenID,
+        txHash,
+        explorerUrl: `${XRPL_EXPLORER}/nfts/${match.NFTokenID}`,
+        imageUrl,
+      };
+    }
   }
-
-  return {
-    tokenId: match.NFTokenID,
-    txHash,
-    explorerUrl: `${XRPL_EXPLORER}/nfts/${match.NFTokenID}`,
-    imageUrl,
-  };
+  throw new Error("NFT minted but not found in validated ledger after 28s — check XRPL explorer for tx: " + txHash);
 }
