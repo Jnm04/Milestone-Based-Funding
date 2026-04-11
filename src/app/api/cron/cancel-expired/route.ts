@@ -4,6 +4,7 @@ import { cancelMilestone, getMilestoneEscrowState, releaseMilestone } from "@/se
 import { writeAuditLog } from "@/services/evm/audit.service";
 import { sendVerifiedEmail, sendMilestoneCompletedInvestorEmail, sendFulfillmentKeyEmail } from "@/lib/email";
 import { contractIdToBytes32 } from "@/services/evm/escrow.service";
+import { isValidCronSecret } from "@/lib/cron-auth";
 
 /**
  * GET /api/cron/cancel-expired
@@ -13,8 +14,7 @@ import { contractIdToBytes32 } from "@/services/evm/escrow.service";
  */
 export async function GET(request: NextRequest) {
   // Protect against external calls — Vercel sets this header on cron invocations
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isValidCronSecret(request.headers.get("authorization"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -78,14 +78,14 @@ export async function GET(request: NextRequest) {
 
         // Send fulfillment key to startup before attempting release
         if (contract.startup?.email) {
-          void sendFulfillmentKeyEmail({
+          sendFulfillmentKeyEmail({
             to: contract.startup.email,
             contractId: contract.id,
             milestoneTitle,
             fulfillment,
             contractIdHash: contractIdToBytes32(contract.id),
             milestoneOrder: milestone.order,
-          });
+          }).catch((err) => console.error("[email] sendFulfillmentKeyEmail failed:", err));
         }
 
         const txHash = await releaseMilestone(contract.id, milestone.order, fulfillment);
@@ -119,10 +119,12 @@ export async function GET(request: NextRequest) {
         });
 
         if (contract.startup?.notifyVerified) {
-          void sendVerifiedEmail({ to: contract.startup.email, contractId: contract.id, milestoneTitle, amountUSD, txHash });
+          sendVerifiedEmail({ to: contract.startup.email, contractId: contract.id, milestoneTitle, amountUSD, txHash })
+            .catch((err) => console.error("[email] sendVerifiedEmail failed:", err));
         }
         if (contract.investor.notifyMilestoneCompleted) {
-          void sendMilestoneCompletedInvestorEmail({ to: contract.investor.email, contractId: contract.id, milestoneTitle, amountUSD });
+          sendMilestoneCompletedInvestorEmail({ to: contract.investor.email, contractId: contract.id, milestoneTitle, amountUSD })
+            .catch((err) => console.error("[email] sendMilestoneCompletedInvestorEmail failed:", err));
         }
 
         return { id: milestone.id, action: "auto-approved", txHash };
@@ -138,10 +140,16 @@ export async function GET(request: NextRequest) {
   const approveSucceeded = approveResults.filter((r) => r.status === "fulfilled").length;
   const approveFailed = approveResults.filter((r) => r.status === "rejected").length;
 
-  console.log(
-    `[cron] Cancelled: ${cancelSucceeded} ok, ${cancelFailed} failed | ` +
-    `Auto-approved: ${approveSucceeded} ok, ${approveFailed} failed`
-  );
+  if (cancelFailed > 0 || approveFailed > 0) {
+    console.error(
+      `[cron/cancel-expired] FAILURES — cancelled: ${cancelSucceeded} ok, ${cancelFailed} failed | ` +
+      `auto-approved: ${approveSucceeded} ok, ${approveFailed} failed`
+    );
+  } else {
+    console.log(
+      `[cron/cancel-expired] OK — cancelled: ${cancelSucceeded} | auto-approved: ${approveSucceeded}`
+    );
+  }
 
   return NextResponse.json({
     ok: true,

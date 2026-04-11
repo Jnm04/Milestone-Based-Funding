@@ -68,11 +68,14 @@ export async function POST(request: NextRequest) {
     const mimeType = file.type || "";
     const fileName = file.name;
     const ext = path.extname(fileName).toLowerCase();
+    // Only use extension fallback for plain-text formats where browsers commonly
+    // send application/octet-stream. Binary office formats (docx/pptx/xlsx) must
+    // carry the correct MIME from the browser — renaming a binary file to .docx
+    // would still be rejected here if the browser doesn't send the right type.
     const extMimeMap: Record<string, string> = {
-      ".csv": "text/csv", ".txt": "text/plain", ".md": "text/plain",
-      ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-      ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ".csv": "text/csv",
+      ".txt": "text/plain",
+      ".md": "text/plain",
     };
     const effectiveMime = ALLOWED_MIME_TYPES.has(mimeType) ? mimeType : (extMimeMap[ext] ?? mimeType);
 
@@ -147,13 +150,13 @@ export async function POST(request: NextRequest) {
 
       // Email investor: startup submitted proof
       if (milestone.contract.investor.notifyProofSubmitted) {
-        void sendProofSubmittedEmail({
+        sendProofSubmittedEmail({
           to: milestone.contract.investor.email,
           contractId: milestone.contractId,
           milestoneTitle: milestone.title,
           startupName: milestone.contract.startup?.companyName ?? milestone.contract.startup?.name,
           investorId: milestone.contract.investorId,
-        });
+        }).catch((err) => console.error("[email] sendProofSubmittedEmail failed:", err));
       }
 
       await writeAuditLog({
@@ -164,14 +167,14 @@ export async function POST(request: NextRequest) {
         metadata: { proofId: proof.id, fileName, fileHash },
       });
 
-      void fireWebhook({
+      fireWebhook({
         investorId: milestone.contract.investorId,
         startupId: milestone.contract.startupId ?? undefined,
         event: "proof.submitted",
         contractId: milestone.contractId,
         milestoneId,
         data: { proofId: proof.id, fileName, milestoneTitle: milestone.title },
-      });
+      }).catch((err) => console.error("[webhook] proof.submitted failed:", err));
 
       // Auto-trigger AI verification after response is sent
       after(() => triggerVerification(proof.id));
@@ -212,13 +215,13 @@ export async function POST(request: NextRequest) {
 
       // Email investor: startup submitted proof
       if (contract.investor.notifyProofSubmitted) {
-        void sendProofSubmittedEmail({
+        sendProofSubmittedEmail({
           to: contract.investor.email,
           contractId: resolvedContractId,
           milestoneTitle: contract.milestone,
           startupName: contract.startup?.companyName ?? contract.startup?.name,
           investorId: contract.investorId,
-        });
+        }).catch((err) => console.error("[email] sendProofSubmittedEmail failed:", err));
       }
 
       await writeAuditLog({
@@ -228,13 +231,13 @@ export async function POST(request: NextRequest) {
         metadata: { proofId: proof.id, fileName, fileHash },
       });
 
-      void fireWebhook({
+      fireWebhook({
         investorId: contract.investorId,
         startupId: contract.startupId ?? undefined,
         event: "proof.submitted",
         contractId: resolvedContractId,
         data: { proofId: proof.id, fileName, milestoneTitle: contract.milestone },
-      });
+      }).catch((err) => console.error("[webhook] proof.submitted failed:", err));
 
       // Auto-trigger AI verification after response is sent
       after(() => triggerVerification(proof.id));

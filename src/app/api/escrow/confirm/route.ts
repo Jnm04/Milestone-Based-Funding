@@ -62,27 +62,34 @@ export async function POST(request: NextRequest) {
     let fundedAmountUSD = contract.amountUSD.toString();
 
     if (milestoneId) {
-      const updatedMilestone = await prisma.milestone.update({
-        where: { id: milestoneId },
-        data: { status: "FUNDED", evmTxHash: txHash },
-      });
-      fundedMilestoneTitle = updatedMilestone.title;
-      fundedAmountUSD = updatedMilestone.amountUSD.toString();
+      // Wrap in a transaction to prevent a race condition where two concurrent
+      // milestone-fund confirmations both read the milestone list and disagree
+      // on whether all milestones are funded.
+      const result = await prisma.$transaction(async (tx) => {
+        const updatedMilestone = await tx.milestone.update({
+          where: { id: milestoneId },
+          data: { status: "FUNDED", evmTxHash: txHash },
+        });
 
-      // Check if all milestones are now funded
-      const allMilestones = await prisma.milestone.findMany({
-        where: { contractId },
-        select: { status: true },
-      });
-      const allFunded = allMilestones.every((m) => m.status === "FUNDED");
+        const allMilestones = await tx.milestone.findMany({
+          where: { contractId },
+          select: { status: true },
+        });
+        const allFunded = allMilestones.every((m) => m.status === "FUNDED");
 
-      await prisma.contract.update({
-        where: { id: contractId },
-        data: {
-          status: allFunded ? "FUNDED" : "AWAITING_ESCROW",
-          evmTxHash: allFunded ? txHash : undefined,
-        },
+        await tx.contract.update({
+          where: { id: contractId },
+          data: {
+            status: allFunded ? "FUNDED" : "AWAITING_ESCROW",
+            evmTxHash: allFunded ? txHash : undefined,
+          },
+        });
+
+        return updatedMilestone;
       });
+
+      fundedMilestoneTitle = result.title;
+      fundedAmountUSD = result.amountUSD.toString();
     } else {
       await prisma.contract.update({
         where: { id: contractId },
@@ -102,23 +109,23 @@ export async function POST(request: NextRequest) {
     });
 
     // Email + webhook: milestone funded
-    void fireWebhook({
+    fireWebhook({
       investorId: contract.investorId,
       startupId: contract.startupId ?? undefined,
       event: "contract.funded",
       contractId,
       milestoneId: milestoneId ?? undefined,
       data: { txHash, amountUSD: fundedAmountUSD, milestoneTitle: fundedMilestoneTitle },
-    });
+    }).catch((err) => console.error("[webhook] contract.funded failed:", err));
 
     if (contract.startup?.notifyFunded) {
-      void sendFundedEmail({
+      sendFundedEmail({
         to: contract.startup.email,
         contractId,
         milestoneTitle: fundedMilestoneTitle,
         amountUSD: fundedAmountUSD,
         startupId: contract.startupId ?? undefined,
-      });
+      }).catch((err) => console.error("[email] sendFundedEmail failed:", err));
     }
 
     return NextResponse.json({ ok: true, action: "funded" });

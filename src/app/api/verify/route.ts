@@ -10,6 +10,7 @@ import { sendPendingReviewEmail, sendRejectedEmail, sendVerifiedEmail, sendMiles
 import { contractIdToBytes32 } from "@/services/evm/escrow.service";
 import { writeAuditLog } from "@/services/evm/audit.service";
 import { fireWebhook } from "@/services/webhook/webhook.service";
+import { isValidCronSecret } from "@/lib/cron-auth";
 
 // Allow up to 60s — XRPL WebSocket + NFT mint can take 10-20s (requires Vercel Pro for >10s)
 export const maxDuration = 60;
@@ -34,8 +35,7 @@ function checkRateLimit(key: string): boolean {
 export async function POST(request: NextRequest) {
   try {
     // Accept either an internal server call (CRON_SECRET) or a logged-in session
-    const authHeader = request.headers.get("authorization");
-    const isInternalCall = authHeader === `Bearer ${process.env.CRON_SECRET}`;
+    const isInternalCall = isValidCronSecret(request.headers.get("authorization"));
     if (!isInternalCall) {
       const session = await getServerSession(authOptions);
       if (!session) {
@@ -142,14 +142,14 @@ export async function POST(request: NextRequest) {
     });
 
     // Store training data in the background — invisible to the user, never blocks response
-    void storeBrainData({
+    storeBrainData({
       proofId,
       milestoneText: milestoneTitle,
       proofText: extractedText,
       modelVotes: result.modelVotes,
       consensusLevel: result.consensusLevel,
       finalDecision: result.decision,
-    });
+    }).catch((err) => console.error("[brain] storeBrainData failed:", err));
 
     // Three-tier confidence logic
     let newStatus: string;
@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Fire webhooks for AI decision (fire-and-forget)
-    void fireWebhook({
+    fireWebhook({
       investorId: contract.investorId,
       startupId: contract.startupId,
       event: "ai.decision",
@@ -209,48 +209,48 @@ export async function POST(request: NextRequest) {
         action,
         milestoneTitle,
       },
-    });
+    }).catch((err) => console.error("[webhook] ai.decision failed:", err));
 
     if (action === "PENDING_REVIEW") {
-      void fireWebhook({
+      fireWebhook({
         investorId: contract.investorId,
         startupId: contract.startupId,
         event: "manual_review.required",
         contractId: contract.id,
         milestoneId: proof.milestoneId ?? undefined,
         data: { milestoneTitle, aiReasoning: result.reasoning },
-      });
+      }).catch((err) => console.error("[webhook] manual_review.required failed:", err));
     }
 
     if (action === "PENDING_REVIEW" && contract.investor.notifyPendingReview) {
-      void sendPendingReviewEmail({
+      sendPendingReviewEmail({
         to: contract.investor.email,
         contractId: contract.id,
         milestoneTitle,
         aiReasoning: result.reasoning,
         investorId: contract.investorId,
-      });
+      }).catch((err) => console.error("[email] sendPendingReviewEmail failed:", err));
     }
 
     if (action === "REJECTED") {
-      void fireWebhook({
+      fireWebhook({
         investorId: contract.investorId,
         startupId: contract.startupId,
         event: "contract.rejected",
         contractId: contract.id,
         milestoneId: proof.milestoneId ?? undefined,
         data: { milestoneTitle, aiReasoning: result.reasoning },
-      });
+      }).catch((err) => console.error("[webhook] contract.rejected failed:", err));
     }
 
     if (action === "REJECTED" && contract.startup?.notifyRejected) {
-      void sendRejectedEmail({
+      sendRejectedEmail({
         to: contract.startup.email,
         contractId: contract.id,
         milestoneTitle,
         aiReasoning: result.reasoning,
         startupId: contract.startupId ?? undefined,
-      });
+      }).catch((err) => console.error("[email] sendRejectedEmail failed:", err));
     }
 
     // Auto-release funds when AI approves with high confidence
@@ -268,14 +268,14 @@ export async function POST(request: NextRequest) {
         // Reveal fulfillment key to startup before attempting auto-release.
         // Even if releaseMilestone fails, the startup can self-execute on-chain.
         if (contract.startup?.email) {
-          void sendFulfillmentKeyEmail({
+          sendFulfillmentKeyEmail({
             to: contract.startup.email,
             contractId: contract.id,
             milestoneTitle,
             fulfillment,
             contractIdHash: contractIdToBytes32(contract.id),
             milestoneOrder,
-          });
+          }).catch((err) => console.error("[email] sendFulfillmentKeyEmail failed:", err));
         }
 
         const txHash = await releaseMilestone(contract.id, milestoneOrder, fulfillment);
@@ -307,26 +307,37 @@ export async function POST(request: NextRequest) {
         // NFT minting is triggered by the frontend ContractPoller after COMPLETED status
         // is detected — decoupled to avoid Vercel serverless timeout issues.
 
-        void fireWebhook({
+        fireWebhook({
           investorId: contract.investorId,
           startupId: contract.startupId,
           event: "funds.released",
           contractId: contract.id,
           milestoneId: proof.milestoneId ?? undefined,
           data: { txHash, amountUSD, milestoneTitle, auto: true },
-        });
+        }).catch((err) => console.error("[webhook] funds.released failed:", err));
 
         if (contract.startup?.notifyVerified) {
-          void sendVerifiedEmail({ to: contract.startup.email, contractId: contract.id, milestoneTitle, amountUSD: amountUSD, txHash, startupId: contract.startupId ?? undefined });
+          sendVerifiedEmail({ to: contract.startup.email, contractId: contract.id, milestoneTitle, amountUSD: amountUSD, txHash, startupId: contract.startupId ?? undefined })
+            .catch((err) => console.error("[email] sendVerifiedEmail failed:", err));
         }
         if (contract.investor.notifyMilestoneCompleted) {
-          void sendMilestoneCompletedInvestorEmail({ to: contract.investor.email, contractId: contract.id, milestoneTitle, amountUSD, investorId: contract.investorId });
+          sendMilestoneCompletedInvestorEmail({ to: contract.investor.email, contractId: contract.id, milestoneTitle, amountUSD, investorId: contract.investorId })
+            .catch((err) => console.error("[email] sendMilestoneCompletedInvestorEmail failed:", err));
         }
 
         return NextResponse.json({ decision: result.decision, reasoning: result.reasoning, confidence: result.confidence, action: "COMPLETED", txHash });
       } catch (releaseErr) {
-        // Auto-release failed — leave status as VERIFIED so startup can retry manually
-        console.error("[verify] Auto-release failed:", releaseErr);
+        // Auto-release failed — contract stays VERIFIED, startup can release manually via the contract page
+        const errMsg = releaseErr instanceof Error ? releaseErr.message : String(releaseErr);
+        console.error("[verify] Auto-release failed:", errMsg);
+        // Write audit log so admins and the audit trail UI can see the failure
+        writeAuditLog({
+          contractId: contract.id,
+          milestoneId: proof.milestoneId ?? undefined,
+          event: "FUNDS_RELEASED",
+          actor: "SYSTEM",
+          metadata: { error: errMsg, auto: true, failed: true },
+        }).catch((e) => console.error("[audit] Failed to write release-failure log:", e));
       }
     }
 

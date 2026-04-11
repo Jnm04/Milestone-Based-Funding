@@ -251,6 +251,48 @@ export async function sendRejectedEmail({
   });
 }
 
+export async function sendDeadlineReminderEmail({
+  to,
+  contractId,
+  milestoneTitle,
+  deadlineAt,
+  role,
+  hasProof,
+}: {
+  to: string;
+  contractId: string;
+  milestoneTitle: string;
+  deadlineAt: Date;
+  role: "investor" | "startup";
+  hasProof: boolean;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  const hoursLeft = Math.round((deadlineAt.getTime() - Date.now()) / (1000 * 60 * 60));
+  const daysLeft = Math.round(hoursLeft / 24);
+  const timeLabel = daysLeft >= 1 ? `${daysLeft} day${daysLeft !== 1 ? "s" : ""}` : `${hoursLeft} hours`;
+
+  const subject =
+    role === "startup"
+      ? `Deadline in ${timeLabel}: ${milestoneTitle}`
+      : `No proof submitted yet — ${timeLabel} remaining: ${milestoneTitle}`;
+
+  const body =
+    role === "startup"
+      ? `<p>Hi,</p>
+         <p>Your deadline for milestone <strong>${milestoneTitle}</strong> is in <strong>${timeLabel}</strong>.</p>
+         ${hasProof
+           ? "<p>You have already submitted proof — AI verification is in progress or awaiting review.</p>"
+           : "<p>You have not yet submitted proof. Please upload it before the deadline to receive payment.</p>"
+         }
+         <p><a href="${contractLink(contractId)}">Open milestone →</a></p>`
+      : `<p>Hi,</p>
+         <p>The startup has not yet submitted proof for milestone <strong>${milestoneTitle}</strong>.</p>
+         <p>The deadline is in <strong>${timeLabel}</strong>. If no proof is submitted, the escrow will be automatically returned to you.</p>
+         <p><a href="${contractLink(contractId)}">View contract →</a></p>`;
+
+  await resend.emails.send({ from: FROM, to, subject, html: body });
+}
+
 export async function sendFulfillmentKeyEmail({
   to,
   contractId,

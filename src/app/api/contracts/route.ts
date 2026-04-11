@@ -49,10 +49,21 @@ export async function POST(request: NextRequest) {
 
     const inviteLink = nanoid(12);
 
-    const result = await prisma.$transaction(async (tx) => {
-      const msData: { title: string; amountUSD: number; cancelAfter: string }[] =
-        milestonesInput ?? [{ title: milestone, amountUSD, cancelAfter }];
+    // Validate amounts before entering the transaction
+    const msData: { title: string; amountUSD: number; cancelAfter: string }[] =
+      milestonesInput ?? [{ title: milestone, amountUSD, cancelAfter }];
 
+    for (const m of msData) {
+      const amt = Number(m.amountUSD);
+      if (!Number.isFinite(amt) || amt <= 0 || amt > 999_999_999) {
+        return NextResponse.json({ error: "Invalid amount: must be between 0 and 999,999,999" }, { status: 400 });
+      }
+      if (Math.round(amt * 100) !== amt * 100) {
+        return NextResponse.json({ error: "Invalid amount: max 2 decimal places allowed" }, { status: 400 });
+      }
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
       const totalAmount = msData.reduce(
         (sum: number, m: { amountUSD: number }) => sum + Number(m.amountUSD),
         0
@@ -102,7 +113,7 @@ export async function POST(request: NextRequest) {
       metadata: { milestoneCount: result.id ? 1 : 0 },
     });
 
-    void fireWebhook({
+    fireWebhook({
       investorId: investor.id,
       startupId: receiver?.id ?? undefined,
       event: "contract.created",
@@ -112,7 +123,7 @@ export async function POST(request: NextRequest) {
         amountUSD: result.amountUSD.toString(),
         cancelAfter: result.cancelAfter.toISOString(),
       },
-    });
+    }).catch((err) => console.error("[webhook] contract.created failed:", err));
 
     return NextResponse.json({
       contractId: result.id,

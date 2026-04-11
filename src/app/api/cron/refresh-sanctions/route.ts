@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { downloadOfacList, invalidateSanctionsCache } from "@/services/sanctions/sanctions.service";
+import { isValidCronSecret } from "@/lib/cron-auth";
 
 /**
  * GET /api/cron/refresh-sanctions
@@ -10,8 +11,7 @@ import { downloadOfacList, invalidateSanctionsCache } from "@/services/sanctions
  * The list is ~500 KB. Parse + store takes <5s in practice.
  */
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isValidCronSecret(request.headers.get("authorization"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
