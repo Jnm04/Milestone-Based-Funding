@@ -12,6 +12,7 @@ import { MilestoneTimeline } from "./milestone-timeline";
 import { ContractPoller } from "./contract-poller";
 import { NodeBackground } from "@/components/node-background";
 import { NftSection } from "@/components/nft-section";
+import { IS_MAINNET } from "@/lib/config";
 import { CalendarButton } from "@/components/calendar-button";
 
 interface ContractPageProps {
@@ -269,7 +270,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           const isCompleted = contract.status === "COMPLETED" ||
             contract.milestones.some((m) => m.status === "COMPLETED");
 
-          const isMainnet = process.env.XRPL_NETWORK === "mainnet" || process.env.NEXT_PUBLIC_XRPL_NETWORK === "mainnet";
+          const isMainnet = IS_MAINNET;
           const certs: Array<{
             tokenId: string; txHash: string; title: string;
             amountUSD: string; completedAt: string; imageUrl?: string;
