@@ -1,8 +1,15 @@
 import * as xrpl from "xrpl";
 
-// HTTP JSON-RPC endpoint — avoids WebSocket overhead in serverless functions
+// Default to mainnet — same pattern as nft.service.ts
+// Only use testnet if explicitly set via env var
+const isTestnet =
+  process.env.XRPL_NETWORK === "testnet" ||
+  process.env.NEXT_PUBLIC_XRPL_NETWORK === "testnet";
 const XRPL_HTTP =
-  process.env.XRPL_HTTP_URL ?? "https://s.altnet.rippletest.net:51234";
+  process.env.XRPL_HTTP_URL ??
+  (isTestnet
+    ? "https://s.altnet.rippletest.net:51234"
+    : "https://s1.ripple.com:51234");
 
 interface XrplAuditParams {
   event: string;

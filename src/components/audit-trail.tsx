@@ -15,7 +15,6 @@ const EVENT_LABELS: Record<string, string> = {
 };
 
 const XRPL_EXPLORER = IS_MAINNET ? "https://xrpscan.com/tx" : "https://testnet.xrpscan.com/tx";
-const EVM_EXPLORER = "https://explorer.xrplevm.org/tx";
 
 export function AuditTrail({ logs }: { logs: AuditLog[] }) {
   if (logs.length === 0) return null;
@@ -86,16 +85,13 @@ export function AuditTrail({ logs }: { logs: AuditLog[] }) {
                 {/* Dual-chain explorer links — show both when available */}
                 <div className="flex flex-col items-end gap-0.5">
                   {log.evmTxHash && (
-                    <a
-                      href={`${EVM_EXPLORER}/${log.evmTxHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-mono hover:underline"
+                    <span
+                      className="text-xs font-mono"
                       title={`EVM: ${log.evmTxHash}`}
-                      style={{ color: "#C4704B" }}
+                      style={{ color: "#A89B8C" }}
                     >
-                      EVM {log.evmTxHash.slice(0, 8)}… ↗
-                    </a>
+                      EVM {log.evmTxHash.slice(0, 8)}…
+                    </span>
                   )}
                   {log.xrplTxHash && (
                     <a
