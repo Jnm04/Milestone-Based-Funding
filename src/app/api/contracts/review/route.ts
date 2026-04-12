@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/services/evm/audit.service";
+import { sendManualApprovedEmail, sendFulfillmentKeyEmail } from "@/lib/email";
+import { contractIdToBytes32 } from "@/services/evm/escrow.service";
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,6 +23,7 @@ export async function POST(request: NextRequest) {
       where: { id: contractId },
       include: {
         investor: true,
+        startup: true,
         milestones: { where: { status: "PENDING_REVIEW" } },
       },
     });
@@ -88,6 +91,35 @@ export async function POST(request: NextRequest) {
         event: "MANUAL_REVIEW_APPROVED",
         actor: session.user.id,
       });
+
+      // Notify startup: their proof was approved, they can now release funds
+      if (contract.startup?.email && contract.startup.notifyVerified) {
+        const pendingMilestone = contract.milestones[0] ?? null;
+        const milestoneTitle = pendingMilestone?.title ?? contract.milestone;
+        const amountUSD = (pendingMilestone?.amountUSD ?? contract.amountUSD).toString();
+
+        sendManualApprovedEmail({
+          to: contract.startup.email,
+          contractId,
+          milestoneTitle,
+          amountUSD,
+          startupId: contract.startupId ?? undefined,
+        }).catch((err) => console.error("[email] sendManualApprovedEmail failed:", err));
+
+        // Send fulfillment key as trustless backup
+        const fulfillment = pendingMilestone?.escrowFulfillment ?? contract.escrowFulfillment;
+        const milestoneOrder = pendingMilestone?.order ?? 0;
+        if (fulfillment) {
+          sendFulfillmentKeyEmail({
+            to: contract.startup.email,
+            contractId,
+            milestoneTitle,
+            fulfillment,
+            contractIdHash: contractIdToBytes32(contractId),
+            milestoneOrder,
+          }).catch((err) => console.error("[email] sendFulfillmentKeyEmail failed:", err));
+        }
+      }
     }
 
     return NextResponse.json({ status: newStatus });

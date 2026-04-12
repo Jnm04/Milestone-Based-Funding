@@ -232,6 +232,47 @@ export default function InvestorDashboard() {
                 <StatCard label="Milestones Completed"  value={completed} />
                 <StatCard label="Pending Reviews"       value={pending} />
               </div>
+
+              {/* Pending review alert */}
+              {pending > 0 && (
+                <div
+                  className="flex items-start gap-4 p-5 rounded-xl"
+                  style={{ background: "rgba(196,112,75,0.08)", border: "1px solid rgba(196,112,75,0.4)" }}
+                >
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-sm"
+                    style={{ background: "rgba(196,112,75,0.18)" }}
+                  >
+                    ⚠
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm font-semibold" style={{ color: "#E8935A" }}>
+                      {pending} contract{pending > 1 ? "s" : ""} require your manual review
+                    </p>
+                    <p className="text-xs" style={{ color: "#A89B8C" }}>
+                      The AI was not confident enough for an automatic decision. Open each contract and approve or reject manually.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {contracts
+                        .filter((c) => c.status === "PENDING_REVIEW")
+                        .map((c) => (
+                          <Link
+                            key={c.id}
+                            href={`/contract/${c.id}?investor=${walletAddress}`}
+                            className="text-xs px-3 py-1 rounded-lg font-medium transition-colors"
+                            style={{
+                              background: "rgba(196,112,75,0.15)",
+                              border: "1px solid rgba(196,112,75,0.3)",
+                              color: "#C4704B",
+                            }}
+                          >
+                            {c.milestone.slice(0, 40)}{c.milestone.length > 40 ? "…" : ""} →
+                          </Link>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
 

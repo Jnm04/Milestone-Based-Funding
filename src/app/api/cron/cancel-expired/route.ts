@@ -140,6 +140,61 @@ export async function GET(request: NextRequest) {
   const approveSucceeded = approveResults.filter((r) => r.status === "fulfilled").length;
   const approveFailed = approveResults.filter((r) => r.status === "rejected").length;
 
+  // ── 3. Delete stale DRAFT / DECLINED contracts (>30 days, no escrow funds) ─
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const staleContracts = await prisma.contract.findMany({
+    where: { status: { in: ["DRAFT", "DECLINED"] }, createdAt: { lt: thirtyDaysAgo } },
+    select: { id: true },
+  });
+  const staleIds = staleContracts.map((c) => c.id);
+  let deletedDrafts = 0;
+  if (staleIds.length > 0) {
+    await prisma.$transaction([
+      prisma.auditLog.deleteMany({ where: { contractId: { in: staleIds } } }),
+      prisma.proof.deleteMany({ where: { contractId: { in: staleIds } } }),
+      prisma.milestone.deleteMany({ where: { contractId: { in: staleIds } } }),
+      prisma.contract.deleteMany({ where: { id: { in: staleIds } } }),
+    ]);
+    deletedDrafts = staleIds.length;
+  }
+
+  // ── 4. Re-trigger verification for stuck PROOF_SUBMITTED (proof has no aiDecision >10 min) ─
+  const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
+  const stuckProofs = await prisma.proof.findMany({
+    where: {
+      aiDecision: null,
+      createdAt: { lt: tenMinutesAgo },
+      contract: { status: "PROOF_SUBMITTED" },
+    },
+    take: 10,
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+
+  let retried = 0;
+  if (stuckProofs.length > 0) {
+    const baseUrl =
+      process.env.NEXTAUTH_URL ??
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+    await Promise.allSettled(
+      stuckProofs.map(async (proof) => {
+        try {
+          await fetch(`${baseUrl}/api/verify`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${process.env.CRON_SECRET}`,
+            },
+            body: JSON.stringify({ proofId: proof.id }),
+          });
+          retried++;
+        } catch (err) {
+          console.error(`[cron/retry-verify] Failed for proof ${proof.id}:`, err);
+        }
+      })
+    );
+  }
+
   if (cancelFailed > 0 || approveFailed > 0) {
     console.error(
       `[cron/cancel-expired] FAILURES — cancelled: ${cancelSucceeded} ok, ${cancelFailed} failed | ` +
@@ -147,7 +202,8 @@ export async function GET(request: NextRequest) {
     );
   } else {
     console.log(
-      `[cron/cancel-expired] OK — cancelled: ${cancelSucceeded} | auto-approved: ${approveSucceeded}`
+      `[cron/cancel-expired] OK — cancelled: ${cancelSucceeded} | auto-approved: ${approveSucceeded} | ` +
+      `drafts deleted: ${deletedDrafts} | stuck proofs retried: ${retried}`
     );
   }
 
@@ -157,5 +213,7 @@ export async function GET(request: NextRequest) {
     cancelFailed,
     autoApproved: approveSucceeded,
     approveFailed,
+    deletedDrafts,
+    retriedVerifications: retried,
   });
 }

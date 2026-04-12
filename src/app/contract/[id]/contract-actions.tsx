@@ -444,8 +444,13 @@ export function ContractActions({
         const err = await res.json();
         throw new Error(err.error ?? "Resubmit failed");
       }
-      toast.success("Contract reset — you can now upload a new proof.");
-      setTimeout(() => window.location.reload(), 1000);
+      const data = await res.json() as { ok: boolean; status?: string; escalated?: boolean };
+      if (data.escalated) {
+        toast.info("Too many AI rejections — your case has been escalated to manual review by the Grant Giver.");
+      } else {
+        toast.success("Contract reset — you can now upload a new proof.");
+      }
+      setTimeout(() => window.location.reload(), 1200);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Resubmit failed.");
     } finally {

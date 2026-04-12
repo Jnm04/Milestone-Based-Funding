@@ -10,23 +10,31 @@ function isAuthorized(req: NextRequest) {
 export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const entries = await prisma.trainingEntry.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 200,
-    select: {
-      id: true,
-      proofId: true,
-      milestoneText: true,
-      proofText: true,
-      label: true,
-      labelSource: true,
-      consensusLevel: true,
-      fraudType: true,
-      modelVotes: true,
-      notes: true,
-      createdAt: true,
-    },
-  });
+  const { searchParams } = req.nextUrl;
+  const limit = Math.min(Math.max(1, parseInt(searchParams.get("limit") ?? "50")), 200);
+  const offset = Math.max(0, parseInt(searchParams.get("offset") ?? "0"));
+
+  const [total, entries] = await Promise.all([
+    prisma.trainingEntry.count(),
+    prisma.trainingEntry.findMany({
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      skip: offset,
+      select: {
+        id: true,
+        proofId: true,
+        milestoneText: true,
+        proofText: true,
+        label: true,
+        labelSource: true,
+        consensusLevel: true,
+        fraudType: true,
+        modelVotes: true,
+        notes: true,
+        createdAt: true,
+      },
+    }),
+  ]);
 
   // Attach fileUrl from Proof table (no direct relation in schema)
   const proofIds = entries.map((e) => e.proofId);
@@ -42,5 +50,5 @@ export async function GET(req: NextRequest) {
     fileName: proofMap.get(e.proofId)?.fileName ?? null,
   }));
 
-  return NextResponse.json({ entries: enriched });
+  return NextResponse.json({ entries: enriched, total, limit, offset });
 }

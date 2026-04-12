@@ -130,6 +130,17 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // Reject exact duplicate files for this milestone
+      const duplicate = await prisma.proof.findFirst({
+        where: { milestoneId, fileHash },
+      });
+      if (duplicate) {
+        return NextResponse.json(
+          { error: "This file has already been submitted as proof for this milestone." },
+          { status: 409 }
+        );
+      }
+
       const filename = `proofs/${milestone.contractId}/${Date.now()}-${safeFileName}`;
       const blob = await put(filename, buffer, { access: "private", contentType: effectiveMime });
       const fileUrl = blob.url;
@@ -198,6 +209,17 @@ export async function POST(request: NextRequest) {
       }
       if (!["FUNDED", "PROOF_SUBMITTED", "PENDING_REVIEW"].includes(contract.status)) {
         return NextResponse.json({ error: `Cannot upload proof in status: ${contract.status}` }, { status: 409 });
+      }
+
+      // Reject exact duplicate files for this contract
+      const duplicate = await prisma.proof.findFirst({
+        where: { contractId: resolvedContractId, fileHash },
+      });
+      if (duplicate) {
+        return NextResponse.json(
+          { error: "This file has already been submitted as proof for this contract." },
+          { status: 409 }
+        );
       }
 
       const filename = `proofs/${resolvedContractId}/${Date.now()}-${safeFileName}`;

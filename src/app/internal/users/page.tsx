@@ -126,8 +126,13 @@ function RecheckButton({ userId, apiKey, onUpdated }: {
   );
 }
 
+const PAGE_SIZE = 100;
+
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
+  const [total, setTotal] = useState(0);
+  const [offset, setOffset] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [search, setSearch] = useState("");
@@ -136,17 +141,35 @@ export default function UsersPage() {
   useEffect(() => {
     const key = sessionStorage.getItem("cascrow_internal_key") ?? "";
     setApiKey(key);
-    fetch("/api/internal/users", {
+    fetch(`/api/internal/users?limit=${PAGE_SIZE}&offset=0`, {
       headers: { "x-internal-key": key },
     })
       .then((r) => r.json())
       .then((d) => {
         if (d.error) { setError(true); return; }
         setUsers(d.users);
+        setTotal(d.total ?? d.users.length);
+        setOffset(d.users.length);
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
+
+  async function loadMore() {
+    setLoadingMore(true);
+    try {
+      const res = await fetch(`/api/internal/users?limit=${PAGE_SIZE}&offset=${offset}`, {
+        headers: { "x-internal-key": apiKey },
+      });
+      const d = await res.json();
+      if (!d.error) {
+        setUsers((prev) => [...prev, ...d.users]);
+        setOffset((prev) => prev + d.users.length);
+      }
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   const updateUser = useCallback((id: string, patch: Partial<User>) => {
     setUsers((prev) => prev.map((u) => u.id === id ? { ...u, ...patch } : u));
@@ -170,7 +193,9 @@ export default function UsersPage() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 500, color: "#EDE6DD", margin: 0 }}>Users</h1>
-          <p style={{ fontSize: 12, color: "#A89B8C", margin: "4px 0 0" }}>{users.length} total</p>
+          <p style={{ fontSize: 12, color: "#A89B8C", margin: "4px 0 0" }}>
+            {users.length} of {total} total
+          </p>
         </div>
         <input
           type="text"
@@ -301,6 +326,27 @@ export default function UsersPage() {
           </tbody>
         </table>
       </div>
+
+      {users.length < total && !search && (
+        <div style={{ textAlign: "center", paddingTop: 8 }}>
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            style={{
+              padding: "8px 20px",
+              borderRadius: 8,
+              background: "rgba(196,112,75,0.1)",
+              border: "1px solid rgba(196,112,75,0.25)",
+              color: "#C4704B",
+              fontSize: 13,
+              cursor: loadingMore ? "default" : "pointer",
+              opacity: loadingMore ? 0.6 : 1,
+            }}
+          >
+            {loadingMore ? "Loading…" : `Load more (${total - users.length} remaining)`}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

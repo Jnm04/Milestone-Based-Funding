@@ -293,6 +293,37 @@ export async function sendDeadlineReminderEmail({
   await resend.emails.send({ from: FROM, to, subject, html: body });
 }
 
+export async function sendManualApprovedEmail({
+  to,
+  contractId,
+  milestoneTitle,
+  amountUSD,
+  startupId,
+}: {
+  to: string;
+  contractId: string;
+  milestoneTitle: string;
+  amountUSD: string;
+  startupId?: string;
+}) {
+  if (startupId) {
+    void tgVerified({ startupId, contractId, milestoneTitle, amountUSD, txHash: null });
+  }
+  if (!process.env.RESEND_API_KEY) return;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Approved — release your funds: ${milestoneTitle}`,
+    html: `
+      <p>Hi,</p>
+      <p>Great news! The Grant Giver has manually approved your proof for <strong>${milestoneTitle}</strong>.</p>
+      <p><strong>$${Number(amountUSD).toLocaleString()} RLUSD</strong> is ready to be released to your wallet.</p>
+      <p>Open the contract page and click <strong>Release Funds</strong> to receive your payment.</p>
+      <p><a href="${contractLink(contractId)}">Release funds →</a></p>
+    `,
+  });
+}
+
 export async function sendFulfillmentKeyEmail({
   to,
   contractId,

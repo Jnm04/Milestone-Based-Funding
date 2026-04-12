@@ -64,8 +64,13 @@ function parseSource(notes: string | null): { tag: string | null; rest: string |
   return { tag: null, rest: notes };
 }
 
+const PAGE_SIZE = 50;
+
 export default function DatasetPage() {
   const [entries, setEntries] = useState<TrainingEntry[]>([]);
+  const [total, setTotal] = useState(0);
+  const [offset, setOffset] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [exporting, setExporting] = useState<"jsonl" | "csv" | null>(null);
@@ -76,9 +81,29 @@ export default function DatasetPage() {
 
   function loadEntries() {
     setLoading(true);
-    fetch("/api/internal/dataset", { headers: { "x-internal-key": key() } })
-      .then((r) => (r.ok ? r.json() : { entries: [] }))
-      .then((d) => { setEntries(d.entries ?? []); setLoading(false); });
+    fetch(`/api/internal/dataset?limit=${PAGE_SIZE}&offset=0`, { headers: { "x-internal-key": key() } })
+      .then((r) => (r.ok ? r.json() : { entries: [], total: 0 }))
+      .then((d) => {
+        setEntries(d.entries ?? []);
+        setTotal(d.total ?? (d.entries ?? []).length);
+        setOffset((d.entries ?? []).length);
+        setLoading(false);
+      });
+  }
+
+  async function loadMore() {
+    setLoadingMore(true);
+    try {
+      const res = await fetch(`/api/internal/dataset?limit=${PAGE_SIZE}&offset=${offset}`, {
+        headers: { "x-internal-key": key() },
+      });
+      if (!res.ok) return;
+      const d = await res.json();
+      setEntries((prev) => [...prev, ...(d.entries ?? [])]);
+      setOffset((prev) => prev + (d.entries ?? []).length);
+    } finally {
+      setLoadingMore(false);
+    }
   }
 
   useEffect(() => { loadEntries(); }, []);
@@ -134,7 +159,7 @@ export default function DatasetPage() {
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 300, marginBottom: 4 }}>Training Dataset</h1>
           <p style={{ color: "#A89B8C", fontSize: 13 }}>
-            {entries.length} labeled entries (most recent first){" "}
+            {entries.length}{total > entries.length ? ` of ${total}` : ""} labeled entries (most recent first){" "}
             <button onClick={loadEntries} disabled={loading} style={{ background: "none", border: "none", color: "#C4704B", cursor: "pointer", fontSize: 13, padding: 0, marginLeft: 8 }}>
               {loading ? "…" : "↻ Refresh"}
             </button>
@@ -182,6 +207,27 @@ export default function DatasetPage() {
       {entries.length === 0 && (
         <div style={{ padding: 32, textAlign: "center", color: "#A89B8C", border: "1px dashed rgba(196,112,75,0.2)", borderRadius: 12 }}>
           No entries yet. Run verifications or use the Sandbox to generate training data.
+        </div>
+      )}
+
+      {entries.length < total && (
+        <div style={{ textAlign: "center" }}>
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            style={{
+              padding: "8px 20px",
+              borderRadius: 8,
+              background: "rgba(196,112,75,0.1)",
+              border: "1px solid rgba(196,112,75,0.25)",
+              color: "#C4704B",
+              fontSize: 13,
+              cursor: loadingMore ? "default" : "pointer",
+              opacity: loadingMore ? 0.6 : 1,
+            }}
+          >
+            {loadingMore ? "Loading…" : `Load more (${total - entries.length} remaining)`}
+          </button>
         </div>
       )}
 
