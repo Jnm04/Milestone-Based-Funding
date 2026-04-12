@@ -6,12 +6,21 @@ import { nanoid } from "nanoid";
 import { writeAuditLog } from "@/services/evm/audit.service";
 import { fireWebhook } from "@/services/webhook/webhook.service";
 import { createContractSchema } from "@/lib/zod-schemas";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    // 20 contract creations per user per hour — prevents DB/webhook spam
+    if (!checkRateLimit(`create-contract:${session.user.id}`, 20, 60 * 60 * 1000)) {
+      return NextResponse.json(
+        { error: "Too many contracts created. Please wait before trying again." },
+        { status: 429, headers: { "Retry-After": "3600" } }
+      );
     }
 
     const body = await request.json();

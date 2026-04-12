@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { Logo } from "@/components/logo";
 import { NodeBackground } from "@/components/node-background";
 
@@ -14,12 +15,20 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await fetch("/api/auth/forgot-password", {
+      const res = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
+      // Only show error for real server faults (5xx).
+      // 4xx are intentionally swallowed — the API never reveals if an email exists.
+      if (res.status >= 500) {
+        toast.error("Something went wrong. Please try again.");
+        return;
+      }
       setSent(true);
+    } catch {
+      toast.error("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }

@@ -205,7 +205,7 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
             </div>
 
             {/* Amount + Deadline */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: "12px" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                 <Label htmlFor={`ms-amount-${idx}`}>Amount (USD)</Label>
                 <Input
@@ -264,9 +264,21 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
         </button>
       </div>
 
-      <Button type="submit" disabled={loading} size="lg">
-        {loading ? "Creating…" : "Create Contract"}
-      </Button>
+      <div style={{ display: "flex", gap: "12px" }}>
+        <Button type="submit" disabled={loading} size="lg" style={{ flex: 1 }}>
+          {loading ? "Creating…" : "Create Contract"}
+        </Button>
+        {!loading && (
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            onClick={() => router.back()}
+          >
+            Cancel
+          </Button>
+        )}
+      </div>
     </form>
   );
 }

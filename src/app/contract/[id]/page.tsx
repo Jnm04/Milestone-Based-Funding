@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { EscrowStatus } from "@/components/escrow-status";
@@ -18,6 +19,17 @@ import { CalendarButton } from "@/components/calendar-button";
 interface ContractPageProps {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ investor?: string; startup?: string }>;
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const contract = await prisma.contract.findUnique({
+    where: { id },
+    select: { milestone: true },
+  });
+  return {
+    title: contract ? `${contract.milestone} | cascrow` : "Contract | cascrow",
+  };
 }
 
 
