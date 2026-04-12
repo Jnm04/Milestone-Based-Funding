@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
   try {
     // Accept either an internal server call (CRON_SECRET) or a logged-in session
     const isInternalCall = isValidCronSecret(request.headers.get("authorization"));
+    let sessionUserId: string | null = null;
     if (!isInternalCall) {
       const session = await getServerSession(authOptions);
       if (!session) {
@@ -48,6 +49,7 @@ export async function POST(request: NextRequest) {
           { status: 429, headers: { "Retry-After": "600" } }
         );
       }
+      sessionUserId = session.user.id;
     }
 
     const { proofId } = await request.json();
@@ -67,6 +69,16 @@ export async function POST(request: NextRequest) {
 
     if (!proof) {
       return NextResponse.json({ error: "Proof not found" }, { status: 404 });
+    }
+
+    // Verify caller is a party to this contract (skip for internal/cron calls)
+    if (!isInternalCall && sessionUserId) {
+      if (
+        proof.contract.investorId !== sessionUserId &&
+        proof.contract.startupId !== sessionUserId
+      ) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      }
     }
 
     const { contract } = proof;

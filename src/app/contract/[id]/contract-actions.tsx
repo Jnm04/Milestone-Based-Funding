@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ProofUpload } from "@/components/proof-upload";
 import { toast } from "sonner";
@@ -231,6 +231,21 @@ export function ContractActions({
   const [loadingCancel, setLoadingCancel] = useState(false);
   const [loadingResubmit, setLoadingResubmit] = useState(false);
   const [verifyDone, setVerifyDone] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [confirmReject, setConfirmReject] = useState(false);
+
+  // Auto-reset confirm states after 5 seconds to prevent accidental clicks
+  useEffect(() => {
+    if (!confirmCancel) return;
+    const t = setTimeout(() => setConfirmCancel(false), 5000);
+    return () => clearTimeout(t);
+  }, [confirmCancel]);
+
+  useEffect(() => {
+    if (!confirmReject) return;
+    const t = setTimeout(() => setConfirmReject(false), 5000);
+    return () => clearTimeout(t);
+  }, [confirmReject]);
 
   // ── Mint test RLUSD via MockRLUSD.faucet() ───────────────────────────────
   async function handleFaucet() {
@@ -648,10 +663,14 @@ export function ContractActions({
                 {loadingReview === "APPROVE" ? "Approving…" : "✓ Approve"}
               </button>
               <button
-                onClick={() => handleReview("REJECT")}
+                onClick={() => {
+                  if (!confirmReject) { setConfirmReject(true); return; }
+                  setConfirmReject(false);
+                  handleReview("REJECT");
+                }}
                 disabled={loadingReview !== null}
                 style={{
-                  background: "rgba(248,113,113,0.1)",
+                  background: confirmReject ? "rgba(248,113,113,0.25)" : "rgba(248,113,113,0.1)",
                   color: "#F87171",
                   flex: 1,
                   padding: "8px 16px",
@@ -662,7 +681,7 @@ export function ContractActions({
                   opacity: loadingReview !== null ? 0.6 : 1,
                 }}
               >
-                {loadingReview === "REJECT" ? "Rejecting…" : "✗ Reject"}
+                {loadingReview === "REJECT" ? "Rejecting…" : confirmReject ? "Confirm: Reject?" : "✗ Reject"}
               </button>
             </div>
           </div>
@@ -715,12 +734,16 @@ export function ContractActions({
             </p>
             {viewerWallet === investorAddress && (
               <button
-                onClick={handleCancelEscrow}
+                onClick={() => {
+                  if (!confirmCancel) { setConfirmCancel(true); return; }
+                  setConfirmCancel(false);
+                  handleCancelEscrow();
+                }}
                 disabled={loadingCancel}
                 className="w-full rounded-lg py-2.5 text-sm font-semibold transition-colors disabled:opacity-50"
-                style={{ background: "rgba(248,113,113,0.15)", color: "#F87171", border: "1px solid rgba(248,113,113,0.3)" }}
+                style={{ background: confirmCancel ? "rgba(248,113,113,0.3)" : "rgba(248,113,113,0.15)", color: "#F87171", border: "1px solid rgba(248,113,113,0.3)" }}
               >
-                {loadingCancel ? "Cancelling…" : "Cancel Escrow & Recover Funds"}
+                {loadingCancel ? "Cancelling…" : confirmCancel ? "Confirm: Cancel & Recover?" : "Cancel Escrow & Recover Funds"}
               </button>
             )}
           </>

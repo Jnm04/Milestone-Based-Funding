@@ -73,6 +73,7 @@ function RegisterForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [role, setRole] = useState<"INVESTOR" | "STARTUP">("INVESTOR");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [loading, setLoading] = useState(false);
@@ -84,6 +85,10 @@ function RegisterForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (password !== passwordConfirm) {
+      toast.error("Passwords do not match.");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/auth/register", {
@@ -314,6 +319,24 @@ function RegisterForm() {
                   </div>
                   <p className="text-xs" style={{ color: strength.color }}>{strength.label}</p>
                 </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="cs-label">Confirm password</label>
+              <input
+                type="password"
+                required
+                minLength={8}
+                value={passwordConfirm}
+                onChange={(e) => setPasswordConfirm(e.target.value)}
+                className="cs-input"
+                placeholder="Repeat your password"
+              />
+              {password && passwordConfirm && (
+                <p className="text-xs mt-0.5" style={{ color: password === passwordConfirm ? "#34d399" : "#f87171" }}>
+                  {password === passwordConfirm ? "✓ Passwords match" : "✗ Passwords do not match"}
+                </p>
               )}
             </div>
 
