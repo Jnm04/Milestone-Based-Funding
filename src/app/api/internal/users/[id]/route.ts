@@ -11,19 +11,20 @@ function isAuthorized(req: NextRequest) {
 /** PATCH /api/internal/users/[id] — manually set kycTier */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { id } = await params;
   const { kycTier } = await request.json();
   if (typeof kycTier !== "number" || ![0, 1, 2, 3].includes(kycTier)) {
     return NextResponse.json({ error: "kycTier must be 0, 1, 2, or 3" }, { status: 400 });
   }
 
   const user = await prisma.user.update({
-    where: { id: params.id },
+    where: { id },
     data: { kycTier },
     select: { id: true, kycTier: true },
   });
@@ -34,14 +35,15 @@ export async function PATCH(
 /** POST /api/internal/users/[id]/recheck — run sanctions screening for a specific user */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { id } = await params;
   const user = await prisma.user.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: { id: true, name: true, email: true, dateOfBirth: true, kycTier: true },
   });
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });

@@ -66,8 +66,20 @@ export async function POST(request: NextRequest) {
     const inviteLink = nanoid(12);
 
     // Validate amounts before entering the transaction
-    const msData: { title: string; amountUSD: number; cancelAfter: string }[] =
-      milestonesInput ?? [{ title: milestone, amountUSD, cancelAfter }];
+    // Build msData with explicit narrowing — Zod refine() guarantees milestone is set
+    // when milestonesInput is absent, but TypeScript can't infer that automatically.
+    let msData: { title: string; amountUSD: number; cancelAfter: string }[];
+    if (milestonesInput) {
+      msData = milestonesInput;
+    } else {
+      if (!milestone || amountUSD === undefined || !cancelAfter) {
+        return NextResponse.json(
+          { error: "milestone, amountUSD, and cancelAfter are required" },
+          { status: 400 }
+        );
+      }
+      msData = [{ title: milestone, amountUSD, cancelAfter }];
+    }
 
     for (const m of msData) {
       const amt = Number(m.amountUSD);
