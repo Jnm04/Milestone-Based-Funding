@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendPasswordResetEmail } from "@/lib/email";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import crypto from "crypto";
 
 export async function POST(request: NextRequest) {
   try {
+    // 5 password-reset emails per IP per hour — prevents email flooding
+    const ip = getClientIp(request);
+    if (!checkRateLimit(`forgot-pw:${ip}`, 5, 60 * 60 * 1000)) {
+      // Return ok to avoid leaking info, but don't actually send the email
+      return NextResponse.json({ ok: true });
+    }
+
     const { email } = await request.json();
 
     if (!email || typeof email !== "string" || email.length > 254) {

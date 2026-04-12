@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { nanoid } from "nanoid";
 import { writeAuditLog } from "@/services/evm/audit.service";
 import { fireWebhook } from "@/services/webhook/webhook.service";
+import { createContractSchema } from "@/lib/zod-schemas";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,15 +14,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const { milestone, amountUSD, cancelAfter, milestones: milestonesInput, receiverWalletAddress } = await request.json();
+    const body = await request.json();
 
-    // Need at least a milestone title/description
-    if (!milestone && (!milestonesInput || milestonesInput.length === 0)) {
-      return NextResponse.json(
-        { error: "milestone or milestones array is required" },
-        { status: 400 }
-      );
+    // Zod: catches missing fields, wrong types, oversized strings, too many milestones
+    const parsed = createContractSchema.safeParse(body);
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? "Invalid input";
+      return NextResponse.json({ error: message }, { status: 400 });
     }
+    const { milestone, amountUSD, cancelAfter, milestones: milestonesInput, receiverWalletAddress } = parsed.data;
 
     if (!session.user.walletAddress) {
       return NextResponse.json(

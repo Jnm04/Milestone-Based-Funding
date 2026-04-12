@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendVerificationEmail } from "@/lib/email";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import crypto from "crypto";
 
 // Minimum seconds between resend requests per email address
@@ -8,6 +9,12 @@ const RESEND_COOLDOWN_MS = 60 * 1000;
 
 export async function POST(request: NextRequest) {
   try {
+    // 10 resend requests per IP per hour (per-email cooldown also applies below)
+    const ip = getClientIp(request);
+    if (!checkRateLimit(`resend-verify:${ip}`, 10, 60 * 60 * 1000)) {
+      return NextResponse.json({ ok: true }); // Silent block — no enumeration
+    }
+
     const { email } = await request.json();
 
     if (!email) {

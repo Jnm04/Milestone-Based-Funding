@@ -3,46 +3,38 @@ import { prisma } from "@/lib/prisma";
 import { sendVerificationEmail } from "@/lib/email";
 import { screenName } from "@/services/sanctions/sanctions.service";
 import { validateName } from "@/lib/validate-name";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { registerSchema } from "@/lib/zod-schemas";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, name, role, dateOfBirth } = await request.json();
-
-    if (!email || !password || !role) {
-      return NextResponse.json({ error: "email, password and role are required" }, { status: 400 });
+    // 10 registrations per IP per hour — blocks signup floods without affecting real users
+    const ip = getClientIp(request);
+    if (!checkRateLimit(`register:${ip}`, 10, 60 * 60 * 1000)) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429, headers: { "Retry-After": "3600" } }
+      );
     }
 
-    // Reject oversized inputs
-    if (typeof email !== "string" || email.length > 254) {
-      return NextResponse.json({ error: "Invalid email" }, { status: 400 });
+    const body = await request.json();
+
+    // Zod: structural + type validation (catches missing fields, wrong types, length violations)
+    const parsed = registerSchema.safeParse(body);
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? "Invalid input";
+      return NextResponse.json({ error: message }, { status: 400 });
     }
-    if (typeof password !== "string" || password.length > 72) {
-      return NextResponse.json({ error: "Password must be at most 72 characters" }, { status: 400 });
-    }
-    if (typeof name === "string" && name.length > 200) {
-      return NextResponse.json({ error: "Name too long" }, { status: 400 });
-    }
+    const { email, password, name, role, dateOfBirth } = parsed.data;
+
+    // Domain-specific name validation (business rules beyond what Zod covers)
     if (typeof name === "string" && name.trim().length > 0) {
       const nameCheck = validateName(name);
       if (!nameCheck.valid) {
         return NextResponse.json({ error: nameCheck.reason }, { status: 400 });
       }
-    }
-
-    // Basic email format check
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
-    }
-
-    if (!["INVESTOR", "STARTUP"].includes(role)) {
-      return NextResponse.json({ error: "role must be INVESTOR or STARTUP" }, { status: 400 });
-    }
-
-    if (password.length < 8) {
-      return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
     }
 
     const existing = await prisma.user.findUnique({ where: { email } });
