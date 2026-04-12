@@ -42,7 +42,9 @@ const milestoneItemSchema = z.object({
 
   cancelAfter: z
     .string({ required_error: "cancelAfter is required" })
-    .min(1, "cancelAfter cannot be empty"),
+    .min(1, "cancelAfter cannot be empty")
+    .refine((val) => !isNaN(new Date(val).getTime()), { message: "cancelAfter must be a valid date" })
+    .refine((val) => new Date(val) > new Date(), { message: "Deadline must be in the future" }),
 });
 
 export const createContractSchema = z

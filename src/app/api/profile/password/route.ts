@@ -2,11 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
 import bcrypt from "bcryptjs";
 
 export async function PUT(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // 10 password-change attempts per user per hour
+  if (!checkRateLimit(`password-change:${session.user.id}`, 10, 60 * 60 * 1000)) {
+    return NextResponse.json(
+      { error: "Too many attempts. Please try again later." },
+      { status: 429, headers: { "Retry-After": "3600" } }
+    );
+  }
 
   const { currentPassword, newPassword } = await request.json();
 
@@ -15,6 +24,9 @@ export async function PUT(request: NextRequest) {
   }
   if (newPassword.length < 8) {
     return NextResponse.json({ error: "New password must be at least 8 characters" }, { status: 400 });
+  }
+  if (newPassword.length > 72) {
+    return NextResponse.json({ error: "New password must be at most 72 characters" }, { status: 400 });
   }
 
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });

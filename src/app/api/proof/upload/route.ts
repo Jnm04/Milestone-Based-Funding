@@ -2,6 +2,7 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { extractPdfText, extractOfficeText, categorizeFile } from "@/services/ai/verifier.service";
 import { sendProofSubmittedEmail } from "@/lib/email";
 import { put } from "@vercel/blob";
@@ -53,6 +54,14 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // 20 uploads per user per hour — prevents Vercel Blob cost abuse
+    if (!checkRateLimit(`proof-upload:${session.user.id}`, 20, 60 * 60 * 1000)) {
+      return NextResponse.json(
+        { error: "Too many uploads. Please wait before submitting again." },
+        { status: 429, headers: { "Retry-After": "3600" } }
+      );
     }
 
     const formData = await request.formData();
