@@ -89,6 +89,9 @@ model Contract {
   auditLogs           AuditLog[]
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
+
+  @@index([investorId])
+  @@index([startupId])
 }
 
 enum ContractStatus {
@@ -124,6 +127,9 @@ model Proof {
   /// For github_url proofs: the submitted GitHub repo URL
   proofUrl      String?
   createdAt     DateTime   @default(now())
+
+  @@index([contractId])
+  @@index([milestoneId])
 }
 
 model Milestone {
@@ -146,6 +152,8 @@ model Milestone {
   proofs            Proof[]
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
+
+  @@index([contractId])
 }
 
 enum MilestoneStatus {
@@ -171,6 +179,8 @@ model AuditLog {
   actor       String?
   metadata    Json?
   createdAt   DateTime @default(now())
+
+  @@index([contractId])
 }
 
 // ── Brain / ML ───────────────────────────────────────────────────────────────
@@ -214,6 +224,8 @@ model HumanReviewQueue {
   fraudType      String?
   notes          String?   @db.Text
   createdAt      DateTime  @default(now())
+
+  @@index([label])
 }
 
 /// Tracks token usage and estimated cost for every AI API call made by the platform.

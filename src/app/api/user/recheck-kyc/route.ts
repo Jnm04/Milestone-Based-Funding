@@ -17,9 +17,16 @@ export async function POST() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, name: true, email: true, dateOfBirth: true, kycTier: true, sanctionsCheckedAt: true },
+    select: { id: true, name: true, email: true, emailVerified: true, dateOfBirth: true, kycTier: true, sanctionsCheckedAt: true },
   });
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+  if (!user.emailVerified) {
+    return NextResponse.json({ error: "Verify your email first" }, { status: 403 });
+  }
+  if (user.kycTier >= 2) {
+    return NextResponse.json({ error: "Your KYC is already at the maximum level" }, { status: 400 });
+  }
 
   // Rate limit: 1 hour between checks
   if (user.sanctionsCheckedAt) {
@@ -33,22 +40,27 @@ export async function POST() {
     }
   }
 
-  const target = user.name ?? user.email.split("@")[0];
-  const result = await screenName(target, user.dateOfBirth ?? null);
+  try {
+    const target = user.name ?? user.email.split("@")[0];
+    const result = await screenName(target, user.dateOfBirth ?? null);
 
-  const newTier = result.hit ? user.kycTier : Math.max(user.kycTier, 1);
+    const newTier = result.hit ? user.kycTier : Math.max(user.kycTier, 1);
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      sanctionsCheckedAt: new Date(),
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        sanctionsCheckedAt: new Date(),
+        sanctionsStatus: result.hit ? "HIT" : "CLEAR",
+        kycTier: newTier,
+      },
+    });
+
+    return NextResponse.json({
       sanctionsStatus: result.hit ? "HIT" : "CLEAR",
       kycTier: newTier,
-    },
-  });
-
-  return NextResponse.json({
-    sanctionsStatus: result.hit ? "HIT" : "CLEAR",
-    kycTier: newTier,
-  });
+    });
+  } catch (err) {
+    console.error("[recheck-kyc] Screening failed:", err);
+    return NextResponse.json({ error: "Screening service unavailable. Try again later." }, { status: 503 });
+  }
 }

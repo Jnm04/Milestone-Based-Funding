@@ -10,26 +10,31 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${BASE_URL}/login?error=invalid_token`);
   }
 
-  const user = await prisma.user.findUnique({
-    where: { emailVerificationToken: token },
-  });
+  try {
+    const user = await prisma.user.findUnique({
+      where: { emailVerificationToken: token },
+    });
 
-  if (!user) {
-    return NextResponse.redirect(`${BASE_URL}/login?error=invalid_token`);
+    if (!user) {
+      return NextResponse.redirect(`${BASE_URL}/login?error=invalid_token`);
+    }
+
+    if (user.emailVerificationTokenExpiry && user.emailVerificationTokenExpiry < new Date()) {
+      return NextResponse.redirect(`${BASE_URL}/login?error=token_expired`);
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationTokenExpiry: null,
+      },
+    });
+
+    return NextResponse.redirect(`${BASE_URL}/login?verified=1`);
+  } catch (err) {
+    console.error("[verify-email] Failed:", err);
+    return NextResponse.redirect(`${BASE_URL}/login?error=server_error`);
   }
-
-  if (user.emailVerificationTokenExpiry && user.emailVerificationTokenExpiry < new Date()) {
-    return NextResponse.redirect(`${BASE_URL}/login?error=token_expired`);
-  }
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      emailVerified: true,
-      emailVerificationToken: null,
-      emailVerificationTokenExpiry: null,
-    },
-  });
-
-  return NextResponse.redirect(`${BASE_URL}/login?verified=1`);
 }
