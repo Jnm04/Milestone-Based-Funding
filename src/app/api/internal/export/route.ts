@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isInternalAuthorized } from "@/lib/internal-auth";
 import { prisma } from "@/lib/prisma";
 
-function isAuthorized(req: NextRequest) {
-  const key = req.headers.get("x-internal-key")?.trim();
-  const secret = process.env.INTERNAL_SECRET?.trim();
-  return key && secret && key === secret;
-}
 
 /**
  * GET /api/internal/export
@@ -21,7 +17,7 @@ function isAuthorized(req: NextRequest) {
  *   - OpenAI fine-tuning API (gpt-3.5-turbo / gpt-4o-mini)
  */
 export async function GET(req: NextRequest) {
-  if (!isAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isInternalAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const format = new URL(req.url).searchParams.get("format") ?? "jsonl";
 

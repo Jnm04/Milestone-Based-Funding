@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { validateName } from "@/lib/validate-name";
-import { screenName } from "@/services/sanctions/sanctions.service";
+import { screenName, screenWallet } from "@/services/sanctions/sanctions.service";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -108,17 +108,21 @@ export async function PUT(request: NextRequest) {
       try {
         const fresh = await prisma.user.findUnique({
           where: { id: session.user.id },
-          select: { name: true, email: true, dateOfBirth: true, kycTier: true },
+          select: { name: true, email: true, dateOfBirth: true, kycTier: true, walletAddress: true },
         });
         if (!fresh || fresh.kycTier >= 2) return;
         const target = fresh.name ?? fresh.email.split("@")[0];
-        const result = await screenName(target, fresh.dateOfBirth ?? null);
+        const [nameResult, walletResult] = await Promise.all([
+          screenName(target, fresh.dateOfBirth ?? null),
+          fresh.walletAddress ? screenWallet(fresh.walletAddress) : Promise.resolve({ hit: false, matches: [] }),
+        ]);
+        const overallHit = nameResult.hit || walletResult.hit;
         await prisma.user.update({
           where: { id: session.user.id },
           data: {
             sanctionsCheckedAt: new Date(),
-            sanctionsStatus: result.hit ? "HIT" : "CLEAR",
-            ...(!result.hit ? { kycTier: Math.max(fresh.kycTier, 1) } : {}),
+            sanctionsStatus: overallHit ? "HIT" : "CLEAR",
+            ...(!overallHit ? { kycTier: Math.max(fresh.kycTier, 1) } : {}),
           },
         });
       } catch (err) {

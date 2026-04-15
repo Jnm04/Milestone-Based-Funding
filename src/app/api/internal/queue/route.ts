@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isInternalAuthorized } from "@/lib/internal-auth";
 import { prisma } from "@/lib/prisma";
 import { labelQueueEntry, undoLabelQueueEntry, skipQueueEntry } from "@/services/brain/training.service";
 
-function isAuthorized(req: NextRequest) {
-  const key = req.headers.get("x-internal-key")?.trim();
-  const secret = process.env.INTERNAL_SECRET?.trim();
-  return key && secret && key === secret;
-}
 
 /**
  * GET — list queue entries by tab:
@@ -15,7 +11,7 @@ function isAuthorized(req: NextRequest) {
  *   ?tab=skipped            — skipped by reviewer (not yet labeled)
  */
 export async function GET(req: NextRequest) {
-  if (!isAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isInternalAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const tab = req.nextUrl.searchParams.get("tab") ?? "pending";
 
@@ -38,7 +34,7 @@ export async function GET(req: NextRequest) {
 
 /** POST — label a queue entry (moves it to TrainingEntry) */
 export async function POST(req: NextRequest) {
-  if (!isAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isInternalAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { proofId, label, fraudType, notes } = await req.json();
   if (!proofId || !label) {
@@ -54,7 +50,7 @@ export async function POST(req: NextRequest) {
 
 /** PATCH — mark entry as skipped (persisted, excluded from pending list) */
 export async function PATCH(req: NextRequest) {
-  if (!isAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isInternalAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { proofId } = await req.json();
   if (!proofId) return NextResponse.json({ error: "proofId required" }, { status: 400 });
@@ -68,7 +64,7 @@ export async function PATCH(req: NextRequest) {
  * Removes the HUMAN TrainingEntry and resets the queue row back to pending.
  */
 export async function DELETE(req: NextRequest) {
-  if (!isAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isInternalAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { proofId } = await req.json();
   if (!proofId) return NextResponse.json({ error: "proofId required" }, { status: 400 });

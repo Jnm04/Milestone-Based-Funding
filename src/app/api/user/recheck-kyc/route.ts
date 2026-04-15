@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
-import { screenName } from "@/services/sanctions/sanctions.service";
+import { screenName, screenWallet } from "@/services/sanctions/sanctions.service";
 
 /**
  * POST /api/user/recheck-kyc
@@ -17,7 +17,7 @@ export async function POST() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, name: true, email: true, emailVerified: true, dateOfBirth: true, kycTier: true, sanctionsCheckedAt: true },
+    select: { id: true, name: true, email: true, emailVerified: true, dateOfBirth: true, kycTier: true, sanctionsCheckedAt: true, walletAddress: true },
   });
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
@@ -42,21 +42,26 @@ export async function POST() {
 
   try {
     const target = user.name ?? user.email.split("@")[0];
-    const result = await screenName(target, user.dateOfBirth ?? null);
+    // Run name and wallet screening in parallel
+    const [nameResult, walletResult] = await Promise.all([
+      screenName(target, user.dateOfBirth ?? null),
+      user.walletAddress ? screenWallet(user.walletAddress) : Promise.resolve({ hit: false, matches: [] }),
+    ]);
+    const overallHit = nameResult.hit || walletResult.hit;
 
-    const newTier = result.hit ? user.kycTier : Math.max(user.kycTier, 1);
+    const newTier = overallHit ? user.kycTier : Math.max(user.kycTier, 1);
 
     await prisma.user.update({
       where: { id: user.id },
       data: {
         sanctionsCheckedAt: new Date(),
-        sanctionsStatus: result.hit ? "HIT" : "CLEAR",
+        sanctionsStatus: overallHit ? "HIT" : "CLEAR",
         kycTier: newTier,
       },
     });
 
     return NextResponse.json({
-      sanctionsStatus: result.hit ? "HIT" : "CLEAR",
+      sanctionsStatus: overallHit ? "HIT" : "CLEAR",
       kycTier: newTier,
     });
   } catch (err) {

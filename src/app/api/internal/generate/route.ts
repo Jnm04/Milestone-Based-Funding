@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isInternalAuthorized } from "@/lib/internal-auth";
 import Anthropic from "@anthropic-ai/sdk";
 import { verifyMilestone } from "@/services/ai/verifier.service";
 
 export const maxDuration = 60;
 
-function isAuthorized(req: NextRequest) {
-  const key = req.headers.get("x-internal-key")?.trim();
-  const secret = process.env.INTERNAL_SECRET?.trim();
-  return key && secret && key === secret;
-}
 
 // ─── Synthetic generation ─────────────────────────────────────────────────────
 
@@ -215,7 +211,7 @@ async function generateMilestoneForDocument(params: {
 // ─── Main handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  if (!isAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isInternalAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
   const { mode, domain, outcome, count, source, keyword } = body as {

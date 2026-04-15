@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isInternalAuthorized } from "@/lib/internal-auth";
 import {
   verifyMilestone,
   verifyMilestoneImage,
@@ -12,14 +13,8 @@ import { ModelVote } from "@/services/brain/training.service";
 import { generateEmbedding, storeProofEmbedding } from "@/services/brain/embedding.service";
 import { prisma } from "@/lib/prisma";
 
-function isAuthorized(req: NextRequest) {
-  const key = req.headers.get("x-internal-key")?.trim();
-  const secret = process.env.INTERNAL_SECRET?.trim();
-  return key && secret && key === secret;
-}
-
 export async function POST(req: NextRequest) {
-  if (!isAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isInternalAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const contentType = req.headers.get("content-type") ?? "";
 

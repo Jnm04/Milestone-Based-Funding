@@ -7,6 +7,28 @@ import crypto from "crypto";
 
 const MAX_ENDPOINTS_PER_USER = 10;
 
+/**
+ * Rejects URLs that resolve to private/internal network ranges to prevent SSRF.
+ * Covers loopback, RFC 1918 private ranges, link-local (AWS metadata), and
+ * common internal hostname suffixes.
+ */
+function isPrivateUrl(urlStr: string): boolean {
+  try {
+    const { hostname } = new URL(urlStr);
+    if (/^(localhost|0\.0\.0\.0)$/i.test(hostname)) return true;
+    if (/^127\./.test(hostname)) return true;            // 127.x.x.x loopback
+    if (/^10\./.test(hostname)) return true;             // 10.0.0.0/8
+    if (/^172\.(1[6-9]|2\d|3[01])\./.test(hostname)) return true; // 172.16–31.x.x
+    if (/^192\.168\./.test(hostname)) return true;       // 192.168.0.0/16
+    if (/^169\.254\./.test(hostname)) return true;       // link-local / AWS metadata
+    if (/^::1$|\[::1\]/.test(hostname)) return true;    // IPv6 loopback
+    if (/\.(local|internal|localhost|intranet)$/i.test(hostname)) return true;
+    return false;
+  } catch {
+    return true; // unparseable URL → reject
+  }
+}
+
 // ─── GET /api/webhooks ────────────────────────────────────────────────────────
 
 export async function GET() {
@@ -48,6 +70,12 @@ export async function POST(request: NextRequest) {
   }
   if (url.length > 500) {
     return NextResponse.json({ error: "url too long" }, { status: 400 });
+  }
+  if (isPrivateUrl(url)) {
+    return NextResponse.json(
+      { error: "Webhook URL must point to a public internet address" },
+      { status: 400 }
+    );
   }
 
   // Validate events

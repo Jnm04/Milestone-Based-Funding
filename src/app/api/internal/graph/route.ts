@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isInternalAuthorized } from "@/lib/internal-auth";
 import { prisma } from "@/lib/prisma";
 
-function isAuthorized(req: NextRequest) {
-  const key = req.headers.get("x-internal-key")?.trim();
-  const secret = process.env.INTERNAL_SECRET?.trim();
-  return key && secret && key === secret;
-}
 
 function cosineSimilarity(a: number[], b: number[]): number {
   let dot = 0, normA = 0, normB = 0;
@@ -25,7 +21,7 @@ function cosineSimilarity(a: number[], b: number[]): number {
  * Used to render the interactive Brain Map graph.
  */
 export async function GET(req: NextRequest) {
-  if (!isAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isInternalAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const [trainingEntries, queueEntries, embeddings] = await Promise.all([
     prisma.trainingEntry.findMany({

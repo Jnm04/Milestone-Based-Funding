@@ -24,6 +24,8 @@ import { prisma } from "@/lib/prisma";
 
 let _cachedEntries: string[] | null = null;
 let _cacheExpiry = 0;
+let _cachedWallets: Set<string> | null = null;
+let _walletCacheExpiry = 0;
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 // ─── OFAC SDN download ────────────────────────────────────────────────────────
@@ -37,6 +39,7 @@ const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
  * We use the SDN CSV (simpler, ~500 KB): https://www.treasury.gov/ofac/downloads/sdn.csv
  */
 const OFAC_SDN_CSV_URL = "https://www.treasury.gov/ofac/downloads/sdn.csv";
+const OFAC_SDN_XML_URL = "https://www.treasury.gov/ofac/downloads/sdn.xml";
 
 interface DownloadResult {
   entries: string[];
@@ -61,6 +64,48 @@ export async function downloadOfacList(): Promise<DownloadResult> {
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * Download the OFAC SDN XML and extract digital currency wallet addresses.
+ * OFAC embeds sanctioned ETH, BTC, XRP, etc. addresses directly in the XML
+ * as <idType>Digital Currency Address - ETH</idType> / <idNumber>0x…</idNumber>.
+ * No extra API key or third-party service required.
+ */
+export async function downloadOfacWalletList(): Promise<{ wallets: string[]; publishedAt: string }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30_000);
+  try {
+    const res = await fetch(OFAC_SDN_XML_URL, {
+      signal: controller.signal,
+      headers: { "User-Agent": "Cascrow-Compliance/1.0" },
+    });
+    if (!res.ok) throw new Error(`OFAC XML download failed: HTTP ${res.status}`);
+    const xml = await res.text();
+    const wallets = parseOfacXmlWallets(xml);
+    return { wallets, publishedAt: new Date().toISOString() };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Extract digital currency addresses from the OFAC SDN XML.
+ * Matches every <id> block that contains "Digital Currency Address" in its <idType>
+ * and pulls the normalised (lowercase) address string from <idNumber>.
+ */
+function parseOfacXmlWallets(xml: string): string[] {
+  const wallets = new Set<string>();
+  // Match individual <id ...>...</id> blocks
+  const idBlockRe = /<id\b[^>]*>([\s\S]*?)<\/id>/gi;
+  let block: RegExpExecArray | null;
+  while ((block = idBlockRe.exec(xml)) !== null) {
+    const content = block[1];
+    if (!/Digital Currency Address/i.test(content)) continue;
+    const numMatch = /<idNumber>([^<]+)<\/idNumber>/i.exec(content);
+    if (numMatch) wallets.add(numMatch[1].trim().toLowerCase());
+  }
+  return [...wallets];
 }
 
 /**
@@ -150,10 +195,27 @@ async function loadEntries(): Promise<string[]> {
   }
 }
 
-/** Invalidate the in-process cache after a list refresh. */
+/** Invalidate all in-process caches after a list refresh. */
 export function invalidateSanctionsCache(): void {
   _cachedEntries = null;
   _cacheExpiry = 0;
+  _cachedWallets = null;
+  _walletCacheExpiry = 0;
+}
+
+/** Load wallet address set from DB with 1-hour in-process TTL cache. */
+async function loadWallets(): Promise<Set<string>> {
+  const now = Date.now();
+  if (_cachedWallets && now < _walletCacheExpiry) return _cachedWallets;
+  try {
+    const row = await prisma.sanctionsCache.findUnique({ where: { listName: "OFAC_WALLETS" } });
+    _cachedWallets = row ? new Set(JSON.parse(row.entries) as string[]) : new Set();
+    _walletCacheExpiry = now + CACHE_TTL_MS;
+    return _cachedWallets;
+  } catch (err) {
+    console.warn("[sanctions] Failed to load wallets from DB (non-fatal):", err);
+    return _cachedWallets ?? new Set();
+  }
 }
 
 // ─── Screening ─────────────────────────────────────────────────────────────────
@@ -213,15 +275,21 @@ export async function screenName(name: string, _dateOfBirth?: Date | null): Prom
 }
 
 /**
- * Screen a wallet address against known SDN wallet addresses.
- * OFAC's digital currency address list is separate; we do a simple exact-match
- * on the address string (case-insensitive hex comparison).
- *
- * Note: The full digital-currency address list requires a separate download.
- * This function is a placeholder that always returns { hit: false } until
- * that list is integrated. It is here to provide a clean API surface.
+ * Screen a wallet address against the OFAC SDN digital currency address list.
+ * Uses exact-match on the normalised (lowercase) address string.
+ * Called as part of the Tier 1 KYC screening alongside name screening.
+ * Returns { hit: false } on any error — screening failure is never a hard block.
  */
-export async function screenWallet(_address: string): Promise<ScreenResult> {
-  // TODO: integrate OFAC digital currency address list when needed for mainnet
-  return { hit: false, matches: [] };
+export async function screenWallet(address: string): Promise<ScreenResult> {
+  try {
+    if (!address) return { hit: false, matches: [] };
+    const wallets = await loadWallets();
+    if (wallets.size === 0) return { hit: false, matches: [] };
+    const normalised = address.trim().toLowerCase();
+    const hit = wallets.has(normalised);
+    return { hit, matches: hit ? [normalised] : [] };
+  } catch (err) {
+    console.warn("[sanctions] screenWallet failed (non-fatal):", err);
+    return { hit: false, matches: [] };
+  }
 }

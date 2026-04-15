@@ -7,6 +7,7 @@ import { sendProofSubmittedEmail } from "@/lib/email";
 import { writeAuditLog } from "@/services/evm/audit.service";
 import { fireWebhook } from "@/services/webhook/webhook.service";
 import crypto from "crypto";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 /**
  * POST /api/proof/github
@@ -40,6 +41,13 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!checkRateLimit(`proof-github:${session.user.id}`, 5, 60 * 60 * 1000)) {
+      return NextResponse.json(
+        { error: "Too many GitHub proof submissions. Try again in an hour." },
+        { status: 429, headers: { "Retry-After": "3600" } }
+      );
     }
 
     const body = await request.json().catch(() => null);

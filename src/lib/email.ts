@@ -12,6 +12,17 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.EMAIL_FROM ?? "Cascrow <onboarding@resend.dev>";
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 
+/** HTML-encode user-controlled strings before embedding them in email templates. */
+function esc(s: string | null | undefined): string {
+  if (s == null) return "";
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 function contractLink(contractId: string) {
   return `${BASE_URL}/contract/${contractId}`;
 }
@@ -90,7 +101,7 @@ export async function sendProofSubmittedEmail({
     subject: `Proof submitted: ${milestoneTitle}`,
     html: `
       <p>Hi,</p>
-      <p><strong>${startupName ?? "The Receiver"}</strong> has submitted proof for the milestone <strong>${milestoneTitle}</strong>.</p>
+      <p><strong>${esc(startupName) || "The Receiver"}</strong> has submitted proof for the milestone <strong>${esc(milestoneTitle)}</strong>.</p>
       <p>AI verification runs automatically. You will be notified if a manual review is required.</p>
       <p><a href="${contractLink(contractId)}">Open contract →</a></p>
     `,
@@ -120,8 +131,8 @@ export async function sendPendingReviewEmail({
     subject: `Manual review required: ${milestoneTitle}`,
     html: `
       <p>Hi,</p>
-      <p>The AI was uncertain about milestone <strong>${milestoneTitle}</strong> and needs your manual review.</p>
-      ${aiReasoning ? `<p><em>AI reasoning: ${aiReasoning}</em></p>` : ""}
+      <p>The AI was uncertain about milestone <strong>${esc(milestoneTitle)}</strong> and needs your manual review.</p>
+      ${aiReasoning ? `<p><em>AI reasoning: ${esc(aiReasoning)}</em></p>` : ""}
       <p><a href="${contractLink(contractId)}">Review now →</a></p>
     `,
   });
@@ -150,7 +161,7 @@ export async function sendMilestoneCompletedInvestorEmail({
     subject: `Milestone completed: ${milestoneTitle}`,
     html: `
       <p>Hi,</p>
-      <p>Milestone <strong>${milestoneTitle}</strong> has been successfully completed. The payment of <strong>$${Number(amountUSD).toLocaleString()} RLUSD</strong> has been released.</p>
+      <p>Milestone <strong>${esc(milestoneTitle)}</strong> has been successfully completed. The payment of <strong>$${Number(amountUSD).toLocaleString()} RLUSD</strong> has been released.</p>
       <p><a href="${contractLink(contractId)}">View contract →</a></p>
     `,
   });
@@ -181,7 +192,7 @@ export async function sendFundedEmail({
     subject: `Milestone funded: ${milestoneTitle}`,
     html: `
       <p>Hi,</p>
-      <p>Your milestone <strong>${milestoneTitle}</strong> has been funded with <strong>$${Number(amountUSD).toLocaleString()} RLUSD</strong>.</p>
+      <p>Your milestone <strong>${esc(milestoneTitle)}</strong> has been funded with <strong>$${Number(amountUSD).toLocaleString()} RLUSD</strong>.</p>
       <p>You can now upload proof to trigger the payment release.</p>
       <p><a href="${contractLink(contractId)}">Upload proof →</a></p>
     `,
@@ -213,7 +224,7 @@ export async function sendVerifiedEmail({
     subject: `Payment released: ${milestoneTitle}`,
     html: `
       <p>Hi,</p>
-      <p>Congratulations! Your proof for <strong>${milestoneTitle}</strong> has been approved. <strong>$${Number(amountUSD).toLocaleString()} RLUSD</strong> has been sent to your wallet.</p>
+      <p>Congratulations! Your proof for <strong>${esc(milestoneTitle)}</strong> has been approved. <strong>$${Number(amountUSD).toLocaleString()} RLUSD</strong> has been sent to your wallet.</p>
       ${txHash ? `<p>Transaction: <code>${txHash}</code></p>` : ""}
       <p><a href="${contractLink(contractId)}">View contract →</a></p>
     `,
@@ -243,8 +254,8 @@ export async function sendRejectedEmail({
     subject: `Proof rejected: ${milestoneTitle}`,
     html: `
       <p>Hi,</p>
-      <p>Your proof for <strong>${milestoneTitle}</strong> was rejected by the AI.</p>
-      ${aiReasoning ? `<p><strong>Reason:</strong> ${aiReasoning}</p>` : ""}
+      <p>Your proof for <strong>${esc(milestoneTitle)}</strong> was rejected by the AI.</p>
+      ${aiReasoning ? `<p><strong>Reason:</strong> ${esc(aiReasoning)}</p>` : ""}
       <p>You can submit new proof as long as the deadline has not passed.</p>
       <p><a href="${contractLink(contractId)}">Resubmit →</a></p>
     `,
@@ -279,14 +290,14 @@ export async function sendDeadlineReminderEmail({
   const body =
     role === "startup"
       ? `<p>Hi,</p>
-         <p>Your deadline for milestone <strong>${milestoneTitle}</strong> is in <strong>${timeLabel}</strong>.</p>
+         <p>Your deadline for milestone <strong>${esc(milestoneTitle)}</strong> is in <strong>${timeLabel}</strong>.</p>
          ${hasProof
            ? "<p>You have already submitted proof — AI verification is in progress or awaiting review.</p>"
            : "<p>You have not yet submitted proof. Please upload it before the deadline to receive payment.</p>"
          }
          <p><a href="${contractLink(contractId)}">Open milestone →</a></p>`
       : `<p>Hi,</p>
-         <p>The startup has not yet submitted proof for milestone <strong>${milestoneTitle}</strong>.</p>
+         <p>The startup has not yet submitted proof for milestone <strong>${esc(milestoneTitle)}</strong>.</p>
          <p>The deadline is in <strong>${timeLabel}</strong>. If no proof is submitted, the escrow will be automatically returned to you.</p>
          <p><a href="${contractLink(contractId)}">View contract →</a></p>`;
 
@@ -316,7 +327,7 @@ export async function sendManualApprovedEmail({
     subject: `Approved — release your funds: ${milestoneTitle}`,
     html: `
       <p>Hi,</p>
-      <p>Great news! The Grant Giver has manually approved your proof for <strong>${milestoneTitle}</strong>.</p>
+      <p>Great news! The Grant Giver has manually approved your proof for <strong>${esc(milestoneTitle)}</strong>.</p>
       <p><strong>$${Number(amountUSD).toLocaleString()} RLUSD</strong> is ready to be released to your wallet.</p>
       <p>Open the contract page and click <strong>Release Funds</strong> to receive your payment.</p>
       <p><a href="${contractLink(contractId)}">Release funds →</a></p>
@@ -347,7 +358,7 @@ export async function sendFulfillmentKeyEmail({
     subject: `Escrow release key: ${milestoneTitle}`,
     html: `
       <p>Hi,</p>
-      <p>Your milestone <strong>${milestoneTitle}</strong> has been approved. Payment is being automatically released to your wallet.</p>
+      <p>Your milestone <strong>${esc(milestoneTitle)}</strong> has been approved. Payment is being automatically released to your wallet.</p>
       <p>As a trustless backup, here is your <strong>escrow release key</strong>. If the automatic payment does not arrive, you can release the funds yourself directly on-chain — no platform involvement needed.</p>
       <hr />
       <p><strong>Escrow Contract:</strong> <code>${escrowAddress}</code></p>
