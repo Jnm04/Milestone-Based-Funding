@@ -68,7 +68,7 @@ export async function PUT(request: NextRequest) {
     if (dateOfBirth === null || dateOfBirth === "") {
       validatedDOB = null;
     } else {
-      const d = new Date(dateOfBirth);
+      const d = new Date(dateOfBirth as string | number);
       validatedDOB = !isNaN(d.getTime()) && d < new Date() ? d : null;
     }
   }
@@ -83,12 +83,12 @@ export async function PUT(request: NextRequest) {
       phone: validatedPhone,
       bio: validatedBio,
       website: validatedWebsite,
-      ...(notifyProofSubmitted !== undefined && { notifyProofSubmitted }),
-      ...(notifyPendingReview !== undefined && { notifyPendingReview }),
-      ...(notifyMilestoneCompleted !== undefined && { notifyMilestoneCompleted }),
-      ...(notifyFunded !== undefined && { notifyFunded }),
-      ...(notifyVerified !== undefined && { notifyVerified }),
-      ...(notifyRejected !== undefined && { notifyRejected }),
+      ...(notifyProofSubmitted !== undefined && { notifyProofSubmitted: Boolean(notifyProofSubmitted) }),
+      ...(notifyPendingReview !== undefined && { notifyPendingReview: Boolean(notifyPendingReview) }),
+      ...(notifyMilestoneCompleted !== undefined && { notifyMilestoneCompleted: Boolean(notifyMilestoneCompleted) }),
+      ...(notifyFunded !== undefined && { notifyFunded: Boolean(notifyFunded) }),
+      ...(notifyVerified !== undefined && { notifyVerified: Boolean(notifyVerified) }),
+      ...(notifyRejected !== undefined && { notifyRejected: Boolean(notifyRejected) }),
       ...(validatedDOB !== undefined && { dateOfBirth: validatedDOB }),
     },
     select: {
