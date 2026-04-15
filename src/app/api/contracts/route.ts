@@ -173,29 +173,39 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const page  = Math.max(1, parseInt(searchParams.get("page")  ?? "1",  10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10) || 20));
+    const skip  = (page - 1) * limit;
+
     const where =
       session.user.role === "INVESTOR"
         ? { investorId: session.user.id }
         : { startupId: session.user.id };
 
-    const contracts = await prisma.contract.findMany({
-      where,
-      include: {
-        investor: true,
-        startup: true,
-        milestones: { select: { status: true }, orderBy: { order: "asc" } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const [contracts, total] = await Promise.all([
+      prisma.contract.findMany({
+        where,
+        include: {
+          investor: true,
+          startup: true,
+          milestones: { select: { status: true }, orderBy: { order: "asc" } },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.contract.count({ where }),
+    ]);
 
-    return NextResponse.json({ contracts });
+    return NextResponse.json({ contracts, total, page, limit, pages: Math.ceil(total / limit) });
   } catch (err) {
     console.error("List contracts error:", err);
     return NextResponse.json({ error: "Failed to list contracts" }, { status: 500 });

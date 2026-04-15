@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,11 +11,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
+    // 10 join attempts per user per hour — prevents invite-code brute-forcing
+    const ip = getClientIp(request);
+    if (!checkRateLimit(`join-contract:${session.user.id}:${ip}`, 10, 60 * 60 * 1000)) {
+      return NextResponse.json(
+        { error: "Too many attempts. Please wait before trying again." },
+        { status: 429, headers: { "Retry-After": "3600" } }
+      );
+    }
+
     if (session.user.role !== "STARTUP") {
       return NextResponse.json({ error: "Only startups can join contracts" }, { status: 403 });
     }
 
-    const { inviteCode } = await request.json();
+    let inviteCode: string | undefined;
+    try {
+      const body = await request.json();
+      inviteCode = body.inviteCode;
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
 
     if (!inviteCode) {
       return NextResponse.json({ error: "inviteCode is required" }, { status: 400 });

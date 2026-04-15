@@ -87,6 +87,10 @@ export default function InvestorDashboard() {
   const [loadingContracts, setLoadingContracts] = useState(false);
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
   const [showHidden, setShowHidden] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalContracts, setTotalContracts] = useState(0);
+  const PAGE_SIZE = 20;
 
   useEffect(() => {
     try {
@@ -121,12 +125,16 @@ export default function InvestorDashboard() {
   useEffect(() => {
     if (status !== "authenticated") return;
     setLoadingContracts(true);
-    fetch("/api/contracts")
+    fetch(`/api/contracts?page=${page}&limit=${PAGE_SIZE}`)
       .then((r) => r.json())
-      .then((data) => setContracts(data.contracts ?? []))
+      .then((data) => {
+        setContracts(data.contracts ?? []);
+        setTotalPages(data.pages ?? 1);
+        setTotalContracts(data.total ?? 0);
+      })
       .catch(() => toast.error("Could not load contracts."))
       .finally(() => setLoadingContracts(false));
-  }, [status]);
+  }, [status, page]);
 
   if (status === "loading") {
     return (
@@ -291,7 +299,7 @@ export default function InvestorDashboard() {
                       {showHidden ? "Hide archived" : `Show archived (${hiddenIds.size})`}
                     </button>
                   )}
-                  <span className="text-sm" style={{ color: "#A89B8C" }}>{contracts.length} total</span>
+                  <span className="text-sm" style={{ color: "#A89B8C" }}>{totalContracts} total</span>
                 </div>
               </div>
 
@@ -302,7 +310,7 @@ export default function InvestorDashboard() {
                 </div>
               )}
 
-              {!loadingContracts && contracts.length === 0 && (
+              {!loadingContracts && contracts.length === 0 && totalContracts === 0 && (
                 <div
                   className="p-10 rounded-xl text-center flex flex-col items-center gap-3"
                   style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.1)" }}
@@ -317,6 +325,31 @@ export default function InvestorDashboard() {
                   <Link href={`/contract/new?investor=${walletAddress}`} className="cs-btn-ghost cs-btn-sm mt-2">
                     + Create New Contract
                   </Link>
+                </div>
+              )}
+
+              {/* Pagination controls */}
+              {!loadingContracts && totalPages > 1 && (
+                <div className="flex items-center justify-between mt-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page <= 1}
+                    className="cs-btn-ghost cs-btn-sm"
+                    style={{ opacity: page <= 1 ? 0.4 : 1 }}
+                  >
+                    ← Prev
+                  </button>
+                  <span className="text-xs" style={{ color: "#A89B8C" }}>
+                    Page {page} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages}
+                    className="cs-btn-ghost cs-btn-sm"
+                    style={{ opacity: page >= totalPages ? 0.4 : 1 }}
+                  >
+                    Next →
+                  </button>
                 </div>
               )}
 

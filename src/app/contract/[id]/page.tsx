@@ -15,6 +15,7 @@ import { NodeBackground } from "@/components/node-background";
 import { NftSection } from "@/components/nft-section";
 import { IS_MAINNET } from "@/lib/config";
 import { CalendarButton } from "@/components/calendar-button";
+import { CopyButton } from "@/components/copy-button";
 
 interface ContractPageProps {
   params: Promise<{ id: string }>;
@@ -139,7 +140,10 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           >
             Contract
           </h1>
-          <code className="text-xs font-mono" style={{ color: "#A89B8C" }}>{contract.id}</code>
+          <span className="flex items-center gap-1.5">
+            <code className="text-xs font-mono" style={{ color: "#A89B8C" }}>{contract.id}</code>
+            <CopyButton text={contract.id} />
+          </span>
         </div>
 
         {/* Project overview */}

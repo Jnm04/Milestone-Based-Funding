@@ -9,7 +9,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const { walletAddress } = await request.json();
+  let walletAddress: string | undefined;
+  try {
+    const body = await request.json();
+    walletAddress = body.walletAddress;
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
   if (!walletAddress) {
     return NextResponse.json({ error: "walletAddress is required" }, { status: 400 });
   }
