@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendPasswordResetEmail } from "@/lib/email";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { verifyTurnstile } from "@/lib/turnstile";
 import crypto from "crypto";
 
 export async function POST(request: NextRequest) {
@@ -13,7 +14,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    const { email } = await request.json();
+    const body = await request.json();
+    const { email, turnstileToken } = body;
+
+    // Turnstile bot protection — fail silently (return ok) to avoid info leak
+    if (!(await verifyTurnstile(turnstileToken))) {
+      return NextResponse.json({ ok: true });
+    }
 
     if (!email || typeof email !== "string" || email.length > 254) {
       return NextResponse.json({ ok: true }); // Always return ok — no user enumeration

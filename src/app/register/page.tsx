@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, Suspense, useEffect, useCallback } from "react";
+import { useState, Suspense, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Logo } from "@/components/logo";
 import { NodeBackground } from "@/components/node-background";
+import { Turnstile } from "@marsidev/react-turnstile";
+import type { TurnstileInstance } from "@marsidev/react-turnstile";
 
 /* ── Password strength ───────────────────────────────────── */
 function pwStrength(pw: string): { score: number; label: string; color: string } {
@@ -80,6 +82,8 @@ function RegisterForm() {
   const [registered, setRegistered] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resending, setResending] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileInstance>(null);
 
   const strength = pwStrength(password);
 
@@ -94,11 +98,13 @@ function RegisterForm() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, name, role, dateOfBirth: dateOfBirth || undefined }),
+        body: JSON.stringify({ email, password, name, role, dateOfBirth: dateOfBirth || undefined, turnstileToken }),
       });
       if (!res.ok) {
         const err = await res.json();
         toast.error(err.error ?? "Registration failed.");
+        turnstileRef.current?.reset();
+        setTurnstileToken(null);
         return;
       }
       setRegistered(true);
@@ -340,9 +346,18 @@ function RegisterForm() {
               )}
             </div>
 
+            <Turnstile
+              ref={turnstileRef}
+              siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+              onSuccess={setTurnstileToken}
+              onExpire={() => setTurnstileToken(null)}
+              onError={() => setTurnstileToken(null)}
+              options={{ theme: "dark" }}
+            />
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !turnstileToken}
               className="cs-btn-primary w-full mt-1"
               style={{ width: "100%" }}
             >

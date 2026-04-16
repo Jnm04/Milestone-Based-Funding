@@ -5,6 +5,7 @@ import { screenName } from "@/services/sanctions/sanctions.service";
 import { validateName } from "@/lib/validate-name";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { registerSchema } from "@/lib/zod-schemas";
+import { verifyTurnstile } from "@/lib/turnstile";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
@@ -20,6 +21,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+
+    // Turnstile bot protection
+    if (!(await verifyTurnstile(body.turnstileToken))) {
+      return NextResponse.json({ error: "Bot check failed. Please try again." }, { status: 400 });
+    }
 
     // Zod: structural + type validation (catches missing fields, wrong types, length violations)
     const parsed = registerSchema.safeParse(body);
