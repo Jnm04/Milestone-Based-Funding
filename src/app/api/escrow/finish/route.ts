@@ -155,8 +155,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ok: true, action: "completed", txHash });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
     console.error("Escrow finish error:", err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: "Escrow release failed" }, { status: 500 });
   }
 }

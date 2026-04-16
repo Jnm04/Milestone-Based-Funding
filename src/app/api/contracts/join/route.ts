@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 10 join attempts per user per hour — prevents invite-code brute-forcing
-    const ip = getClientIp(request);
+    const ip = getClientIp(request) ?? "unknown";
     if (!checkRateLimit(`join-contract:${session.user.id}:${ip}`, 10, 60 * 60 * 1000)) {
       return NextResponse.json(
         { error: "Too many attempts. Please wait before trying again." },

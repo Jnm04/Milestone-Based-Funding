@@ -10,8 +10,10 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = request.nextUrl;
-  const limit = Math.min(Math.max(1, parseInt(searchParams.get("limit") ?? "100")), 500);
-  const offset = Math.max(0, parseInt(searchParams.get("offset") ?? "0"));
+  const limitRaw = parseInt(searchParams.get("limit") ?? "");
+  const limit = Math.min(Math.max(1, Number.isNaN(limitRaw) ? 100 : limitRaw), 500);
+  const offsetRaw = parseInt(searchParams.get("offset") ?? "");
+  const offset = Math.max(0, Number.isNaN(offsetRaw) ? 0 : offsetRaw);
 
   const [total, users] = await Promise.all([
     prisma.user.count(),

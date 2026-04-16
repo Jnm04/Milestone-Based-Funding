@@ -51,7 +51,10 @@ export async function POST(req: NextRequest) {
     }
     precomputedExtractedText = (formData.get("precomputedExtractedText") as string | null) ?? null;
     const cl = formData.get("precomputedConsensusLevel");
-    if (cl !== null) precomputedConsensusLevel = Number(cl);
+    if (cl !== null) {
+      const parsed = Number(cl);
+      if (!Number.isNaN(parsed) && parsed >= 0 && parsed <= 5) precomputedConsensusLevel = parsed;
+    }
     const dec = formData.get("precomputedDecision") as string | null;
     if (dec === "YES" || dec === "NO") precomputedDecision = dec;
   } else {
@@ -61,7 +64,10 @@ export async function POST(req: NextRequest) {
     saveToDataset = body.saveToDataset ?? false;
     if (body.precomputedVotes) precomputedVotes = body.precomputedVotes;
     if (body.precomputedExtractedText != null) precomputedExtractedText = body.precomputedExtractedText;
-    if (body.precomputedConsensusLevel != null) precomputedConsensusLevel = Number(body.precomputedConsensusLevel);
+    if (body.precomputedConsensusLevel != null) {
+      const parsed = Number(body.precomputedConsensusLevel);
+      if (!Number.isNaN(parsed) && parsed >= 0 && parsed <= 5) precomputedConsensusLevel = parsed;
+    }
     if (body.precomputedDecision === "YES" || body.precomputedDecision === "NO") precomputedDecision = body.precomputedDecision;
     if (body.notes) notes = String(body.notes);
   }

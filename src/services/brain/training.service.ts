@@ -48,6 +48,7 @@ async function notifyReviewQueue(entry: {
     await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(10_000),
       body: JSON.stringify({
         text: `🔍 *Human review needed* — 3-2 split on proof \`${entry.proofId}\`\nMilestone: ${entry.milestoneText.slice(0, 120)}…\nConsensus: ${entry.consensusLevel}/5\n→ ${baseUrl}/internal/review`,
         proofId: entry.proofId,

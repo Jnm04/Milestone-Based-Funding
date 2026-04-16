@@ -7,8 +7,10 @@ export async function GET(req: NextRequest) {
   if (!isInternalAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = req.nextUrl;
-  const limit = Math.min(Math.max(1, parseInt(searchParams.get("limit") ?? "50")), 200);
-  const offset = Math.max(0, parseInt(searchParams.get("offset") ?? "0"));
+  const limitRaw = parseInt(searchParams.get("limit") ?? "");
+  const limit = Math.min(Math.max(1, Number.isNaN(limitRaw) ? 50 : limitRaw), 200);
+  const offsetRaw = parseInt(searchParams.get("offset") ?? "");
+  const offset = Math.max(0, Number.isNaN(offsetRaw) ? 0 : offsetRaw);
 
   const [total, entries] = await Promise.all([
     prisma.trainingEntry.count(),

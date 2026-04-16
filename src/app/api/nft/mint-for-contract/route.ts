@@ -93,8 +93,7 @@ export async function POST(request: NextRequest) {
     } else {
       await prisma.contract.updateMany({ where: { id: contractId, nftTokenId: "PENDING" }, data: { nftTokenId: null } }).catch(() => {});
     }
-    const msg = err instanceof Error ? err.message : String(err);
     console.error("[nft/mint-for-contract]", err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: "NFT minting failed" }, { status: 500 });
   }
 }
