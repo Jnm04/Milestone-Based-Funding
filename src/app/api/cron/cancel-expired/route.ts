@@ -158,6 +158,14 @@ export async function GET(request: NextRequest) {
     deletedDrafts = staleIds.length;
   }
 
+  // ── 3b. Decline AWAITING_ESCROW contracts stalled for >90 days ───────────
+  // Startup accepted but investor never funded. No escrow locked — safe to decline.
+  const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+  const { count: declinedAwaitingEscrow } = await prisma.contract.updateMany({
+    where: { status: "AWAITING_ESCROW", createdAt: { lt: ninetyDaysAgo } },
+    data: { status: "DECLINED" },
+  });
+
   // ── 4. Re-trigger verification for stuck PROOF_SUBMITTED (proof has no aiDecision >5 min) ─
   const tenMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
   const stuckProofs = await prisma.proof.findMany({
@@ -203,7 +211,7 @@ export async function GET(request: NextRequest) {
   } else {
     console.log(
       `[cron/cancel-expired] OK — cancelled: ${cancelSucceeded} | auto-approved: ${approveSucceeded} | ` +
-      `drafts deleted: ${deletedDrafts} | stuck proofs retried: ${retried}`
+      `drafts deleted: ${deletedDrafts} | awaiting-escrow declined: ${declinedAwaitingEscrow} | stuck proofs retried: ${retried}`
     );
   }
 
@@ -214,6 +222,7 @@ export async function GET(request: NextRequest) {
     autoApproved: approveSucceeded,
     approveFailed,
     deletedDrafts,
+    declinedAwaitingEscrow,
     retriedVerifications: retried,
   });
 }

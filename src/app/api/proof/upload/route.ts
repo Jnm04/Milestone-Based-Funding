@@ -2,7 +2,6 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
-import { checkRateLimit } from "@/lib/rate-limit";
 import { extractPdfText, extractOfficeText, categorizeFile } from "@/services/ai/verifier.service";
 import { sendProofSubmittedEmail } from "@/lib/email";
 import { put } from "@vercel/blob";
@@ -59,8 +58,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 20 uploads per user per hour — prevents Vercel Blob cost abuse
-    if (!checkRateLimit(`proof-upload:${session.user.id}`, 20, 60 * 60 * 1000)) {
+    // 20 uploads per user per hour — DB-backed so it works across serverless instances
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const recentUploadCount = await prisma.proof.count({
+      where: {
+        createdAt: { gte: oneHourAgo },
+        contract: { startupId: session.user.id },
+      },
+    });
+    if (recentUploadCount >= 20) {
       return NextResponse.json(
         { error: "Too many uploads. Please wait before submitting again." },
         { status: 429, headers: { "Retry-After": "3600" } }

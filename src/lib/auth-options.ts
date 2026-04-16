@@ -2,6 +2,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
+import type { JWT } from "next-auth/jwt";
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
@@ -78,14 +79,34 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = (user as unknown as { role: string }).role;
         token.walletAddress = (user as unknown as { walletAddress: string | null }).walletAddress;
+        return token;
       }
       // Allow updating wallet address via session update
       if (trigger === "update" && session?.walletAddress) {
         token.walletAddress = session.walletAddress;
       }
+      // On every token refresh (not fresh login), verify account hasn't been deleted.
+      // Account deletion clears passwordHash to "". One primary-key lookup per request.
+      if (token.id) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { passwordHash: true },
+        });
+        if (!dbUser || dbUser.passwordHash === "") {
+          (token as JWT & { accountDeleted: boolean }).accountDeleted = true;
+        }
+      }
       return token;
     },
     async session({ session, token }) {
+      if ((token as JWT & { accountDeleted?: boolean }).accountDeleted) {
+        // Strip user identity — API routes using session.user.id will fail safely.
+        // The expired timestamp signals the client to redirect to login.
+        session.user.id = "";
+        session.user.role = "";
+        session.expires = new Date(0).toISOString();
+        return session;
+      }
       session.user.id = token.id as string;
       session.user.role = token.role as string;
       session.user.walletAddress = (token.walletAddress as string | null) ?? null;
