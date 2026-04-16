@@ -135,8 +135,7 @@ export async function POST(request: NextRequest) {
       milestoneOrder,
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
     console.error("Escrow create error:", err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: "Escrow create failed" }, { status: 500 });
   }
 }

@@ -44,8 +44,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "label must be APPROVED, REJECTED, or FAKED" }, { status: 400 });
   }
 
-  await labelQueueEntry({ proofId, label, fraudType, notes });
-  return NextResponse.json({ ok: true });
+  try {
+    await labelQueueEntry({ proofId, label, fraudType, notes });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("[queue/label]", err);
+    return NextResponse.json({ error: "Failed to label entry" }, { status: 500 });
+  }
 }
 
 /** PATCH — mark entry as skipped (persisted, excluded from pending list) */
@@ -55,8 +60,13 @@ export async function PATCH(req: NextRequest) {
   const { proofId } = await req.json();
   if (!proofId) return NextResponse.json({ error: "proofId required" }, { status: 400 });
 
-  await skipQueueEntry(proofId);
-  return NextResponse.json({ ok: true });
+  try {
+    await skipQueueEntry(proofId);
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("[queue/skip]", err);
+    return NextResponse.json({ error: "Failed to skip entry" }, { status: 500 });
+  }
 }
 
 /**
@@ -69,6 +79,11 @@ export async function DELETE(req: NextRequest) {
   const { proofId } = await req.json();
   if (!proofId) return NextResponse.json({ error: "proofId required" }, { status: 400 });
 
-  await undoLabelQueueEntry(proofId);
-  return NextResponse.json({ ok: true });
+  try {
+    await undoLabelQueueEntry(proofId);
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("[queue/undo]", err);
+    return NextResponse.json({ error: "Failed to undo label" }, { status: 500 });
+  }
 }

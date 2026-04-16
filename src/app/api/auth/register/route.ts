@@ -12,7 +12,7 @@ import crypto from "crypto";
 export async function POST(request: NextRequest) {
   try {
     // 10 registrations per IP per hour — blocks signup floods without affecting real users
-    const ip = getClientIp(request);
+    const ip = getClientIp(request) ?? "unknown";
     if (!checkRateLimit(`register:${ip}`, 10, 60 * 60 * 1000)) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
