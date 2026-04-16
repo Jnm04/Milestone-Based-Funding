@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   // pdf-parse and xrpl use Node.js APIs — keep them server-side only.
@@ -8,6 +9,23 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   async headers() {
+    const csp = [
+      "default-src 'self'",
+      // Next.js requires unsafe-inline for its hydration scripts; unsafe-eval for some dynamic imports
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' challenges.cloudflare.com",
+      "style-src 'self' 'unsafe-inline'",
+      // Vercel Blob for uploaded PDFs + cert images; data:/blob: for local previews
+      "img-src 'self' data: blob: https://*.vercel-storage.com",
+      // XRPL EVM RPC, native XRPL JSON-RPC, Turnstile verification, Sentry
+      "connect-src 'self' challenges.cloudflare.com https://rpc.testnet.xrplevm.org https://s1.ripple.com https://s2.ripple.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io",
+      // Turnstile widget loads in an iframe
+      "frame-src challenges.cloudflare.com",
+      "font-src 'self' data:",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join("; ");
+
     return [
       {
         source: "/(.*)",
@@ -16,6 +34,7 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
+          { key: "Content-Security-Policy", value: csp },
         ],
       },
     ];
@@ -44,4 +63,12 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  // Only upload source maps when SENTRY_AUTH_TOKEN is set (i.e. in CI/production builds)
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: true,
+  // Disable source map upload in local dev
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+});

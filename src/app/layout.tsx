@@ -5,6 +5,7 @@ import "./globals.css";
 import "@/lib/env-validation";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthSessionProvider } from "@/components/session-provider";
+import { CookieBanner } from "@/components/cookie-banner";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
 const libreFranklin = Libre_Franklin({
@@ -83,6 +84,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthSessionProvider>
           {children}
           <Toaster richColors position="top-right" />
+          <CookieBanner />
         </AuthSessionProvider>
       </body>
     </html>
