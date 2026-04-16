@@ -36,102 +36,202 @@ export default function DatenschutzPage() {
             Kontakt: <a href="mailto:hello@cascrow.com" style={{ color: "#C4704B" }}>hello@cascrow.com</a>
           </p>
           <p className="mt-3" style={{ color: "#A89B8C", fontSize: 13 }}>
-            Hinweis: Cascrow befindet sich im Aufbau. Die Angaben zum Verantwortlichen werden nach Gründung des Unternehmens vervollständigt.
+            Hinweis: Cascrow befindet sich im Aufbau. Die vollständigen Angaben zum Verantwortlichen (Firmenname, Adresse) werden nach Gründung des Unternehmens ergänzt.
           </p>
         </Section>
 
         <Section title="2. Welche Daten wir erheben">
           <ul className="flex flex-col gap-2">
-            <Li><strong>Account-Daten:</strong> E-Mail-Adresse (Pflicht), Name (optional), Geburtsdatum (optional, verbessert Sanktionsprüfung), XRPL-Wallet-Adresse (optional)</Li>
-            <Li><strong>Sicherheitsdaten:</strong> Passwort-Hash (bcrypt, nicht reversibel), Login-Versuche, Konto-Sperrzeit</Li>
-            <Li><strong>Vertragsdaten:</strong> Meilensteine, Beträge, Fristen, Status — notwendig für die Kernfunktion der Plattform</Li>
+            <Li><strong>Account-Daten:</strong> E-Mail-Adresse (Pflicht), Name (optional), Geburtsdatum (optional – verbessert Sanktionsprüfung), XRPL-Wallet-Adresse (optional)</Li>
+            <Li><strong>Profildaten:</strong> Unternehmen, Abteilung, Jobtitel, Telefon, Bio, Website (alle optional)</Li>
+            <Li><strong>Sicherheitsdaten:</strong> Passwort-Hash (bcrypt, nicht reversibel), Login-Versuche, Kontosperrstatus</Li>
+            <Li><strong>Vertragsdaten:</strong> Meilensteine, Beträge in USD, Fristen, Status, Einladungslinks – notwendig für die Kernfunktion der Plattform</Li>
             <Li><strong>Nachweise (Proofs):</strong> Hochgeladene PDF-Dokumente oder GitHub-Links zur Meilensteinerfüllung</Li>
-            <Li><strong>Audit-Trail:</strong> Ereignisse (Vertrag erstellt, Zahlung freigegeben etc.) werden in der Datenbank und öffentlich auf der XRP Ledger Blockchain gespeichert</Li>
-            <Li><strong>IP-Adresse:</strong> Temporär für Rate Limiting und Sicherheitsschutz (nicht dauerhaft gespeichert)</Li>
+            <Li><strong>Audit-Trail:</strong> Ereignisse (Vertrag erstellt, Zahlung freigegeben etc.) werden in der Datenbank sowie dauerhaft und öffentlich auf der XRP Ledger Blockchain gespeichert</Li>
+            <Li><strong>Blockchain-Daten:</strong> Wallet-Adressen und Transaktionsdaten auf der XRPL EVM Sidechain (Escrow) und dem XRP Ledger Mainnet (NFT-Zertifikate, Audit-Memos) – öffentlich und unveränderlich</Li>
+            <Li><strong>IP-Adresse:</strong> Temporär im Arbeitsspeicher für Rate Limiting und Sicherheitsschutz (max. 1 Stunde, nicht in der Datenbank gespeichert)</Li>
+            <Li><strong>Technische Fehlerdaten:</strong> Stack Traces, Fehlermeldungen, betroffene Seiten – über Sentry erfasst, ohne personenbezogene Kontoinformationen</Li>
           </ul>
         </Section>
 
         <Section title="3. Zweck und Rechtsgrundlage">
           <ul className="flex flex-col gap-2">
-            <Li><strong>Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO):</strong> E-Mail, Name, Vertragsdaten — notwendig für die Erbringung des Escrow-Diensts</Li>
-            <Li><strong>Rechtliche Verpflichtung (Art. 6 Abs. 1 lit. c DSGVO):</strong> Sanktionsprüfung gegen OFAC- und EU-Sanktionslisten</Li>
-            <Li><strong>Berechtigtes Interesse (Art. 6 Abs. 1 lit. f DSGVO):</strong> Sicherheitsmaßnahmen (Rate Limiting, Account-Sperre), Betrugserkennung</Li>
-            <Li><strong>Einwilligung (Art. 6 Abs. 1 lit. a DSGVO):</strong> Telegram-Benachrichtigungen (nur bei aktiver Verknüpfung)</Li>
+            <Li><strong>Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO):</strong> E-Mail, Passwort, Vertragsdaten – notwendig zur Erbringung des Escrow-Diensts und Verwaltung des Nutzerkontos</Li>
+            <Li><strong>Rechtliche Verpflichtung (Art. 6 Abs. 1 lit. c DSGVO):</strong> Sanktionsprüfung gegen OFAC- und EU-Sanktionslisten; handelsrechtliche Aufbewahrung von Vertragsdaten</Li>
+            <Li><strong>Berechtigtes Interesse (Art. 6 Abs. 1 lit. f DSGVO):</strong> Sicherheitsmaßnahmen (Rate Limiting, Kontosperre), Betrugserkennung, Fehlerüberwachung (Sentry), Plattformbetrieb</Li>
+            <Li><strong>Einwilligung (Art. 6 Abs. 1 lit. a DSGVO):</strong> Optionale E-Mail-Benachrichtigungen (einzeln abschaltbar in den Profileinstellungen), Telegram-Benachrichtigungen (nur bei aktiver Verknüpfung)</Li>
           </ul>
         </Section>
 
-        <Section title="4. KI-Verarbeitung">
-          <p>
-            Zur Überprüfung hochgeladener Nachweise nutzen wir ein Mehrheits-Votum von 5 KI-Modellen
-            (Anthropic Claude, Google Gemini, OpenAI GPT, Mistral, Cerebras). Die Inhalte der
-            hochgeladenen Dokumente werden an diese Dienste übermittelt. Es werden keine
-            personenbezogenen Kontodaten (Name, E-Mail) an die KI-Anbieter übermittelt.
+        <Section title="4. E-Mail-Benachrichtigungen">
+          <p className="mb-3">Wir unterscheiden zwischen <strong>Pflicht-E-Mails</strong> und <strong>optionalen Benachrichtigungen</strong>:</p>
+
+          <p className="mb-2" style={{ color: "#EDE6DD" }}>Pflicht-E-Mails (können nicht deaktiviert werden):</p>
+          <ul className="flex flex-col gap-1 mb-4">
+            <Li>E-Mail-Verifizierung bei Registrierung</Li>
+            <Li>Passwort-Reset-Link</Li>
+            <Li>Fulfillment Key bei Escrow-Abschluss (sicherheitskritisch für die Freigabe der Mittel)</Li>
+          </ul>
+
+          <p className="mb-2" style={{ color: "#EDE6DD" }}>Optionale Benachrichtigungen (einzeln abschaltbar in <Link href="/profile" style={{ color: "#C4704B" }}>Profileinstellungen → Notifications</Link>):</p>
+          <ul className="flex flex-col gap-1">
+            <Li>Nachweis eingereicht</Li>
+            <Li>Meilenstein steht zur manuellen Prüfung an</Li>
+            <Li>Meilenstein abgeschlossen und Zahlung freigegeben</Li>
+            <Li>Escrow finanziert</Li>
+            <Li>KI-Verifizierung erfolgreich</Li>
+            <Li>KI-Verifizierung abgelehnt</Li>
+          </ul>
+
+          <p className="mt-3">
+            Alle E-Mails werden über <strong>Resend</strong> (New York, USA) versendet. Rechtsgrundlage für optionale Benachrichtigungen ist deine Einwilligung (Art. 6 Abs. 1 lit. a DSGVO), die du jederzeit widerrufen kannst.
           </p>
-          <p className="mt-3">KI-Anbieter und deren Datenschutz:</p>
-          <ul className="flex flex-col gap-1 mt-1">
-            <Li>Anthropic (USA) — <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener noreferrer" style={{ color: "#C4704B" }}>Privacy Policy</a></Li>
-            <Li>Google (USA) — <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" style={{ color: "#C4704B" }}>Privacy Policy</a></Li>
-            <Li>OpenAI (USA) — <a href="https://openai.com/policies/privacy-policy" target="_blank" rel="noopener noreferrer" style={{ color: "#C4704B" }}>Privacy Policy</a></Li>
-            <Li>Mistral AI (Frankreich) — <a href="https://mistral.ai/privacy" target="_blank" rel="noopener noreferrer" style={{ color: "#C4704B" }}>Privacy Policy</a></Li>
-            <Li>Cerebras (USA) — <a href="https://cerebras.ai/privacy" target="_blank" rel="noopener noreferrer" style={{ color: "#C4704B" }}>Privacy Policy</a></Li>
+        </Section>
+
+        <Section title="5. KI-Verarbeitung">
+          <p>
+            Zur Überprüfung hochgeladener Nachweise nutzen wir ein Mehrheits-Votum von 5 KI-Modellen.
+            Die Inhalte hochgeladener Dokumente werden an diese Dienste übermittelt.
+            Personenbezogene Kontodaten (Name, E-Mail) werden <strong>nicht</strong> an KI-Anbieter übermittelt.
+          </p>
+          <div className="mt-3 overflow-x-auto">
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid rgba(196,112,75,0.2)" }}>
+                  <th style={{ textAlign: "left", padding: "6px 12px 6px 0", color: "#EDE6DD" }}>Anbieter</th>
+                  <th style={{ textAlign: "left", padding: "6px 12px", color: "#EDE6DD" }}>Standort</th>
+                  <th style={{ textAlign: "left", padding: "6px 0 6px 12px", color: "#EDE6DD" }}>Grundlage</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  ["Anthropic (Claude)", "USA", "SCCs"],
+                  ["Google (Gemini)", "USA / EU", "EU-US DPF"],
+                  ["OpenAI (GPT)", "USA", "EU-US DPF"],
+                  ["Mistral AI", "Frankreich (EU)", "–"],
+                  ["Cerebras", "USA", "SCCs"],
+                ].map(([name, loc, basis]) => (
+                  <tr key={name} style={{ borderBottom: "1px solid rgba(196,112,75,0.08)" }}>
+                    <td style={{ padding: "7px 12px 7px 0" }}>{name}</td>
+                    <td style={{ padding: "7px 12px" }}>{loc}</td>
+                    <td style={{ padding: "7px 0 7px 12px" }}>{basis}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-2 text-xs" style={{ color: "#6b7280" }}>
+            SCCs = EU-Standardvertragsklauseln (Art. 46 Abs. 2 lit. c DSGVO) · EU-US DPF = EU-US Data Privacy Framework (Angemessenheitsbeschluss)
+          </p>
+        </Section>
+
+        <Section title="6. Infrastruktur und Serverstandorte">
+          <div className="overflow-x-auto">
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid rgba(196,112,75,0.2)" }}>
+                  <th style={{ textAlign: "left", padding: "6px 12px 6px 0", color: "#EDE6DD" }}>Dienst</th>
+                  <th style={{ textAlign: "left", padding: "6px 12px", color: "#EDE6DD" }}>Zweck</th>
+                  <th style={{ textAlign: "left", padding: "6px 12px", color: "#EDE6DD" }}>Serverstandort</th>
+                  <th style={{ textAlign: "left", padding: "6px 0 6px 12px", color: "#EDE6DD" }}>Grundlage</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  ["Vercel", "Hosting, Datei-Speicher (PDFs, Zertifikate)", "USA (Edge global)", "EU-US DPF"],
+                  ["Neon / Vercel Postgres", "Datenbank", "USA oder EU (je nach Konfig.)", "EU-US DPF / SCCs"],
+                  ["Resend", "E-Mail-Versand", "USA", "SCCs"],
+                  ["Cloudflare Turnstile", "Bot-Schutz", "Global (CDN)", "EU-US DPF"],
+                  ["Sentry", "Fehlerüberwachung", "EU (Frankfurt)", "–"],
+                  ["Telegram", "Optionale Benachrichtigungen", "Global", "SCCs"],
+                  ["XRP Ledger Mainnet", "NFT-Zertifikate, Audit-Trail", "Dezentral, weltweit", "Öffentliche Blockchain"],
+                  ["XRPL EVM Sidechain", "Escrow Smart Contract", "Dezentral, weltweit", "Öffentliche Blockchain"],
+                ].map(([name, purpose, loc, basis]) => (
+                  <tr key={name} style={{ borderBottom: "1px solid rgba(196,112,75,0.08)" }}>
+                    <td style={{ padding: "7px 12px 7px 0", whiteSpace: "nowrap" }}>{name}</td>
+                    <td style={{ padding: "7px 12px" }}>{purpose}</td>
+                    <td style={{ padding: "7px 12px", whiteSpace: "nowrap" }}>{loc}</td>
+                    <td style={{ padding: "7px 0 7px 12px", whiteSpace: "nowrap" }}>{basis}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Section>
+
+        <Section title="7. Internationale Datenübermittlung">
+          <p>
+            Einige der oben genannten Dienste befinden sich in den USA oder anderen Drittländern außerhalb des EWR.
+            Wir stellen sicher, dass diese Übermittlungen auf Basis geeigneter Garantien nach Art. 44 ff. DSGVO erfolgen:
+          </p>
+          <ul className="flex flex-col gap-2 mt-3">
+            <Li><strong>EU-US Data Privacy Framework (DPF):</strong> Für zertifizierte US-Anbieter (Google, OpenAI, Cloudflare, Vercel) liegt ein Angemessenheitsbeschluss der EU-Kommission vor.</Li>
+            <Li><strong>EU-Standardvertragsklauseln (SCCs):</strong> Für nicht DPF-zertifizierte Anbieter (Anthropic, Cerebras, Resend) gelten die EU-Standardvertragsklauseln gemäß Art. 46 Abs. 2 lit. c DSGVO.</Li>
+            <Li><strong>Öffentliche Blockchain:</strong> Transaktionsdaten auf dem XRP Ledger und der XRPL EVM Sidechain sind weltweit öffentlich einsehbar und technisch unveränderlich. Vor der Nutzung der Wallet-Funktion wird darauf hingewiesen.</Li>
           </ul>
         </Section>
 
-        <Section title="5. Drittanbieter und Datenübermittlung">
-          <ul className="flex flex-col gap-2">
-            <Li><strong>Vercel (USA):</strong> Hosting der Plattform und Dateispeicherung (PDFs, Zertifikate). Vercel ist nach EU-US Data Privacy Framework zertifiziert.</Li>
-            <Li><strong>Cloudflare Turnstile (USA):</strong> Bot-Schutz bei Registrierung und Passwort-Reset. Verarbeitung: IP-Adresse, Browser-Fingerprint. <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer" style={{ color: "#C4704B" }}>Cloudflare Privacy Policy</a></Li>
-            <Li><strong>SMTP-E-Mail-Provider:</strong> Versand von Verifikations- und Benachrichtigungs-E-Mails (E-Mail-Adresse)</Li>
-            <Li><strong>Telegram (optional):</strong> Benachrichtigungen bei Vertragsaktivitäten, nur bei aktiver Verknüpfung</Li>
-            <Li><strong>XRP Ledger (öffentliche Blockchain):</strong> Audit-Trail-Einträge und NFT-Zertifikate werden dauerhaft und öffentlich auf der XRP Ledger Mainnet gespeichert. Diese Daten sind unveränderlich und weltweit einsehbar.</Li>
-            <Li><strong>XRPL EVM Sidechain:</strong> Smart-Contract-Transaktionen für die Escrow-Funktion (Wallet-Adresse, Beträge)</Li>
-            <Li><strong>Sentry (USA):</strong> Fehlerüberwachung für den Betrieb der Plattform. Es werden technische Fehlerdaten ohne personenbezogene Kontoinformationen übermittelt.</Li>
-          </ul>
-        </Section>
-
-        <Section title="6. Cookies und lokale Speicherung">
+        <Section title="8. Cookies und lokale Speicherung">
           <p>Wir verwenden ausschließlich technisch notwendige Cookies:</p>
           <ul className="flex flex-col gap-2 mt-3">
-            <Li><strong>next-auth.session-token:</strong> Session-Cookie für angemeldete Nutzer (JWT). Notwendig für die Authentifizierung. Läuft mit der Browser-Session oder nach 30 Tagen ab.</Li>
-            <Li><strong>next-auth.csrf-token:</strong> CSRF-Schutz (Cross-Site-Request-Forgery). Technisch notwendig.</Li>
+            <Li><strong>next-auth.session-token:</strong> Session-Cookie für angemeldete Nutzer (JWT). Notwendig für die Authentifizierung. Läuft nach 30 Tagen oder beim Schließen des Browsers ab.</Li>
+            <Li><strong>next-auth.csrf-token:</strong> CSRF-Schutz. Technisch notwendig für die Sicherheit von Formularen.</Li>
           </ul>
           <p className="mt-3">
-            Da wir ausschließlich technisch notwendige Cookies verwenden, ist nach Art. 5 Abs. 3 ePrivacy-Richtlinie keine Einwilligung erforderlich. Wir nutzen keine Analyse-, Werbe- oder Tracking-Cookies.
+            Da wir ausschließlich technisch notwendige Cookies setzen, ist nach Art. 5 Abs. 3 der ePrivacy-Richtlinie keine Einwilligung erforderlich.
+            Wir verwenden keine Analyse-, Werbe- oder Tracking-Cookies.
+          </p>
+          <p className="mt-3">
+            Zusätzlich speichern wir im <strong>localStorage</strong> deines Browsers: deine Cookie-Hinweis-Bestätigung sowie den internen Admin-Zugriffsschlüssel (nur für Betreiber). Diese Daten verlassen deinen Browser nicht.
           </p>
         </Section>
 
-        <Section title="7. Speicherdauer">
+        <Section title="9. Speicherdauer">
           <ul className="flex flex-col gap-2">
-            <Li><strong>Account-Daten:</strong> Bis zur Kontolöschung durch den Nutzer</Li>
-            <Li><strong>Vertragsdaten und Audit-Logs:</strong> 7 Jahre (handelsrechtliche Aufbewahrungspflicht) nach Vertragsende; Blockchain-Einträge sind dauerhaft</Li>
+            <Li><strong>Account-Daten:</strong> Bis zur Kontolöschung durch den Nutzer oder auf Anfrage</Li>
+            <Li><strong>Vertragsdaten und Audit-Logs:</strong> 7 Jahre nach Vertragsende (handelsrechtliche Aufbewahrungspflicht gem. § 257 HGB); Blockchain-Einträge sind dauerhaft und nicht löschbar</Li>
             <Li><strong>Hochgeladene Dateien (Proofs):</strong> Für die Dauer des Vertragsverhältnisses, danach auf Anfrage löschbar</Li>
-            <Li><strong>IP-Adressen (Rate Limiting):</strong> Im Arbeitsspeicher, max. 1 Stunde</Li>
+            <Li><strong>Sentry Fehlerdaten:</strong> 90 Tage (Sentry-Standard für den kostenlosen Plan)</Li>
+            <Li><strong>IP-Adressen (Rate Limiting):</strong> Nur im Arbeitsspeicher, max. 1 Stunde, nicht persistent gespeichert</Li>
           </ul>
         </Section>
 
-        <Section title="8. Deine Rechte (DSGVO Art. 15–21)">
-          <ul className="flex flex-col gap-2">
-            <Li><strong>Auskunft (Art. 15):</strong> Welche Daten wir über dich gespeichert haben</Li>
-            <Li><strong>Datenportabilität (Art. 20):</strong> Export aller deiner Daten als JSON — verfügbar in den <Link href="/profile" style={{ color: "#C4704B" }}>Profileinstellungen</Link> unter „Privacy & Data"</Li>
-            <Li><strong>Löschung (Art. 17):</strong> Anonymisierung deines Kontos — verfügbar in den <Link href="/profile" style={{ color: "#C4704B" }}>Profileinstellungen</Link> unter „Delete Account". Hinweis: Blockchain-Transaktionen sind technisch nicht löschbar.</Li>
-            <Li><strong>Berichtigung (Art. 16):</strong> Korrektur unrichtiger Daten — via Profileinstellungen oder per E-Mail</Li>
-            <Li><strong>Widerspruch (Art. 21):</strong> Widerspruch gegen Verarbeitung auf Basis berechtigter Interessen</Li>
-            <Li><strong>Beschwerde:</strong> Du hast das Recht, dich bei einer Datenschutz-Aufsichtsbehörde zu beschweren, z.B. beim Bundesbeauftragten für den Datenschutz und die Informationsfreiheit (BfDI)</Li>
-          </ul>
-          <p className="mt-3">
-            Für Anfragen zu deinen Datenschutzrechten: <a href="mailto:hello@cascrow.com" style={{ color: "#C4704B" }}>hello@cascrow.com</a>
-          </p>
-        </Section>
-
-        <Section title="9. Sanktionsprüfung">
+        <Section title="10. Sanktionsprüfung">
           <p>
             Gemäß gesetzlicher Verpflichtung prüfen wir bei der Registrierung Name und optionales
             Geburtsdatum gegen OFAC- und EU-Sanktionslisten. Diese Prüfung ist eine rechtliche
             Verpflichtung (Art. 6 Abs. 1 lit. c DSGVO) und kann nicht abgewählt werden.
+            Das Ergebnis (CLEAR oder HIT) wird intern gespeichert und nicht an Dritte weitergegeben.
           </p>
         </Section>
 
-        <Section title="10. Änderungen dieser Erklärung">
+        <Section title="11. Deine Rechte (DSGVO Art. 15–21)">
+          <ul className="flex flex-col gap-2">
+            <Li><strong>Auskunft (Art. 15):</strong> Welche Daten wir über dich gespeichert haben</Li>
+            <Li><strong>Datenportabilität (Art. 20):</strong> Export aller deiner Daten als JSON – verfügbar in den <Link href="/profile" style={{ color: "#C4704B" }}>Profileinstellungen</Link> unter „Privacy &amp; Data"</Li>
+            <Li><strong>Löschung (Art. 17):</strong> Anonymisierung deines Kontos – verfügbar in den <Link href="/profile" style={{ color: "#C4704B" }}>Profileinstellungen</Link> unter „Delete Account". Hinweis: Blockchain-Transaktionen sind technisch nicht löschbar.</Li>
+            <Li><strong>Berichtigung (Art. 16):</strong> Korrektur unrichtiger Daten über die Profileinstellungen oder per E-Mail</Li>
+            <Li><strong>Einschränkung (Art. 18):</strong> Einschränkung der Verarbeitung auf Antrag</Li>
+            <Li><strong>Widerspruch (Art. 21):</strong> Widerspruch gegen Verarbeitung auf Basis berechtigter Interessen</Li>
+            <Li><strong>Widerruf der Einwilligung:</strong> Optionale E-Mail-Benachrichtigungen jederzeit in den <Link href="/profile" style={{ color: "#C4704B" }}>Profileinstellungen</Link> deaktivierbar</Li>
+            <Li><strong>Beschwerde (Art. 77):</strong> Du hast das Recht, dich bei einer Datenschutz-Aufsichtsbehörde zu beschweren, z.B. beim <a href="https://www.bfdi.bund.de" target="_blank" rel="noopener noreferrer" style={{ color: "#C4704B" }}>Bundesbeauftragten für den Datenschutz und die Informationsfreiheit (BfDI)</a></Li>
+          </ul>
+          <p className="mt-3">
+            Für alle Datenschutzanfragen: <a href="mailto:hello@cascrow.com" style={{ color: "#C4704B" }}>hello@cascrow.com</a>
+          </p>
+        </Section>
+
+        <Section title="12. Automatisierte Entscheidungsfindung">
+          <p>
+            Die KI-gestützte Meilensteinprüfung (5-Modell-Mehrheitsvotum) hat direkte Auswirkungen
+            auf die Freigabe oder Ablehnung von Escrow-Mitteln. Dies stellt eine automatisierte
+            Entscheidung im Sinne von Art. 22 DSGVO dar. Du hast das Recht, eine manuelle Überprüfung
+            durch einen Betreiber anzufordern (Widerspruch gegen automatisierte Entscheidung).
+            Wende dich hierfür an <a href="mailto:hello@cascrow.com" style={{ color: "#C4704B" }}>hello@cascrow.com</a>.
+          </p>
+        </Section>
+
+        <Section title="13. Änderungen dieser Erklärung">
           <p>
             Wir behalten uns vor, diese Datenschutzerklärung anzupassen. Die jeweils aktuelle Version
             ist unter cascrow.com/datenschutz abrufbar. Bei wesentlichen Änderungen informieren wir
