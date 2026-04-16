@@ -219,6 +219,12 @@ export default function ProfilePage() {
   // Webhooks
   const [webhooks, setWebhooks] = useState<WebhookEndpoint[]>([]);
   const [showNewWebhook, setShowNewWebhook] = useState(false);
+
+  // GDPR
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [exportingData, setExportingData] = useState(false);
   const [whUrl, setWhUrl] = useState("");
   const [whEvents, setWhEvents] = useState<string[]>(["contract.funded", "proof.submitted", "ai.decision", "funds.released"]);
   const [whSaving, setWhSaving] = useState(false);
@@ -418,6 +424,48 @@ export default function ProfilePage() {
       toast.error(err instanceof Error ? err.message : "Error saving settings.");
     } finally {
       setSavingNotify(false);
+    }
+  }
+
+  async function handleExportData() {
+    setExportingData(true);
+    try {
+      const res = await fetch("/api/user/export");
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `cascrow-data-export.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to export data. Please try again.");
+    } finally {
+      setExportingData(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (!deleteConfirmEmail) return;
+    setDeletingAccount(true);
+    try {
+      const res = await fetch("/api/user/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmEmail: deleteConfirmEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Failed to delete account.");
+        return;
+      }
+      toast.success("Account deleted. You will be signed out.");
+      setTimeout(() => signOut({ callbackUrl: "/" }), 1500);
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setDeletingAccount(false);
     }
   }
 
@@ -993,6 +1041,85 @@ export default function ProfilePage() {
                 >
                   {role === "INVESTOR" ? "Grant Giver" : "Receiver"}
                 </span>
+              </div>
+            </div>
+          </SectionCard>
+
+          {/* Privacy & Data (GDPR) */}
+          <SectionCard title="Privacy & Data" subtitle="Your rights under GDPR / data protection law">
+            <div className="flex flex-col gap-4">
+              {/* Export */}
+              <div
+                className="flex items-start justify-between gap-4 p-4 rounded-xl"
+                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.1)" }}
+              >
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-medium" style={{ color: "#EDE6DD" }}>Export My Data</span>
+                  <p className="text-xs" style={{ color: "#A89B8C" }}>Download a JSON file with all data we hold about you: profile, contracts, proofs, and audit logs.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleExportData}
+                  disabled={exportingData}
+                  className="cs-btn-ghost cs-btn-sm shrink-0"
+                >
+                  {exportingData ? "Exporting…" : "Export"}
+                </button>
+              </div>
+
+              {/* Delete */}
+              <div
+                className="flex flex-col gap-3 p-4 rounded-xl"
+                style={{ background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.15)" }}
+              >
+                <div>
+                  <span className="text-sm font-medium" style={{ color: "#EDE6DD" }}>Delete Account</span>
+                  <p className="text-xs mt-1" style={{ color: "#A89B8C" }}>
+                    Permanently anonymizes your personal data. Contracts with active escrow are preserved for the other party&apos;s records. This cannot be undone.
+                  </p>
+                </div>
+                {!showDeleteConfirm ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="cs-btn-ghost cs-btn-sm self-start text-xs"
+                    style={{ borderColor: "rgba(239,68,68,0.3)", color: "#ef4444" }}
+                  >
+                    Delete My Account
+                  </button>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-xs" style={{ color: "#A89B8C" }}>
+                      Type your email address to confirm:
+                    </p>
+                    <input
+                      type="email"
+                      value={deleteConfirmEmail}
+                      onChange={(e) => setDeleteConfirmEmail(e.target.value)}
+                      placeholder={profile.email}
+                      className="cs-input text-sm"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleDeleteAccount}
+                        disabled={deletingAccount || !deleteConfirmEmail}
+                        className="cs-btn-sm rounded-xl px-4 py-1.5 text-xs font-semibold"
+                        style={{ background: "rgba(239,68,68,0.15)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)", opacity: deletingAccount || !deleteConfirmEmail ? 0.5 : 1 }}
+                      >
+                        {deletingAccount ? "Deleting…" : "Confirm Delete"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmEmail(""); }}
+                        className="cs-btn-ghost cs-btn-sm"
+                        style={{ opacity: 0.6 }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </SectionCard>

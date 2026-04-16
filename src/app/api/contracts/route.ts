@@ -177,18 +177,25 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+      return NextResponse.json({ error: "Not authenticated", code: "UNAUTHORIZED" }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
-    const page  = Math.max(1, parseInt(searchParams.get("page")  ?? "1",  10) || 1);
-    const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10) || 20));
-    const skip  = (page - 1) * limit;
+    const page   = Math.max(1, parseInt(searchParams.get("page")  ?? "1",  10) || 1);
+    const limit  = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10) || 20));
+    const skip   = (page - 1) * limit;
+    const status = searchParams.get("status") ?? undefined;
+    const search = searchParams.get("search")?.trim() || undefined;
 
-    const where =
-      session.user.role === "INVESTOR"
+    const where = {
+      ...(session.user.role === "INVESTOR"
         ? { investorId: session.user.id }
-        : { startupId: session.user.id };
+        : { startupId: session.user.id }),
+      ...(status ? { status: status as never } : {}),
+      ...(search
+        ? { milestone: { contains: search, mode: "insensitive" as const } }
+        : {}),
+    };
 
     const [contracts, total] = await Promise.all([
       prisma.contract.findMany({
@@ -208,6 +215,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ contracts, total, page, limit, pages: Math.ceil(total / limit) });
   } catch (err) {
     console.error("List contracts error:", err);
-    return NextResponse.json({ error: "Failed to list contracts" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to list contracts", code: "INTERNAL_ERROR" }, { status: 500 });
   }
 }

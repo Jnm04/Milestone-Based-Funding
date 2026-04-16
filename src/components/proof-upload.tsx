@@ -43,6 +43,7 @@ function GitHubIcon() {
 
 export function ProofUpload({ contractId, milestoneId, onUploaded, replaceMode }: ProofUploadProps) {
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [files, setFiles] = useState<File[]>([]);
   const [uploaded, setUploaded] = useState(false);
   const [showReplace, setShowReplace] = useState(false);
@@ -76,26 +77,55 @@ export function ProofUpload({ contractId, milestoneId, onUploaded, replaceMode }
   async function handleSubmit() {
     if (!canSubmit) return;
     setLoading(true);
+    setUploadProgress(0);
     let lastProofId = "";
     try {
-      // Upload files first
-      for (const file of files) {
+      // Upload files first (using XHR for progress tracking)
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
         const formData = new FormData();
         formData.append("file", file);
         formData.append("contractId", contractId);
         if (milestoneId) formData.append("milestoneId", milestoneId);
 
-        const res = await fetch("/api/proof/upload", {
-          method: "POST",
-          body: formData,
+        const fileStartProgress = (i / files.length) * 100;
+        const fileEndProgress = ((i + 1) / files.length) * 100;
+
+        const proofId = await new Promise<string>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              const fileProgress = (e.loaded / e.total) * (fileEndProgress - fileStartProgress);
+              setUploadProgress(Math.round(fileStartProgress + fileProgress));
+            }
+          };
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                const data = JSON.parse(xhr.responseText) as { proofId?: string; error?: string };
+                if (data.proofId) {
+                  setUploadProgress(Math.round(fileEndProgress));
+                  resolve(data.proofId);
+                } else {
+                  reject(new Error(`${file.name}: ${data.error ?? "Upload failed"}`));
+                }
+              } catch {
+                reject(new Error(`${file.name}: Invalid server response`));
+              }
+            } else {
+              try {
+                const data = JSON.parse(xhr.responseText) as { error?: string };
+                reject(new Error(`${file.name}: ${data.error ?? "Upload failed"}`));
+              } catch {
+                reject(new Error(`${file.name}: Upload failed (${xhr.status})`));
+              }
+            }
+          };
+          xhr.onerror = () => reject(new Error(`${file.name}: Network error during upload`));
+          xhr.open("POST", "/api/proof/upload");
+          xhr.send(formData);
         });
 
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(`${file.name}: ${err.error ?? "Upload failed"}`);
-        }
-
-        const { proofId } = await res.json();
         lastProofId = proofId;
       }
 
@@ -133,6 +163,7 @@ export function ProofUpload({ contractId, milestoneId, onUploaded, replaceMode }
       toast.error(err instanceof Error ? err.message : "Upload failed.");
     } finally {
       setLoading(false);
+      setUploadProgress(0);
     }
   }
 
@@ -264,7 +295,7 @@ export function ProofUpload({ contractId, milestoneId, onUploaded, replaceMode }
 
       {/* Submit button */}
       {!uploaded && canSubmit && (
-        <div className="px-6 pb-6 pt-2" style={{ background: "rgba(255,255,255,0.03)" }}>
+        <div className="px-6 pb-6 pt-2 flex flex-col gap-2" style={{ background: "rgba(255,255,255,0.03)" }}>
           <button
             type="button"
             onClick={handleSubmit}
@@ -280,6 +311,22 @@ export function ProofUpload({ contractId, milestoneId, onUploaded, replaceMode }
                   ? `Upload ${files.length} file${files.length > 1 ? "s" : ""} & start AI verification`
                   : "Submit GitHub repo & start AI verification"}
           </button>
+          {loading && uploadProgress > 0 && (
+            <div
+              className="w-full rounded-full overflow-hidden"
+              style={{ height: 4, background: "rgba(196,112,75,0.15)" }}
+            >
+              <div
+                style={{
+                  width: `${uploadProgress}%`,
+                  height: "100%",
+                  background: "#C4704B",
+                  borderRadius: 9999,
+                  transition: "width 0.2s ease",
+                }}
+              />
+            </div>
+          )}
         </div>
       )}
 

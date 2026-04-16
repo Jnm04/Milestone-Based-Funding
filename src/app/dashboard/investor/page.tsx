@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { BuyRlusdModal } from "@/components/buy-rlusd-modal";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { NodeBackground } from "@/components/node-background";
+import { CopyButton } from "@/components/copy-button";
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT:            "Draft",
@@ -40,6 +41,7 @@ interface Contract {
   milestone: string;
   amountUSD: string;
   status: string;
+  inviteLink: string | null;
   startup: { walletAddress: string | null } | null;
   milestones: { status: string }[];
   createdAt: string;
@@ -416,13 +418,21 @@ export default function InvestorDashboard() {
                             </div>
                           )}
                           {!isHidden && (
-                            <Link
-                              href={`/contract/${c.id}?investor=${walletAddress}`}
-                              className="text-xs font-medium self-start"
-                              style={{ color: "#C4704B" }}
-                            >
-                              View →
-                            </Link>
+                            <div className="flex items-center gap-3">
+                              <Link
+                                href={`/contract/${c.id}?investor=${walletAddress}`}
+                                className="text-xs font-medium self-start"
+                                style={{ color: "#C4704B" }}
+                              >
+                                View →
+                              </Link>
+                              {c.status === "DRAFT" && c.inviteLink && (
+                                <div className="flex items-center gap-1" title="Copy invite link">
+                                  <CopyButton text={`${window.location.origin}/dashboard/startup?invite=${c.inviteLink}`} />
+                                  <span className="text-xs" style={{ color: "#A89B8C" }}>Copy invite</span>
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
 
@@ -452,13 +462,18 @@ export default function InvestorDashboard() {
                             {STATUS_LABELS[c.status] ?? c.status}
                           </span>
                           {!isHidden ? (
-                            <Link
-                              href={`/contract/${c.id}?investor=${walletAddress}`}
-                              className="text-sm font-medium transition-colors hover:underline"
-                              style={{ color: "#C4704B" }}
-                            >
-                              View
-                            </Link>
+                            <div className="flex items-center gap-2">
+                              <Link
+                                href={`/contract/${c.id}?investor=${walletAddress}`}
+                                className="text-sm font-medium transition-colors hover:underline"
+                                style={{ color: "#C4704B" }}
+                              >
+                                View
+                              </Link>
+                              {c.status === "DRAFT" && c.inviteLink && (
+                                <CopyButton text={`${window.location.origin}/dashboard/startup?invite=${c.inviteLink}`} />
+                              )}
+                            </div>
                           ) : (
                             <span />
                           )}

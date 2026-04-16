@@ -15,21 +15,26 @@ import { isValidCronSecret } from "@/lib/cron-auth";
 // Allow up to 60s — XRPL WebSocket + NFT mint can take 10-20s (requires Vercel Pro for >10s)
 export const maxDuration = 60;
 
-// Rate limiting: max 5 verify calls per user per 10 minutes
-const verifyRateLimit = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_MAX = 5;
-const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 
-function checkRateLimit(key: string): boolean {
-  const now = Date.now();
-  const entry = verifyRateLimit.get(key);
-  if (!entry || now > entry.resetAt) {
-    verifyRateLimit.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT_MAX) return false;
-  entry.count++;
-  return true;
+/**
+ * DB-backed rate limit for verification requests.
+ * Counts proofs created in the last 10 minutes across all of this user's contracts.
+ * Safe for serverless multi-instance deployments (no in-memory state).
+ */
+async function checkVerifyRateLimit(userId: string): Promise<boolean> {
+  const recentCount = await prisma.proof.count({
+    where: {
+      milestone: {
+        contract: {
+          OR: [{ investorId: userId }, { startupId: userId }],
+        },
+      },
+      createdAt: { gte: new Date(Date.now() - RATE_LIMIT_WINDOW_MS) },
+    },
+  });
+  return recentCount < RATE_LIMIT_MAX;
 }
 
 export async function POST(request: NextRequest) {
@@ -42,10 +47,11 @@ export async function POST(request: NextRequest) {
       if (!session) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
-      // Rate limit by user ID
-      if (!checkRateLimit(session.user.id)) {
+      // Rate limit by user ID (DB-backed — safe across serverless instances)
+      const withinLimit = await checkVerifyRateLimit(session.user.id);
+      if (!withinLimit) {
         return NextResponse.json(
-          { error: "Too many verification requests. Please wait 10 minutes." },
+          { error: "Too many verification requests. Please wait 10 minutes.", code: "RATE_LIMITED" },
           { status: 429, headers: { "Retry-After": "600" } }
         );
       }
@@ -116,6 +122,7 @@ export async function POST(request: NextRequest) {
       // Fetch image from Vercel Blob — private blobs require the token as Bearer auth
       const imageRes = await fetch(proof.fileUrl, {
         headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` },
+        signal: AbortSignal.timeout(15_000),
       });
       if (!imageRes.ok) {
         throw new Error(`Failed to download image from storage: ${imageRes.status} ${imageRes.statusText}`);
@@ -363,6 +370,6 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     console.error("Verification error:", err);
     const message = err instanceof Error ? err.message : "Verification failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message, code: "VERIFICATION_FAILED" }, { status: 500 });
   }
 }

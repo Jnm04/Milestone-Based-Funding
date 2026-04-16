@@ -414,7 +414,17 @@ export async function verifyMilestone(params: {
   ]);
 
   const results = raw.filter((r): r is { model: string; result: AIVerificationResult } => r !== null);
-  if (results.length < 3) throw new Error(`Only ${results.length}/5 AI models responded — cannot reach majority`);
+  if (results.length < 3) {
+    // Not enough models responded to reach majority — escalate to manual review instead of throwing
+    console.warn(`[verifier] Only ${results.length}/5 AI models responded — escalating to manual review`);
+    return {
+      decision: "NO" as const,
+      reasoning: `Insufficient AI model responses (${results.length}/5 models responded). This proof requires manual review by the investor.`,
+      confidence: 65, // 65 hits the middle tier in verify/route.ts (>60, ≤85) → PENDING_REVIEW
+      consensusLevel: 0,
+      modelVotes: results.map((r) => ({ model: r.model, decision: r.result.decision, confidence: r.result.confidence, reasoning: r.result.reasoning })),
+    };
+  }
   return combineResults(results);
 }
 
@@ -453,7 +463,17 @@ export async function verifyMilestoneImage(params: {
   ]);
 
   const results = raw.filter((r): r is { model: string; result: AIVerificationResult } => r !== null);
-  if (results.length < 3) throw new Error(`Only ${results.length}/5 AI models responded — cannot reach majority`);
+  if (results.length < 3) {
+    // Not enough models responded to reach majority — escalate to manual review instead of throwing
+    console.warn(`[verifier] Only ${results.length}/5 AI models responded (image) — escalating to manual review`);
+    return {
+      decision: "NO" as const,
+      reasoning: `Insufficient AI model responses for image verification (${results.length}/5 models responded). This proof requires manual review by the investor.`,
+      confidence: 65, // 65 hits the middle tier in verify/route.ts (>60, ≤85) → PENDING_REVIEW
+      consensusLevel: 0,
+      modelVotes: results.map((r) => ({ model: r.model, decision: r.result.decision, confidence: r.result.confidence, reasoning: r.result.reasoning })),
+    };
+  }
   return combineResults(results);
 }
 
