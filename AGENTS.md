@@ -45,6 +45,8 @@ The product is called **cascrow**. The repo folder is `milestonefund` — use `c
 - Models: Claude Haiku, Gemini Flash, GPT-4o-mini, Mistral Small, Cerebras/Qwen3
 - **3/5 YES = approved**. Do not change the threshold without discussing.
 - API usage is tracked in the `ApiUsage` DB table (non-fatal if it fails)
+- **Soft failure**: if < 3 models respond, returns `confidence: 65` + `decision: "NO"` → triggers PENDING_REVIEW tier in `verify/route.ts` instead of throwing a 500
+- Three-tier confidence logic in `verify/route.ts`: `< 60` → REJECTED, `60–85` → PENDING_REVIEW, `> 85` + YES → VERIFIED
 
 ## File Storage
 - All uploads (PDFs, NFT SVGs) go to **Vercel Blob** via `BLOB_READ_WRITE_TOKEN`
@@ -65,6 +67,29 @@ The product is called **cascrow**. The repo folder is `milestonefund` — use `c
 - Background: `#171311`
 - Use inline `style={{}}` for brand colors (not Tailwind color classes)
 - Rounded corners: `rounded-2xl` standard, `rounded-full` for pills
+
+## Rate Limiting
+- `src/lib/rate-limit.ts` exports `checkRateLimit(key, max, windowMs)` — **in-memory, per-instance only**
+- For the `/api/verify` route: rate limiting is **DB-backed** (counts recent `Proof` records via Prisma) — cross-instance safe in serverless. Do not revert to in-memory for this route.
+- For all other routes: in-memory rate limiting is acceptable
+
+## API Contracts
+- `GET /api/contracts` supports `?status=FUNDED&search=keyword` filter params
+- `PATCH /api/contracts/[id]` — edit `milestone`, `amountUSD`, `cancelAfter` while contract is `DRAFT` (investor only, startup not yet accepted)
+- `DELETE /api/proof/[proofId]` — startup can delete their own proof if `aiDecision` is null; resets milestone to `FUNDED`
+- `GET /api/user/export` — GDPR data export (JSON download, strips passwordHash/tokens)
+- `POST /api/user/delete` — GDPR soft anonymization (requires `{ confirmEmail }` body); cancels DRAFT/AWAITING_ESCROW contracts; anonymizes user row, does NOT delete it (preserves FK references)
+- `GET /api/auth/check-verified` — **public endpoint** (no session required), looks up by `?email=`, IP rate-limited (20/min); used for signup polling
+
+## Env Validation
+- `src/lib/env-validation.ts` runs at server startup (imported in `src/app/layout.tsx`)
+- Throws on missing `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `BLOB_READ_WRITE_TOKEN`, `NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS`, `NEXT_PUBLIC_RLUSD_CONTRACT_ADDRESS`
+- Warns (does not throw) for missing AI/blockchain keys
+
+## ThirdWeb RPC
+- The XRPL EVM Testnet RPC (`https://rpc.testnet.xrplevm.org`) is hosted by **ThirdWeb**
+- Occasional "We are not able to process your request at this time" errors are ThirdWeb outages — not a code bug
+- `extractError()` in `contract-actions.tsx` detects ThirdWeb error strings and replaces them with a user-friendly message
 
 ## Internal Admin
 - `/internal/*` routes are for admin use only — always guard with `INTERNAL_API_SECRET` header check
