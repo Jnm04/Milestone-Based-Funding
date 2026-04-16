@@ -15,7 +15,7 @@ async function triggerVerification(proofId: string) {
   try {
     const baseUrl = process.env.NEXTAUTH_URL
       ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-    await fetch(`${baseUrl}/api/verify`, {
+    const res = await fetch(`${baseUrl}/api/verify`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -23,8 +23,11 @@ async function triggerVerification(proofId: string) {
       },
       body: JSON.stringify({ proofId }),
     });
+    if (!res.ok) {
+      console.error(`[auto-verify] FAILED proofId=${proofId} status=${res.status} — cron will retry within 1h`);
+    }
   } catch (err) {
-    console.error("[auto-verify] failed:", err);
+    console.error(`[auto-verify] FAILED proofId=${proofId} — cron will retry within 1h`, err);
   }
 }
 

@@ -158,8 +158,8 @@ export async function GET(request: NextRequest) {
     deletedDrafts = staleIds.length;
   }
 
-  // ── 4. Re-trigger verification for stuck PROOF_SUBMITTED (proof has no aiDecision >10 min) ─
-  const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
+  // ── 4. Re-trigger verification for stuck PROOF_SUBMITTED (proof has no aiDecision >5 min) ─
+  const tenMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
   const stuckProofs = await prisma.proof.findMany({
     where: {
       aiDecision: null,

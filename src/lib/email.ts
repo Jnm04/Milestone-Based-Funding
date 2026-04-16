@@ -133,6 +133,9 @@ export async function sendPendingReviewEmail({
       <p>Hi,</p>
       <p>The AI was uncertain about milestone <strong>${esc(milestoneTitle)}</strong> and needs your manual review.</p>
       ${aiReasoning ? `<p><em>AI reasoning: ${esc(aiReasoning)}</em></p>` : ""}
+      <p style="background:#fff3cd;border-left:4px solid #e6a817;padding:10px 14px;margin:12px 0;font-size:13px;">
+        <strong>Action required within 14 days.</strong> If no decision is made, the milestone will be automatically approved and funds released to the Receiver.
+      </p>
       <p><a href="${contractLink(contractId)}">Review now →</a></p>
     `,
   });

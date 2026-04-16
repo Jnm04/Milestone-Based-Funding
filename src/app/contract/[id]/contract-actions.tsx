@@ -499,7 +499,7 @@ export function ContractActions({
       const res = await fetch("/api/contracts/resubmit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contractId }),
+        body: JSON.stringify({ contractId, ...(milestoneId ? { milestoneId } : {}) }),
       });
       if (!res.ok) {
         const err = await res.json();
