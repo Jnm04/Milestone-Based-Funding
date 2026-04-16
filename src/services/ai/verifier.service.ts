@@ -388,6 +388,15 @@ async function safeCall(
 
 // ─── Public verification functions ───────────────────────────────────────────
 
+/**
+ * Returns true when a verification result represents a technical AI failure
+ * (not enough models responded), as opposed to a real content decision.
+ * Used by the route to decide whether to retry.
+ */
+export function isInsufficientModels(result: AIVerificationResultWithVotes): boolean {
+  return result.confidence === 65 && result.consensusLevel === 0 && result.reasoning.startsWith("Insufficient AI model responses");
+}
+
 /** Verifies milestone against extracted text (PDF, Office, CSV). */
 export async function verifyMilestone(params: {
   milestone: string;
@@ -415,12 +424,11 @@ export async function verifyMilestone(params: {
 
   const results = raw.filter((r): r is { model: string; result: AIVerificationResult } => r !== null);
   if (results.length < 3) {
-    // Not enough models responded to reach majority — escalate to manual review instead of throwing
-    console.warn(`[verifier] Only ${results.length}/5 AI models responded — escalating to manual review`);
+    console.warn(`[verifier] Only ${results.length}/5 AI models responded`);
     return {
       decision: "NO" as const,
-      reasoning: `Insufficient AI model responses (${results.length}/5 models responded). This proof requires manual review by the investor.`,
-      confidence: 65, // 65 hits the middle tier in verify/route.ts (>60, ≤85) → PENDING_REVIEW
+      reasoning: `Insufficient AI model responses (${results.length}/5 models responded). Manual review required.`,
+      confidence: 65,
       consensusLevel: 0,
       modelVotes: results.map((r) => ({ model: r.model, decision: r.result.decision, confidence: r.result.confidence, reasoning: r.result.reasoning })),
     };
@@ -464,12 +472,11 @@ export async function verifyMilestoneImage(params: {
 
   const results = raw.filter((r): r is { model: string; result: AIVerificationResult } => r !== null);
   if (results.length < 3) {
-    // Not enough models responded to reach majority — escalate to manual review instead of throwing
-    console.warn(`[verifier] Only ${results.length}/5 AI models responded (image) — escalating to manual review`);
+    console.warn(`[verifier] Only ${results.length}/5 AI models responded (image)`);
     return {
       decision: "NO" as const,
-      reasoning: `Insufficient AI model responses for image verification (${results.length}/5 models responded). This proof requires manual review by the investor.`,
-      confidence: 65, // 65 hits the middle tier in verify/route.ts (>60, ≤85) → PENDING_REVIEW
+      reasoning: `Insufficient AI model responses (${results.length}/5 models responded). Manual review required.`,
+      confidence: 65,
       consensusLevel: 0,
       modelVotes: results.map((r) => ({ model: r.model, decision: r.result.decision, confidence: r.result.confidence, reasoning: r.result.reasoning })),
     };

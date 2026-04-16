@@ -353,7 +353,7 @@ export function ContractActions({
     }
   }
 
-  // ── AI verification ───────────────────────────────────────────────────────
+  // ── AI verification (SSE stream with retry progress) ─────────────────────
   async function handleVerify(proofId: string) {
     setLoadingVerify(true);
     try {
@@ -362,18 +362,54 @@ export function ContractActions({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ proofId }),
       });
+
+      // Non-200 responses are plain JSON errors (auth, rate limit, validation)
       if (!res.ok) {
-        const err = await res.json();
+        const err = await res.json() as { error?: string };
         throw new Error(err.error ?? "Verification failed");
       }
-      const result = await res.json();
-      if (result.decision === "YES") {
-        toast.success("AI approved! Milestone verified — you can now release the funds.");
-      } else {
-        toast.error(`AI rejected: ${result.reasoning}`);
+
+      // 200 = SSE stream
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          let event: Record<string, unknown>;
+          try { event = JSON.parse(line.slice(6)) as Record<string, unknown>; } catch { continue; }
+
+          if (event.type === "retrying") {
+            toast.info(
+              `AI providers didn't respond (attempt ${(event.n as number) - 1}/3). Retrying in ${event.waitSeconds}s…`,
+              { duration: (event.waitSeconds as number) * 1000 }
+            );
+          } else if (event.type === "attempt" && (event.n as number) > 1) {
+            toast.info(`Attempt ${event.n}/3…`);
+          } else if (event.type === "error") {
+            throw new Error((event.message as string | undefined) ?? "Verification failed");
+          } else if (event.type === "complete") {
+            if (event.action === "COMPLETED") {
+              toast.success("AI approved! Funds auto-released — milestone completed.");
+            } else if (event.decision === "YES") {
+              toast.success("AI approved! Milestone verified — you can now release the funds.");
+            } else {
+              toast.error(`AI rejected: ${event.reasoning}`);
+            }
+            setVerifyDone(true);
+            setTimeout(() => window.location.reload(), 1500);
+            return;
+          }
+        }
       }
-      setVerifyDone(true);
-      setTimeout(() => window.location.reload(), 1500);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Verification failed.");
     } finally {
