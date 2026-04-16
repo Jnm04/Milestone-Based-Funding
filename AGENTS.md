@@ -94,6 +94,17 @@ The product is called **cascrow**. The repo folder is `milestonefund` — use `c
 ## Internal Admin
 - `/internal/*` routes are for admin use only — always guard with `INTERNAL_API_SECRET` header check
 - Do not expose internal endpoints publicly
+- All internal auth comparisons use `crypto.timingSafeEqual` (constant-time) — do not use `===` for secret comparison
+
+## Security Headers
+- `next.config.ts` sets `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, and `Permissions-Policy` on all routes via `headers()`
+- CSP is handled separately in middleware
+- Do not remove or weaken these headers
+
+## Error Handling
+- Never return raw `err.message` in API responses — log it server-side, return a generic message to the client
+- Pattern: `console.error("[route]", err); return NextResponse.json({ error: "..." }, { status: 500 })`
+- `/api/health` returns generic `"Database check failed"` / `"XRPL check failed"` strings — not raw DB errors
 
 ## EVM Explorer
 - **No stable public explorer** exists for XRPL EVM Testnet

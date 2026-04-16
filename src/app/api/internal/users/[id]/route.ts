@@ -1,11 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { screenName } from "@/services/sanctions/sanctions.service";
+import crypto from "crypto";
 
 function isAuthorized(req: NextRequest) {
   const key = req.headers.get("x-internal-key")?.trim();
   const secret = process.env.INTERNAL_SECRET?.trim();
-  return key && secret && key === secret;
+  if (!key || !secret) return false;
+  try {
+    const len = Math.max(key.length, secret.length);
+    const a = Buffer.alloc(len);
+    const b = Buffer.alloc(len);
+    Buffer.from(key).copy(a);
+    Buffer.from(secret).copy(b);
+    return key.length === secret.length && crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
 }
 
 /** PATCH /api/internal/users/[id] — manually set kycTier */

@@ -20,18 +20,15 @@ export function isValidCronSecret(authHeader: string | null): boolean {
   if (provided.length === 0) return false;
 
   try {
-    // Pad to same length before comparing to avoid length-based timing leaks
-    const a = Buffer.from(provided.padEnd(secret.length, "\0"));
-    const b = Buffer.from(secret.padEnd(provided.length, "\0"));
-    // timingSafeEqual requires same-length buffers
-    const len = Math.max(a.length, b.length);
-    return (
-      provided.length === secret.length &&
-      crypto.timingSafeEqual(
-        Buffer.from(provided.padEnd(len)),
-        Buffer.from(secret.padEnd(len))
-      )
-    );
+    const len = Math.max(provided.length, secret.length);
+    const a = Buffer.alloc(len);
+    const b = Buffer.alloc(len);
+    Buffer.from(provided).copy(a);
+    Buffer.from(secret).copy(b);
+    // Always run timingSafeEqual (no short-circuit) — length equality checked separately
+    // and combined with bitwise AND so both checks always execute in constant time.
+    const sameLength = provided.length === secret.length ? 1 : 0;
+    return crypto.timingSafeEqual(a, b) && sameLength === 1;
   } catch {
     return false;
   }

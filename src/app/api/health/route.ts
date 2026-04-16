@@ -13,7 +13,8 @@ async function checkDatabase(): Promise<{ ok: boolean; latencyMs?: number; error
     await prisma.$queryRaw`SELECT 1`;
     return { ok: true, latencyMs: Date.now() - start };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    console.error("[health] DB check failed:", err);
+    return { ok: false, error: "Database check failed" };
   }
 }
 
@@ -29,7 +30,8 @@ async function checkXrpl(): Promise<{ ok: boolean; latencyMs?: number; error?: s
     if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
     return { ok: true, latencyMs: Date.now() - start };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    console.error("[health] XRPL check failed:", err);
+    return { ok: false, error: "XRPL check failed" };
   }
 }
 

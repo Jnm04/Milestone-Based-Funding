@@ -281,8 +281,7 @@ export async function POST(request: NextRequest) {
       });
     }
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("Upload error:", msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("Upload error:", err);
+    return NextResponse.json({ error: "Upload failed. Please try again." }, { status: 500 });
   }
 }
