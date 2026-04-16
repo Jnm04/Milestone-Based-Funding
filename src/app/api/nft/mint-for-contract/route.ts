@@ -8,6 +8,7 @@ import { writeAuditLog } from "@/services/evm/audit.service";
 export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
+  try {
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -95,5 +96,9 @@ export async function POST(request: NextRequest) {
     }
     console.error("[nft/mint-for-contract]", err);
     return NextResponse.json({ error: "NFT minting failed" }, { status: 500 });
+  }
+  } catch (err) {
+    console.error("[nft/mint-for-contract] Unexpected error:", err);
+    return NextResponse.json({ error: "NFT request failed" }, { status: 500 });
   }
 }

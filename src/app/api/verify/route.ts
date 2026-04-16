@@ -369,8 +369,7 @@ export async function POST(request: NextRequest) {
         send({ type: "complete", decision: result.decision, reasoning: result.reasoning, confidence: result.confidence, action });
       } catch (err) {
         console.error("Verification error:", err);
-        const message = err instanceof Error ? err.message : "Verification failed";
-        send({ type: "error", message, code: "VERIFICATION_FAILED" });
+        send({ type: "error", message: "Verification failed", code: "VERIFICATION_FAILED" });
       } finally {
         controller.close();
       }

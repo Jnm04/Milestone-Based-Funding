@@ -15,33 +15,38 @@ export async function GET(request: NextRequest) {
   const offsetRaw = parseInt(searchParams.get("offset") ?? "");
   const offset = Math.max(0, Number.isNaN(offsetRaw) ? 0 : offsetRaw);
 
-  const [total, users] = await Promise.all([
-    prisma.user.count(),
-    prisma.user.findMany({
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        kycTier: true,
-        sanctionsStatus: true,
-        sanctionsCheckedAt: true,
-        emailVerified: true,
-        walletAddress: true,
-        companyName: true,
-        createdAt: true,
-        _count: { select: { contracts: true, startupContracts: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      take: limit,
-      skip: offset,
-    }),
-  ]);
+  try {
+    const [total, users] = await Promise.all([
+      prisma.user.count(),
+      prisma.user.findMany({
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          kycTier: true,
+          sanctionsStatus: true,
+          sanctionsCheckedAt: true,
+          emailVerified: true,
+          walletAddress: true,
+          companyName: true,
+          createdAt: true,
+          _count: { select: { contracts: true, startupContracts: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+      }),
+    ]);
 
-  const enriched = users.map((u) => ({
-    ...u,
-    nameFlagged: isSuspiciousName(u.name) || isSuspiciousName(u.companyName),
-  }));
+    const enriched = users.map((u) => ({
+      ...u,
+      nameFlagged: isSuspiciousName(u.name) || isSuspiciousName(u.companyName),
+    }));
 
-  return NextResponse.json({ users: enriched, total, limit, offset });
+    return NextResponse.json({ users: enriched, total, limit, offset });
+  } catch (err) {
+    console.error("[internal/users] GET failed:", err);
+    return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
+  }
 }
