@@ -1051,8 +1051,9 @@ export default function LandingPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
             <span style={{ fontSize: 11, color: "#3D342C" }}>© 2026 Cascrow</span>
             <div className="flex gap-6">
-              <Link href="/login"    className="transition-colors hover:text-[#EDE6DD]">Sign in</Link>
-              <Link href="/register" className="transition-colors hover:text-[#EDE6DD]">Register</Link>
+              <Link href="/login"        className="transition-colors hover:text-[#EDE6DD]">Sign in</Link>
+              <Link href="/register"     className="transition-colors hover:text-[#EDE6DD]">Register</Link>
+              <Link href="/datenschutz"  className="transition-colors hover:text-[#EDE6DD]">Datenschutz</Link>
             </div>
           </div>
         </div>
