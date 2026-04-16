@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  try {
   const now = new Date();
   const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
 
@@ -225,4 +226,8 @@ export async function GET(request: NextRequest) {
     declinedAwaitingEscrow,
     retriedVerifications: retried,
   });
+  } catch (err) {
+    console.error("[cron/cancel-expired] Unexpected error:", err);
+    return NextResponse.json({ error: "Cron job failed" }, { status: 500 });
+  }
 }

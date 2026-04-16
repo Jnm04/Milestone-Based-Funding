@@ -12,41 +12,46 @@ export async function GET(req: NextRequest) {
   const offsetRaw = parseInt(searchParams.get("offset") ?? "");
   const offset = Math.max(0, Number.isNaN(offsetRaw) ? 0 : offsetRaw);
 
-  const [total, entries] = await Promise.all([
-    prisma.trainingEntry.count(),
-    prisma.trainingEntry.findMany({
-      orderBy: { createdAt: "desc" },
-      take: limit,
-      skip: offset,
-      select: {
-        id: true,
-        proofId: true,
-        milestoneText: true,
-        proofText: true,
-        label: true,
-        labelSource: true,
-        consensusLevel: true,
-        fraudType: true,
-        modelVotes: true,
-        notes: true,
-        createdAt: true,
-      },
-    }),
-  ]);
+  try {
+    const [total, entries] = await Promise.all([
+      prisma.trainingEntry.count(),
+      prisma.trainingEntry.findMany({
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+        select: {
+          id: true,
+          proofId: true,
+          milestoneText: true,
+          proofText: true,
+          label: true,
+          labelSource: true,
+          consensusLevel: true,
+          fraudType: true,
+          modelVotes: true,
+          notes: true,
+          createdAt: true,
+        },
+      }),
+    ]);
 
-  // Attach fileUrl from Proof table (no direct relation in schema)
-  const proofIds = entries.map((e) => e.proofId);
-  const proofs = await prisma.proof.findMany({
-    where: { id: { in: proofIds } },
-    select: { id: true, fileUrl: true, fileName: true },
-  });
-  const proofMap = new Map(proofs.map((p) => [p.id, p]));
+    // Attach fileUrl from Proof table (no direct relation in schema)
+    const proofIds = entries.map((e) => e.proofId);
+    const proofs = await prisma.proof.findMany({
+      where: { id: { in: proofIds } },
+      select: { id: true, fileUrl: true, fileName: true },
+    });
+    const proofMap = new Map(proofs.map((p) => [p.id, p]));
 
-  const enriched = entries.map((e) => ({
-    ...e,
-    fileUrl: proofMap.get(e.proofId)?.fileUrl ?? null,
-    fileName: proofMap.get(e.proofId)?.fileName ?? null,
-  }));
+    const enriched = entries.map((e) => ({
+      ...e,
+      fileUrl: proofMap.get(e.proofId)?.fileUrl ?? null,
+      fileName: proofMap.get(e.proofId)?.fileName ?? null,
+    }));
 
-  return NextResponse.json({ entries: enriched, total, limit, offset });
+    return NextResponse.json({ entries: enriched, total, limit, offset });
+  } catch (err) {
+    console.error("[internal/dataset] GET failed:", err);
+    return NextResponse.json({ error: "Failed to fetch dataset" }, { status: 500 });
+  }
 }

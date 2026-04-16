@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  try {
   const now = new Date();
   const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
 
@@ -90,4 +91,8 @@ export async function GET(request: NextRequest) {
   console.log(`[cron/send-reminders] Reminders sent: ${sent}, failed: ${failed}, milestones checked: ${upcoming.length}`);
 
   return NextResponse.json({ ok: true, milestones: upcoming.length, sent, failed });
+  } catch (err) {
+    console.error("[cron/send-reminders] Unexpected error:", err);
+    return NextResponse.json({ error: "Cron job failed" }, { status: 500 });
+  }
 }

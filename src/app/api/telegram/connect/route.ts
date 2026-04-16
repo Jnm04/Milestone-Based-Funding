@@ -30,50 +30,64 @@ export async function POST() {
     );
   }
 
-  const token = crypto.randomBytes(32).toString("hex");
-  const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+  try {
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
-  // Upsert: create row if first time connecting, update token if reconnecting
-  await prisma.telegramChat.upsert({
-    where: { userId: session.user.id },
-    create: {
-      userId: session.user.id,
-      chatId: "", // filled in by /api/telegram/webhook
-      connectToken: token,
-      connectTokenExpiry: expiry,
-      active: false,
-    },
-    update: {
-      connectToken: token,
-      connectTokenExpiry: expiry,
-    },
-  });
+    // Upsert: create row if first time connecting, update token if reconnecting
+    await prisma.telegramChat.upsert({
+      where: { userId: session.user.id },
+      create: {
+        userId: session.user.id,
+        chatId: "", // filled in by /api/telegram/webhook
+        connectToken: token,
+        connectTokenExpiry: expiry,
+        active: false,
+      },
+      update: {
+        connectToken: token,
+        connectTokenExpiry: expiry,
+      },
+    });
 
-
-  const deepLink = `https://t.me/${botUsername}?start=${token}`;
-  return NextResponse.json({ deepLink, expiresInMinutes: 15 });
+    const deepLink = `https://t.me/${botUsername}?start=${token}`;
+    return NextResponse.json({ deepLink, expiresInMinutes: 15 });
+  } catch (err) {
+    console.error("[telegram/connect] POST failed:", err);
+    return NextResponse.json({ error: "Failed to generate connect link" }, { status: 500 });
+  }
 }
 
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const chat = await prisma.telegramChat.findUnique({
-    where: { userId: session.user.id },
-    select: { active: true, createdAt: true },
-  });
+  try {
+    const chat = await prisma.telegramChat.findUnique({
+      where: { userId: session.user.id },
+      select: { active: true, createdAt: true },
+    });
 
-  return NextResponse.json({
-    configured: !!BOT_USERNAME(),
-    connected: !!chat?.active,
-    connectedAt: chat?.active ? chat.createdAt : null,
-  });
+    return NextResponse.json({
+      configured: !!BOT_USERNAME(),
+      connected: !!chat?.active,
+      connectedAt: chat?.active ? chat.createdAt : null,
+    });
+  } catch (err) {
+    console.error("[telegram/connect] GET failed:", err);
+    return NextResponse.json({ error: "Failed to fetch Telegram status" }, { status: 500 });
+  }
 }
 
 export async function DELETE() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  await prisma.telegramChat.deleteMany({ where: { userId: session.user.id } });
-  return NextResponse.json({ ok: true });
+  try {
+    await prisma.telegramChat.deleteMany({ where: { userId: session.user.id } });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("[telegram/connect] DELETE failed:", err);
+    return NextResponse.json({ error: "Failed to disconnect Telegram" }, { status: 500 });
+  }
 }

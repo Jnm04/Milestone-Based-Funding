@@ -19,6 +19,7 @@ import { prisma } from "@/lib/prisma";
 export async function GET(req: NextRequest) {
   if (!isInternalAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  try {
   const format = new URL(req.url).searchParams.get("format") ?? "jsonl";
 
   const entries = await prisma.trainingEntry.findMany({
@@ -123,4 +124,8 @@ export async function GET(req: NextRequest) {
       "Content-Disposition": `attachment; filename="cascrow-dataset-${timestamp}.jsonl"`,
     },
   });
+  } catch (err) {
+    console.error("[internal/export] GET failed:", err);
+    return NextResponse.json({ error: "Failed to export dataset" }, { status: 500 });
+  }
 }

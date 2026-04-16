@@ -49,42 +49,47 @@ export async function POST(req: NextRequest) {
 
   const userId = session.user.id;
 
-  // Cancel DRAFT and AWAITING_ESCROW contracts (no funds locked yet)
-  await prisma.contract.updateMany({
-    where: {
-      OR: [{ investorId: userId }, { startupId: userId }],
-      status: { in: ["DRAFT", "AWAITING_ESCROW"] },
-    },
-    data: { status: "DECLINED" },
-  });
-
-  // Anonymize the user record — preserve the row so contract FKs don't break
-  const anonymizedEmail = `deleted-${userId}@cascrow.xyz`;
-  await prisma.$transaction([
-    // Disconnect telegram chat if present
-    prisma.telegramChat.deleteMany({ where: { userId } }),
-    // Anonymize the user record — preserve the row so contract FKs don't break
-    prisma.user.update({
-      where: { id: userId },
-      data: {
-        email: anonymizedEmail,
-        name: null,
-        phone: null,
-        bio: null,
-        website: null,
-        companyName: null,
-        department: null,
-        jobTitle: null,
-        walletAddress: null,
-        passwordHash: "",
-        emailVerified: false,
-        emailVerificationToken: null,
-        emailVerificationTokenExpiry: null,
-        passwordResetToken: null,
-        passwordResetTokenExpiry: null,
+  try {
+    // Cancel DRAFT and AWAITING_ESCROW contracts (no funds locked yet)
+    await prisma.contract.updateMany({
+      where: {
+        OR: [{ investorId: userId }, { startupId: userId }],
+        status: { in: ["DRAFT", "AWAITING_ESCROW"] },
       },
-    }),
-  ]);
+      data: { status: "DECLINED" },
+    });
 
-  return NextResponse.json({ ok: true });
+    // Anonymize the user record — preserve the row so contract FKs don't break
+    const anonymizedEmail = `deleted-${userId}@cascrow.xyz`;
+    await prisma.$transaction([
+      // Disconnect telegram chat if present
+      prisma.telegramChat.deleteMany({ where: { userId } }),
+      // Anonymize the user record — preserve the row so contract FKs don't break
+      prisma.user.update({
+        where: { id: userId },
+        data: {
+          email: anonymizedEmail,
+          name: null,
+          phone: null,
+          bio: null,
+          website: null,
+          companyName: null,
+          department: null,
+          jobTitle: null,
+          walletAddress: null,
+          passwordHash: "",
+          emailVerified: false,
+          emailVerificationToken: null,
+          emailVerificationTokenExpiry: null,
+          passwordResetToken: null,
+          passwordResetTokenExpiry: null,
+        },
+      }),
+    ]);
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("[user/delete] POST failed:", err);
+    return NextResponse.json({ error: "Account deletion failed. Please try again." }, { status: 500 });
+  }
 }

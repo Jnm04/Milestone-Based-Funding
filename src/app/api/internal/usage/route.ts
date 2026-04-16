@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 export async function GET(req: NextRequest) {
   if (!isInternalAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  try {
   const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
   const [allTime, last30d] = await Promise.all([
@@ -51,4 +52,8 @@ export async function GET(req: NextRequest) {
     })),
     dailySeries: Array.from(byDay.values()),
   });
+  } catch (err) {
+    console.error("[internal/usage] GET failed:", err);
+    return NextResponse.json({ error: "Failed to fetch usage stats" }, { status: 500 });
+  }
 }

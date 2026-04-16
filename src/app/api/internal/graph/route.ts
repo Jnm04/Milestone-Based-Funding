@@ -23,6 +23,7 @@ function cosineSimilarity(a: number[], b: number[]): number {
 export async function GET(req: NextRequest) {
   if (!isInternalAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  try {
   const [trainingEntries, queueEntries, embeddings] = await Promise.all([
     prisma.trainingEntry.findMany({
       orderBy: { createdAt: "desc" },
@@ -132,4 +133,8 @@ export async function GET(req: NextRequest) {
       pendingCount: queueEntries.length,
     },
   });
+  } catch (err) {
+    console.error("[internal/graph] GET failed:", err);
+    return NextResponse.json({ error: "Failed to fetch graph data" }, { status: 500 });
+  }
 }
