@@ -44,3 +44,6 @@ next-env.d.ts
 public/uploads/
 /contracts/
 .env*.local
+
+# Serena MCP
+.serena/

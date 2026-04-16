@@ -97,9 +97,32 @@ The product is called **cascrow**. The repo folder is `milestonefund` — use `c
 - All internal auth comparisons use `crypto.timingSafeEqual` (constant-time) — do not use `===` for secret comparison
 
 ## Security Headers
-- `next.config.ts` sets `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, and `Permissions-Policy` on all routes via `headers()`
-- CSP is handled separately in middleware
+- `next.config.ts` sets all security headers on all routes via the `headers()` config:
+  - `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`
+  - **Content Security Policy (CSP)** — also set in `next.config.ts`, not in middleware
+  - CSP connect-src includes both `https://*.ingest.sentry.io` AND `https://*.ingest.de.sentry.io` (EU Sentry endpoint)
 - Do not remove or weaken these headers
+- There is **no middleware.ts** for security headers — everything is in `next.config.ts`
+
+## Sentry
+- Configured in `sentry.client.config.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`
+- DSN from `NEXT_PUBLIC_SENTRY_DSN` (public); auth token from `SENTRY_AUTH_TOKEN` (private, Personal Token — not Org Token)
+- Only enabled in production (`process.env.NODE_ENV === "production"`)
+- EU data region (Frankfurt) — DSN contains `ingest.de.sentry.io`
+- Live error view at `/internal/errors` — fetches from Sentry Issues API via `/api/internal/sentry-issues`
+- The Issues API requires a **Personal Token** with `Project: Read` + `Issue & Event: Read` scopes (org tokens only have `org:ci` and will 403)
+
+## Bot Protection (Cloudflare Turnstile)
+- Register and forgot-password pages are protected with Cloudflare Turnstile
+- Site key: `NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY` (public)
+- Secret: `CLOUDFLARE_TURNSTILE_SECRET_KEY` (server-side verification)
+- Verification happens server-side in the API route before any DB work
+
+## Cookie Consent & Privacy Policy
+- `src/components/cookie-banner.tsx` — info banner (not a consent gate) shown once, acknowledged via localStorage key `cascrow_cookie_consent`
+- Only strictly necessary cookies are set (NextAuth session + CSRF) — no consent required under ePrivacy Directive
+- Privacy Policy at `/datenschutz` — bilingual (German default, English toggle), client component
+- Footer link on landing page: "Privacy Policy" → `/datenschutz`
 
 ## Error Handling
 - Never return raw `err.message` in API responses — log it server-side, return a generic message to the client

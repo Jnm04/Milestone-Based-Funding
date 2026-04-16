@@ -136,6 +136,8 @@ The `tokenId` and `txHash` are stored in the database and displayed as a certifi
 | File storage | Vercel Blob |
 | Email | Resend |
 | Cron | Vercel Cron (auto-cancel expired milestones) |
+| Error monitoring | Sentry (EU region, Frankfurt) |
+| Bot protection | Cloudflare Turnstile (register + forgot-password) |
 
 ---
 
@@ -180,21 +182,37 @@ CEREBRAS_API_KEY=csk_...
 BLOB_READ_WRITE_TOKEN=  # Vercel Blob token
 
 # EVM / Blockchain
-EVM_RPC_URL=https://rpc.testnet.xrplevm.org
+NEXT_PUBLIC_EVM_RPC_URL=https://rpc.testnet.xrplevm.org
 NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS=0x...
 NEXT_PUBLIC_RLUSD_CONTRACT_ADDRESS=0x...
-PLATFORM_WALLET_PRIVATE_KEY=0x...   # Platform wallet — releases/cancels escrow server-side
+EVM_PLATFORM_PRIVATE_KEY=0x...      # Platform wallet — releases/cancels escrow server-side
 
 # Native XRPL audit trail (AccountSet memo transactions)
-XRPL_PLATFORM_SEED=s...             # XRPL testnet wallet seed (fund via testnet faucet)
-# XRPL_HTTP_URL=https://s.altnet.rippletest.net:51234  # optional override
+XRPL_PLATFORM_SEED=s...             # XRPL wallet seed (fund at xrpl.org/xrp-testnet-faucet.html)
+# XRPL_NETWORK=testnet              # Omit for mainnet (default)
 
-# Email (optional — notifications disabled without this)
-RESEND_API_KEY=re_...
+# Email (Resend — required for verification/reset; optional notifications work without it)
+EMAIL_HOST=smtp.resend.com
+EMAIL_PORT=465
+EMAIL_USER=resend
+EMAIL_PASS=re_...
 EMAIL_FROM=Cascrow <noreply@yourdomain.com>
 
+# Bot protection
+NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY=...
+CLOUDFLARE_TURNSTILE_SECRET_KEY=...
+
+# Error monitoring (Sentry — optional, errors silently skipped if missing)
+NEXT_PUBLIC_SENTRY_DSN=https://...@....ingest.de.sentry.io/...
+SENTRY_ORG=your-org
+SENTRY_PROJECT=your-project
+SENTRY_AUTH_TOKEN=...   # Personal Token (Project: Read + Issue & Event: Read scopes)
+
+# Internal admin API (set to any long random string)
+INTERNAL_API_SECRET=...
+
 # Cron (set to any secret string, must match Vercel Cron config)
-CRON_SECRET=your-secret
+CRON_SECRET=...
 ```
 
 > **XRPL audit wallet setup:** Create a testnet wallet at [xrpl.org/xrp-testnet-faucet.html](https://xrpl.org/xrp-testnet-faucet.html), copy the seed into `XRPL_PLATFORM_SEED`. The wallet needs ~10 XRP reserve + small amount for fees.
@@ -257,31 +275,44 @@ The cron job at `/api/cron/cancel-expired` runs daily and cancels any milestone 
 src/
 ├── app/
 │   ├── api/
-│   │   ├── auth/          # Register, login, email verification, resend
-│   │   ├── contracts/     # Create, join, decline, resubmit, review, preview
-│   │   ├── escrow/        # Create calldata, confirm funding, finish, cancel
-│   │   ├── proof/         # PDF/image upload → Vercel Blob
-│   │   ├── verify/        # AI milestone verification
-│   │   ├── profile/       # User profile + notification preferences
-│   │   ├── user/wallet/   # Save wallet address
-│   │   ├── cron/          # Auto-cancel expired milestones
-│   │   └── health/        # Health check
-│   ├── contract/[id]/     # Contract detail page (incl. audit trail)
-│   ├── dashboard/         # Grant giver + receiver dashboards
-│   ├── login/             # Sign in
-│   ├── register/          # Sign up + email verification screen
-│   ├── profile/           # Profile settings
-│   └── page.tsx           # Landing page
+│   │   ├── auth/              # NextAuth + register, verify-email, reset-password
+│   │   ├── contracts/[id]/    # CRUD, join/decline, review, resubmit, PATCH (draft edit)
+│   │   ├── escrow/            # Create calldata, confirm, finish, cancel, sync
+│   │   ├── proof/             # PDF/image upload → Vercel Blob; DELETE proof
+│   │   ├── verify/            # AI milestone verification (5-model vote)
+│   │   ├── nft/               # Mint NFT cert, cert image, cert metadata
+│   │   ├── user/              # Wallet save, GDPR data export, GDPR account delete
+│   │   ├── webhooks/          # Outbound webhook delivery
+│   │   ├── telegram/          # Bot connect + webhook handler
+│   │   ├── internal/          # Admin APIs (stats, queue, Sentry issues, etc.)
+│   │   ├── cron/              # Auto-cancel expired milestones + refresh sanctions
+│   │   └── health/            # Health check
+│   ├── contract/[id]/         # Contract detail + audit trail + milestone timeline
+│   ├── dashboard/             # Investor + startup dashboards
+│   ├── internal/              # Admin panel (stats, review queue, errors, usage, etc.)
+│   ├── datenschutz/           # Bilingual Privacy Policy (DE/EN toggle)
+│   ├── login/ register/ forgot-password/ reset-password/ profile/
+│   └── page.tsx               # Landing page
 ├── services/
-│   ├── ai/                # 5-model verifier (Claude, Gemini, GPT-4o-mini, Mistral, Qwen) — PDF + image
-│   ├── evm/               # EVM client, escrow calldata, release/cancel, audit
-│   └── xrpl/              # Native XRPL: audit memo writer + NFT certificate minter
+│   ├── ai/                    # 5-model verifier — PDF + image
+│   ├── evm/                   # EVM client, escrow calldata, release/cancel, audit
+│   ├── xrpl/                  # Native XRPL: audit memos + NFT cert minter
+│   ├── github/                # GitHub proof validation
+│   ├── sanctions/             # OFAC/EU sanctions screening
+│   ├── telegram/              # Bot notifications
+│   └── webhook/               # Outbound webhook delivery
 ├── components/
-│   └── audit-trail.tsx    # On-chain audit trail UI with xrpscan.com links
-└── lib/
-    ├── prisma.ts
-    ├── auth-options.ts
-    └── email.ts            # Resend email templates
+│   ├── audit-trail.tsx        # On-chain audit trail UI with xrpscan.com links
+│   ├── cookie-banner.tsx      # Cookie info banner (strictly necessary only)
+│   ├── proof-upload.tsx       # PDF/image proof upload with XHR progress
+│   └── ...
+├── lib/
+│   ├── prisma.ts
+│   ├── auth-options.ts
+│   ├── rate-limit.ts          # In-memory rate limiter
+│   ├── env-validation.ts      # Startup env var check (throws on missing required vars)
+│   └── email.ts               # Nodemailer/Resend email templates
+└── sentry.*.config.ts         # Sentry client/server/edge config (production only)
 ```
 
 ---
@@ -333,7 +364,7 @@ DRAFT
 
 ## Roadmap
 
-Cascrow is live on testnet. Here's where it's going.
+Post-Demo Day (April 2026) — moving toward real market launch. Here's what's next.
 
 ### Compliance — Risk-based KYC
 
