@@ -56,8 +56,12 @@ function extractError(err: unknown): string {
       if (typeof inner.message === "string") return inner.message;
     }
     if (typeof e.message === "string") {
-      // Strip the generic "Internal JSON-RPC error" wrapper if there's nested info
       const msg = e.message as string;
+      // ThirdWeb-managed RPC error — replace with user-friendly message
+      if (msg.includes("thirdweb support") || msg.includes("We are not able to process your request")) {
+        return "The XRPL EVM network is temporarily unavailable. Please wait a moment and try again.";
+      }
+      // Strip the generic "Internal JSON-RPC error" wrapper if there's nested info
       if (msg.includes("Internal JSON-RPC error") || msg.includes("execution reverted")) {
         try {
           // Sometimes the revert reason is JSON-encoded inside the message
@@ -71,7 +75,13 @@ function extractError(err: unknown): string {
       return msg;
     }
   }
-  if (err instanceof Error) return err.message;
+  if (err instanceof Error) {
+    const msg = err.message;
+    if (msg.includes("thirdweb support") || msg.includes("We are not able to process your request")) {
+      return "The XRPL EVM network is temporarily unavailable. Please wait a moment and try again.";
+    }
+    return msg;
+  }
   return String(err);
 }
 

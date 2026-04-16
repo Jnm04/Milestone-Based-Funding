@@ -229,7 +229,10 @@ export default async function ContractPage({ params, searchParams }: ContractPag
             className="p-4 rounded-2xl flex flex-col gap-2"
             style={{ background: "rgba(212,184,150,0.06)", border: "1px solid rgba(212,184,150,0.2)" }}
           >
-            <span className="text-sm font-medium" style={{ color: "#D4B896" }}>Share with receiver</span>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-medium" style={{ color: "#D4B896" }}>Share with receiver</span>
+              <CopyButton text={inviteUrl} />
+            </div>
             <code className="text-xs font-mono break-all" style={{ color: "#A89B8C" }}>{inviteUrl}</code>
           </div>
         )}
