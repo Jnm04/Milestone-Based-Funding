@@ -7,6 +7,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "invite param required" }, { status: 400 });
   }
 
+  // Reject malformed invite codes before hitting the DB.
+  // nanoid generates alphanumeric + _- characters. Valid range: 6–32 chars.
+  if (!/^[A-Za-z0-9_-]{6,32}$/.test(invite)) {
+    return NextResponse.json({ error: "Contract not found" }, { status: 404 });
+  }
+
   const contract = await prisma.contract.findUnique({
     where: { inviteLink: invite },
     include: {

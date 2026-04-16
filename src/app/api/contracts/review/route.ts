@@ -46,8 +46,13 @@ export async function POST(request: NextRequest) {
     if (decision === "REJECT" && contract.milestones.length > 0) {
       // Extend each rejected milestone's deadline by however long the review took.
       // The milestone's updatedAt records when it entered PENDING_REVIEW.
+      // Cap extension at 30 days to guard against clock skew or abnormally long reviews.
+      const MAX_EXTENSION_MS = 30 * 24 * 60 * 60 * 1000;
       for (const milestone of contract.milestones) {
-        const reviewDurationMs = now.getTime() - milestone.updatedAt.getTime();
+        const reviewDurationMs = Math.min(
+          Math.max(0, now.getTime() - milestone.updatedAt.getTime()),
+          MAX_EXTENSION_MS
+        );
         const newCancelAfter = new Date(milestone.cancelAfter.getTime() + reviewDurationMs);
 
         await prisma.milestone.update({
@@ -69,7 +74,10 @@ export async function POST(request: NextRequest) {
 
       // Extend contract deadline by the same duration as the first milestone
       const firstMilestone = contract.milestones[0];
-      const reviewDurationMs = now.getTime() - firstMilestone.updatedAt.getTime();
+      const reviewDurationMs = Math.min(
+        Math.max(0, now.getTime() - firstMilestone.updatedAt.getTime()),
+        MAX_EXTENSION_MS
+      );
       await prisma.contract.update({
         where: { id: contractId },
         data: { status: "REJECTED", cancelAfter: new Date(contract.cancelAfter.getTime() + reviewDurationMs) },

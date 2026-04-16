@@ -15,12 +15,14 @@ import { sendTelegramMessage } from "@/services/telegram/telegram.service";
  */
 export async function POST(request: NextRequest) {
   // Validate Telegram's secret token header
-  const secretToken = process.env.TELEGRAM_WEBHOOK_SECRET ?? "";
+  const secretToken = process.env.TELEGRAM_WEBHOOK_SECRET;
   if (secretToken) {
     const incoming = request.headers.get("x-telegram-bot-api-secret-token");
     if (incoming !== secretToken) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+  } else {
+    console.warn("[telegram/webhook] TELEGRAM_WEBHOOK_SECRET is not set — webhook is unauthenticated");
   }
 
   let update: TelegramUpdate;

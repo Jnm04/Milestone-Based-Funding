@@ -45,20 +45,23 @@ export async function POST(request: NextRequest) {
 
     // Update DB to reflect on-chain reality
     if (milestoneId) {
-      await prisma.milestone.update({
-        where: { id: milestoneId },
-        data: { status: "FUNDED" },
-      });
+      // Wrap in transaction so concurrent syncs can't produce inconsistent status
+      await prisma.$transaction(async (tx) => {
+        await tx.milestone.update({
+          where: { id: milestoneId },
+          data: { status: "FUNDED" },
+        });
 
-      const allMilestones = await prisma.milestone.findMany({
-        where: { contractId },
-        select: { status: true },
-      });
-      const allFunded = allMilestones.every((m) => m.status === "FUNDED");
+        const allMilestones = await tx.milestone.findMany({
+          where: { contractId },
+          select: { status: true },
+        });
+        const allFunded = allMilestones.every((m) => m.status === "FUNDED");
 
-      await prisma.contract.update({
-        where: { id: contractId },
-        data: { status: allFunded ? "FUNDED" : "AWAITING_ESCROW" },
+        await tx.contract.update({
+          where: { id: contractId },
+          data: { status: allFunded ? "FUNDED" : "AWAITING_ESCROW" },
+        });
       });
     } else {
       await prisma.contract.update({

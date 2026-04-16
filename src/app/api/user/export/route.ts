@@ -49,7 +49,7 @@ export async function GET() {
     return NextResponse.json({ error: "User not found", code: "NOT_FOUND" }, { status: 404 });
   }
 
-  // All contracts where user is investor or startup
+  // All contracts where user is investor or startup (capped to prevent oversized exports)
   const contracts = await prisma.contract.findMany({
     where: { OR: [{ investorId: session.user.id }, { startupId: session.user.id }] },
     select: {
@@ -71,9 +71,10 @@ export async function GET() {
       },
     },
     orderBy: { createdAt: "desc" },
+    take: 500,
   });
 
-  // All proofs from those contracts
+  // All proofs from those contracts (capped to prevent OOM in serverless)
   const contractIds = contracts.map((c) => c.id);
   const proofs = await prisma.proof.findMany({
     where: { contractId: { in: contractIds } },
@@ -91,6 +92,7 @@ export async function GET() {
       createdAt: true,
     },
     orderBy: { createdAt: "desc" },
+    take: 1000,
   });
 
   // Audit log entries
