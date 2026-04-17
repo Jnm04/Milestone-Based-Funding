@@ -92,7 +92,7 @@ export default function SandboxPage() {
         precomputedDecision: result.decision,
         precomputedExtractedText: result.extractedText ?? proofText,
       }),
-    });
+    }, key());
 
     setSaving(false);
     setSaved(true);

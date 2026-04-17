@@ -124,7 +124,7 @@ export default function GeneratePage() {
           precomputedExtractedText: r.proofText,
           notes: tab === "synthetic" ? "source:synthetic" : `source:${source}`,
         }),
-      })
+      }, key())
     ));
     const failed = responses.filter(r => !r.ok).length;
     if (failed > 0) {
