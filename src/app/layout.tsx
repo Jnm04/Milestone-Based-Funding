@@ -42,7 +42,7 @@ export const metadata: Metadata = {
   creator: "Cascrow",
   metadataBase: new URL("https://cascrow.com"),
   alternates: {
-    canonical: "/",
+    canonical: "https://cascrow.com",
   },
   openGraph: {
     type: "website",
