@@ -34,6 +34,7 @@
     "@types/d3-force": "^3.0.10",
     "@types/d3-zoom": "^3.0.8",
     "@types/three": "^0.183.1",
+    "@upstash/redis": "^1.37.0",
     "@vercel/blob": "^2.3.1",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",

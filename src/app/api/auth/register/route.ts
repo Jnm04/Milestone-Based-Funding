@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
   try {
     // 10 registrations per IP per hour — blocks signup floods without affecting real users
     const ip = getClientIp(request) ?? "unknown";
-    if (!checkRateLimit(`register:${ip}`, 10, 60 * 60 * 1000)) {
+    if (!(await checkRateLimit(`register:${ip}`, 10, 60 * 60 * 1000))) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
         { status: 429, headers: { "Retry-After": "3600" } }

@@ -1,19 +1,30 @@
 /**
- * In-memory rate limiter for server-side API routes.
+ * Rate limiter for server-side API routes.
  *
- * Limitations (acceptable for current scale):
- * - Per-instance: each serverless function instance has its own counter.
- *   Upgrade path: replace `memoryStore` with Upstash Redis calls when needed.
- * - Counters reset on cold start — adds some leakage, but still blocks burst abuse.
+ * Uses Upstash Redis when UPSTASH_REDIS_REST_URL is set (production on Vercel).
+ * Falls back to an in-memory store for local development.
  *
  * Usage:
  *   const ip = getClientIp(request);
- *   if (!checkRateLimit(`register:${ip}`, 10, 60 * 60 * 1000)) {
+ *   if (!(await checkRateLimit(`register:${ip}`, 10, 60 * 60 * 1000))) {
  *     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
  *   }
  */
 
 import { NextRequest } from "next/server";
+import { Redis } from "@upstash/redis";
+
+// ─── Redis client (production) ────────────────────────────────────────────────
+
+const redis =
+  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+    ? new Redis({
+        url: process.env.UPSTASH_REDIS_REST_URL,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      })
+    : null;
+
+// ─── In-memory fallback (local dev) ───────────────────────────────────────────
 
 interface Entry {
   count: number;
@@ -22,7 +33,6 @@ interface Entry {
 
 const memoryStore = new Map<string, Entry>();
 
-// Prune expired entries every 500 calls to prevent unbounded memory growth.
 let callsSinceClean = 0;
 function maybeClean() {
   if (++callsSinceClean < 500) return;
@@ -33,14 +43,7 @@ function maybeClean() {
   }
 }
 
-/**
- * Returns true if the request is within the limit, false if it should be blocked.
- *
- * @param key     Unique bucket key, e.g. `"register:<ip>"`
- * @param limit   Max requests allowed per window
- * @param windowMs Window duration in milliseconds
- */
-export function checkRateLimit(key: string, limit: number, windowMs: number): boolean {
+function checkRateLimitMemory(key: string, limit: number, windowMs: number): boolean {
   maybeClean();
   const now = Date.now();
   const entry = memoryStore.get(key);
@@ -53,6 +56,31 @@ export function checkRateLimit(key: string, limit: number, windowMs: number): bo
   if (entry.count >= limit) return false;
   entry.count++;
   return true;
+}
+
+// ─── Main export ──────────────────────────────────────────────────────────────
+
+/**
+ * Returns true if the request is within the limit, false if it should be blocked.
+ *
+ * @param key     Unique bucket key, e.g. `"register:<ip>"`
+ * @param limit   Max requests allowed per window
+ * @param windowMs Window duration in milliseconds
+ */
+export async function checkRateLimit(key: string, limit: number, windowMs: number): Promise<boolean> {
+  if (!redis) return checkRateLimitMemory(key, limit, windowMs);
+
+  try {
+    const count = await redis.incr(key);
+    if (count === 1) {
+      // First hit in this window — set expiry (TTL in seconds)
+      await redis.pexpire(key, windowMs);
+    }
+    return count <= limit;
+  } catch {
+    // Redis unavailable — fail open (allow request) to preserve availability
+    return true;
+  }
 }
 
 /**

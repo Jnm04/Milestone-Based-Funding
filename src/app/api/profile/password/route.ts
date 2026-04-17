@@ -10,7 +10,7 @@ export async function PUT(request: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // 10 password-change attempts per user per hour
-  if (!checkRateLimit(`password-change:${session.user.id}`, 10, 60 * 60 * 1000)) {
+  if (!(await checkRateLimit(`password-change:${session.user.id}`, 10, 60 * 60 * 1000))) {
     return NextResponse.json(
       { error: "Too many attempts. Please try again later." },
       { status: 429, headers: { "Retry-After": "3600" } }

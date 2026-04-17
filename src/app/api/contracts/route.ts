@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 20 contract creations per user per hour — prevents DB/webhook spam
-    if (!checkRateLimit(`create-contract:${session.user.id}`, 20, 60 * 60 * 1000)) {
+    if (!(await checkRateLimit(`create-contract:${session.user.id}`, 20, 60 * 60 * 1000))) {
       return NextResponse.json(
         { error: "Too many contracts created. Please wait before trying again." },
         { status: 429, headers: { "Retry-After": "3600" } }

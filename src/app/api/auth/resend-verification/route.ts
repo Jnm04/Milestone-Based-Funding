@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
   try {
     // 10 resend requests per IP per hour (per-email cooldown also applies below)
     const ip = getClientIp(request);
-    if (!checkRateLimit(`resend-verify:${ip}`, 10, 60 * 60 * 1000)) {
+    if (!(await checkRateLimit(`resend-verify:${ip}`, 10, 60 * 60 * 1000))) {
       return NextResponse.json({ ok: true }); // Silent block — no enumeration
     }
 

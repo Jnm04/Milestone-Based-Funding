@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
 
     // 5 password-reset emails per IP per hour — prevents email flooding
     const ip = getClientIp(request);
-    if (!checkRateLimit(`forgot-pw:${ip}`, 5, 60 * 60 * 1000)) {
+    if (!(await checkRateLimit(`forgot-pw:${ip}`, 5, 60 * 60 * 1000))) {
       await minDelay;
       return NextResponse.json({ ok: true });
     }

@@ -14,7 +14,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ nextauth: 
   const segments = (await ctx.params)?.nextauth ?? [];
   if (segments.join("/") === "callback/credentials") {
     const ip = getClientIp(req);
-    if (!checkRateLimit(`login-ip:${ip}`, 20, 15 * 60 * 1000)) {
+    if (!(await checkRateLimit(`login-ip:${ip}`, 20, 15 * 60 * 1000))) {
       return new NextResponse(
         JSON.stringify({ error: "Too many login attempts. Please wait before trying again." }),
         { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "900" } }

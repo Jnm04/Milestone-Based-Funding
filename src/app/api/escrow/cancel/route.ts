@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!checkRateLimit(`escrow-cancel:${session.user.id}`, 5, 60 * 1000)) {
+    if (!(await checkRateLimit(`escrow-cancel:${session.user.id}`, 5, 60 * 1000))) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 

@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!checkRateLimit(`proof-github:${session.user.id}`, 5, 60 * 60 * 1000)) {
+    if (!(await checkRateLimit(`proof-github:${session.user.id}`, 5, 60 * 60 * 1000))) {
       return NextResponse.json(
         { error: "Too many GitHub proof submissions. Try again in an hour." },
         { status: 429, headers: { "Retry-After": "3600" } }

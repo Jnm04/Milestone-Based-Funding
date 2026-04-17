@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
   // Rate-limit by IP: 20 checks per minute is plenty for a polling loop
   const ip = getClientIp(request);
-  if (!checkRateLimit(`check-verified:${ip}`, 20, 60_000)) {
+  if (!(await checkRateLimit(`check-verified:${ip}`, 20, 60_000))) {
     return NextResponse.json({ verified: false }, { status: 429 });
   }
 
