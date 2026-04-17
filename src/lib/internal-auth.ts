@@ -5,6 +5,19 @@ const MIN_SECRET_LENGTH = 32;
 const SIG_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 const COOKIE_NAME = "cascrow_admin";
 
+// H5: nonce store — prevents replay of captured HMAC-signed requests within the window
+const usedNonces = new Map<string, number>(); // nonce → expiry timestamp
+let lastNonceCleanup = 0;
+
+function evictExpiredNonces(): void {
+  const now = Date.now();
+  if (now - lastNonceCleanup < 60_000) return;
+  lastNonceCleanup = now;
+  for (const [k, exp] of usedNonces) {
+    if (exp < now) usedNonces.delete(k);
+  }
+}
+
 /** Derives the same session token used by /api/internal/auth. */
 function makeSessionToken(secret: string): string {
   return crypto
@@ -66,6 +79,11 @@ export function isInternalAuthorized(req: NextRequest): boolean {
 
     if (Math.abs(Date.now() - ts) > SIG_WINDOW_MS) return false;
 
+    // H5: reject replayed requests — nonce = timestamp + raw signature (unique per call)
+    const nonce = `${tsHeader}:${sig}`;
+    evictExpiredNonces();
+    if (usedNonces.has(nonce)) return false;
+
     const method = req.method.toUpperCase();
     const pathname = req.nextUrl.pathname;
     const expected = crypto
@@ -87,7 +105,9 @@ export function isInternalAuthorized(req: NextRequest): boolean {
     Buffer.from(provided).copy(aSig);
     Buffer.from(expected).copy(bSig);
 
-    return crypto.timingSafeEqual(aKey, bKey) && crypto.timingSafeEqual(aSig, bSig);
+    const isValid = crypto.timingSafeEqual(aKey, bKey) && crypto.timingSafeEqual(aSig, bSig);
+    if (isValid) usedNonces.set(nonce, Date.now() + SIG_WINDOW_MS);
+    return isValid;
   }
 
   // ── 3. Plain key fallback (no replay protection) ───────────────────────────

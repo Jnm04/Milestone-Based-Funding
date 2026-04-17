@@ -32,6 +32,37 @@ async function triggerVerification(proofId: string) {
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
+// H3: expected magic bytes per MIME type
+const MAGIC_BYTES: Record<string, number[]> = {
+  "application/pdf":    [0x25, 0x50, 0x44, 0x46],        // %PDF
+  "image/jpeg":         [0xFF, 0xD8, 0xFF],
+  "image/png":          [0x89, 0x50, 0x4E, 0x47],
+  "image/gif":          [0x47, 0x49, 0x46, 0x38],        // GIF8
+  "image/webp":         [0x52, 0x49, 0x46, 0x46],        // RIFF (+ WEBP at offset 8)
+  // Office Open XML (ZIP container)
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document":   [0x50, 0x4B, 0x03, 0x04],
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation": [0x50, 0x4B, 0x03, 0x04],
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":         [0x50, 0x4B, 0x03, 0x04],
+  // Legacy Office (OLE2 Compound Document)
+  "application/msword":            [0xD0, 0xCF, 0x11, 0xE0],
+  "application/vnd.ms-excel":      [0xD0, 0xCF, 0x11, 0xE0],
+  "application/vnd.ms-powerpoint": [0xD0, 0xCF, 0x11, 0xE0],
+  // text/csv and text/plain: no magic bytes — browser-supplied MIME is trusted
+};
+
+function checkMagicBytes(buf: Buffer, mime: string): boolean {
+  const sig = MAGIC_BYTES[mime];
+  if (!sig) return true; // no signature defined for this type (plain text)
+  if (buf.length < sig.length) return false;
+  if (!sig.every((byte, i) => buf[i] === byte)) return false;
+  // WebP: additionally verify "WEBP" at bytes 8–11
+  if (mime === "image/webp") {
+    if (buf.length < 12) return false;
+    return buf.slice(8, 12).toString("ascii") === "WEBP";
+  }
+  return true;
+}
+
 const ALLOWED_MIME_TYPES = new Set([
   // Documents
   "application/pdf",
@@ -109,6 +140,15 @@ export async function POST(request: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
+
+    // H3: reject files whose magic bytes don't match the declared MIME type
+    if (!checkMagicBytes(buffer, effectiveMime)) {
+      return NextResponse.json(
+        { error: "File content does not match the declared type. Please upload a valid file." },
+        { status: 400 }
+      );
+    }
+
     const fileHash = crypto.createHash("sha256").update(buffer).digest("hex");
     const category = categorizeFile(effectiveMime, fileName);
     // Sanitize filename for use in Blob storage paths (keep original for display)

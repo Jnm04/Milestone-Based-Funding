@@ -64,6 +64,8 @@ export async function POST(req: NextRequest) {
     await prisma.$transaction([
       // Disconnect telegram chat if present
       prisma.telegramChat.deleteMany({ where: { userId } }),
+      // M2: delete webhook endpoints so no outbound calls happen post-deletion
+      prisma.webhookEndpoint.deleteMany({ where: { userId } }),
       // Anonymize the user record — preserve the row so contract FKs don't break
       prisma.user.update({
         where: { id: userId },

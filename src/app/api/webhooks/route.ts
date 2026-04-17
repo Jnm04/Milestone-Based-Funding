@@ -211,6 +211,35 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
+// ─── PUT /api/webhooks?id=xxx  (regenerate signing secret) ───────────────────
+
+export async function PUT(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const id = request.nextUrl.searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });
+
+  try {
+    const endpoint = await prisma.webhookEndpoint.findUnique({ where: { id } });
+    if (!endpoint) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (endpoint.userId !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const newSecret = crypto.randomBytes(32).toString("hex");
+    await prisma.webhookEndpoint.update({ where: { id }, data: { secret: newSecret } });
+
+    return NextResponse.json({
+      secret: newSecret,
+      message: "Secret regenerated. Save it now — it will not be shown again.",
+    });
+  } catch (err) {
+    console.error("[webhooks] PUT failed:", err);
+    return NextResponse.json({ error: "Failed to regenerate secret" }, { status: 500 });
+  }
+}
+
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
 function safeParseEvents(raw: string): string[] {

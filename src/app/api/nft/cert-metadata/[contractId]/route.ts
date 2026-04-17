@@ -3,15 +3,37 @@ import { prisma } from "@/lib/prisma";
 
 const APP_URL = process.env.NEXTAUTH_URL ?? "https://cascrow.com";
 
+// H6: simple in-process IP rate limiter — 30 requests/min per IP
+const IP_RATE_LIMIT = 30;
+const IP_RATE_WINDOW_MS = 60_000;
+const ipHits = new Map<string, { count: number; resetAt: number }>();
+
+function checkIpRate(ip: string): boolean {
+  const now = Date.now();
+  const entry = ipHits.get(ip);
+  if (!entry || entry.resetAt < now) {
+    ipHits.set(ip, { count: 1, resetAt: now + IP_RATE_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= IP_RATE_LIMIT) return false;
+  entry.count++;
+  return true;
+}
+
 /**
  * GET /api/nft/cert-metadata/[contractId]
  * Returns ERC-721-compatible metadata JSON for the NFT certificate.
  * Public — no auth required.
  */
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ contractId: string }> }
 ) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  if (!checkIpRate(ip)) {
+    return new NextResponse("Too Many Requests", { status: 429, headers: { "Retry-After": "60" } });
+  }
+
   const { contractId } = await params;
 
   const contract = await prisma.contract.findUnique({

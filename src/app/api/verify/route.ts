@@ -21,18 +21,19 @@ const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 
 /**
  * DB-backed rate limit for verification requests.
- * Counts proofs created in the last 10 minutes across all of this user's contracts.
+ * H2: counts proofs that have already been verified (aiDecision set) in the last
+ * 10 minutes — not proof submissions — so submitting N proofs and verifying all
+ * of them is correctly throttled.
  * Safe for serverless multi-instance deployments (no in-memory state).
  */
 async function checkVerifyRateLimit(userId: string): Promise<boolean> {
   const recentCount = await prisma.proof.count({
     where: {
-      milestone: {
-        contract: {
-          OR: [{ investorId: userId }, { startupId: userId }],
-        },
+      aiDecision: { not: null },
+      updatedAt: { gte: new Date(Date.now() - RATE_LIMIT_WINDOW_MS) },
+      contract: {
+        OR: [{ investorId: userId }, { startupId: userId }],
       },
-      createdAt: { gte: new Date(Date.now() - RATE_LIMIT_WINDOW_MS) },
     },
   });
   return recentCount < RATE_LIMIT_MAX;
@@ -40,6 +41,16 @@ async function checkVerifyRateLimit(userId: string): Promise<boolean> {
 
 // Retry delays for insufficient-model responses: wait 10s then 60s before final attempt
 const RETRY_DELAYS_MS = [10_000, 60_000];
+// M6: hard per-attempt timeout — if AI providers don't respond, escalate to human review
+const VERIFY_TIMEOUT_MS = 45_000;
+
+/** Races a promise against a timeout; returns null if the timeout fires first. */
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | null> {
+  return Promise.race([
+    p,
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+  ]);
+}
 
 export async function POST(request: NextRequest) {
   // ── Phase 1: Auth + validation (sync, returns JSON errors before streaming) ──
@@ -162,10 +173,10 @@ export async function POST(request: NextRequest) {
 
         // ── Retry loop: up to 3 attempts if AI providers are unresponsive ────
         send({ type: "attempt", n: 1, total: 3 });
-        let result = await runVerify();
+        let result = await withTimeout(runVerify(), VERIFY_TIMEOUT_MS);
 
         for (let i = 0; i < RETRY_DELAYS_MS.length; i++) {
-          if (!isInsufficientModels(result)) break;
+          if (result !== null && !isInsufficientModels(result)) break;
           const waitSeconds = RETRY_DELAYS_MS[i] / 1000;
           const attempt = i + 2;
           send({
@@ -173,11 +184,30 @@ export async function POST(request: NextRequest) {
             n: attempt,
             total: 3,
             waitSeconds,
-            message: `AI providers didn't respond (attempt ${attempt - 1}/3). Retrying in ${waitSeconds}s…`,
+            message: result === null
+              ? `AI providers timed out (attempt ${attempt - 1}/3). Retrying in ${waitSeconds}s…`
+              : `AI providers didn't respond (attempt ${attempt - 1}/3). Retrying in ${waitSeconds}s…`,
           });
           await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[i]));
           send({ type: "attempt", n: attempt, total: 3 });
-          result = await runVerify();
+          result = await withTimeout(runVerify(), VERIFY_TIMEOUT_MS);
+        }
+
+        // M6: if all attempts timed out or returned insufficient models, escalate to human review
+        if (result === null || isInsufficientModels(result)) {
+          if (proof.milestoneId) {
+            await prisma.milestone.update({ where: { id: proof.milestoneId }, data: { status: "PENDING_REVIEW" as never } });
+          }
+          await prisma.contract.update({ where: { id: contract.id }, data: { status: "PENDING_REVIEW" as never } });
+          await writeAuditLog({
+            contractId: contract.id,
+            milestoneId: proof.milestoneId ?? undefined,
+            event: "AI_DECISION",
+            actor: "AI",
+            metadata: { decision: "TIMEOUT", action: "PENDING_REVIEW", proofId, reason: "All AI attempts unresponsive or timed out" },
+          });
+          send({ type: "complete", decision: "PENDING", action: "PENDING_REVIEW", reasoning: "AI verification unresponsive after 3 attempts — escalated to manual review.", timedOut: true });
+          return;
         }
 
         // ── Persist AI result ───────────────────────────────────────────────
