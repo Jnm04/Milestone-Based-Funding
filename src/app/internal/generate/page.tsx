@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { internalFetch } from "@/lib/internal-client";
 
 interface ModelVote { model: string; decision: "YES" | "NO"; confidence: number; reasoning: string }
 
@@ -65,11 +66,11 @@ export default function GeneratePage() {
       ? { mode: "synthetic", domain, outcome, count }
       : { mode: "public", source, keyword: keyword.trim(), outcome, count };
 
-    const res = await fetch("/api/internal/generate", {
+    const res = await internalFetch("/api/internal/generate", {
       method: "POST",
-      headers: { "content-type": "application/json", "x-internal-key": key() },
+      headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
-    });
+    }, key());
 
     if (!res.ok) {
       const d = await res.json().catch(() => ({})) as { error?: string };
@@ -110,9 +111,9 @@ export default function GeneratePage() {
     setError("");
     const toSave = [...selected].map(i => results[i]);
     const responses = await Promise.all(toSave.map(r =>
-      fetch("/api/internal/sandbox", {
+      internalFetch("/api/internal/sandbox", {
         method: "POST",
-        headers: { "content-type": "application/json", "x-internal-key": key() },
+        headers: { "content-type": "application/json" },
         body: JSON.stringify({
           milestoneText: r.milestoneText,
           proofText: r.proofText,

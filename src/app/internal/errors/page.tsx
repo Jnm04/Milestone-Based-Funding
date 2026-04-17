@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { internalFetch } from "@/lib/internal-client";
 
 interface SentryIssue {
   id: string;
@@ -39,7 +40,7 @@ export default function ErrorsPage() {
 
   useEffect(() => {
     const key = sessionStorage.getItem("cascrow_internal_key") ?? "";
-    fetch("/api/internal/sentry-issues", { headers: { "x-internal-key": key } })
+    internalFetch("/api/internal/sentry-issues", {}, key)
       .then((r) => r.json())
       .then((data) => {
         if (data.error && !data.issues?.length) setError(data.error);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { internalFetch } from "@/lib/internal-client";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -59,7 +60,7 @@ export default function InternalDashboard() {
 
   useEffect(() => {
     const key = sessionStorage.getItem("cascrow_internal_key") ?? "";
-    fetch("/api/internal/stats", { headers: { "x-internal-key": key } })
+    internalFetch("/api/internal/stats", {}, key)
       .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
       .then(setStats)
       .catch(() => setError(true));

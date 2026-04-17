@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { internalFetch } from "@/lib/internal-client";
 
 interface ModelVote {
   model: string;
@@ -81,7 +82,7 @@ export default function DatasetPage() {
 
   function loadEntries() {
     setLoading(true);
-    fetch(`/api/internal/dataset?limit=${PAGE_SIZE}&offset=0`, { headers: { "x-internal-key": key() } })
+    internalFetch(`/api/internal/dataset?limit=${PAGE_SIZE}&offset=0`, {}, key())
       .then((r) => (r.ok ? r.json() : { entries: [], total: 0 }))
       .then((d) => {
         setEntries(d.entries ?? []);
@@ -94,9 +95,7 @@ export default function DatasetPage() {
   async function loadMore() {
     setLoadingMore(true);
     try {
-      const res = await fetch(`/api/internal/dataset?limit=${PAGE_SIZE}&offset=${offset}`, {
-        headers: { "x-internal-key": key() },
-      });
+      const res = await internalFetch(`/api/internal/dataset?limit=${PAGE_SIZE}&offset=${offset}`, {}, key());
       if (!res.ok) return;
       const d = await res.json();
       setEntries((prev) => [...prev, ...(d.entries ?? [])]);
@@ -121,11 +120,11 @@ export default function DatasetPage() {
     setBootstrapping(true);
     setBootstrapResult(null);
     try {
-      const res = await fetch("/api/internal/dataset/bootstrap", {
+      const res = await internalFetch("/api/internal/dataset/bootstrap", {
         method: "POST",
-        headers: { "content-type": "application/json", "x-internal-key": key() },
+        headers: { "content-type": "application/json" },
         body: JSON.stringify({ pairsPerCombo: 2 }),
-      });
+      }, key());
       const d = await res.json() as { saved?: number; queued?: number; generated?: number; error?: string };
       if (d.error) { alert(d.error); return; }
       setBootstrapResult({ saved: d.saved ?? 0, queued: d.queued ?? 0, generated: d.generated ?? 0 });
@@ -137,9 +136,7 @@ export default function DatasetPage() {
 
   async function downloadExport(format: "jsonl" | "csv") {
     setExporting(format);
-    const res = await fetch(`/api/internal/export?format=${format}`, {
-      headers: { "x-internal-key": key() },
-    });
+    const res = await internalFetch(`/api/internal/export?format=${format}`, {}, key());
     if (!res.ok) { setExporting(null); return; }
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);

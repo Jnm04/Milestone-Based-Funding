@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { internalFetch } from "@/lib/internal-client";
 
 interface ModelStat {
   model: string;
@@ -84,7 +85,7 @@ export default function UsagePage() {
 
   function load() {
     setLoading(true);
-    fetch("/api/internal/usage", { headers: { "x-internal-key": key() } })
+    internalFetch("/api/internal/usage", {}, key())
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { setData(d); setLoading(false); });
   }

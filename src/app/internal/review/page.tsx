@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { internalFetch } from "@/lib/internal-client";
 
 interface ModelVote { model: string; decision: "YES" | "NO"; confidence: number; reasoning: string }
 interface QueueEntry {
@@ -46,7 +47,7 @@ export default function ReviewQueuePage() {
   const load = useCallback((t: Tab) => {
     setLoading(true);
     setLastLabeled(null);
-    fetch(`/api/internal/queue?tab=${t}`, { headers: { "x-internal-key": key() } })
+    internalFetch(`/api/internal/queue?tab=${t}`, {}, key())
       .then((r) => r.json())
       .then((d) => { setEntries(d.entries ?? []); setCurrent(0); setLoading(false); });
   }, []);
@@ -64,11 +65,11 @@ export default function ReviewQueuePage() {
   async function submit() {
     if (!label || !entry) return;
     setSubmitting(true);
-    await fetch("/api/internal/queue", {
+    await internalFetch("/api/internal/queue", {
       method: "POST",
-      headers: { "content-type": "application/json", "x-internal-key": key() },
+      headers: { "content-type": "application/json" },
       body: JSON.stringify({ proofId: entry.proofId, label, fraudType: fraudType || undefined, notes: notes || undefined }),
-    });
+    }, key());
     setLastLabeled({ proofId: entry.proofId, label });
     resetForm();
     setSubmitting(false);
@@ -78,11 +79,11 @@ export default function ReviewQueuePage() {
 
   async function handleSkip() {
     if (!entry) return;
-    await fetch("/api/internal/queue", {
+    await internalFetch("/api/internal/queue", {
       method: "PATCH",
-      headers: { "content-type": "application/json", "x-internal-key": key() },
+      headers: { "content-type": "application/json" },
       body: JSON.stringify({ proofId: entry.proofId }),
-    });
+    }, key());
     setEntries((prev) => prev.filter((_, i) => i !== current));
     setCurrent((c) => Math.min(c, Math.max(0, entries.length - 2)));
   }
@@ -90,11 +91,11 @@ export default function ReviewQueuePage() {
   async function handleUndo() {
     if (!lastLabeled) return;
     setUndoing(true);
-    await fetch("/api/internal/queue", {
+    await internalFetch("/api/internal/queue", {
       method: "DELETE",
-      headers: { "content-type": "application/json", "x-internal-key": key() },
+      headers: { "content-type": "application/json" },
       body: JSON.stringify({ proofId: lastLabeled.proofId }),
-    });
+    }, key());
     setUndoing(false);
     setLastLabeled(null);
     load(tab);
@@ -176,11 +177,11 @@ export default function ReviewQueuePage() {
                 </span>
                 <button
                   onClick={async () => {
-                    await fetch("/api/internal/queue", {
+                    await internalFetch("/api/internal/queue", {
                       method: "DELETE",
-                      headers: { "content-type": "application/json", "x-internal-key": key() },
+                      headers: { "content-type": "application/json" },
                       body: JSON.stringify({ proofId: e.proofId }),
-                    });
+                    }, key());
                     load(tab);
                   }}
                   style={{ fontSize: 11, color: "#A89B8C", background: "none", border: "1px solid rgba(196,112,75,0.2)", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}>
@@ -212,11 +213,11 @@ export default function ReviewQueuePage() {
                 )}
                 <button
                   onClick={async () => {
-                    await fetch("/api/internal/queue", {
+                    await internalFetch("/api/internal/queue", {
                       method: "DELETE",
-                      headers: { "content-type": "application/json", "x-internal-key": key() },
+                      headers: { "content-type": "application/json" },
                       body: JSON.stringify({ proofId: e.proofId }),
-                    });
+                    }, key());
                     load(tab);
                   }}
                   style={{ fontSize: 11, color: "#C4704B", background: "none", border: "1px solid rgba(196,112,75,0.3)", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}>

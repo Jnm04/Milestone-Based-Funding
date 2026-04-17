@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo, Suspense } from "react";
 import dynamic from "next/dynamic";
+import { internalFetch } from "@/lib/internal-client";
 
 // Three.js / R3F — browser-only, must be dynamically imported
 const BrainGraph3D = dynamic(() => import("./BrainGraph3D"), {
@@ -121,7 +122,7 @@ export default function BrainMapPage() {
     typeof sessionStorage !== "undefined" ? sessionStorage.getItem("cascrow_internal_key") ?? "" : "";
 
   useEffect(() => {
-    fetch("/api/internal/graph", { headers: { "x-internal-key": key() } })
+    internalFetch("/api/internal/graph", {}, key())
       .then(r => r.ok ? r.json() : null)
       .then((d: GraphData | null) => { if (d) setData(d); setLoading(false); })
       .catch(() => setLoading(false));

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { internalFetch } from "@/lib/internal-client";
 
 interface User {
   id: string;
@@ -43,11 +44,11 @@ function TierSelect({ userId, current, apiKey, onUpdated }: {
     const tier = Number(e.target.value);
     setLoading(true);
     try {
-      const res = await fetch(`/api/internal/users/${userId}`, {
+      const res = await internalFetch(`/api/internal/users/${userId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-internal-key": apiKey },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ kycTier: tier }),
-      });
+      }, apiKey);
       if (res.ok) onUpdated(tier);
     } finally {
       setLoading(false);
@@ -91,10 +92,9 @@ function RecheckButton({ userId, apiKey, onUpdated }: {
   async function handle() {
     setLoading(true);
     try {
-      const res = await fetch(`/api/internal/users/${userId}`, {
+      const res = await internalFetch(`/api/internal/users/${userId}`, {
         method: "POST",
-        headers: { "x-internal-key": apiKey },
-      });
+      }, apiKey);
       if (res.ok) {
         const d = await res.json();
         onUpdated(d.user.sanctionsStatus, d.user.kycTier);
@@ -141,9 +141,7 @@ export default function UsersPage() {
   useEffect(() => {
     const key = sessionStorage.getItem("cascrow_internal_key") ?? "";
     setApiKey(key);
-    fetch(`/api/internal/users?limit=${PAGE_SIZE}&offset=0`, {
-      headers: { "x-internal-key": key },
-    })
+    internalFetch(`/api/internal/users?limit=${PAGE_SIZE}&offset=0`, {}, key)
       .then((r) => r.json())
       .then((d) => {
         if (d.error) { setError(true); return; }
@@ -158,9 +156,7 @@ export default function UsersPage() {
   async function loadMore() {
     setLoadingMore(true);
     try {
-      const res = await fetch(`/api/internal/users?limit=${PAGE_SIZE}&offset=${offset}`, {
-        headers: { "x-internal-key": apiKey },
-      });
+      const res = await internalFetch(`/api/internal/users?limit=${PAGE_SIZE}&offset=${offset}`, {}, apiKey);
       const d = await res.json();
       if (!d.error) {
         setUsers((prev) => [...prev, ...d.users]);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { internalFetch } from "@/lib/internal-client";
 
 interface ModelVote { model: string; decision: "YES" | "NO"; confidence: number; reasoning: string }
 interface SandboxResult {
@@ -57,17 +58,16 @@ export default function SandboxPage() {
       fd.append("proofText", proofText);
       fd.append("saveToDataset", "false");
       fd.append("file", file);
-      res = await fetch("/api/internal/sandbox", {
+      res = await internalFetch("/api/internal/sandbox", {
         method: "POST",
-        headers: { "x-internal-key": key() },
         body: fd,
-      });
+      }, key());
     } else {
-      res = await fetch("/api/internal/sandbox", {
+      res = await internalFetch("/api/internal/sandbox", {
         method: "POST",
-        headers: { "content-type": "application/json", "x-internal-key": key() },
+        headers: { "content-type": "application/json" },
         body: JSON.stringify({ milestoneText, proofText, saveToDataset: false }),
-      });
+      }, key());
     }
 
     if (!res.ok) { setError("Failed — check API keys or file format"); setRunning(false); return; }
@@ -80,9 +80,9 @@ export default function SandboxPage() {
     setSaving(true);
 
     // Send the already-computed result back — no re-verification, no vote drift.
-    await fetch("/api/internal/sandbox", {
+    await internalFetch("/api/internal/sandbox", {
       method: "POST",
-      headers: { "content-type": "application/json", "x-internal-key": key() },
+      headers: { "content-type": "application/json" },
       body: JSON.stringify({
         milestoneText,
         proofText: result.extractedText ?? proofText,
