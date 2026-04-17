@@ -71,12 +71,59 @@ export const metadata: Metadata = {
   },
 };
 
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://cascrow.com/#organization",
+      name: "Cascrow",
+      url: "https://cascrow.com",
+      logo: {
+        "@type": "ImageObject",
+        url: "https://cascrow.com/icon.svg",
+      },
+      description:
+        "Cascrow is an AI-powered escrow platform on the XRP Ledger. It locks RLUSD in a smart contract and releases funds automatically when AI verifies milestone completion — no lawyers, no middlemen.",
+      sameAs: ["https://cascrow.com"],
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://cascrow.com/#website",
+      url: "https://cascrow.com",
+      name: "Cascrow",
+      publisher: { "@id": "https://cascrow.com/#organization" },
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://cascrow.com/#app",
+      name: "Cascrow",
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Web",
+      url: "https://cascrow.com",
+      description:
+        "AI-powered escrow platform on XRPL. Cascrow locks RLUSD in a smart contract on the XRP Ledger EVM sidechain and uses a 5-model AI majority vote to verify milestone completion before releasing funds.",
+      offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "USD",
+      },
+    },
+  ],
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
       className={`${geist.variable} ${libreFranklin.variable} dark h-full antialiased`}
     >
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body
         className="min-h-full bg-background text-foreground flex flex-col"
         style={{ fontFamily: "var(--font-libre-franklin), var(--font-geist-sans), sans-serif" }}
