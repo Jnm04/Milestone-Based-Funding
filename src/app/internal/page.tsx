@@ -59,8 +59,7 @@ export default function InternalDashboard() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    const key = sessionStorage.getItem("cascrow_internal_key") ?? "";
-    internalFetch("/api/internal/stats", {}, key)
+    internalFetch("/api/internal/stats")
       .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
       .then(setStats)
       .catch(() => setError(true));

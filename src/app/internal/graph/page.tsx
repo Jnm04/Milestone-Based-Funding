@@ -118,11 +118,8 @@ export default function BrainMapPage() {
 
   const resetRef = useRef<() => void>(() => {});
 
-  const key = () =>
-    typeof sessionStorage !== "undefined" ? sessionStorage.getItem("cascrow_internal_key") ?? "" : "";
-
   useEffect(() => {
-    internalFetch("/api/internal/graph", {}, key())
+    internalFetch("/api/internal/graph")
       .then(r => r.ok ? r.json() : null)
       .then((d: GraphData | null) => { if (d) setData(d); setLoading(false); })
       .catch(() => setLoading(false));

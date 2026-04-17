@@ -3,23 +3,34 @@ import { NextRequest } from "next/server";
 
 const MIN_SECRET_LENGTH = 32;
 const SIG_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+const COOKIE_NAME = "cascrow_admin";
+
+/** Derives the same session token used by /api/internal/auth. */
+function makeSessionToken(secret: string): string {
+  return crypto
+    .createHmac("sha256", secret)
+    .update("admin-session-v1")
+    .digest("hex");
+}
 
 /**
  * Validates internal admin API requests.
  *
- * Accepts HMAC-SHA256 signed requests (preferred):
- *   x-internal-key:  the raw secret (constant-time compared)
- *   x-internal-ts:   Unix millisecond timestamp (must be within ±5 min)
- *   x-internal-sig:  sha256=<HMAC-SHA256(secret, method:pathname:ts)>
+ * Auth precedence (first match wins):
  *
- * Falls back to plain key-only if the signature headers are absent —
- * this allows existing callers to keep working while being migrated.
- * A warning is logged on every plain-key request.
+ * 1. HTTP-only cookie `cascrow_admin` — preferred, set by /api/internal/auth
+ *    on successful login. Invisible to JavaScript.
+ *
+ * 2. HMAC-SHA256 signed headers (legacy programmatic access):
+ *    x-internal-key:  the raw secret (constant-time compared)
+ *    x-internal-ts:   Unix millisecond timestamp (must be within ±5 min)
+ *    x-internal-sig:  sha256=<HMAC-SHA256(secret, method:pathname:ts)>
+ *
+ * 3. Plain key header fallback — logs a warning on every call.
  */
 export function isInternalAuthorized(req: NextRequest): boolean {
-  const key = req.headers.get("x-internal-key")?.trim() ?? "";
   const secret = process.env.INTERNAL_SECRET?.trim() ?? "";
-  if (!key || !secret) return false;
+  if (!secret) return false;
 
   if (secret.length < MIN_SECRET_LENGTH) {
     console.error(
@@ -29,10 +40,26 @@ export function isInternalAuthorized(req: NextRequest): boolean {
     return false;
   }
 
+  // ── 1. HTTP-only cookie (preferred) ────────────────────────────────────────
+  const cookieToken = req.cookies.get(COOKIE_NAME)?.value ?? "";
+  if (cookieToken) {
+    const expected = makeSessionToken(secret);
+    if (cookieToken.length === expected.length) {
+      try {
+        if (crypto.timingSafeEqual(Buffer.from(cookieToken), Buffer.from(expected))) {
+          return true;
+        }
+      } catch { /* fall through */ }
+    }
+  }
+
+  // ── 2. HMAC + timestamp headers (programmatic / legacy) ───────────────────
+  const key = req.headers.get("x-internal-key")?.trim() ?? "";
+  if (!key) return false;
+
   const sig = req.headers.get("x-internal-sig") ?? "";
   const tsHeader = req.headers.get("x-internal-ts") ?? "";
 
-  // ── HMAC + timestamp path (preferred) ──────────────────────────────────────
   if (sig && tsHeader) {
     const ts = parseInt(tsHeader, 10);
     if (isNaN(ts)) return false;
@@ -48,7 +75,6 @@ export function isInternalAuthorized(req: NextRequest): boolean {
 
     const provided = sig.startsWith("sha256=") ? sig.slice(7) : sig;
 
-    // Constant-time comparison for both key and signature
     const lenKey = Math.max(Buffer.byteLength(key), Buffer.byteLength(secret));
     const aKey = Buffer.alloc(lenKey);
     const bKey = Buffer.alloc(lenKey);
@@ -64,7 +90,7 @@ export function isInternalAuthorized(req: NextRequest): boolean {
     return crypto.timingSafeEqual(aKey, bKey) && crypto.timingSafeEqual(aSig, bSig);
   }
 
-  // ── Plain key fallback (no replay protection — migration only) ─────────────
+  // ── 3. Plain key fallback (no replay protection) ───────────────────────────
   console.warn(
     "[internal-auth] Request missing HMAC signature headers (x-internal-sig / x-internal-ts). " +
       "Falling back to plain key check. Update the caller to use internalFetch()."

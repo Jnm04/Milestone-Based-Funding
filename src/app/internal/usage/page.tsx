@@ -81,11 +81,9 @@ export default function UsagePage() {
   const [data, setData] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const key = () => sessionStorage.getItem("cascrow_internal_key") ?? "";
-
   function load() {
     setLoading(true);
-    internalFetch("/api/internal/usage", {}, key())
+    internalFetch("/api/internal/usage")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { setData(d); setLoading(false); });
   }

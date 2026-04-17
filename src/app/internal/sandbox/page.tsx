@@ -28,8 +28,6 @@ export default function SandboxPage() {
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const key = () => sessionStorage.getItem("cascrow_internal_key") ?? "";
-
   function handleFile(f: File) {
     setFile(f);
     setResult(null);
@@ -61,13 +59,13 @@ export default function SandboxPage() {
       res = await internalFetch("/api/internal/sandbox", {
         method: "POST",
         body: fd,
-      }, key());
+      });
     } else {
       res = await internalFetch("/api/internal/sandbox", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ milestoneText, proofText, saveToDataset: false }),
-      }, key());
+      });
     }
 
     if (!res.ok) { setError("Failed — check API keys or file format"); setRunning(false); return; }
@@ -92,7 +90,7 @@ export default function SandboxPage() {
         precomputedDecision: result.decision,
         precomputedExtractedText: result.extractedText ?? proofText,
       }),
-    }, key());
+    });
 
     setSaving(false);
     setSaved(true);

@@ -78,11 +78,9 @@ export default function DatasetPage() {
   const [bootstrapping, setBootstrapping] = useState(false);
   const [bootstrapResult, setBootstrapResult] = useState<{ saved: number; queued: number; generated: number } | null>(null);
 
-  const key = () => sessionStorage.getItem("cascrow_internal_key") ?? "";
-
   function loadEntries() {
     setLoading(true);
-    internalFetch(`/api/internal/dataset?limit=${PAGE_SIZE}&offset=0`, {}, key())
+    internalFetch(`/api/internal/dataset?limit=${PAGE_SIZE}&offset=0`)
       .then((r) => (r.ok ? r.json() : { entries: [], total: 0 }))
       .then((d) => {
         setEntries(d.entries ?? []);
@@ -95,7 +93,7 @@ export default function DatasetPage() {
   async function loadMore() {
     setLoadingMore(true);
     try {
-      const res = await internalFetch(`/api/internal/dataset?limit=${PAGE_SIZE}&offset=${offset}`, {}, key());
+      const res = await internalFetch(`/api/internal/dataset?limit=${PAGE_SIZE}&offset=${offset}`);
       if (!res.ok) return;
       const d = await res.json();
       setEntries((prev) => [...prev, ...(d.entries ?? [])]);
@@ -124,7 +122,7 @@ export default function DatasetPage() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ pairsPerCombo: 2 }),
-      }, key());
+      });
       const d = await res.json() as { saved?: number; queued?: number; generated?: number; error?: string };
       if (d.error) { alert(d.error); return; }
       setBootstrapResult({ saved: d.saved ?? 0, queued: d.queued ?? 0, generated: d.generated ?? 0 });
@@ -136,7 +134,7 @@ export default function DatasetPage() {
 
   async function downloadExport(format: "jsonl" | "csv") {
     setExporting(format);
-    const res = await internalFetch(`/api/internal/export?format=${format}`, {}, key());
+    const res = await internalFetch(`/api/internal/export?format=${format}`);
     if (!res.ok) { setExporting(null); return; }
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);

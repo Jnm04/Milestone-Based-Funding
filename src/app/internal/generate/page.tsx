@@ -53,8 +53,6 @@ export default function GeneratePage() {
   const [saving, setSaving]   = useState(false);
   const [savedCount, setSavedCount] = useState(0);
 
-  const key = () => sessionStorage.getItem("cascrow_internal_key") ?? "";
-
   async function generate() {
     setRunning(true);
     setError("");
@@ -70,7 +68,7 @@ export default function GeneratePage() {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
-    }, key());
+    });
 
     if (!res.ok) {
       const d = await res.json().catch(() => ({})) as { error?: string };
@@ -124,7 +122,7 @@ export default function GeneratePage() {
           precomputedExtractedText: r.proofText,
           notes: tab === "synthetic" ? "source:synthetic" : `source:${source}`,
         }),
-      }, key())
+      })
     ));
     const failed = responses.filter(r => !r.ok).length;
     if (failed > 0) {

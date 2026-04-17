@@ -2,34 +2,53 @@
 
 import { useState, useEffect } from "react";
 
-const STORAGE_KEY = "cascrow_internal_key";
-
-function useInternalAuth() {
-  const [key, setKey] = useState<string | null>(null);
-  const [checked, setChecked] = useState(false);
-
-  useEffect(() => {
-    const stored = sessionStorage.getItem(STORAGE_KEY);
-    setKey(stored);
-    setChecked(true);
-  }, []);
-
-  const login = (k: string) => {
-    sessionStorage.setItem(STORAGE_KEY, k);
-    setKey(k);
-  };
-
-  return { key, checked, login };
-}
-
 export default function InternalLayout({ children }: { children: React.ReactNode }) {
-  const { key, checked, login } = useInternalAuth();
+  const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [input, setInput] = useState("");
   const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  if (!checked) return null;
+  // Check if the HTTP-only session cookie is valid on mount.
+  useEffect(() => {
+    fetch("/api/internal/auth", { credentials: "same-origin" })
+      .then((r) => setAuthenticated(r.ok))
+      .catch(() => setAuthenticated(false));
+  }, []);
 
-  if (!key) {
+  const login = async () => {
+    if (!input.trim()) { setError(true); return; }
+    setLoading(true);
+    setError(false);
+    try {
+      const res = await fetch("/api/internal/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: input }),
+        credentials: "same-origin",
+      });
+      if (res.ok) {
+        setAuthenticated(true);
+      } else {
+        setError(true);
+        setInput("");
+      }
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    await fetch("/api/internal/auth", { method: "DELETE", credentials: "same-origin" });
+    setAuthenticated(false);
+    setInput("");
+  };
+
+  // Still checking cookie
+  if (authenticated === null) return null;
+
+  if (!authenticated) {
     return (
       <div style={{ minHeight: "100vh", background: "#171311", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ width: 360, display: "flex", flexDirection: "column", gap: 16, padding: 32, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.2)", borderRadius: 16 }}>
@@ -40,13 +59,8 @@ export default function InternalLayout({ children }: { children: React.ReactNode
           <input
             type="password"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                if (input.length > 0) login(input);
-                else setError(true);
-              }
-            }}
+            onChange={(e) => { setInput(e.target.value); setError(false); }}
+            onKeyDown={(e) => { if (e.key === "Enter") login(); }}
             placeholder="Internal key…"
             style={{
               background: "rgba(255,255,255,0.04)",
@@ -59,11 +73,15 @@ export default function InternalLayout({ children }: { children: React.ReactNode
               outline: "none",
             }}
           />
+          {error && (
+            <p style={{ color: "#ef4444", fontSize: 12, margin: 0 }}>Invalid key — try again.</p>
+          )}
           <button
-            onClick={() => { if (input.length > 0) login(input); else setError(true); }}
-            style={{ padding: "10px 0", borderRadius: 8, background: "#C4704B", color: "#fff", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 500 }}
+            onClick={login}
+            disabled={loading}
+            style={{ padding: "10px 0", borderRadius: 8, background: loading ? "#7a4530" : "#C4704B", color: "#fff", border: "none", cursor: loading ? "default" : "pointer", fontSize: 14, fontWeight: 500 }}
           >
-            Enter
+            {loading ? "Verifying…" : "Enter"}
           </button>
         </div>
       </div>
@@ -97,7 +115,7 @@ export default function InternalLayout({ children }: { children: React.ReactNode
         ))}
         <div style={{ marginLeft: "auto" }}>
           <button
-            onClick={() => { sessionStorage.removeItem(STORAGE_KEY); window.location.reload(); }}
+            onClick={logout}
             style={{ fontSize: 12, color: "#A89B8C", background: "none", border: "none", cursor: "pointer" }}
           >
             Log out

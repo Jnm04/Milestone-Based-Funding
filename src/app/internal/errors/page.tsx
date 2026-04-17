@@ -39,8 +39,7 @@ export default function ErrorsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const key = sessionStorage.getItem("cascrow_internal_key") ?? "";
-    internalFetch("/api/internal/sentry-issues", {}, key)
+    internalFetch("/api/internal/sentry-issues")
       .then((r) => r.json())
       .then((data) => {
         if (data.error && !data.issues?.length) setError(data.error);

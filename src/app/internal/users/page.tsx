@@ -32,10 +32,9 @@ const ROLE_COLORS: Record<string, string> = {
   ADMIN: "#C4ADFA",
 };
 
-function TierSelect({ userId, current, apiKey, onUpdated }: {
+function TierSelect({ userId, current, onUpdated }: {
   userId: string;
   current: number;
-  apiKey: string;
   onUpdated: (newTier: number) => void;
 }) {
   const [loading, setLoading] = useState(false);
@@ -48,7 +47,7 @@ function TierSelect({ userId, current, apiKey, onUpdated }: {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ kycTier: tier }),
-      }, apiKey);
+      });
       if (res.ok) onUpdated(tier);
     } finally {
       setLoading(false);
@@ -82,9 +81,8 @@ function TierSelect({ userId, current, apiKey, onUpdated }: {
   );
 }
 
-function RecheckButton({ userId, apiKey, onUpdated }: {
+function RecheckButton({ userId, onUpdated }: {
   userId: string;
-  apiKey: string;
   onUpdated: (status: string, tier: number) => void;
 }) {
   const [loading, setLoading] = useState(false);
@@ -94,7 +92,7 @@ function RecheckButton({ userId, apiKey, onUpdated }: {
     try {
       const res = await internalFetch(`/api/internal/users/${userId}`, {
         method: "POST",
-      }, apiKey);
+      });
       if (res.ok) {
         const d = await res.json();
         onUpdated(d.user.sanctionsStatus, d.user.kycTier);
@@ -136,12 +134,9 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [search, setSearch] = useState("");
-  const [apiKey, setApiKey] = useState("");
 
   useEffect(() => {
-    const key = sessionStorage.getItem("cascrow_internal_key") ?? "";
-    setApiKey(key);
-    internalFetch(`/api/internal/users?limit=${PAGE_SIZE}&offset=0`, {}, key)
+    internalFetch(`/api/internal/users?limit=${PAGE_SIZE}&offset=0`)
       .then((r) => r.json())
       .then((d) => {
         if (d.error) { setError(true); return; }
@@ -156,7 +151,7 @@ export default function UsersPage() {
   async function loadMore() {
     setLoadingMore(true);
     try {
-      const res = await internalFetch(`/api/internal/users?limit=${PAGE_SIZE}&offset=${offset}`, {}, apiKey);
+      const res = await internalFetch(`/api/internal/users?limit=${PAGE_SIZE}&offset=${offset}`);
       const d = await res.json();
       if (!d.error) {
         setUsers((prev) => [...prev, ...d.users]);
@@ -276,7 +271,6 @@ export default function UsersPage() {
                   <TierSelect
                     userId={u.id}
                     current={u.kycTier}
-                    apiKey={apiKey}
                     onUpdated={(newTier) => updateUser(u.id, { kycTier: newTier })}
                   />
                 </td>
@@ -295,7 +289,6 @@ export default function UsersPage() {
                     )}
                     <RecheckButton
                       userId={u.id}
-                      apiKey={apiKey}
                       onUpdated={(status, tier) => updateUser(u.id, { sanctionsStatus: status, kycTier: tier })}
                     />
                   </div>

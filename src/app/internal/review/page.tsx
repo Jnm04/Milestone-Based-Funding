@@ -42,12 +42,10 @@ export default function ReviewQueuePage() {
   const [lastLabeled, setLastLabeled] = useState<{ proofId: string; label: string } | null>(null);
   const [undoing, setUndoing] = useState(false);
 
-  const key = () => sessionStorage.getItem("cascrow_internal_key") ?? "";
-
   const load = useCallback((t: Tab) => {
     setLoading(true);
     setLastLabeled(null);
-    internalFetch(`/api/internal/queue?tab=${t}`, {}, key())
+    internalFetch(`/api/internal/queue?tab=${t}`)
       .then((r) => r.json())
       .then((d) => { setEntries(d.entries ?? []); setCurrent(0); setLoading(false); });
   }, []);
@@ -69,7 +67,7 @@ export default function ReviewQueuePage() {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ proofId: entry.proofId, label, fraudType: fraudType || undefined, notes: notes || undefined }),
-    }, key());
+    });
     setLastLabeled({ proofId: entry.proofId, label });
     resetForm();
     setSubmitting(false);
@@ -83,7 +81,7 @@ export default function ReviewQueuePage() {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ proofId: entry.proofId }),
-    }, key());
+    });
     setEntries((prev) => prev.filter((_, i) => i !== current));
     setCurrent((c) => Math.min(c, Math.max(0, entries.length - 2)));
   }
@@ -95,7 +93,7 @@ export default function ReviewQueuePage() {
       method: "DELETE",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ proofId: lastLabeled.proofId }),
-    }, key());
+    });
     setUndoing(false);
     setLastLabeled(null);
     load(tab);
@@ -181,7 +179,7 @@ export default function ReviewQueuePage() {
                       method: "DELETE",
                       headers: { "content-type": "application/json" },
                       body: JSON.stringify({ proofId: e.proofId }),
-                    }, key());
+                    });
                     load(tab);
                   }}
                   style={{ fontSize: 11, color: "#A89B8C", background: "none", border: "1px solid rgba(196,112,75,0.2)", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}>
@@ -217,7 +215,7 @@ export default function ReviewQueuePage() {
                       method: "DELETE",
                       headers: { "content-type": "application/json" },
                       body: JSON.stringify({ proofId: e.proofId }),
-                    }, key());
+                    });
                     load(tab);
                   }}
                   style={{ fontSize: 11, color: "#C4704B", background: "none", border: "1px solid rgba(196,112,75,0.3)", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}>
