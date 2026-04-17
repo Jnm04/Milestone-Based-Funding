@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { cookies } from "next/headers";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 const COOKIE_NAME = "cascrow_admin";
 const COOKIE_MAX_AGE = 8 * 60 * 60; // 8 hours
@@ -50,6 +51,11 @@ export async function GET(req: NextRequest) {
 
 /** POST — verify raw key, set HTTP-only session cookie. */
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req) ?? "unknown";
+  if (!(await checkRateLimit(`admin-login:${ip}`, 10, 15 * 60 * 1000))) {
+    return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
+  }
+
   const secret = getSecret();
   if (!secret || secret.length < MIN_SECRET_LENGTH) {
     return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
