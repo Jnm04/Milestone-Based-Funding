@@ -7,10 +7,14 @@ import crypto from "crypto";
 
 export async function POST(request: NextRequest) {
   try {
+    // N2: normalize response timing — always wait at least 400ms so timing
+    // side-channels cannot reveal whether a given email is registered.
+    const minDelay = new Promise<void>((r) => setTimeout(r, 400));
+
     // 5 password-reset emails per IP per hour — prevents email flooding
     const ip = getClientIp(request);
     if (!checkRateLimit(`forgot-pw:${ip}`, 5, 60 * 60 * 1000)) {
-      // Return ok to avoid leaking info, but don't actually send the email
+      await minDelay;
       return NextResponse.json({ ok: true });
     }
 
@@ -47,7 +51,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Always respond with ok — never reveal whether the email exists
+    // Always respond with ok — never reveal whether the email exists.
+    // Await minDelay to ensure consistent response time regardless of DB result.
+    await minDelay;
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[forgot-password]", err);

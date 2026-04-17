@@ -30,7 +30,7 @@ async function checkVerifyRateLimit(userId: string): Promise<boolean> {
   const recentCount = await prisma.proof.count({
     where: {
       aiDecision: { not: null },
-      updatedAt: { gte: new Date(Date.now() - RATE_LIMIT_WINDOW_MS) },
+      createdAt: { gte: new Date(Date.now() - RATE_LIMIT_WINDOW_MS) },
       contract: {
         OR: [{ investorId: userId }, { startupId: userId }],
       },

@@ -22,6 +22,25 @@
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 
+// H10: reject webhook deliveries to private/internal network ranges (DNS-rebinding defence)
+function isPrivateUrl(urlStr: string): boolean {
+  try {
+    const { hostname } = new URL(urlStr);
+    if (/^(localhost|0\.0\.0\.0)$/i.test(hostname)) return true;
+    if (/^127\./.test(hostname)) return true;
+    if (/^10\./.test(hostname)) return true;
+    if (/^172\.(1[6-9]|2\d|3[01])\./.test(hostname)) return true;
+    if (/^192\.168\./.test(hostname)) return true;
+    if (/^169\.254\./.test(hostname)) return true;
+    if (/^224\./.test(hostname)) return true;
+    if (/^::1$|\[::1\]/.test(hostname)) return true;
+    if (/\.(local|internal|localhost|intranet)$/i.test(hostname)) return true;
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 // ─── Event catalogue ──────────────────────────────────────────────────────────
 
 export const WEBHOOK_EVENTS = [
@@ -61,6 +80,12 @@ function sign(secret: string, timestampMs: number, body: string): string {
 // ─── Single delivery attempt ──────────────────────────────────────────────────
 
 async function deliver(url: string, secret: string, payload: WebhookPayload): Promise<boolean> {
+  // Re-validate at delivery time to defend against DNS rebinding attacks
+  if (isPrivateUrl(url)) {
+    console.warn(`[webhook] Blocked delivery to private/internal URL: ${url}`);
+    return false;
+  }
+
   const body = JSON.stringify(payload);
   const timestampMs = new Date(payload.timestamp).getTime();
   const signature = sign(secret, timestampMs, body);
