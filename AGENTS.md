@@ -69,9 +69,16 @@ The product is called **cascrow**. The repo folder is `milestonefund` — use `c
 - Rounded corners: `rounded-2xl` standard, `rounded-full` for pills
 
 ## Rate Limiting
-- `src/lib/rate-limit.ts` exports `checkRateLimit(key, max, windowMs)` — **in-memory, per-instance only**
-- For the `/api/verify` route: rate limiting is **DB-backed** (counts recent `Proof` records via Prisma) — cross-instance safe in serverless. Do not revert to in-memory for this route.
-- For all other routes: in-memory rate limiting is acceptable
+- `src/lib/rate-limit.ts` exports `checkRateLimit(key, max, windowMs)` — **async**, backed by **Upstash Redis** (INCR + PEXPIRE). Cross-instance safe in serverless.
+- `getClientIp(req)` reads `x-forwarded-for` → `x-real-ip` — use this for IP-based keys
+- **Always `await` `checkRateLimit`** — it is async and will silently pass-through if not awaited
+- For the `/api/verify` route: rate limiting is **DB-backed** (counts recent `Proof` records via Prisma) — independent of Redis. Do not change this.
+- Active rate limits (as of 2026-04-18):
+  - `admin-login:{ip}` — 10 / 15 min (POST /api/internal/auth)
+  - `join-contract:{userId}:{ip}` — 10 / hour (POST /api/contracts/join)
+  - `proof-github:{userId}` — 5 / hour (POST /api/proof/github)
+  - `escrow-cancel:{userId}` — 5 / 60 s (POST /api/escrow/cancel)
+  - `escrow-finish:{userId}` — 5 / 60 s (POST /api/escrow/finish)
 
 ## API Contracts
 - `GET /api/contracts` supports `?status=FUNDED&search=keyword` filter params

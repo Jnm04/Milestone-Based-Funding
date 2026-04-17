@@ -110,8 +110,8 @@ export function PrivacyContent() {
             <Li>
               <strong>{de ? "IP-Adresse:" : "IP address:"}</strong>{" "}
               {de
-                ? "Temporär im Arbeitsspeicher für Rate Limiting und Sicherheitsschutz (max. 1 Stunde, nicht in der Datenbank gespeichert)"
-                : "Temporarily in memory for rate limiting and security protection (max. 1 hour, not stored in the database)"}
+                ? "Für Rate Limiting und Missbrauchsschutz temporär bei Upstash Redis gespeichert (max. 1 Stunde TTL, danach automatisch gelöscht)"
+                : "Temporarily stored in Upstash Redis for rate limiting and abuse protection (max. 1 hour TTL, then automatically deleted)"}
             </Li>
             <Li>
               <strong>{de ? "Technische Fehlerdaten:" : "Technical error data:"}</strong>{" "}
@@ -275,6 +275,7 @@ export function PrivacyContent() {
                   ? [
                       ["Vercel", "Hosting, Datei-Speicher (PDFs, Zertifikate)", "USA (Edge global)", "EU-US DPF"],
                       ["Neon / Vercel Postgres", "Datenbank", "USA oder EU (je nach Konfig.)", "EU-US DPF / SCCs"],
+                      ["Upstash Redis", "Rate Limiting (IP, User-ID, max. 1 h TTL)", "USA", "SCCs"],
                       ["Resend", "E-Mail-Versand", "USA", "SCCs"],
                       ["Cloudflare Turnstile", "Bot-Schutz", "Global (CDN)", "EU-US DPF"],
                       ["Sentry", "Fehlerüberwachung", "EU (Frankfurt)", "–"],
@@ -285,6 +286,7 @@ export function PrivacyContent() {
                   : [
                       ["Vercel", "Hosting, file storage (PDFs, certificates)", "USA (Edge global)", "EU-US DPF"],
                       ["Neon / Vercel Postgres", "Database", "USA or EU (depending on config)", "EU-US DPF / SCCs"],
+                      ["Upstash Redis", "Rate limiting (IP, user ID, max. 1 h TTL)", "USA", "SCCs"],
                       ["Resend", "Email delivery", "USA", "SCCs"],
                       ["Cloudflare Turnstile", "Bot protection", "Global (CDN)", "EU-US DPF"],
                       ["Sentry", "Error monitoring", "EU (Frankfurt)", "–"],
@@ -322,8 +324,8 @@ export function PrivacyContent() {
             <Li>
               <strong>{de ? "EU-Standardvertragsklauseln (SCCs):" : "EU Standard Contractual Clauses (SCCs):"}</strong>{" "}
               {de
-                ? "Für nicht DPF-zertifizierte Anbieter (Anthropic, Cerebras, Resend) gelten die EU-Standardvertragsklauseln gemäß Art. 46 Abs. 2 lit. c DSGVO."
-                : "For providers not certified under DPF (Anthropic, Cerebras, Resend), EU Standard Contractual Clauses pursuant to Art. 46(2)(c) GDPR apply."}
+                ? "Für nicht DPF-zertifizierte Anbieter (Anthropic, Cerebras, Resend, Upstash) gelten die EU-Standardvertragsklauseln gemäß Art. 46 Abs. 2 lit. c DSGVO."
+                : "For providers not certified under DPF (Anthropic, Cerebras, Resend, Upstash), EU Standard Contractual Clauses pursuant to Art. 46(2)(c) GDPR apply."}
             </Li>
             <Li>
               <strong>{de ? "Öffentliche Blockchain:" : "Public blockchain:"}</strong>{" "}
@@ -391,10 +393,10 @@ export function PrivacyContent() {
                 : "90 days (Sentry default for the free plan)"}
             </Li>
             <Li>
-              <strong>{de ? "IP-Adressen (Rate Limiting):" : "IP addresses (rate limiting):"}</strong>{" "}
+              <strong>{de ? "IP-Adressen & User-IDs (Rate Limiting):" : "IP addresses & user IDs (rate limiting):"}</strong>{" "}
               {de
-                ? "Nur im Arbeitsspeicher, max. 1 Stunde, nicht persistent gespeichert"
-                : "In memory only, max. 1 hour, not persistently stored"}
+                ? "Bei Upstash Redis gespeichert mit automatischem Ablauf (TTL): max. 15 Minuten für Login-Schutz, max. 1 Stunde für API-Limits"
+                : "Stored in Upstash Redis with automatic expiry (TTL): max. 15 minutes for login protection, max. 1 hour for API limits"}
             </Li>
           </ul>
         </Section>
