@@ -33,7 +33,7 @@ Every completed milestone triggers a **non-transferable NFT mint on the native X
 
 Every key event is written to **both chains** as an immutable audit entry:
 - **XRPL EVM Sidechain** — hex-encoded JSON in an EVM transaction's `data` field
-- **Native XRP Ledger** — JSON memo in an `AccountSet` transaction, publicly verifiable on [testnet.xrpscan.com](https://testnet.xrpscan.com)
+- **Native XRP Ledger** — JSON memo in an `AccountSet` transaction, publicly verifiable on [xrpscan.com](https://xrpscan.com)
 
 ---
 
@@ -94,7 +94,7 @@ The NFT is a permanent, tamper-proof record that a specific milestone was AI-ver
 
 *(Compact keys are required to stay within the XRPL 256-byte URI field limit.)*
 
-Even if Cascrow goes offline, the NFT remains on the XRPL Ledger and is publicly verifiable at `https://testnet.xrpl.org/nft/<tokenId>`. Useful for grant programs (KfW, NGOs, development aid) that require documented accountability — the proof is on a public ledger, not in a private database.
+Even if Cascrow goes offline, the NFT remains on the XRPL Ledger and is publicly verifiable at `https://xrpl.org/nft/<tokenId>`. Useful for grant programs (KfW, NGOs, development aid) that require documented accountability — the proof is on a public ledger, not in a private database.
 
 **2. On-chain reputation and track record**
 
@@ -112,7 +112,7 @@ Flags:              0  (tfTransferable NOT set — non-transferable)
 NFTokenTaxon:       1  (cascrow milestone certificates)
 URI:                hex-encoded JSON metadata
 Minted by:          platform wallet (XRPL_PLATFORM_SEED)
-Explorer:           https://testnet.xrpl.org/nft/<tokenId>
+Explorer:           https://xrpl.org/nft/<tokenId>
 ```
 
 Non-transferable means the certificate cannot be sold, traded, or transferred to another wallet. It is a credential, not an asset — tied permanently to the platform wallet as proof that the work was done.
@@ -134,10 +134,12 @@ The `tokenId` and `txHash` are stored in the database and displayed as a certifi
 | AI | Claude `claude-haiku-4-5-20251001` + Gemini `gemini-2.5-flash` + GPT-4o-mini + Mistral Small + Qwen3-235B via Cerebras (5-model majority vote, 3/5 required) |
 | Database | PostgreSQL + Prisma |
 | File storage | Vercel Blob |
-| Email | Resend |
+| Email | Resend (via SMTP) |
 | Cron | Vercel Cron (auto-cancel expired milestones) |
 | Error monitoring | Sentry (EU region, Frankfurt) |
 | Bot protection | Cloudflare Turnstile (register + forgot-password) |
+| Charts | Recharts (internal dashboard) |
+| 3D graph | React Three Fiber + D3 Force 3D (internal contract graph) |
 
 ---
 
@@ -276,25 +278,26 @@ src/
 ├── app/
 │   ├── api/
 │   │   ├── auth/              # NextAuth + register, verify-email, reset-password
-│   │   ├── contracts/[id]/    # CRUD, join/decline, review, resubmit, PATCH (draft edit)
-│   │   ├── escrow/            # Create calldata, confirm, finish, cancel, sync
+│   │   ├── contracts/[id]/    # CRUD, join/decline, review, resubmit, calendar, preview
+│   │   ├── escrow/            # Create, confirm, finish, cancel, sync, webhook
 │   │   ├── proof/             # PDF/image upload → Vercel Blob; DELETE proof
 │   │   ├── verify/            # AI milestone verification (5-model vote)
 │   │   ├── nft/               # Mint NFT cert, cert image, cert metadata
-│   │   ├── user/              # Wallet save, GDPR data export, GDPR account delete
+│   │   ├── user/              # Wallet save, GDPR export, GDPR delete, recheck-kyc
 │   │   ├── webhooks/          # Outbound webhook delivery
 │   │   ├── telegram/          # Bot connect + webhook handler
-│   │   ├── internal/          # Admin APIs (stats, queue, Sentry issues, etc.)
+│   │   ├── internal/          # Admin APIs (stats, export, queue, graph, generate, dataset, sentry-issues, users)
 │   │   ├── cron/              # Auto-cancel expired milestones + refresh sanctions
 │   │   └── health/            # Health check
 │   ├── contract/[id]/         # Contract detail + audit trail + milestone timeline
 │   ├── dashboard/             # Investor + startup dashboards
-│   ├── internal/              # Admin panel (stats, review queue, errors, usage, etc.)
+│   ├── internal/              # Admin panel (stats, review queue, errors, usage, graph, generate, dataset, users)
 │   ├── datenschutz/           # Bilingual Privacy Policy (DE/EN toggle)
 │   ├── login/ register/ forgot-password/ reset-password/ profile/
 │   └── page.tsx               # Landing page
 ├── services/
 │   ├── ai/                    # 5-model verifier — PDF + image
+│   ├── brain/                 # Proof enrichment, embeddings, training data collection
 │   ├── evm/                   # EVM client, escrow calldata, release/cancel, audit
 │   ├── xrpl/                  # Native XRPL: audit memos + NFT cert minter
 │   ├── github/                # GitHub proof validation

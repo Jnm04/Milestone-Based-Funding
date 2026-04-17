@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { cancelMilestone, getMilestoneEscrowState } from "@/services/evm/escrow.service";
 import { writeAuditLog } from "@/services/evm/audit.service";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 /**
  * POST /api/escrow/cancel
@@ -18,6 +19,10 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!checkRateLimit(`escrow-cancel:${session.user.id}`, 5, 60 * 1000)) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
     const { contractId, milestoneId } = await request.json();

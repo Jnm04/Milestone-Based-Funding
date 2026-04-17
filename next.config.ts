@@ -16,14 +16,19 @@ const nextConfig: NextConfig = {
       "style-src 'self' 'unsafe-inline'",
       // Vercel Blob for uploaded PDFs + cert images; data:/blob: for local previews
       "img-src 'self' data: blob: https://*.vercel-storage.com",
-      // XRPL EVM RPC, native XRPL JSON-RPC, Turnstile verification, Sentry
-      "connect-src 'self' challenges.cloudflare.com https://rpc.testnet.xrplevm.org https://s1.ripple.com https://s2.ripple.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io",
+      // XRPL EVM RPC (HTTPS + WebSocket for ethers.js), native XRPL JSON-RPC, Turnstile, Sentry
+      "connect-src 'self' challenges.cloudflare.com https://rpc.testnet.xrplevm.org wss://rpc.testnet.xrplevm.org https://s1.ripple.com https://s2.ripple.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io",
       // Turnstile widget loads in an iframe
       "frame-src challenges.cloudflare.com",
       "font-src 'self' data:",
+      // Web Workers (Three.js / postprocessing may spawn workers)
+      "worker-src 'self' blob:",
+      // Prevent <base href> injection
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
+      // Belt-and-suspenders alongside X-Frame-Options: DENY
+      "frame-ancestors 'none'",
     ].join("; ");
 
     return [
@@ -34,6 +39,8 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
+          { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains; preload" },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
           { key: "Content-Security-Policy", value: csp },
         ],
       },

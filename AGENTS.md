@@ -97,12 +97,14 @@ The product is called **cascrow**. The repo folder is `milestonefund` — use `c
 - All internal auth comparisons use `crypto.timingSafeEqual` (constant-time) — do not use `===` for secret comparison
 
 ## Security Headers
-- `next.config.ts` sets all security headers on all routes via the `headers()` config:
+- `next.config.ts` sets ALL security headers on all routes via the `headers()` config:
   - `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`
-  - **Content Security Policy (CSP)** — also set in `next.config.ts`, not in middleware
+  - `Strict-Transport-Security` (HSTS), `Cross-Origin-Opener-Policy`
+  - **Content Security Policy (CSP)** — comprehensive, includes Sentry, Turnstile, XRPL RPCs
   - CSP connect-src includes both `https://*.ingest.sentry.io` AND `https://*.ingest.de.sentry.io` (EU Sentry endpoint)
+  - CSP includes `wss://rpc.testnet.xrplevm.org` (WebSocket for ethers.js) and `worker-src blob:` (Three.js)
 - Do not remove or weaken these headers
-- There is **no middleware.ts** for security headers — everything is in `next.config.ts`
+- `middleware.ts` only handles **CSRF protection** — no security headers (they are all in `next.config.ts`)
 
 ## Sentry
 - Configured in `sentry.client.config.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`

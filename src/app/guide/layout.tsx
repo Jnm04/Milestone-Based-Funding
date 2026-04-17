@@ -31,12 +31,79 @@ const howToJsonLd = {
   ],
 };
 
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "What is Cascrow?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Cascrow is an AI-powered escrow platform on the XRP Ledger. It locks RLUSD stablecoins in a smart contract and releases funds automatically when a 5-model AI majority vote verifies that the agreed milestone has been completed — no lawyers or middlemen required.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "What blockchain does Cascrow use?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Cascrow uses two chains: the XRPL EVM Sidechain (Chain ID 1449000) for the escrow smart contract and RLUSD payments, and the native XRP Ledger Mainnet for NFT completion certificates and audit trail memos.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "What is RLUSD?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "RLUSD is a USD-pegged stablecoin issued by Ripple on the XRP Ledger. On Cascrow testnet, a mock version (MockRLUSD) is used so you can test the full flow without real money.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "How does the AI verification work?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Five AI models — Claude Haiku, Gemini Flash, GPT-4o-mini, Mistral Small, and Cerebras/Qwen3 — independently analyze the uploaded proof against the milestone criteria. If 3 or more models vote YES with high confidence, funds are released automatically. If confidence is between 60–85%, a manual review is triggered. Below 60% is an automatic rejection.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "What happens if the proof is rejected?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "If the AI rejects the proof, the startup is notified and can delete the proof, improve their deliverable, and resubmit. The RLUSD remains locked in escrow until a proof is approved or the deadline passes.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "What is the NFT certificate?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "When a milestone is completed and funds are released, Cascrow mints a non-transferable NFT on the native XRP Ledger Mainnet as a permanent, on-chain proof of completion. It serves as a verifiable record of the milestone achievement.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Do I need a crypto wallet to use Cascrow?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "The investor (Grant Giver) needs MetaMask to fund the escrow — this requires an Ethereum-compatible wallet on the XRPL EVM Sidechain. The startup (Receiver) only needs a Cascrow account to submit proof; they do not need a wallet unless they want to receive RLUSD directly to a wallet address.",
+      },
+    },
+  ],
+};
+
 export default function GuideLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(howToJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
       {children}
     </>

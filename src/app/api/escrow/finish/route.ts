@@ -6,6 +6,7 @@ import { releaseMilestone } from "@/services/evm/escrow.service";
 import { decryptFulfillment } from "@/lib/crypto";
 import { sendVerifiedEmail, sendMilestoneCompletedInvestorEmail } from "@/lib/email";
 import { writeAuditLog } from "@/services/evm/audit.service";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 /**
  * POST /api/escrow/finish
@@ -21,6 +22,10 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!checkRateLimit(`escrow-finish:${session.user.id}`, 5, 60 * 1000)) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
     const { contractId, milestoneId } = await request.json();

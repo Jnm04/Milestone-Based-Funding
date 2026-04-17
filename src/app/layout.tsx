@@ -52,12 +52,23 @@ export const metadata: Metadata = {
     title: "Cascrow — AI-Powered Escrow on XRPL",
     description:
       "Lock RLUSD in native XRPL escrow. AI verifies milestone completion. Instant trustless settlement — no lawyers, no middlemen.",
+    images: [
+      {
+        url: "https://cascrow.com/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Cascrow — AI-Powered Escrow on XRPL",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
+    site: "@cascrowhq",
+    creator: "@cascrowhq",
     title: "Cascrow — AI-Powered Escrow on XRPL",
     description:
       "Lock RLUSD in native XRPL escrow. AI verifies milestone completion. Instant trustless settlement.",
+    images: ["https://cascrow.com/opengraph-image"],
   },
   robots: {
     index: true,
@@ -85,7 +96,11 @@ const jsonLd = {
       },
       description:
         "Cascrow is an AI-powered escrow platform on the XRP Ledger. It locks RLUSD in a smart contract and releases funds automatically when AI verifies milestone completion — no lawyers, no middlemen.",
-      sameAs: ["https://cascrow.com"],
+      sameAs: [
+        "https://cascrow.com",
+        "https://twitter.com/cascrowhq",
+        "https://www.instagram.com/cascrow",
+      ],
     },
     {
       "@type": "WebSite",

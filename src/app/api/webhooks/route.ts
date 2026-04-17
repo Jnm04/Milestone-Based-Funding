@@ -21,6 +21,7 @@ function isPrivateUrl(urlStr: string): boolean {
     if (/^172\.(1[6-9]|2\d|3[01])\./.test(hostname)) return true; // 172.16–31.x.x
     if (/^192\.168\./.test(hostname)) return true;       // 192.168.0.0/16
     if (/^169\.254\./.test(hostname)) return true;       // link-local / AWS metadata
+    if (/^224\./.test(hostname)) return true;            // multicast 224.0.0.0/4
     if (/^::1$|\[::1\]/.test(hostname)) return true;    // IPv6 loopback
     if (/\.(local|internal|localhost|intranet)$/i.test(hostname)) return true;
     return false;

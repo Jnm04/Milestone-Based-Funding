@@ -255,8 +255,7 @@ export async function POST(request: NextRequest) {
       });
     }
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[proof/github] Error:", msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[proof/github] Error:", err);
+    return NextResponse.json({ error: "Failed to submit GitHub proof" }, { status: 500 });
   }
 }
