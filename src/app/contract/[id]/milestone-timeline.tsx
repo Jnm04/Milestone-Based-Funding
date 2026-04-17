@@ -7,6 +7,7 @@ interface MilestoneProof {
   id: string;
   fileName: string;
   fileUrl: string;
+  fileHash?: string | null;
   aiDecision: string | null;
   aiReasoning: string | null;
   aiConfidence: number | null;
@@ -272,6 +273,17 @@ export function MilestoneTimeline({ milestones, activeMilestoneId }: MilestoneTi
                             <p style={{ fontSize: "12px", color: "#A89B8C", lineHeight: 1.5, margin: 0 }}>
                               {proof.aiReasoning}
                             </p>
+                          )}
+                          {proof.fileHash && (
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              <span style={{ fontSize: "10px", color: "#6B5E52" }}>SHA-256</span>
+                              <code
+                                title={proof.fileHash}
+                                style={{ fontSize: "10px", fontFamily: "monospace", color: "#A89B8C" }}
+                              >
+                                {proof.fileHash.slice(0, 16)}…{proof.fileHash.slice(-8)}
+                              </code>
+                            </div>
                           )}
                           <p style={{ fontSize: "11px", color: "#6B5E52", margin: 0 }}>
                             {new Date(proof.createdAt).toLocaleString()}

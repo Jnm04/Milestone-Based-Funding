@@ -13,6 +13,7 @@ interface AIResultProps {
   confidence: number;
   submittedAt: Date | string;
   modelVotes?: ModelVote[];
+  fileHash?: string;
 }
 
 /** Shortened display names for the 5 models */
@@ -32,7 +33,7 @@ function shortName(model: string): string {
   return MODEL_LABELS[model] ?? model.split(/[\s/]/)[0];
 }
 
-export function AIResult({ decision, reasoning, confidence, submittedAt, modelVotes }: AIResultProps) {
+export function AIResult({ decision, reasoning, confidence, submittedAt, modelVotes, fileHash }: AIResultProps) {
   const isYes = decision === "YES";
   const bg     = isYes ? "rgba(74,222,128,0.07)"  : "rgba(248,113,113,0.07)";
   const border = isYes ? "rgba(74,222,128,0.2)"   : "rgba(248,113,113,0.2)";
@@ -117,6 +118,24 @@ export function AIResult({ decision, reasoning, confidence, submittedAt, modelVo
       <p className="text-xs" style={{ color: "#6B5E52" }}>
         Verified at {new Date(submittedAt).toLocaleString()}
       </p>
+
+      {fileHash && (
+        <div
+          className="flex items-center gap-2 pt-1"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+        >
+          <span className="text-xs" style={{ color: "#6B5E52", flexShrink: 0 }}>
+            Proof SHA-256
+          </span>
+          <code
+            className="text-xs font-mono truncate"
+            title={fileHash}
+            style={{ color: "#A89B8C" }}
+          >
+            {fileHash.slice(0, 16)}…{fileHash.slice(-8)}
+          </code>
+        </div>
+      )}
     </div>
   );
 }

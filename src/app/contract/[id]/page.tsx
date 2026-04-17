@@ -190,6 +190,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
                 id: p.id,
                 fileName: p.fileName,
                 fileUrl: p.fileUrl,
+                fileHash: p.fileHash,
                 aiDecision: p.aiDecision,
                 aiReasoning: p.aiReasoning,
                 aiConfidence: p.aiConfidence,
@@ -280,6 +281,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
             confidence={latestProof.aiConfidence ?? 0}
             submittedAt={latestProof.createdAt}
             modelVotes={(latestProof.aiModelVotes as import("@/components/ai-result").ModelVote[] | null) ?? undefined}
+          fileHash={latestProof.fileHash ?? undefined}
           />
         )}
 
