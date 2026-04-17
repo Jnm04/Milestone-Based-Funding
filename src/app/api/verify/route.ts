@@ -266,7 +266,7 @@ export async function POST(request: NextRequest) {
           milestoneId: proof.milestoneId ?? undefined,
           event: "AI_DECISION",
           actor: "AI",
-          metadata: { decision: result.decision, confidence: result.confidence, action, proofId, promptHash: VERIFICATION_PROMPT_HASH },
+          metadata: { decision: result.decision, confidence: result.confidence, action, proofId, promptHash: VERIFICATION_PROMPT_HASH, modelVotes: result.modelVotes },
         });
 
         fireWebhook({
@@ -345,7 +345,7 @@ export async function POST(request: NextRequest) {
             if (proof.milestoneId) {
               const completedMilestone = await prisma.milestone.update({
                 where: { id: proof.milestoneId },
-                data: { status: "COMPLETED", evmTxHash: txHash },
+                data: { status: "COMPLETED", evmTxHash: txHash, escrowFulfillment: null },
                 include: { contract: { include: { milestones: { orderBy: { order: "asc" } } } } },
               });
               const milestones = completedMilestone.contract.milestones;
@@ -355,7 +355,7 @@ export async function POST(request: NextRequest) {
               const nextStatus = !remaining ? "COMPLETED" : remaining.status === "FUNDED" ? "FUNDED" : "AWAITING_ESCROW";
               await prisma.contract.update({ where: { id: contract.id }, data: { status: nextStatus as never } });
             } else {
-              await prisma.contract.update({ where: { id: contract.id }, data: { status: "COMPLETED" } });
+              await prisma.contract.update({ where: { id: contract.id }, data: { status: "COMPLETED", escrowFulfillment: null } });
             }
 
             await writeAuditLog({

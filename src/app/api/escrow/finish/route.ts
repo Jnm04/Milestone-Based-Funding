@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     if (milestoneId) {
       const completedMilestone = await prisma.milestone.update({
         where: { id: milestoneId },
-        data: { status: "COMPLETED", evmTxHash: txHash },
+        data: { status: "COMPLETED", evmTxHash: txHash, escrowFulfillment: null },
         include: { contract: { include: { milestones: { orderBy: { order: "asc" } } } } },
       });
 
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
     } else {
       await prisma.contract.update({
         where: { id: contractId },
-        data: { status: "COMPLETED" },
+        data: { status: "COMPLETED", escrowFulfillment: null },
       });
     }
 
