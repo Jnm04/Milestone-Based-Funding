@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +19,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Password must be at most 72 characters" }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({ where: { passwordResetToken: token } });
+    // Hash the received token before DB lookup — tokens are stored as SHA-256 hashes.
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const user = await prisma.user.findUnique({ where: { passwordResetToken: tokenHash } });
 
     if (!user || !user.passwordResetTokenExpiry || user.passwordResetTokenExpiry < new Date()) {
       return NextResponse.json({ error: "Invalid or expired reset link" }, { status: 400 });

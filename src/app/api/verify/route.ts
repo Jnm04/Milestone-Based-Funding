@@ -6,6 +6,7 @@ import { verifyMilestone, verifyMilestoneImage, mockVerifyMilestone, categorizeF
 import { storeBrainData } from "@/services/brain/training.service";
 import { buildEnrichmentContext } from "@/services/brain/proof-enrichment.service";
 import { releaseMilestone } from "@/services/evm/escrow.service";
+import { decryptFulfillment } from "@/lib/crypto";
 import { sendPendingReviewEmail, sendRejectedEmail, sendVerifiedEmail, sendMilestoneCompletedInvestorEmail, sendFulfillmentKeyEmail } from "@/lib/email";
 import { contractIdToBytes32 } from "@/services/evm/escrow.service";
 import { writeAuditLog } from "@/services/evm/audit.service";
@@ -293,8 +294,9 @@ export async function POST(request: NextRequest) {
         if (action === "VERIFIED") {
           try {
             const milestoneOrder = proof.milestone?.order ?? 0;
-            const fulfillment = proof.milestone?.escrowFulfillment ?? contract.escrowFulfillment;
-            if (!fulfillment) throw new Error("Fulfillment key not found — cannot release escrow");
+            const rawFulfillment = proof.milestone?.escrowFulfillment ?? contract.escrowFulfillment;
+            if (!rawFulfillment) throw new Error("Fulfillment key not found — cannot release escrow");
+            const fulfillment = decryptFulfillment(rawFulfillment);
 
             if (contract.startup?.email) {
               sendFulfillmentKeyEmail({

@@ -7,6 +7,7 @@ import {
   buildFundMilestoneCalldata,
   generateFulfillment,
 } from "@/services/evm/escrow.service";
+import { encryptFulfillment, decryptFulfillment } from "@/lib/crypto";
 
 const ESCROW_CONTRACT = process.env.NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS!;
 const RLUSD_CONTRACT = process.env.NEXT_PUBLIC_RLUSD_CONTRACT_ADDRESS!;
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
     if (existingFulfillment) {
       // Recompute condition from the stored fulfillment so both are always in sync.
       const { ethers: ethersLib } = await import("ethers");
-      fulfillment = existingFulfillment;
+      fulfillment = decryptFulfillment(existingFulfillment);
       condition = ethersLib.keccak256(
         ethersLib.AbiCoder.defaultAbiCoder().encode(["bytes32"], [fulfillment])
       );
@@ -106,12 +107,12 @@ export async function POST(request: NextRequest) {
       if (milestoneId) {
         await prisma.milestone.update({
           where: { id: milestoneId },
-          data: { amountRLUSD: amountUSD, escrowFulfillment: fulfillment, escrowCondition: condition },
+          data: { amountRLUSD: amountUSD, escrowFulfillment: encryptFulfillment(fulfillment), escrowCondition: condition },
         });
       } else {
         await prisma.contract.update({
           where: { id: contractId },
-          data: { amountRLUSD: amountUSD, escrowFulfillment: fulfillment, escrowCondition: condition },
+          data: { amountRLUSD: amountUSD, escrowFulfillment: encryptFulfillment(fulfillment), escrowCondition: condition },
         });
       }
     }

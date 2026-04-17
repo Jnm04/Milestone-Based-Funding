@@ -290,7 +290,7 @@ export default function GuidePage() {
           <Step n={6} title="Register on Cascrow">
             <P>Both the investor and the startup need a Cascrow account. Registration takes under a minute:</P>
             <Ol items={[
-              'Go to cascrow.xyz/register',
+              'Go to cascrow.com/register',
               'Enter your email, choose a password, and select your role (Grant Giver or Receiver)',
               'Check your email and click the verification link',
               'Log in — you\'re in',

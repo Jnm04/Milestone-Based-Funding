@@ -62,7 +62,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
 
   const latestProof = contract.proofs[0] ?? null;
   const inviteUrl = contract.inviteLink
-    ? `${process.env.NEXTAUTH_URL ?? "http://localhost:3000"}/dashboard/startup?invite=${contract.inviteLink}`
+    ? `${process.env.NEXTAUTH_URL ?? "https://cascrow.com"}/dashboard/startup?invite=${contract.inviteLink}`
     : null;
 
   // Determine dashboard link based on viewer role

@@ -1,4 +1,4 @@
-const APP_URL = process.env.NEXTAUTH_URL ?? "https://cascrow.xyz";
+const APP_URL = process.env.NEXTAUTH_URL ?? "https://cascrow.com";
 
 export interface CertImageParams {
   contractId: string;
@@ -138,7 +138,7 @@ export function generateCertificateSVG(params: CertImageParams): string {
   <!-- Footer -->
   <rect x="40" y="432" width="720" height="1" fill="#D4B896" fill-opacity="0.08"/>
   <text x="64" y="458" font-family="Arial, Helvetica, sans-serif" font-size="9.5" letter-spacing="0.07em" fill="#5A4F47">Non-transferable · Permanent on-chain record</text>
-  <text x="736" y="458" font-family="Arial, Helvetica, sans-serif" font-size="9.5" letter-spacing="0.07em" fill="#5A4F47" text-anchor="end">cascrow.xyz · XRPL EVM Sidechain</text>
+  <text x="736" y="458" font-family="Arial, Helvetica, sans-serif" font-size="9.5" letter-spacing="0.07em" fill="#5A4F47" text-anchor="end">cascrow.com · XRPL EVM Sidechain</text>
 </svg>`;
 }
 

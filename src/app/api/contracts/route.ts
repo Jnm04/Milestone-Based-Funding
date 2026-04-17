@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const inviteLink = nanoid(12);
+    const inviteLink = nanoid(32);
 
     // Validate amounts before entering the transaction
     // Build msData with explicit narrowing — Zod refine() guarantees milestone is set

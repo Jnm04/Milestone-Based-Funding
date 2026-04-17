@@ -14,7 +14,7 @@ import { prisma } from "@/lib/prisma";
  *
  * Actions:
  * - Nullify: name, phone, bio, website, companyName, department, jobTitle, walletAddress
- * - Anonymize: email → "deleted-{id}@cascrow.xyz"
+ * - Anonymize: email → "deleted-{id}@cascrow.com"
  * - Clear: passwordHash, emailVerificationToken, passwordResetToken
  * - Cancel: any DRAFT or AWAITING_ESCROW contracts where no escrow is locked yet
  * - Does NOT touch: contracts with active escrow (other party's funds are involved)
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Anonymize the user record — preserve the row so contract FKs don't break
-    const anonymizedEmail = `deleted-${userId}@cascrow.xyz`;
+    const anonymizedEmail = `deleted-${userId}@cascrow.com`;
     await prisma.$transaction([
       // Disconnect telegram chat if present
       prisma.telegramChat.deleteMany({ where: { userId } }),

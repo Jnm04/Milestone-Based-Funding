@@ -181,7 +181,7 @@ export async function GET(
               Non-transferable · Permanent on-chain record
             </span>
             <span style={{ fontSize: 9, letterSpacing: "0.07em", color: "#5A4F47" }}>
-              cascrow.xyz · XRPL EVM Sidechain
+              cascrow.com · XRPL EVM Sidechain
             </span>
           </div>
         </div>

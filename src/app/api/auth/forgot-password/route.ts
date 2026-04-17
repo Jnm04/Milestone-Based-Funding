@@ -30,11 +30,14 @@ export async function POST(request: NextRequest) {
 
     if (user && user.emailVerified) {
       const token = crypto.randomBytes(32).toString("hex");
+      // Store only the SHA-256 hash in DB — raw token is sent to the user via email only.
+      // If the DB is leaked, stored hashes cannot be used to reset passwords directly.
+      const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
       const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
       await prisma.user.update({
         where: { id: user.id },
-        data: { passwordResetToken: token, passwordResetTokenExpiry: expiry },
+        data: { passwordResetToken: tokenHash, passwordResetTokenExpiry: expiry },
       });
 
       try {

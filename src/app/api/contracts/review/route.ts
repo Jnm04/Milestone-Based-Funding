@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/services/evm/audit.service";
 import { sendManualApprovedEmail, sendFulfillmentKeyEmail } from "@/lib/email";
+import { decryptFulfillment } from "@/lib/crypto";
 import { contractIdToBytes32 } from "@/services/evm/escrow.service";
 
 export async function POST(request: NextRequest) {
@@ -115,9 +116,10 @@ export async function POST(request: NextRequest) {
         }).catch((err) => console.error("[email] sendManualApprovedEmail failed:", err));
 
         // Send fulfillment key as trustless backup
-        const fulfillment = pendingMilestone?.escrowFulfillment ?? contract.escrowFulfillment;
+        const rawFulfillment = pendingMilestone?.escrowFulfillment ?? contract.escrowFulfillment;
         const milestoneOrder = pendingMilestone?.order ?? 0;
-        if (fulfillment) {
+        if (rawFulfillment) {
+          const fulfillment = decryptFulfillment(rawFulfillment);
           sendFulfillmentKeyEmail({
             to: contract.startup.email,
             contractId,

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { releaseMilestone } from "@/services/evm/escrow.service";
+import { decryptFulfillment } from "@/lib/crypto";
 import { sendVerifiedEmail, sendMilestoneCompletedInvestorEmail } from "@/lib/email";
 import { writeAuditLog } from "@/services/evm/audit.service";
 
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
 
     // Platform wallet releases funds on-chain using the fulfillment key.
     // The smart contract verifies keccak256(fulfillment) == stored condition.
-    const txHash = await releaseMilestone(contractId, milestoneOrder, fulfillment);
+    const txHash = await releaseMilestone(contractId, milestoneOrder, decryptFulfillment(fulfillment));
     console.log("[escrow/finish] Released on-chain:", txHash);
 
     if (milestoneId) {

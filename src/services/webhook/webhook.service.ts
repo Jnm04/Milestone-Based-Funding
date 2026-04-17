@@ -5,9 +5,11 @@
  * whenever a key contract lifecycle event occurs.
  *
  * Security:
- *  - Every request body is signed with HMAC-SHA256 using the endpoint's secret.
+ *  - Every request is signed with HMAC-SHA256 using the endpoint's secret.
  *  - Signature is in the `X-Cascrow-Signature` header: "sha256=<hex>".
- *  - Recipients verify: HMAC-SHA256(secret, rawBody) === signature.
+ *  - Signing input: "t=<unix_ms>." + rawBody  (Stripe-style — timestamp baked into MAC).
+ *  - Recipients verify: HMAC-SHA256(secret, "t=" + timestamp + "." + rawBody) === sig
+ *    AND X-Cascrow-Timestamp is within their acceptable replay window (e.g. 5 minutes).
  *
  * Reliability:
  *  - Retries up to 3 times with exponential backoff (1s, 2s, 4s).
@@ -46,15 +48,22 @@ export interface WebhookPayload {
 
 // ─── HMAC signing ─────────────────────────────────────────────────────────────
 
-function sign(secret: string, body: string): string {
-  return "sha256=" + crypto.createHmac("sha256", secret).update(body).digest("hex");
+/**
+ * Signs "t=<unix_ms>.<body>" so the timestamp is cryptographically bound to the
+ * payload. Receivers can reject requests where the timestamp is stale without
+ * needing to parse the JSON body first.
+ */
+function sign(secret: string, timestampMs: number, body: string): string {
+  const input = `t=${timestampMs}.${body}`;
+  return "sha256=" + crypto.createHmac("sha256", secret).update(input).digest("hex");
 }
 
 // ─── Single delivery attempt ──────────────────────────────────────────────────
 
 async function deliver(url: string, secret: string, payload: WebhookPayload): Promise<boolean> {
   const body = JSON.stringify(payload);
-  const signature = sign(secret, body);
+  const timestampMs = new Date(payload.timestamp).getTime();
+  const signature = sign(secret, timestampMs, body);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10_000);
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cancelMilestone, getMilestoneEscrowState, releaseMilestone } from "@/services/evm/escrow.service";
+import { decryptFulfillment } from "@/lib/crypto";
 import { writeAuditLog } from "@/services/evm/audit.service";
 import { sendVerifiedEmail, sendMilestoneCompletedInvestorEmail, sendFulfillmentKeyEmail } from "@/lib/email";
 import { contractIdToBytes32 } from "@/services/evm/escrow.service";
@@ -69,10 +70,11 @@ export async function GET(request: NextRequest) {
     stalledMilestones.map(async (milestone) => {
       const { contract } = milestone;
       try {
-        const fulfillment = milestone.escrowFulfillment ?? contract.escrowFulfillment;
-        if (!fulfillment) {
+        const rawFulfillment = milestone.escrowFulfillment ?? contract.escrowFulfillment;
+        if (!rawFulfillment) {
           throw new Error(`No fulfillment key for milestone ${milestone.id}`);
         }
+        const fulfillment = decryptFulfillment(rawFulfillment);
 
         const milestoneTitle = milestone.title;
         const amountUSD = milestone.amountUSD.toString();

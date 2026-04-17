@@ -305,7 +305,7 @@ export default function LandingPage() {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Cascrow",
-    "url": "https://cascrow.xyz",
+    "url": "https://cascrow.com",
     "description": "AI-powered escrow platform on the XRP Ledger. Locks RLUSD in native XRPL escrow and releases funds only when AI verifies milestone completion.",
     "applicationCategory": "FinanceApplication",
     "operatingSystem": "Web",

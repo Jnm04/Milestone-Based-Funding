@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-const APP_URL = process.env.NEXTAUTH_URL ?? "https://cascrow.xyz";
+const APP_URL = process.env.NEXTAUTH_URL ?? "https://cascrow.com";
 
 /**
  * GET /api/nft/cert-metadata/[contractId]
@@ -31,7 +31,7 @@ export async function GET(
 
   const metadata = {
     name: `Cascrow Certificate — ${title.slice(0, 60)}`,
-    description: `Milestone verified by Claude AI on ${completedAt}. Amount: $${amountUSD} RLUSD. Platform: Cascrow (cascrow.xyz).`,
+    description: `Milestone verified by Claude AI on ${completedAt}. Amount: $${amountUSD} RLUSD. Platform: Cascrow (cascrow.com).`,
     image: `${base}/api/nft/cert-image/${contractId}?format=png`,
     external_url: `${base}/contract/${contractId}`,
     attributes: [
