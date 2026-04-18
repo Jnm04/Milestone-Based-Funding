@@ -13,6 +13,41 @@ interface MilestoneInput {
   deadlineDays: string;
 }
 
+const MILESTONE_TEMPLATES: { label: string; text: string }[] = [
+  {
+    label: "MVP Launch",
+    text: "A functional minimum viable product is live and publicly accessible. Core features are implemented and at least 10 real users have signed up and completed the main user flow.",
+  },
+  {
+    label: "Beta Launch",
+    text: "The product enters public beta. A landing page is live, the onboarding flow is complete, and 50 users have registered. No critical bugs blocking core functionality.",
+  },
+  {
+    label: "First Revenue",
+    text: "The product generates its first paid revenue. At least 3 paying customers have been invoiced and payments received. Revenue is documented with receipts or transaction records.",
+  },
+  {
+    label: "Market Research",
+    text: "A market research report is completed covering target audience, competitor analysis, and market size estimation. Report is at minimum 5 pages with cited sources.",
+  },
+  {
+    label: "Customer Interviews",
+    text: "At least 15 customer discovery interviews have been conducted and documented. A written summary with key insights and product-market fit assessment is submitted.",
+  },
+  {
+    label: "Signed Partnership",
+    text: "A signed partnership agreement or Letter of Intent (LOI) has been executed with a named partner. The signed document is submitted as proof.",
+  },
+  {
+    label: "App Store Launch",
+    text: "The app is live and approved on the App Store and/or Google Play. A public download link is submitted. The app must be downloadable and functional.",
+  },
+  {
+    label: "GitHub Milestone",
+    text: "The defined GitHub milestone is closed with all associated issues resolved. Link to the closed milestone is submitted as proof.",
+  },
+];
+
 interface ContractFormProps {
   investorAddress: string;
 }
@@ -180,12 +215,36 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
             </div>
 
             {/* Title */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
               <Label htmlFor={`ms-title-${idx}`}>Milestone Description</Label>
+              {/* Template chips */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                {MILESTONE_TEMPLATES.map((tpl) => (
+                  <button
+                    key={tpl.label}
+                    type="button"
+                    onClick={() => updateMilestone(idx, "title", tpl.text)}
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: 500,
+                      padding: "3px 9px",
+                      borderRadius: "999px",
+                      border: "1px solid #e4e4e7",
+                      background: ms.title === tpl.text ? "#18181b" : "#f4f4f5",
+                      color: ms.title === tpl.text ? "#fff" : "#52525b",
+                      cursor: "pointer",
+                      transition: "background 0.1s, color 0.1s",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {tpl.label}
+                  </button>
+                ))}
+              </div>
               <textarea
                 id={`ms-title-${idx}`}
                 rows={3}
-                placeholder="Describe what the startup must deliver to receive payment for this milestone…"
+                placeholder="Describe what the receiver must deliver to receive payment — or pick a template above…"
                 value={ms.title}
                 onChange={(e) => updateMilestone(idx, "title", e.target.value)}
                 required
