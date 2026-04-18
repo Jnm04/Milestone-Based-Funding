@@ -384,14 +384,14 @@ Consider a live counter: "X disputes resolved autonomously" — DB query on each
 
 ---
 
-## Total Cost Estimate
+## Total Cost Estimate (Phase 1 — Features A–D)
 
 All 4 features combined: **under $1/month at 100 contracts/month**  
 All on existing API keys (Anthropic), no new paid services, GitHub public API is free.
 
 ---
 
-## Key Files to Edit
+## Key Files to Edit (Phase 1)
 
 | Feature | Primary Files |
 |---|---|
@@ -400,3 +400,222 @@ All on existing API keys (Anthropic), no new paid services, GitHub public API is
 | C — Dispute | `src/app/contract/[id]/contract-actions.tsx`, new `src/app/api/proof/[proofId]/appeal/route.ts`, `src/services/ai/verifier.service.ts` (add objection generation), `prisma/schema.prisma` |
 | D — Guidance | `src/app/contract/[id]/contract-actions.tsx`, new `src/app/api/contracts/[id]/milestones/[milestoneId]/guidance/route.ts`, `prisma/schema.prisma` |
 | All | `src/app/stats/page.tsx`, `src/app/page.tsx` (landing), `src/lib/zod-schemas.ts` (new schemas) |
+
+---
+
+## Phase 2 Features
+
+These extend cascrow's AI coverage to the remaining gaps in the contract lifecycle.
+
+### Feature E: AI Fraud Detection
+
+**Replaces:** Manual plagiarism / fake-proof check  
+**Marketing:** "Every proof is screened for authenticity before AI review."  
+**Build after:** Features A–D are live and there are enough real proofs to validate detection heuristics.
+
+### What it does
+Before the 5-model verification vote runs, a lightweight fraud pre-screen checks:
+- GitHub repo created <7 days before proof submission → Red Flag
+- PDF appears AI-generated (low lexical variety, unnatural sentence uniformity) → Warning
+- Identical file hash already submitted on another contract → Block
+- Screenshot appears to be a stock photo (reverse image heuristic) → Warning
+
+Output: not a blocker by default, but a structured `AuthenticityWarning` that:
+1. Gets appended to the AI verification prompt as additional context
+2. Is displayed to the investor on the contract page
+
+### DB Changes
+New fields on `Proof`:
+```prisma
+authenticityFlags   Json?    // [{type: string, severity: "WARNING"|"RED_FLAG", detail: string}]
+authenticityScore   Int?     // 0-100, 100 = fully authentic
+```
+
+### API / Integration
+No new API route needed. Add a `runFraudPreScreen(proof)` function to `src/services/ai/verifier.service.ts` that runs before the main `verifyMilestone()` call. Results stored on the Proof record and passed into the verification prompt context.
+
+### Cost
+Mostly free — DB hash checks and heuristics. One optional cheap Haiku call for AI-generated-text detection. **~$0.05/month.**
+
+---
+
+### Feature F: AI Milestone Renegotiation
+
+**Replaces:** Lawyer / mediator when deadlines slip  
+**Marketing:** "When deadlines slip, cascrow's AI mediates — not lawyers."
+
+### What it does
+When a milestone deadline expires and no proof has been submitted, instead of an immediate auto-cancel, a **48-hour renegotiation window** opens. The startup can request an extension — but only by uploading an **interim progress update** showing that real work has happened.
+
+### Full Flow
+
+1. Deadline expires → cron job detects expired milestones (extend existing `cancel-expired` cron)
+2. Instead of immediate cancel: set milestone status to `RENEGOTIATING`, send email/Telegram to both parties
+3. **Startup must upload a progress update** to request extension:
+   - Short text: "What have you done so far? What's left?" (min 100 chars)
+   - Optional file: screenshot, partial build, document
+4. **AI assesses the interim update** (one Haiku call):
+   - "Based on this progress update, completion within an additional [X] days seems plausible / unlikely."
+   - Flags if the update is vague or contains no concrete evidence
+5. **Grant Giver sees**: the interim update + AI assessment + proposed extension length
+6. Grant Giver chooses: Approve Extension / Reject (trigger cancel)
+7. If Grant Giver does not respond within 48h → auto-cancel proceeds
+8. If extension approved → new deadline set, milestone back to `FUNDED` status
+
+### DB Changes
+New fields on `Milestone`:
+```prisma
+renegotiationStatus      String?    // "RENEGOTIATING" | "EXTENSION_REQUESTED" | "EXTENSION_APPROVED" | "EXTENSION_REJECTED"
+renegotiationDeadline    DateTime?  // when the 48h window closes
+interimUpdateText        String?    @db.Text
+interimUpdateFileUrl     String?
+interimUpdateFileName    String?
+interimAiAssessment      String?    @db.Text  // Haiku's plausibility assessment
+interimAiPositive        Boolean?             // true = plausible, false = unlikely
+extensionDays            Int?                 // how many days extension requested
+extensionApprovedAt      DateTime?
+```
+
+New milestone status: `RENEGOTIATING` (add to status enum and UI status colors/labels)
+
+### API Routes
+- `POST /api/contracts/[id]/milestones/[milestoneId]/renegotiate` — startup submits interim update + requested extension days
+- `POST /api/contracts/[id]/milestones/[milestoneId]/renegotiate/respond` — grant giver approves or rejects
+
+### UI Integration
+- New `RENEGOTIATING` status block in `contract-actions.tsx`:
+  - **Startup view**: form to upload interim update + choose extension days (7/14/30 options)
+  - **Investor view**: shows interim update text + file + AI assessment + Approve/Reject buttons
+- Countdown timer showing when the 48h window closes
+
+### AI Strategy
+Model: Claude Haiku, one call when startup submits interim update.  
+Prompt: given the original milestone description + the interim update, assess plausibility of completion.  
+Response: `{ "plausible": true/false, "assessment": "2 sentence summary", "concerns": ["..."] }`
+
+### Cost
+~$0.001 per renegotiation. **~$0.05/month** assuming ~10% of milestones miss deadline.
+
+---
+
+### Feature G: AI Progress Check-ins
+
+**Replaces:** Project manager / weekly status calls  
+**Marketing:** "Investors see progress without micromanaging. Startups stay accountable without feeling surveilled."
+
+### What it does
+Every Tuesday after a milestone is funded, an automated check-in goes to the startup via email (and optionally Telegram):
+
+> "Quick check-in for [Milestone Title] — how's it going? Reply in 1-2 sentences."
+
+The response (email reply or Telegram message) is logged and displayed to the investor as a timeline of updates. Optionally, AI summarizes the check-in history into a "Progress Summary" for the investor.
+
+### Implementation
+- New cron job: `GET /api/cron/progress-checkins` — runs every Tuesday, finds all `FUNDED` milestones, sends check-in emails
+- Startup replies to email → inbound email webhook (Resend supports inbound parsing) captures and logs
+- Or: simpler version — a "Log Progress Update" button in the startup's dashboard that sends a short text
+- Updates stored in a new `ProgressUpdate` model
+
+### DB Changes
+New model:
+```prisma
+model ProgressUpdate {
+  id          String   @id @default(cuid())
+  milestoneId String
+  text        String   @db.Text
+  source      String   // "EMAIL_REPLY" | "MANUAL" | "TELEGRAM"
+  createdAt   DateTime @default(now())
+
+  @@index([milestoneId])
+}
+```
+
+### Cost
+Zero AI cost for the check-in itself (just email). Optional Haiku call to summarize history: ~$0.001/summary. **Essentially free.**
+
+---
+
+### Feature H: AI Reputation System
+
+**Replaces:** References, LinkedIn recommendations  
+**Marketing:** "Your on-chain track record, automatically built with every completed milestone."
+
+### What it does
+When a milestone is completed, AI auto-generates a **privacy-safe performance card** that becomes part of the startup's permanent profile. Multiple completed milestones build a full reputation score.
+
+### Privacy Design
+The full milestone description is **never shown publicly**. Instead, AI generates a sanitized summary that:
+- Removes company names, partner names, revenue figures, specific URLs
+- Keeps only the category and achievement type: "Shipped a functional MVP with active users"
+- Startup opts in per milestone to make the card public (default: private)
+
+Public profile shows only **aggregated metrics**:
+- Total milestones completed
+- On-time delivery rate (%)
+- Average AI confidence score
+- Average resubmissions before approval
+- Categories (MVP, Revenue, Partnership, etc. — from a fixed taxonomy)
+
+The NFTs (already live) serve as the on-chain proof of completion. The Reputation System is the **human-readable aggregate layer** on top of the NFTs.
+
+### DB Changes
+New fields on `Milestone`:
+```prisma
+reputationSummary     String?   @db.Text   // AI-generated privacy-safe summary
+reputationPublic      Boolean   @default(false)  // startup opt-in
+reputationCategory    String?   // "MVP" | "REVENUE" | "PARTNERSHIP" | "GITHUB" | "BETA" | "OTHER"
+```
+
+New model:
+```prisma
+model ReputationScore {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  totalCompleted      Int      @default(0)
+  onTimeRate          Float?   // 0.0-1.0
+  avgAiConfidence     Float?
+  avgResubmissions    Float?
+  categories          Json     // {MVP: 2, REVENUE: 1, ...}
+  lastCalculatedAt    DateTime @default(now())
+}
+```
+
+Recalculated on every milestone completion.
+
+### API / Integration
+- `GET /api/user/[userId]/reputation` — public endpoint, returns score + public milestone cards
+- Shown on the startup's public profile page (new page: `/profile/[userId]`)
+- Referenced in Feature B (Credibility Scoring): high reputation score → higher credibility score
+
+### Cost
+One Haiku call per completed milestone to generate the privacy-safe summary.  
+~$0.001/completion. **~$0.10/month** at 100 completions/month.
+
+---
+
+## Complete AI Lifecycle Map
+
+```
+Contract Creation  → Feature A: AI drafts milestones from plain-text description
+Funding Decision   → Feature B: AI credibility score (GitHub + history + profile)
+Proof Preparation  → Feature D: AI proof coach (checklist per milestone)
+Proof Submission   → Feature E: AI fraud pre-screen (before verification)
+Verification       → 5-model majority vote ✅ (live)
+Rejection          → Feature C: AI dispute arbitration (guided appeal wizard)
+Deadline Expired   → Feature F: AI renegotiation (interim update → grant giver approval)
+Completion         → Feature H: AI reputation card (privacy-safe, opt-in public)
+Ongoing            → Feature G: AI progress check-ins (weekly, logged timeline)
+```
+
+No human intermediary is required at any step. Humans are only invoked when AI has genuinely exhausted its judgment (final appeal escalation, renegotiation approval by grant giver).
+
+---
+
+## Phase 2 Key Files
+
+| Feature | Primary Files |
+|---|---|
+| E — Fraud Detection | `src/services/ai/verifier.service.ts` (add pre-screen), `prisma/schema.prisma` |
+| F — Renegotiation | `src/app/api/cron/cancel-expired/route.ts` (extend), new renegotiate API routes, `src/app/contract/[id]/contract-actions.tsx`, `prisma/schema.prisma` |
+| G — Check-ins | new `src/app/api/cron/progress-checkins/route.ts`, new `ProgressUpdate` model, `src/lib/email.ts` |
+| H — Reputation | new `src/app/api/user/[userId]/reputation/route.ts`, new `/profile/[userId]/page.tsx`, `prisma/schema.prisma` |
