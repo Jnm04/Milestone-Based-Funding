@@ -846,3 +846,65 @@ No human intermediary is required at any step. Humans are only invoked when AI h
 |---|---|
 | L — Completion Report | new `src/app/api/contracts/[id]/milestones/[milestoneId]/completion-report/route.ts`, `src/services/xrpl/cert-image.service.ts` (extend), `prisma/schema.prisma` |
 | M — Email Personalization | `src/lib/email.ts` (extend with AI body generation), optional `prisma/schema.prisma` |
+
+---
+
+## Auth: Google OAuth
+
+**Not AI-related — UX improvement for onboarding.**  
+"Continue with Google" on login and register pages. Apple not planned for now.
+
+### What it involves
+
+1. **Google Cloud Console**: create OAuth 2.0 credentials, set authorized redirect URI to `https://cascrow.com/api/auth/callback/google`
+2. **New env vars**: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+3. **`src/lib/auth-options.ts`**: add `GoogleProvider` from `next-auth/providers/google`
+4. **`prisma/schema.prisma`**: add `Account` model — required by NextAuth for OAuth token storage:
+
+```prisma
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+```
+
+Also add `accounts Account[]` relation to the `User` model.
+
+5. **UI**: add "Continue with Google" button to `src/app/login/page.tsx` and `src/app/register/page.tsx`. Style with brand colors, use Google's official icon.
+
+6. **Account linking**: if a user signs in with Google but already has a credentials account with the same email, NextAuth's `allowDangerousEmailAccountLinking: true` option on the provider handles this. Alternatively, show an error prompting them to log in with email instead — safer default.
+
+7. **Turnstile**: Cloudflare Turnstile on the register page can be skipped for OAuth flows — Google OAuth inherently verifies the user.
+
+8. **Role assignment**: Google OAuth users need a role (INVESTOR or STARTUP) assigned. Two options:
+   - Show a role-selection step after first Google login (if `user.role` is null)
+   - Or default to a neutral state and prompt on first dashboard visit
+
+### Gotchas
+- `NEXTAUTH_URL` must match the redirect URI registered in Google Cloud Console exactly
+- In development, register `http://localhost:3000/api/auth/callback/google` as an additional authorized URI
+- Google profile picture URL can be stored in `user.image` — NextAuth populates this automatically
+
+### Key Files
+| File | Change |
+|---|---|
+| `src/lib/auth-options.ts` | Add `GoogleProvider(...)` |
+| `prisma/schema.prisma` | Add `Account` model + `accounts` relation on `User` |
+| `src/app/login/page.tsx` | Add "Continue with Google" button calling `signIn("google")` |
+| `src/app/register/page.tsx` | Add "Continue with Google" button |
+| `.env` / Vercel env vars | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |
