@@ -846,6 +846,8 @@ No human intermediary is required at any step. Humans are only invoked when AI h
 |---|---|
 | L — Completion Report | new `src/app/api/contracts/[id]/milestones/[milestoneId]/completion-report/route.ts`, `src/services/xrpl/cert-image.service.ts` (extend), `prisma/schema.prisma` |
 | M — Email Personalization | `src/lib/email.ts` (extend with AI body generation), optional `prisma/schema.prisma` |
+| O — Portfolio Briefing | new `src/app/api/dashboard/investor/briefing/route.ts`, `src/app/dashboard/investor/page.tsx`, `prisma/schema.prisma` |
+| Q — Post-Mortem | new `src/services/ai/postmortem.service.ts`, `src/app/api/cron/cancel-expired/route.ts` (extend), `src/app/api/escrow/finish/route.ts` (extend), `prisma/schema.prisma` |
 
 ---
 
@@ -907,4 +909,158 @@ Also add `accounts Account[]` relation to the `User` model.
 | `prisma/schema.prisma` | Add `Account` model + `accounts` relation on `User` |
 | `src/app/login/page.tsx` | Add "Continue with Google" button calling `signIn("google")` |
 | `src/app/register/page.tsx` | Add "Continue with Google" button |
+
+---
+
+## Feature O: Investor Portfolio AI Briefing
+
+**Replaces:** Manual portfolio tracking, spreadsheets  
+**Marketing:** "Your grant portfolio, at a glance — AI tells you what needs attention today."  
+**Works from:** Day 1 (uses only the investor's own contracts, no platform-wide data needed)
+
+### What it does
+On the investor dashboard, a persistent "Portfolio Briefing" panel shows an AI-generated summary across all their active and recent contracts:
+
+- Which milestones have deadlines in the next 7 days with no proof submitted
+- Which contracts are at risk (deadline passed, renegotiation pending)
+- Which contracts are on track
+- Recommended next actions per contract
+
+Also delivered as a weekly email digest (uses Feature M email infrastructure).
+
+### API
+`GET /api/dashboard/investor/briefing`
+
+Response:
+```json
+{
+  "summary": "You have 3 active contracts. 1 deadline in 4 days with no proof submitted...",
+  "alerts": [
+    { "contractId": "...", "contractTitle": "...", "type": "DEADLINE_SOON", "message": "Deadline in 4 days, no proof submitted." },
+    { "contractId": "...", "contractTitle": "...", "type": "RENEGOTIATION_PENDING", "message": "Startup requested an extension." }
+  ],
+  "onTrack": ["contractId1", "contractId2"],
+  "cachedAt": "ISO timestamp"
+}
+```
+
+Auth: session required, investor role only.  
+Rate limit: `portfolio-briefing:{userId}` — 10/hour.  
+Cache: 6-hour TTL. Auto-invalidated when any of the investor's contracts change status.
+
+### DB Changes
+No new model. Add one field to `User`:
+```prisma
+portfolioBriefingCache     String?   @db.Text  // JSON string
+portfolioBriefingCachedAt  DateTime?
+```
+
+### UI Integration
+File: `src/app/dashboard/investor/page.tsx`
+
+Add a `<PortfolioBriefing>` card at the top of the investor dashboard (above the contract list):
+- Dark amber panel with "Portfolio AI" label
+- AI summary text (2–4 sentences)
+- Alert list with color-coded badges (red = urgent, amber = warning, green = on track)
+- "Refresh" button (client component, calls API, invalidates cache)
+- "Last updated X hours ago" note
+- Collapses to a one-line summary if no alerts
+
+### AI Strategy
+Model: **Claude Haiku** (structured JSON, cheap)
+
+System prompt pattern:
+```
+You are an AI assistant for a grant escrow platform. Given the investor's contract data, generate a brief portfolio summary.
+Respond with ONLY valid JSON: { "summary": "...", "alerts": [...], "onTrack": [...] }
+Be concise. Prioritize urgent items. Summary max 3 sentences.
+```
+
+User message includes: all investor contracts with status, milestone statuses, deadlines, days remaining.
+
+### Cost
+~1,000 tokens/call → ~$0.0020/call → cached 6h, so ~$0.01/investor/day → **essentially free**
+
+---
+
+## Feature Q: AI Post-Mortem Report
+
+**Replaces:** Manual review of failed/expired contracts  
+**Marketing:** "Every failed milestone generates a structured lesson — so the next one succeeds."  
+**Works from:** Day 1 (analyzes the specific contract only, no platform data needed)
+
+### What it does
+When a contract milestone **expires** (auto-cancelled after deadline) or is **rejected** (AI vote NO), cascrow automatically generates a structured post-mortem report:
+
+- What the milestone required
+- What signals suggested it was at risk (deadline tightness, proof quality, credibility score if available)
+- What went wrong (based on AI reasoning from the rejection, if available)
+- Concrete suggestions for next time (better milestone wording, more realistic deadline, etc.)
+
+Shown to both investor and startup. Investor sees the full report. Startup sees an actionable "what to do next time" version.
+
+### API
+`POST /api/contracts/[id]/milestones/[milestoneId]/postmortem`
+
+Triggered automatically by:
+- `src/app/api/cron/cancel-expired/route.ts` — when a milestone expires
+- `src/app/api/escrow/finish/route.ts` — when AI vote returns NO (rejection path)
+
+Response:
+```json
+{
+  "summary": "string (2-3 sentences overview)",
+  "whatWentWrong": "string",
+  "riskSignals": ["string", "string"],
+  "suggestionsForNextTime": ["string", "string"],
+  "generatedAt": "ISO timestamp"
+}
+```
+
+No user-facing endpoint needed — triggered server-side automatically.
+
+### DB Changes
+Add fields to `Milestone`:
+```prisma
+postMortemSummary          String?  @db.Text
+postMortemWentWrong        String?  @db.Text
+postMortemRiskSignals      Json?
+postMortemSuggestions      Json?
+postMortemGeneratedAt      DateTime?
+```
+
+### UI Integration
+File: `src/app/contract/[id]/milestone-timeline.tsx`
+
+In the expanded panel for a REJECTED or EXPIRED milestone, show a "What happened?" section:
+- Amber/red tinted card with "AI Post-Mortem" label
+- Summary text
+- "What went wrong" block
+- "For next time" bullet list (green tint)
+- Hidden from external/public views
+
+### AI Strategy
+Model: **Claude Haiku**
+
+System prompt pattern:
+```
+You are a post-mortem analyst for a milestone-based grant escrow platform.
+Given a failed or expired milestone, generate a structured analysis.
+Respond with ONLY valid JSON matching the schema provided.
+Be factual, specific, and actionable. Do not blame either party. Max 3 items per list.
+```
+
+User message includes: milestone title, amount, deadline, days overdue, AI rejection reasoning (if any), proof submitted (yes/no), credibility score (if available).
+
+### Cost
+~800 tokens/call → ~$0.0016/call → only triggered on failure → **~$0.16/month at 100 failures/month**
+
+### Key Files
+| File | Change |
+|---|---|
+| `prisma/schema.prisma` | Add 5 postMortem fields to `Milestone` |
+| `src/app/api/cron/cancel-expired/route.ts` | Call postmortem generation after cancellation |
+| `src/app/api/escrow/finish/route.ts` | Call postmortem generation on rejection path |
+| new `src/services/ai/postmortem.service.ts` | Claude Haiku call + DB write |
+| `src/app/contract/[id]/milestone-timeline.tsx` | Show postmortem in expanded rejected/expired milestone |
 | `.env` / Vercel env vars | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |
