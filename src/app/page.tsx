@@ -93,6 +93,24 @@ function IconCheck() {
     </svg>
   );
 }
+function IconTrending() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C4704B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+      <polyline points="16 7 22 7 22 13" />
+    </svg>
+  );
+}
+function IconClipboard() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C4704B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+      <rect x="8" y="2" width="8" height="4" rx="1" />
+      <line x1="9" y1="12" x2="15" y2="12" />
+      <line x1="9" y1="16" x2="13" y2="16" />
+    </svg>
+  );
+}
 
 /* ── Footer logo with hover colour ───────────────────────────── */
 function FooterLogo({ logo }: { logo: FooterLogoItem }) {
@@ -940,6 +958,49 @@ export default function LandingPage() {
                 </div>
                 <p className="text-sm leading-relaxed" style={{ color: "#A89B8C" }}>
                   AI that goes beyond uploaded documents — querying GitHub to analyze code, checking public APIs, and cross-referencing live data. Weighted confidence scores replace binary decisions as models improve.
+                </p>
+              </div>
+            </ScrollReveal>
+          </div>
+
+          {/* Third row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 items-stretch">
+            <ScrollReveal delay={0} className="h-full">
+              <div
+                className="rounded-2xl p-7 flex flex-col gap-4 h-full"
+                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.14)" }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.2)" }}>
+                    <IconTrending />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#C4704B" }}>Intelligence</p>
+                    <h3 className="font-semibold text-lg" style={{ color: "#EDE6DD" }}>Milestone pricing benchmarks</h3>
+                  </div>
+                </div>
+                <p className="text-sm leading-relaxed" style={{ color: "#A89B8C" }}>
+                  Before committing to a deal, AI benchmarks the proposed amount and timeline against platform data — showing predicted completion rates for similar milestones so both sides set realistic expectations from the start.
+                </p>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal delay={100} className="h-full">
+              <div
+                className="rounded-2xl p-7 flex flex-col gap-4 h-full"
+                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.14)" }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.2)" }}>
+                    <IconClipboard />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#C4704B" }}>Learning</p>
+                    <h3 className="font-semibold text-lg" style={{ color: "#EDE6DD" }}>AI post-mortem on every failure</h3>
+                  </div>
+                </div>
+                <p className="text-sm leading-relaxed" style={{ color: "#A89B8C" }}>
+                  When a milestone expires or is rejected, AI automatically generates a structured post-mortem for both parties — what went wrong, which signals were missed, and concrete steps to succeed next time.
                 </p>
               </div>
             </ScrollReveal>
