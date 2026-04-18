@@ -1053,6 +1053,7 @@ export default function LandingPage() {
             <div className="flex gap-6">
               <Link href="/login"        className="transition-colors hover:text-[#EDE6DD]">Sign in</Link>
               <Link href="/register"     className="transition-colors hover:text-[#EDE6DD]">Register</Link>
+              <Link href="/stats"        className="transition-colors hover:text-[#EDE6DD]">Stats</Link>
               <Link href="/datenschutz"  className="transition-colors hover:text-[#EDE6DD]">Privacy Policy</Link>
             </div>
           </div>
