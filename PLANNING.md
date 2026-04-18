@@ -593,18 +593,150 @@ One Haiku call per completed milestone to generate the privacy-safe summary.
 
 ---
 
+## Phase 3 Features (Quick Wins)
+
+Three features with minimal build effort, high visual impact, and immediate user value.
+
+---
+
+### Feature I: AI Proof Pre-Check
+
+**Replaces:** Guesswork before submitting proof  
+**Marketing:** "Test your proof before you submit — AI tells you what's missing."  
+**Effort:** 1 new API route, no DB changes
+
+### What it does
+Before officially submitting, the startup clicks "Test my proof" on an already-uploaded file. Runs a single-model (Haiku) soft check — not the full 5-model vote, no status change, no DB record as an official submission. Returns plain-language feedback:
+
+> "Your proof looks strong — the URL is accessible and shows active users. Consider adding a screenshot of the signup count to make the 10-user requirement undeniable."
+
+If the pre-check looks good, they proceed to the real Submit. If not, they improve first.
+
+### API
+`POST /api/proof/precheck`
+
+Request:
+```json
+{ "milestoneId": "string", "fileUrl": "string", "fileName": "string" }
+```
+
+Response:
+```json
+{
+  "verdict": "LIKELY_PASS" | "LIKELY_FAIL" | "BORDERLINE",
+  "feedback": "Plain-language feedback string",
+  "suggestions": ["string"]
+}
+```
+
+Auth: startup on the contract only.  
+Rate limit: `proof-precheck:{userId}` — 5/hour (prevents using pre-check as a free unlimited verifier).  
+No status change, no AuditLog entry, no official Proof record created.
+
+### AI Strategy
+Model: Claude Haiku (single model, not 5-model vote — this is advisory only).  
+Reuse the existing prompt structure from `verifier.service.ts` but single-shot, with an explicit "advisory only" framing.
+
+### Cost
+~$0.001/pre-check. **~$0.10/month** assuming ~1 pre-check per milestone.
+
+---
+
+### Feature J: AI Contract Risk Flags
+
+**Replaces:** Experienced grants advisor spotting structural problems  
+**Marketing:** "AI reviews your contract before anyone signs — flags issues before they become disputes."  
+**Effort:** 1 JSON field on Contract, 1 Haiku call at contract creation
+
+### What it does
+When a contract is first created (end of `POST /api/contracts`), one Haiku call analyses all milestones together and flags structural problems:
+
+- Milestone descriptions with no measurable criteria → hard to verify
+- Deadline of Milestone 2 shorter than Milestone 1 → unrealistic sequencing
+- Total amount seems disproportionate to the milestone scope
+- A milestone describes multiple distinct deliverables → should be split
+
+Shown on the contract detail page as a collapsible "AI Risk Review" panel. Not a blocker — purely advisory. Visible to both parties.
+
+### DB Changes
+One new field on `Contract`:
+```prisma
+riskFlags   Json?   // [{severity: "WARNING"|"INFO", text: string}]
+```
+
+### UI Integration
+File: `src/app/contract/[id]/page.tsx`
+
+New collapsible panel between the project overview card and the milestone timeline. Only shown if `riskFlags` is non-null and non-empty. Title: "AI Risk Review" with an amber warning icon. Each flag shown as a bullet with severity indicator.
+
+### AI Strategy
+Model: Claude Haiku, one call at contract creation end.  
+Input: all milestone titles, amounts, deadlines as a structured list.  
+Response: `[{ "severity": "WARNING"|"INFO", "text": "plain-language flag" }]`  
+Max 5 flags. If no issues found, returns empty array — panel not shown.
+
+### Cost
+~$0.001/contract. **~$0.10/month** at 100 contracts/month. Stored permanently — never recalculated.
+
+---
+
+### Feature K: Deal Health Score
+
+**Replaces:** Investor manually checking each contract for status  
+**Marketing:** "At a glance, know which deals need your attention."  
+**Effort:** Pure logic on existing data, no AI call needed for the indicator itself
+
+### What it does
+Every contract card in the investor dashboard shows a small traffic-light health indicator computed from existing DB data — no AI call required for the score itself:
+
+- 🟢 **On Track** — funded, deadline >7 days away, proof submitted, or check-ins positive
+- 🟡 **Watch** — deadline in ≤7 days, no proof submitted yet
+- 🔴 **At Risk** — deadline passed, no proof, or currently `RENEGOTIATING`
+
+Optional enhancement: one Haiku call per contract per day (cached in DB) that generates a single-sentence context note shown on hover:
+> "Startup has responded to 3 check-ins but no proof yet — follow up recommended."
+
+### DB Changes
+Optional (only if the AI summary note is added):
+```prisma
+// On Contract model
+healthNote          String?    // AI-generated single sentence, cached
+healthNoteUpdatedAt DateTime?
+```
+
+The traffic-light color itself requires zero DB changes — computed client-side from `status`, `cancelAfter`, and existing milestone data already returned by the dashboard query.
+
+### UI Integration
+File: `src/app/dashboard/investor/page.tsx` (or wherever the contract list renders)
+
+Small colored dot + label in the top-right of each contract card. On hover/click: shows the optional AI context note. The color logic is a simple pure function:
+```ts
+function dealHealth(contract): "GREEN" | "YELLOW" | "RED" {
+  if (contract.status === "RENEGOTIATING") return "RED"
+  if (new Date(contract.cancelAfter) < new Date()) return "RED"
+  const daysLeft = (new Date(contract.cancelAfter).getTime() - Date.now()) / 86400000
+  if (daysLeft <= 7 && contract.status === "FUNDED") return "YELLOW"
+  return "GREEN"
+}
+```
+
+### Cost
+Zero for the indicator (pure logic). Optional AI note: ~$0.001/contract/day if enabled. Recommend caching with 24h TTL. **~$0.10/month** even with notes enabled.
+
+---
+
 ## Complete AI Lifecycle Map
 
 ```
-Contract Creation  → Feature A: AI drafts milestones from plain-text description
-Funding Decision   → Feature B: AI credibility score (GitHub + history + profile)
-Proof Preparation  → Feature D: AI proof coach (checklist per milestone)
-Proof Submission   → Feature E: AI fraud pre-screen (before verification)
+Contract Creation  → A: AI drafts milestones + J: Risk flags on all milestones
+Funding Decision   → B: AI credibility score (GitHub + history + profile)
+Ongoing Monitoring → K: Deal health score on dashboard + G: Weekly check-ins
+Proof Preparation  → D: AI proof coach (checklist) + I: Proof pre-check
+Proof Submission   → E: AI fraud pre-screen (before verification)
 Verification       → 5-model majority vote ✅ (live)
-Rejection          → Feature C: AI dispute arbitration (guided appeal wizard)
-Deadline Expired   → Feature F: AI renegotiation (interim update → grant giver approval)
-Completion         → Feature H: AI reputation card (privacy-safe, opt-in public)
-Ongoing            → Feature G: AI progress check-ins (weekly, logged timeline)
+Rejection          → C: AI dispute arbitration (guided appeal wizard)
+Deadline Expired   → F: AI renegotiation (interim update → grant giver approval)
+Completion         → H: AI reputation card (privacy-safe, opt-in public)
 ```
 
 No human intermediary is required at any step. Humans are only invoked when AI has genuinely exhausted its judgment (final appeal escalation, renegotiation approval by grant giver).
@@ -619,3 +751,11 @@ No human intermediary is required at any step. Humans are only invoked when AI h
 | F — Renegotiation | `src/app/api/cron/cancel-expired/route.ts` (extend), new renegotiate API routes, `src/app/contract/[id]/contract-actions.tsx`, `prisma/schema.prisma` |
 | G — Check-ins | new `src/app/api/cron/progress-checkins/route.ts`, new `ProgressUpdate` model, `src/lib/email.ts` |
 | H — Reputation | new `src/app/api/user/[userId]/reputation/route.ts`, new `/profile/[userId]/page.tsx`, `prisma/schema.prisma` |
+
+## Phase 3 Key Files
+
+| Feature | Primary Files |
+|---|---|
+| I — Proof Pre-Check | new `src/app/api/proof/precheck/route.ts`, `src/app/contract/[id]/contract-actions.tsx` |
+| J — Risk Flags | `src/app/api/contracts/route.ts` (extend POST), `src/app/contract/[id]/page.tsx`, `prisma/schema.prisma` |
+| K — Deal Health | `src/app/dashboard/investor/page.tsx`, optional `prisma/schema.prisma` (health note cache) |
