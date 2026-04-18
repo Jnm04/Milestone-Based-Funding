@@ -1064,3 +1064,411 @@ User message includes: milestone title, amount, deadline, days overdue, AI rejec
 | new `src/services/ai/postmortem.service.ts` | Claude Haiku call + DB write |
 | `src/app/contract/[id]/milestone-timeline.tsx` | Show postmortem in expanded rejected/expired milestone |
 | `.env` / Vercel env vars | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |
+
+---
+
+## Phase 5 Features (Depth & Negotiation)
+
+Five genuinely new features not covered in earlier phases. All work from day 1 with no platform-wide data dependency.
+
+---
+
+### Feature V: Proof TL;DR for Investors
+
+**Replaces:** Investor reading the full PDF to understand what was submitted  
+**Marketing:** "Before the verdict arrives, see exactly what your startup submitted — in 5 bullets."  
+**Effort:** 1 Haiku call at proof upload, 1 new field on `Proof`, minor UI addition
+
+### What it does
+When a startup submits a proof, AI generates a **plain-language summary** of the document's contents and stores it on the `Proof` record. The investor sees this summary on the contract page before (and alongside) the AI YES/NO decision.
+
+This is distinct from the 5-model verification (which produces a verdict) — this produces a human-readable description of *what was inside the submitted file*, helping the investor understand what was reviewed without reading the full PDF.
+
+Example output:
+> "The submitted PDF contains: (1) a live URL screenshot with 14 registered users visible, (2) a GitHub repository link with 47 commits over 3 weeks, (3) a short product demo video link, (4) no invoice or revenue documentation included."
+
+### API / Integration
+No new API route needed. Called automatically at the end of `POST /api/proof/upload` and `POST /api/proof/github` after the file is stored — before triggering verification.
+
+### DB Changes
+One new field on `Proof`:
+```prisma
+aiContentSummary   String?  @db.Text   // AI-generated bullet summary of proof contents
+```
+
+### UI Integration
+File: `src/app/contract/[id]/milestone-timeline.tsx` and `src/app/contract/[id]/contract-actions.tsx`
+
+Show below the proof file link in the expanded milestone panel and in the investor's actions block:
+- Label: "Proof Contents" (small amber uppercase)
+- Bullet list from `aiContentSummary`
+- Only shown to the investor (not the startup — they know what they submitted)
+- Shown regardless of the AI verdict
+
+### AI Strategy
+Model: **Claude Haiku**
+
+System prompt:
+```
+You are a proof content analyst for a milestone escrow platform.
+Given a proof document (PDF text or GitHub data), list exactly what evidence is present.
+Be factual and specific. Do not evaluate whether the milestone is met — only describe what is there.
+Respond with ONLY a JSON array of 3-5 strings: ["string", "string", ...]
+Each string starts with a concrete observation. Flag missing items only if clearly expected from the milestone description.
+```
+
+User message: milestone title + extracted proof text (PDF) or GitHub summary.
+
+### Cost
+~500 tokens/call → ~$0.001/proof → **~$0.10/month at 100 proofs/month**
+
+### Key Files
+| File | Change |
+|---|---|
+| `prisma/schema.prisma` | Add `aiContentSummary` to `Proof` |
+| `src/app/api/proof/upload/route.ts` | Call content summarizer after upload |
+| `src/app/api/proof/github/route.ts` | Call content summarizer after GitHub proof creation |
+| new `src/services/ai/proof-summary.service.ts` | Haiku call + return summary string |
+| `src/app/contract/[id]/milestone-timeline.tsx` | Show summary in expanded proof panel |
+
+---
+
+### Feature W: Resubmission Diff Intelligence
+
+**Replaces:** Startup guessing what to fix on a second attempt  
+**Marketing:** "Second attempt? AI tells you exactly which objections you've addressed — and which are still open."  
+**Effort:** 1 Haiku call at resubmission, 1 new field on `Proof`, minor UI addition
+
+### What it does
+When a startup resubmits a proof after a rejection, AI compares the **new proof against the previous rejection reasoning** and generates a structured diff:
+
+> "You've addressed 2 of 3 objections:
+> ✅ Live URL is now accessible and shows 14 users.
+> ✅ GitHub commit history is now included.
+> ❌ No invoice or payment receipt — revenue requirement still unmet."
+
+This is distinct from Feature I (Proof Pre-Check), which is blind — it has no memory of the previous rejection. Feature W specifically uses the previous `aiReasoning` and `aiRejectionObjections` as context.
+
+Only shown on proofs where a previous rejected proof exists on the same milestone.
+
+### API / Integration
+No new API route. Triggered automatically at the end of `POST /api/proof/upload` when the milestone already has a prior proof with `aiDecision = "NO"`. Stores result on the new `Proof` record before verification runs.
+
+### DB Changes
+One new field on `Proof`:
+```prisma
+resubmissionDiff   String?  @db.Text   // AI diff vs previous rejection, JSON array
+```
+
+### UI Integration
+File: `src/app/contract/[id]/contract-actions.tsx` — startup view, FUNDED block after resubmission
+
+New panel shown to startup only (not investor) after resubmission:
+- Label: "What Changed Since Last Attempt"
+- Green checkmarks for addressed objections
+- Red X for still-open objections
+- Shown before the new verdict arrives so the startup knows what to expect
+
+### AI Strategy
+Model: **Claude Haiku**
+
+System prompt:
+```
+You are a proof review assistant for a milestone escrow platform.
+Compare a new proof submission against the objections from a previous rejection.
+For each prior objection, determine if the new proof addresses it.
+Respond ONLY with valid JSON: { "addressed": ["objection text"], "stillOpen": ["objection text"] }
+Be specific. Only mark an objection as addressed if there is clear evidence in the new proof.
+```
+
+User message: previous rejection reasoning + objection list + new proof content summary (from Feature V, or raw text).
+
+### Cost
+~600 tokens/call → ~$0.0012/resubmission → **~$0.06/month** (assuming ~50% of proofs result in resubmission)
+
+### Key Files
+| File | Change |
+|---|---|
+| `prisma/schema.prisma` | Add `resubmissionDiff` to `Proof` |
+| `src/app/api/proof/upload/route.ts` | Check for prior rejection, run diff if exists |
+| new `src/services/ai/resubmission-diff.service.ts` | Haiku call comparing new vs prior |
+| `src/app/contract/[id]/contract-actions.tsx` | Show diff panel to startup after resubmission |
+
+---
+
+### Feature X: Milestone Completion Probability
+
+**Replaces:** Investor intuition when setting deadlines  
+**Marketing:** "Before you commit — AI tells you how realistic this milestone is."  
+**Effort:** Client-side Haiku call from the contract form, no DB changes required
+
+### What it does
+In the contract creation form, once a milestone has a title and a deadline set, a small AI indicator appears inline:
+
+> "MVP Launch in 30 days: **Ambitious** — estimated 55% completion probability. Most similar milestones take 45–60 days."
+
+Purely advisory. Does not block contract creation. Updates as the user changes the deadline or description. Debounced — fires once the user stops typing for 1.5 seconds.
+
+Three tiers:
+- **Realistic** (≥75%): green — deadline and scope are well-matched
+- **Ambitious** (50–74%): amber — achievable but tight
+- **High Risk** (<50%): red — consider extending the deadline
+
+No platform data needed — this is static reasoning by Claude Haiku based on the milestone type and deadline combination.
+
+### API
+`POST /api/contracts/milestone-probability`
+
+Request:
+```json
+{ "title": "string", "deadlineDays": 30, "amountUSD": 5000 }
+```
+
+Response:
+```json
+{
+  "probability": 55,
+  "tier": "AMBITIOUS",
+  "reasoning": "MVP launches typically require 45-60 days for first-time deployments.",
+  "suggestion": "Consider 45 days for a more realistic timeline."
+}
+```
+
+Auth: session required.
+Rate limit: `milestone-probability:{userId}` — 30/hour (debounced in UI, so actual calls are low).
+No DB write — result is purely advisory, displayed in the form only.
+
+### DB Changes
+None.
+
+### UI Integration
+File: `src/components/contract-form.tsx`
+
+Small inline indicator below each milestone's deadline input field:
+- Appears after both title and deadline are filled
+- Color-coded pill: green/amber/red + tier label + short reasoning
+- "Recalculate" icon (↺) if user edits the fields
+- Loading spinner while fetching
+- Never blocks the submit button
+
+### AI Strategy
+Model: **Claude Haiku**
+
+System prompt:
+```
+You are a milestone feasibility analyst for a grant escrow platform.
+Given a milestone description and deadline, estimate the probability of successful completion.
+Base your estimate on the complexity implied by the description and the realism of the timeline.
+Respond ONLY with valid JSON: { "probability": 55, "tier": "REALISTIC|AMBITIOUS|HIGH_RISK", "reasoning": "1 sentence", "suggestion": "1 sentence or null" }
+probability is an integer 0-100. Be calibrated — most well-structured milestones with realistic deadlines should score 70-85.
+```
+
+### Cost
+~300 tokens/call → ~$0.0006/call → debounced so ~2-3 calls per milestone created → **~$0.06/month at 100 contracts/month**
+
+### Key Files
+| File | Change |
+|---|---|
+| new `src/app/api/contracts/milestone-probability/route.ts` | Haiku call, returns probability JSON |
+| `src/components/contract-form.tsx` | Inline probability indicator per milestone |
+
+---
+
+### Feature Y: Stakeholder Transparency Report
+
+**Replaces:** Manual reporting for DAOs, funds, accelerators, NGOs  
+**Marketing:** "One click — a board-ready grant report for your stakeholders."  
+**Effort:** 1 Haiku call, PDF generation via existing Vercel Blob patterns, 2 new DB fields
+
+### What it does
+Investors who manage multiple contracts on behalf of an organization can generate a formal **quarterly transparency report** as a downloadable PDF. This is distinct from:
+
+- **Feature O (Portfolio Briefing)**: operational, daily, for the investor themselves
+- **Feature L (Completion Report)**: per-milestone artifact for the startup
+- **Feature Y**: retrospective, quarterly, formal, for *external stakeholders* (board, donors, DAO voters)
+
+Report contents:
+- Period covered (e.g., Q1 2026)
+- Contracts funded, completed, failed, in progress
+- Total RLUSD deployed and released
+- Per-contract summary: title, startup, milestone outcomes, AI confidence averages
+- AI-generated narrative paragraph: "In Q1 2026, [Investor] deployed $42,000 RLUSD across 3 contracts. 2 contracts completed successfully with an average AI verification confidence of 84%..."
+- cascrow branding + on-chain contract IDs as tamper-evident references
+
+### API
+`POST /api/dashboard/investor/transparency-report`
+
+Request:
+```json
+{ "quarter": "Q1", "year": 2026 }
+```
+
+Response:
+```json
+{ "reportUrl": "https://blob.vercel-storage.com/..." }
+```
+
+Auth: session required, investor role only.
+Rate limit: `transparency-report:{userId}` — 4/day (one per quarter is the intended use).
+Cached: if a report for the same quarter already exists, return the cached URL immediately.
+
+### DB Changes
+Two new fields on `User`:
+```prisma
+lastTransparencyReportUrl     String?
+lastTransparencyReportPeriod  String?   // e.g. "Q1-2026"
+```
+
+### UI Integration
+File: `src/app/dashboard/investor/page.tsx`
+
+New button in the dashboard header area: "Generate Q1 Report" (shown if there are any contracts in the last quarter).
+- Opens a small modal: choose quarter + year
+- Shows loading state: "Generating your report…"
+- On success: download link + "Copy link" button
+- Caches the URL for 30 days — re-download without regenerating
+
+### AI Strategy
+Model: **Claude Haiku** (higher token budget than usual — full quarter of contract data)
+
+System prompt:
+```
+You are a grant portfolio reporting assistant. Generate a formal, professional narrative paragraph for a quarterly transparency report.
+Write in third person. Be factual, data-grounded, and concise (3-4 sentences max).
+Tone: professional, suitable for board or donor review.
+```
+
+User message: structured JSON of all contracts in the quarter with statuses, amounts, completion dates, AI confidence scores.
+
+PDF generation: reuse the SVG/PDF pattern from `src/services/xrpl/cert-image.service.ts`, adapted for a longer document format.
+
+### Cost
+~2,000 tokens/call → ~$0.004/report → generated ~4x/year per investor → **essentially free**
+
+### Key Files
+| File | Change |
+|---|---|
+| `prisma/schema.prisma` | Add 2 report cache fields to `User` |
+| new `src/app/api/dashboard/investor/transparency-report/route.ts` | Haiku call + PDF generation + Blob upload |
+| `src/app/dashboard/investor/page.tsx` | "Generate Report" button + modal |
+| `src/services/xrpl/cert-image.service.ts` | Extend SVG/PDF generation for multi-page report format |
+
+---
+
+### Feature Z: Contract Counter-Proposal
+
+**Replaces:** Binary accept/decline — startups can now negotiate  
+**Marketing:** "Startups can propose changes. Investors decide. AI summarizes the rationale for both sides."  
+**Effort:** New DB model, 2 API routes, UI additions on both sides of the contract invite flow
+
+### What it does
+Currently startups can only accept or decline a contract invite. Feature Z adds a **structured counter-proposal flow**:
+
+1. Startup receives invite → sees "Accept", "Decline", and new "Propose Changes" button
+2. Startup selects which milestones to modify (deadline and/or amount), writes a short rationale
+3. AI helps draft or improve the rationale: "Based on your explanation, here's a clearer version..."
+4. Investor receives notification with: original terms, proposed changes, startup's rationale, AI summary
+5. Investor chooses: Accept Counter / Reject Counter / Propose Back (one round of back-and-forth)
+6. If accepted: contract proceeds as if startup accepted (status → AWAITING_ESCROW)
+7. If rejected: startup can still accept original terms or decline
+
+This is distinct from:
+- **Feature C (Dispute Arbitration)**: post-rejection appeal on a proof — happens after funding
+- **Feature F (Renegotiation)**: deadline extension after expiry — happens after funding
+- **Feature Z**: pre-funding term negotiation — happens at the invite stage
+
+### APIs
+
+`POST /api/contracts/[id]/counter-proposal`
+```json
+{
+  "milestoneChanges": [
+    { "milestoneId": "string", "newDeadlineDays": 45, "newAmountUSD": 6000 }
+  ],
+  "rationale": "string (min 50, max 800 chars)"
+}
+```
+Validates: startup on this contract, contract status = `DRAFT`, no existing open counter-proposal.
+Runs AI rationale improvement (optional, startup can skip). Stores counter-proposal, notifies investor.
+
+`POST /api/contracts/[id]/counter-proposal/respond`
+```json
+{ "decision": "ACCEPT" | "REJECT" }
+```
+Auth: investor on this contract only.
+- `ACCEPT`: applies the milestone changes (update amounts/deadlines in DB), advances contract status to `AWAITING_ESCROW` (as if startup accepted)
+- `REJECT`: counter-proposal marked rejected, startup notified, original invite remains open
+
+`GET /api/contracts/[id]/counter-proposal`
+Returns the current counter-proposal for display on both sides.
+
+### DB Changes
+New model:
+```prisma
+model CounterProposal {
+  id               String   @id @default(cuid())
+  contractId       String   @unique
+  proposedBy       String   // startup userId
+  status           String   // "PENDING" | "ACCEPTED" | "REJECTED"
+  milestoneChanges Json     // [{milestoneId, newDeadlineDays?, newAmountUSD?}]
+  rationale        String   @db.Text
+  aiImprovedRationale String? @db.Text
+  respondedAt      DateTime?
+  createdAt        DateTime @default(now())
+
+  @@index([contractId])
+}
+```
+
+New AuditLog event strings: `COUNTER_PROPOSAL_SUBMITTED`, `COUNTER_PROPOSAL_ACCEPTED`, `COUNTER_PROPOSAL_REJECTED`
+
+### UI Integration
+
+**Startup side** (`src/app/dashboard/startup/page.tsx` or contract invite page):
+- New "Propose Changes" button on the invite card alongside Accept/Decline
+- Expanding form: per-milestone deadline/amount inputs + rationale textarea
+- Optional "Improve my rationale with AI" button → replaces rationale with AI-polished version
+- Amber notice: "You have one counter-proposal per contract. Make it count."
+
+**Investor side** (`src/app/contract/[id]/page.tsx` or dashboard):
+- New banner when `counterProposal.status === "PENDING"`: "Startup proposed changes"
+- Side-by-side comparison: original terms vs proposed terms
+- Startup's rationale + AI-improved version (if generated)
+- Accept / Reject buttons
+- If accepted: milestone records updated, status advances
+
+### AI Strategy
+Model: **Claude Haiku** — one optional call to improve the startup's rationale
+
+System prompt:
+```
+You are a professional contract negotiation assistant. Improve the following rationale for requesting milestone changes.
+Make it clearer, more specific, and professional. Keep the startup's core argument intact.
+Do not add claims that weren't in the original. Max 150 words.
+Respond with ONLY the improved rationale as plain text.
+```
+
+### Cost
+~300 tokens/call → ~$0.0006/counter-proposal → **~$0.03/month** assuming ~5% of contracts trigger a counter-proposal
+
+### Key Files
+| File | Change |
+|---|---|
+| `prisma/schema.prisma` | New `CounterProposal` model |
+| new `src/app/api/contracts/[id]/counter-proposal/route.ts` | POST (submit) + GET (fetch) |
+| new `src/app/api/contracts/[id]/counter-proposal/respond/route.ts` | POST (accept/reject) |
+| `src/app/dashboard/startup/page.tsx` | "Propose Changes" flow on invite card |
+| `src/app/contract/[id]/page.tsx` | Counter-proposal banner + comparison for investor |
+| `src/lib/email.ts` | Notification emails for both sides |
+
+---
+
+## Phase 5 Key Files
+
+| Feature | Primary Files |
+|---|---|
+| V — Proof TL;DR | `src/app/api/proof/upload/route.ts`, `src/app/api/proof/github/route.ts`, new `src/services/ai/proof-summary.service.ts`, `prisma/schema.prisma` |
+| W — Resubmission Diff | `src/app/api/proof/upload/route.ts`, new `src/services/ai/resubmission-diff.service.ts`, `prisma/schema.prisma` |
+| X — Completion Probability | new `src/app/api/contracts/milestone-probability/route.ts`, `src/components/contract-form.tsx` |
+| Y — Stakeholder Report | new `src/app/api/dashboard/investor/transparency-report/route.ts`, `src/app/dashboard/investor/page.tsx`, `prisma/schema.prisma` |
+| Z — Counter-Proposal | new counter-proposal API routes, `src/app/dashboard/startup/page.tsx`, `src/app/contract/[id]/page.tsx`, `prisma/schema.prisma` |
