@@ -10,6 +10,7 @@ const STATUS_CONFIG: Record<ContractStatus, { label: string; variant: "default" 
   VERIFIED:        { label: "Verified — AI Approved", variant: "default" },
   REJECTED:        { label: "Rejected",               variant: "destructive" },
   DECLINED:        { label: "Invitation Declined",    variant: "destructive" },
+  RENEGOTIATING:   { label: "Renegotiating",          variant: "secondary" },
   EXPIRED:         { label: "Expired",                variant: "destructive" },
   COMPLETED:       { label: "Completed",              variant: "default" },
 };

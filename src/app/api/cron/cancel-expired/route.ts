@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { cancelMilestone, getMilestoneEscrowState, releaseMilestone } from "@/services/evm/escrow.service";
 import { decryptFulfillment } from "@/lib/crypto";
 import { writeAuditLog } from "@/services/evm/audit.service";
-import { sendVerifiedEmail, sendMilestoneCompletedInvestorEmail, sendFulfillmentKeyEmail } from "@/lib/email";
+import { sendVerifiedEmail, sendMilestoneCompletedInvestorEmail, sendFulfillmentKeyEmail, sendRenegotiationOpenedEmail } from "@/lib/email";
 import { contractIdToBytes32 } from "@/services/evm/escrow.service";
 import { isValidCronSecret } from "@/lib/cron-auth";
 
@@ -23,14 +23,73 @@ export async function GET(request: NextRequest) {
   const now = new Date();
   const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
 
-  // ── 1. Cancel expired funded milestones ──────────────────────────────────
-  const expiredMilestones = await prisma.milestone.findMany({
+  // ── 1a. Open renegotiation window for expired FUNDED milestones ──────────
+  // Instead of immediately cancelling, give startups 48h to submit a progress update.
+  const expiredFundedMilestones = await prisma.milestone.findMany({
     where: {
-      status: { in: ["FUNDED", "PROOF_SUBMITTED", "REJECTED"] },
+      status: "FUNDED",
+      cancelAfter: { lt: now },
+    },
+    include: { contract: { include: { investor: true, startup: true } } },
+  });
+
+  const RENEGOTIATION_WINDOW_HOURS = 48;
+  const renegotiationResults = await Promise.allSettled(
+    expiredFundedMilestones.map(async (milestone) => {
+      try {
+        await prisma.milestone.update({
+          where: { id: milestone.id },
+          data: {
+            status: "RENEGOTIATING" as never,
+            renegotiationStatus: "RENEGOTIATING",
+            renegotiationDeadline: new Date(now.getTime() + RENEGOTIATION_WINDOW_HOURS * 60 * 60 * 1000),
+          },
+        });
+        await prisma.contract.update({
+          where: { id: milestone.contractId },
+          data: { status: "RENEGOTIATING" as never },
+        });
+
+        // Notify both parties (fire-and-forget)
+        const { investor, startup } = milestone.contract;
+        if (startup) {
+          sendRenegotiationOpenedEmail({
+            toInvestor: investor.email,
+            toStartup: startup.email,
+            contractId: milestone.contractId,
+            milestoneTitle: milestone.title,
+            deadlineHours: RENEGOTIATION_WINDOW_HOURS,
+          }).catch((err) => console.error("[email] sendRenegotiationOpenedEmail failed:", err));
+        }
+
+        return { id: milestone.id, action: "renegotiating" };
+      } catch (err) {
+        console.error(`[cron/renegotiate] Failed for milestone ${milestone.id}:`, err);
+        throw err;
+      }
+    })
+  );
+
+  // ── 1b. Cancel PROOF_SUBMITTED / REJECTED milestones past deadline ────────
+  // These had an active proof attempt; renegotiation doesn't apply.
+  const expiredOtherMilestones = await prisma.milestone.findMany({
+    where: {
+      status: { in: ["PROOF_SUBMITTED", "REJECTED"] },
       cancelAfter: { lt: now },
     },
     include: { contract: true },
   });
+
+  // ── 1c. Cancel RENEGOTIATING milestones whose 48h window has closed ───────
+  const timedOutRenegotiations = await prisma.milestone.findMany({
+    where: {
+      status: "RENEGOTIATING" as never,
+      renegotiationDeadline: { lt: now },
+    },
+    include: { contract: true },
+  });
+
+  const expiredMilestones = [...expiredOtherMilestones, ...timedOutRenegotiations];
 
   const cancelResults = await Promise.allSettled(
     expiredMilestones.map(async (milestone) => {
@@ -138,6 +197,8 @@ export async function GET(request: NextRequest) {
     })
   );
 
+  const renegotiationSucceeded = renegotiationResults.filter((r) => r.status === "fulfilled").length;
+  const renegotiationFailed = renegotiationResults.filter((r) => r.status === "rejected").length;
   const cancelSucceeded = cancelResults.filter((r) => r.status === "fulfilled").length;
   const cancelFailed = cancelResults.filter((r) => r.status === "rejected").length;
   const approveSucceeded = approveResults.filter((r) => r.status === "fulfilled").length;
@@ -206,20 +267,24 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  if (cancelFailed > 0 || approveFailed > 0) {
+  if (cancelFailed > 0 || approveFailed > 0 || renegotiationFailed > 0) {
     console.error(
-      `[cron/cancel-expired] FAILURES — cancelled: ${cancelSucceeded} ok, ${cancelFailed} failed | ` +
+      `[cron/cancel-expired] FAILURES — renegotiated: ${renegotiationSucceeded} ok, ${renegotiationFailed} failed | ` +
+      `cancelled: ${cancelSucceeded} ok, ${cancelFailed} failed | ` +
       `auto-approved: ${approveSucceeded} ok, ${approveFailed} failed`
     );
   } else {
     console.log(
-      `[cron/cancel-expired] OK — cancelled: ${cancelSucceeded} | auto-approved: ${approveSucceeded} | ` +
-      `drafts deleted: ${deletedDrafts} | awaiting-escrow declined: ${declinedAwaitingEscrow} | stuck proofs retried: ${retried}`
+      `[cron/cancel-expired] OK — renegotiated: ${renegotiationSucceeded} | cancelled: ${cancelSucceeded} | ` +
+      `auto-approved: ${approveSucceeded} | drafts deleted: ${deletedDrafts} | ` +
+      `awaiting-escrow declined: ${declinedAwaitingEscrow} | stuck proofs retried: ${retried}`
     );
   }
 
   return NextResponse.json({
     ok: true,
+    renegotiated: renegotiationSucceeded,
+    renegotiationFailed,
     cancelled: cancelSucceeded,
     cancelFailed,
     autoApproved: approveSucceeded,

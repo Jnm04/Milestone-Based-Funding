@@ -105,6 +105,7 @@ enum ContractStatus {
   VERIFIED
   REJECTED
   DECLINED
+  RENEGOTIATING
   EXPIRED
   COMPLETED
 }
@@ -169,6 +170,22 @@ model Milestone {
   proofGuidance         Json?      // { tone: string, checklist: [{ item, why }] }
   proofGuidanceCachedAt DateTime?
 
+  // Feature F: AI Milestone Renegotiation
+  /// "RENEGOTIATING" | "EXTENSION_REQUESTED" | "EXTENSION_APPROVED" | "EXTENSION_REJECTED"
+  renegotiationStatus   String?
+  /// When the 48-hour renegotiation window closes
+  renegotiationDeadline DateTime?
+  interimUpdateText     String?    @db.Text
+  interimUpdateFileUrl  String?
+  interimUpdateFileName String?
+  /// Haiku plausibility assessment (2-sentence summary)
+  interimAiAssessment   String?    @db.Text
+  /// true = plausible completion, false = unlikely
+  interimAiPositive     Boolean?
+  /// How many extra days the startup requested (7 | 14 | 30)
+  extensionDays         Int?
+  extensionApprovedAt   DateTime?
+
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
@@ -183,6 +200,7 @@ enum MilestoneStatus {
   PENDING_REVIEW
   VERIFIED
   REJECTED
+  RENEGOTIATING
   EXPIRED
   COMPLETED
 }

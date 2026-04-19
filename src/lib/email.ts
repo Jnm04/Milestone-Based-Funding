@@ -375,3 +375,126 @@ export async function sendFulfillmentKeyEmail({
     `,
   });
 }
+
+// ── Feature F: Renegotiation notifications ────────────────────────────────────
+
+export async function sendRenegotiationOpenedEmail({
+  toInvestor,
+  toStartup,
+  contractId,
+  milestoneTitle,
+  deadlineHours,
+}: {
+  toInvestor: string;
+  toStartup: string;
+  contractId: string;
+  milestoneTitle: string;
+  deadlineHours: number;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  const link = contractLink(contractId);
+  await Promise.allSettled([
+    resend.emails.send({
+      from: FROM,
+      to: toInvestor,
+      subject: `Renegotiation window open: ${milestoneTitle}`,
+      html: `
+        <p>Hi,</p>
+        <p>The deadline for milestone <strong>${esc(milestoneTitle)}</strong> has passed without a submitted proof.</p>
+        <p>A <strong>${deadlineHours}-hour renegotiation window</strong> is now open. The Receiver can submit a progress update to request an extension — you will be notified when they do.</p>
+        <p>If no request is submitted within ${deadlineHours} hours, the escrow will be automatically cancelled and RLUSD returned to you.</p>
+        <p><a href="${link}">View contract →</a></p>
+      `,
+    }),
+    resend.emails.send({
+      from: FROM,
+      to: toStartup,
+      subject: `Extension request window open: ${milestoneTitle}`,
+      html: `
+        <p>Hi,</p>
+        <p>The deadline for milestone <strong>${esc(milestoneTitle)}</strong> has passed.</p>
+        <p>You have <strong>${deadlineHours} hours</strong> to submit a progress update and request a deadline extension. The Grant Giver will review your request and decide whether to approve it.</p>
+        <p>If no request is submitted in time, the escrow will be automatically cancelled.</p>
+        <p><a href="${link}">Submit progress update →</a></p>
+      `,
+    }),
+  ]);
+}
+
+export async function sendExtensionRequestedEmail({
+  to,
+  contractId,
+  milestoneTitle,
+  extensionDays,
+  startupName,
+}: {
+  to: string;
+  contractId: string;
+  milestoneTitle: string;
+  extensionDays: number;
+  startupName?: string | null;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Extension request: ${milestoneTitle}`,
+    html: `
+      <p>Hi,</p>
+      <p><strong>${esc(startupName) || "The Receiver"}</strong> has submitted a progress update and is requesting a <strong>${extensionDays}-day extension</strong> for milestone <strong>${esc(milestoneTitle)}</strong>.</p>
+      <p>Open the contract to review the update and AI plausibility assessment, then approve or reject.</p>
+      <p><a href="${contractLink(contractId)}">Review extension request →</a></p>
+    `,
+  });
+}
+
+export async function sendExtensionApprovedEmail({
+  to,
+  contractId,
+  milestoneTitle,
+  extensionDays,
+  newDeadline,
+}: {
+  to: string;
+  contractId: string;
+  milestoneTitle: string;
+  extensionDays: number;
+  newDeadline: Date;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Extension approved: ${milestoneTitle}`,
+    html: `
+      <p>Hi,</p>
+      <p>The Grant Giver has approved your extension request for <strong>${esc(milestoneTitle)}</strong>.</p>
+      <p>You now have <strong>${extensionDays} additional days</strong>. New deadline: <strong>${newDeadline.toLocaleDateString()}</strong>.</p>
+      <p>Upload your proof before the new deadline to receive payment.</p>
+      <p><a href="${contractLink(contractId)}">Open milestone →</a></p>
+    `,
+  });
+}
+
+export async function sendExtensionRejectedEmail({
+  to,
+  contractId,
+  milestoneTitle,
+}: {
+  to: string;
+  contractId: string;
+  milestoneTitle: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Extension rejected: ${milestoneTitle}`,
+    html: `
+      <p>Hi,</p>
+      <p>The Grant Giver has rejected your extension request for <strong>${esc(milestoneTitle)}</strong>.</p>
+      <p>The escrow has been cancelled and funds returned to the Grant Giver.</p>
+      <p><a href="${contractLink(contractId)}">View contract →</a></p>
+    `,
+  });
+}

@@ -36,6 +36,19 @@ interface ContractActionsProps {
   latestProofAppealResult: string | null;
   /** Claude's reasoning for the appeal verdict. */
   latestProofAppealReasoning: string | null;
+  // ── Feature F: Renegotiation ──────────────────────────────────────────────
+  /** Current renegotiation sub-status: null | "RENEGOTIATING" | "EXTENSION_REQUESTED" | "EXTENSION_APPROVED" | "EXTENSION_REJECTED" */
+  renegotiationStatus: string | null;
+  /** ISO string — when the 48-hour window closes */
+  renegotiationDeadline: string | null;
+  /** Progress update text submitted by startup */
+  interimUpdateText: string | null;
+  /** AI plausibility assessment (2-sentence summary) */
+  interimAiAssessment: string | null;
+  /** true = AI thinks completion is plausible */
+  interimAiPositive: boolean | null;
+  /** Extension days requested: 7 | 14 | 30 */
+  extensionDays: number | null;
 }
 
 // ─── MetaMask helpers ────────────────────────────────────────────────────────
@@ -246,6 +259,12 @@ export function ContractActions({
   latestProofAppealStatus,
   latestProofAppealResult,
   latestProofAppealReasoning,
+  renegotiationStatus,
+  renegotiationDeadline,
+  interimUpdateText,
+  interimAiAssessment,
+  interimAiPositive,
+  extensionDays,
 }: ContractActionsProps) {
   const [fundingStep, setFundingStep] = useState<
     "idle" | "approving" | "funding" | "confirming" | "done"
@@ -261,6 +280,10 @@ export function ContractActions({
   const [confirmReject, setConfirmReject] = useState(false);
   const [appealText, setAppealText] = useState("");
   const [loadingAppeal, setLoadingAppeal] = useState(false);
+  const [renegotiationText, setRenegotiationText] = useState("");
+  const [renegotiationExtDays, setRenegotiationExtDays] = useState<7 | 14 | 30>(14);
+  const [loadingRenegotiate, setLoadingRenegotiate] = useState(false);
+  const [loadingRenegotiateRespond, setLoadingRenegotiateRespond] = useState<"APPROVE" | "REJECT" | null>(null);
 
   // Auto-reset confirm states after 5 seconds to prevent accidental clicks
   useEffect(() => {
@@ -562,6 +585,56 @@ export function ContractActions({
       toast.error(err instanceof Error ? err.message : "Appeal failed.");
     } finally {
       setLoadingAppeal(false);
+    }
+  }
+
+  // ── Submit interim progress update (startup) ─────────────────────────────
+  async function handleRenegotiate() {
+    if (!milestoneId) return;
+    setLoadingRenegotiate(true);
+    try {
+      const res = await fetch(`/api/contracts/${contractId}/milestones/${milestoneId}/renegotiate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ interimUpdateText: renegotiationText, extensionDays: renegotiationExtDays }),
+      });
+      if (!res.ok) {
+        const err = (await res.json()) as { error?: string };
+        throw new Error(err.error ?? "Request failed");
+      }
+      toast.success("Extension request submitted — the Grant Giver will review it shortly.");
+      setTimeout(() => window.location.reload(), 1200);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Request failed.");
+    } finally {
+      setLoadingRenegotiate(false);
+    }
+  }
+
+  // ── Investor approves or rejects the extension request ───────────────────
+  async function handleRenegotiateRespond(decision: "APPROVE" | "REJECT") {
+    if (!milestoneId) return;
+    setLoadingRenegotiateRespond(decision);
+    try {
+      const res = await fetch(`/api/contracts/${contractId}/milestones/${milestoneId}/renegotiate/respond`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision }),
+      });
+      if (!res.ok) {
+        const err = (await res.json()) as { error?: string };
+        throw new Error(err.error ?? "Request failed");
+      }
+      toast.success(
+        decision === "APPROVE"
+          ? "Extension approved! The milestone deadline has been extended."
+          : "Extension rejected. The escrow has been cancelled."
+      );
+      setTimeout(() => window.location.reload(), 1200);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Request failed.");
+    } finally {
+      setLoadingRenegotiateRespond(null);
     }
   }
 
@@ -973,6 +1046,227 @@ export function ContractActions({
           <p className="text-xs" style={{ color: "#F87171", opacity: 0.8 }}>
             The proof was rejected. The Receiver will need to resubmit a new proof.
           </p>
+        )}
+      </div>
+    );
+  }
+
+  // ── RENEGOTIATING: startup submits interim update / investor approves ────
+  if (status === "RENEGOTIATING") {
+    const windowClosed = renegotiationDeadline ? new Date() > new Date(renegotiationDeadline) : false;
+    const extensionRequested = renegotiationStatus === "EXTENSION_REQUESTED";
+    const isStartup = viewerWallet === startupAddress;
+    const isInvestor = viewerWallet === investorAddress;
+
+    // Countdown display
+    const windowLabel = (() => {
+      if (!renegotiationDeadline || windowClosed) return "Window closed";
+      const msLeft = new Date(renegotiationDeadline).getTime() - Date.now();
+      const hLeft = Math.max(0, Math.floor(msLeft / (1000 * 60 * 60)));
+      const mLeft = Math.max(0, Math.floor((msLeft % (1000 * 60 * 60)) / (1000 * 60)));
+      return hLeft > 0 ? `${hLeft}h ${mLeft}m remaining` : `${mLeft}m remaining`;
+    })();
+
+    return (
+      <div
+        className="flex flex-col gap-4 p-5 rounded-xl"
+        style={{ background: "rgba(212,160,60,0.07)", border: "1px solid rgba(212,160,60,0.3)" }}
+      >
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <p className="text-sm font-semibold" style={{ color: "#D4A03C" }}>
+            Renegotiation Window Open
+          </p>
+          <span
+            className="text-xs font-medium px-2 py-0.5 rounded-full"
+            style={{ background: "rgba(212,160,60,0.12)", color: "#D4A03C", border: "1px solid rgba(212,160,60,0.25)" }}
+          >
+            {windowLabel}
+          </span>
+        </div>
+
+        <p className="text-xs" style={{ color: "#A89B8C" }}>
+          The milestone deadline has passed. The Receiver has a limited window to submit a progress update and request an extension.
+        </p>
+
+        {/* ── Startup: submit progress update ────────────────────────────── */}
+        {isStartup && !extensionRequested && !windowClosed && (
+          <div className="flex flex-col gap-3">
+            <div>
+              <p className="text-xs font-medium" style={{ color: "#D4B896" }}>
+                Your progress update
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: "rgba(168,155,140,0.7)" }}>
+                Describe what you have done so far and what remains. Min 100 characters.
+              </p>
+            </div>
+            <textarea
+              value={renegotiationText}
+              onChange={(e) => setRenegotiationText(e.target.value)}
+              placeholder="e.g. We have completed the backend API and 70% of the frontend. The remaining work is the payment integration, which is scoped and ready to build…"
+              rows={4}
+              maxLength={3000}
+              className="w-full rounded-lg p-3 text-sm resize-none outline-none"
+              style={{
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(212,160,60,0.25)",
+                color: "#EDE6DD",
+                fontFamily: "inherit",
+              }}
+            />
+            <div className="flex items-center gap-2">
+              <p className="text-xs" style={{ color: "#A89B8C" }}>Extension requested:</p>
+              {([7, 14, 30] as const).map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setRenegotiationExtDays(d)}
+                  className="px-3 py-1 rounded-lg text-xs font-semibold transition-colors"
+                  style={{
+                    background: renegotiationExtDays === d ? "#D4A03C" : "rgba(212,160,60,0.1)",
+                    color: renegotiationExtDays === d ? "#171311" : "#D4A03C",
+                    border: `1px solid ${renegotiationExtDays === d ? "#D4A03C" : "rgba(212,160,60,0.3)"}`,
+                  }}
+                >
+                  {d} days
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs" style={{ color: "rgba(168,155,140,0.4)" }}>
+                {renegotiationText.length}/3000
+              </span>
+              <button
+                onClick={handleRenegotiate}
+                disabled={loadingRenegotiate || renegotiationText.trim().length < 100}
+                className="rounded-lg px-4 py-1.5 text-xs font-semibold transition-all disabled:opacity-40"
+                style={{ background: "#D4A03C", color: "#171311" }}
+              >
+                {loadingRenegotiate ? "Submitting…" : "Submit Extension Request"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Startup: request submitted, waiting ────────────────────────── */}
+        {isStartup && extensionRequested && (
+          <div
+            className="flex flex-col gap-2 p-3 rounded-lg"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(212,160,60,0.2)" }}
+          >
+            <p className="text-xs font-medium" style={{ color: "#D4A03C" }}>
+              Extension request submitted
+            </p>
+            <p className="text-xs" style={{ color: "#A89B8C" }}>
+              The Grant Giver is reviewing your request. You will be notified once a decision has been made.
+            </p>
+            {interimAiAssessment && (
+              <p className="text-xs leading-relaxed mt-1" style={{ color: "#A89B8C" }}>
+                <strong style={{ color: "#D4B896" }}>AI assessment: </strong>
+                {interimAiAssessment}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* ── Startup: window closed without submitting ───────────────────── */}
+        {isStartup && !extensionRequested && windowClosed && (
+          <p className="text-xs" style={{ color: "#F87171" }}>
+            The renegotiation window has closed. The escrow will be cancelled shortly.
+          </p>
+        )}
+
+        {/* ── Investor: waiting for startup to submit ─────────────────────── */}
+        {isInvestor && !extensionRequested && (
+          <p className="text-xs" style={{ color: "#A89B8C" }}>
+            Waiting for the Receiver to submit a progress update.
+            {windowClosed
+              ? " The window has closed — the escrow will be automatically cancelled."
+              : ""}
+          </p>
+        )}
+
+        {/* ── Investor: review extension request ─────────────────────────── */}
+        {isInvestor && extensionRequested && (
+          <div className="flex flex-col gap-3">
+            {interimUpdateText && (
+              <div className="flex flex-col gap-1">
+                <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "#A89B8C" }}>
+                  Progress Update
+                </p>
+                <p
+                  className="text-sm leading-relaxed rounded-lg p-3"
+                  style={{ background: "rgba(255,255,255,0.04)", color: "#EDE6DD" }}
+                >
+                  {interimUpdateText}
+                </p>
+              </div>
+            )}
+
+            {interimAiAssessment && (
+              <div
+                className="flex flex-col gap-1.5 p-3 rounded-lg"
+                style={{
+                  background: interimAiPositive
+                    ? "rgba(74,222,128,0.06)"
+                    : "rgba(248,113,113,0.06)",
+                  border: `1px solid ${interimAiPositive ? "rgba(74,222,128,0.2)" : "rgba(248,113,113,0.2)"}`,
+                }}
+              >
+                <p
+                  className="text-xs font-medium uppercase tracking-wide"
+                  style={{ color: interimAiPositive ? "#6EE09A" : "#F87171" }}
+                >
+                  AI Assessment — {interimAiPositive ? "Plausible" : "Unlikely"}
+                </p>
+                <p className="text-xs leading-relaxed" style={{ color: "#A89B8C" }}>
+                  {interimAiAssessment}
+                </p>
+              </div>
+            )}
+
+            {extensionDays && (
+              <p className="text-xs" style={{ color: "#A89B8C" }}>
+                Requested extension:{" "}
+                <strong style={{ color: "#D4B896" }}>{extensionDays} days</strong>
+              </p>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleRenegotiateRespond("APPROVE")}
+                disabled={loadingRenegotiateRespond !== null}
+                style={{
+                  background: "#16a34a",
+                  color: "#fff",
+                  flex: 1,
+                  padding: "8px 16px",
+                  borderRadius: "8px",
+                  border: "none",
+                  fontWeight: 600,
+                  cursor: loadingRenegotiateRespond !== null ? "not-allowed" : "pointer",
+                  opacity: loadingRenegotiateRespond !== null ? 0.6 : 1,
+                }}
+              >
+                {loadingRenegotiateRespond === "APPROVE" ? "Approving…" : "✓ Approve Extension"}
+              </button>
+              <button
+                onClick={() => handleRenegotiateRespond("REJECT")}
+                disabled={loadingRenegotiateRespond !== null}
+                style={{
+                  background: "rgba(248,113,113,0.1)",
+                  color: "#F87171",
+                  flex: 1,
+                  padding: "8px 16px",
+                  borderRadius: "8px",
+                  border: "1px solid rgba(248,113,113,0.3)",
+                  fontWeight: 600,
+                  cursor: loadingRenegotiateRespond !== null ? "not-allowed" : "pointer",
+                  opacity: loadingRenegotiateRespond !== null ? 0.6 : 1,
+                }}
+              >
+                {loadingRenegotiateRespond === "REJECT" ? "Rejecting…" : "✗ Reject"}
+              </button>
+            </div>
+          </div>
         )}
       </div>
     );

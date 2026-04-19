@@ -56,6 +56,7 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }
   PENDING_REVIEW:  { bg: "rgba(196,112,75,0.15)",  text: "#E8935A",  border: "rgba(196,112,75,0.35)"  },
   VERIFIED:        { bg: "rgba(74,222,128,0.12)",  text: "#6EE09A",  border: "rgba(74,222,128,0.3)"   },
   REJECTED:        { bg: "rgba(248,113,113,0.12)", text: "#F87171",  border: "rgba(248,113,113,0.3)"  },
+  RENEGOTIATING:   { bg: "rgba(212,160,60,0.12)",  text: "#D4A03C",  border: "rgba(212,160,60,0.3)"   },
   EXPIRED:         { bg: "rgba(168,155,140,0.12)", text: "#A89B8C",  border: "rgba(168,155,140,0.25)" },
   COMPLETED:       { bg: "rgba(74,222,128,0.12)",  text: "#6EE09A",  border: "rgba(74,222,128,0.3)"   },
 };
@@ -68,6 +69,7 @@ const STATUS_LABELS: Record<string, string> = {
   PENDING_REVIEW:  "Manual Review",
   VERIFIED:        "Verified",
   REJECTED:        "Rejected",
+  RENEGOTIATING:   "Renegotiating",
   EXPIRED:         "Expired",
   COMPLETED:       "Completed",
 };

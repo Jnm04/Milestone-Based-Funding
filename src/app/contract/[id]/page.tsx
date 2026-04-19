@@ -102,7 +102,8 @@ export default async function ContractPage({ params, searchParams }: ContractPag
   const activeMilestone = contract.milestones.length > 0
     ? (
         contract.milestones.find((m) => m.status === "AWAITING_ESCROW") ??
-        contract.milestones.find((m) => !["PENDING", "COMPLETED", "AWAITING_ESCROW"].includes(m.status)) ??
+        contract.milestones.find((m) => m.status === "RENEGOTIATING") ??
+        contract.milestones.find((m) => !["PENDING", "COMPLETED", "AWAITING_ESCROW", "RENEGOTIATING", "EXPIRED"].includes(m.status)) ??
         contract.milestones.find((m) => m.status === "FUNDED") ??
         null
       )
@@ -404,6 +405,12 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           latestProofAppealStatus={activeMilestone?.proofs[0]?.appealStatus ?? latestProof?.appealStatus ?? null}
           latestProofAppealResult={activeMilestone?.proofs[0]?.appealResult ?? latestProof?.appealResult ?? null}
           latestProofAppealReasoning={activeMilestone?.proofs[0]?.appealReasoning ?? latestProof?.appealReasoning ?? null}
+          renegotiationStatus={activeMilestone?.renegotiationStatus ?? null}
+          renegotiationDeadline={activeMilestone?.renegotiationDeadline?.toISOString() ?? null}
+          interimUpdateText={activeMilestone?.interimUpdateText ?? null}
+          interimAiAssessment={activeMilestone?.interimAiAssessment ?? null}
+          interimAiPositive={activeMilestone?.interimAiPositive ?? null}
+          extensionDays={activeMilestone?.extensionDays ?? null}
         />
 
         {/* AI result */}
