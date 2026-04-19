@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import type { DraftResponse } from "@/app/api/contracts/draft/route";
 import type { RiskFlag } from "@/app/api/contracts/risk-preview/route";
+import type { ProbabilityResponse } from "@/app/api/contracts/milestone-probability/route";
 
 interface MilestoneInput {
   title: string;
@@ -74,12 +75,47 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
   const [loadingRisk, setLoadingRisk] = useState(false);
   const [riskChecked, setRiskChecked] = useState(false);
 
+  // Feature X: per-milestone completion probability
+  const [milestoneProbs, setMilestoneProbs] = useState<
+    Record<number, ProbabilityResponse | "loading" | null>
+  >({});
+  const debounceTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+
   function addMilestone() {
     setMilestones((prev) => [...prev, { title: "", amountUSD: "", deadlineDays: "30" }]);
   }
 
   function removeMilestone(index: number) {
+    if (debounceTimers.current[index]) clearTimeout(debounceTimers.current[index]);
+    setMilestoneProbs({});
     setMilestones((prev) => prev.filter((_, i) => i !== index));
+    if (riskChecked) {
+      setRiskFlags(null);
+      setRiskChecked(false);
+    }
+  }
+
+  async function fetchProbability(
+    index: number,
+    title: string,
+    deadlineDays: number,
+    amountUSD: number
+  ) {
+    try {
+      const res = await fetch("/api/contracts/milestone-probability", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, deadlineDays, amountUSD }),
+      });
+      if (!res.ok) {
+        setMilestoneProbs((prev) => ({ ...prev, [index]: null }));
+        return;
+      }
+      const data = (await res.json()) as ProbabilityResponse;
+      setMilestoneProbs((prev) => ({ ...prev, [index]: data }));
+    } catch {
+      setMilestoneProbs((prev) => ({ ...prev, [index]: null }));
+    }
   }
 
   function updateMilestone(index: number, field: keyof MilestoneInput, value: string) {
@@ -88,6 +124,22 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
     if (riskChecked) {
       setRiskFlags(null);
       setRiskChecked(false);
+    }
+    // Debounce probability check when title or deadline change
+    if (field === "title" || field === "deadlineDays") {
+      const current = milestones[index];
+      const updated = { ...current, [field]: value };
+      const title = updated.title.trim();
+      const days = Number(updated.deadlineDays);
+      if (debounceTimers.current[index]) clearTimeout(debounceTimers.current[index]);
+      if (title.length >= 5 && days > 0) {
+        debounceTimers.current[index] = setTimeout(() => {
+          setMilestoneProbs((prev) => ({ ...prev, [index]: "loading" }));
+          void fetchProbability(index, updated.title, days, Number(updated.amountUSD) || 0);
+        }, 1500);
+      } else {
+        setMilestoneProbs((prev) => ({ ...prev, [index]: null }));
+      }
     }
   }
 
@@ -524,6 +576,58 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
                   required
                 />
                 <p style={{ fontSize: "11px", color: "#71717a" }}>After this: auto-refund</p>
+                {/* Feature X: Milestone completion probability */}
+                {milestoneProbs[idx] === "loading" && (
+                  <p style={{ fontSize: "11px", color: "#A89B8C", margin: 0 }}>
+                    Assessing feasibility…
+                  </p>
+                )}
+                {milestoneProbs[idx] && milestoneProbs[idx] !== "loading" && (() => {
+                  const prob = milestoneProbs[idx] as ProbabilityResponse;
+                  const isRealistic = prob.tier === "REALISTIC";
+                  const isHigh = prob.tier === "HIGH_RISK";
+                  const color = isRealistic ? "#4ade80" : isHigh ? "#f87171" : "#D4A03C";
+                  const bg = isRealistic
+                    ? "rgba(74,222,128,0.1)"
+                    : isHigh
+                    ? "rgba(248,113,113,0.1)"
+                    : "rgba(212,160,60,0.1)";
+                  const border = isRealistic
+                    ? "rgba(74,222,128,0.3)"
+                    : isHigh
+                    ? "rgba(248,113,113,0.3)"
+                    : "rgba(212,160,60,0.3)";
+                  const label = isRealistic ? "Realistic" : isHigh ? "High Risk" : "Ambitious";
+                  return (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "3px", marginTop: "2px" }}>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          alignSelf: "flex-start",
+                          padding: "2px 8px",
+                          borderRadius: "999px",
+                          background: bg,
+                          border: `1px solid ${border}`,
+                          color,
+                          fontSize: "11px",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {label} · {prob.probability}%
+                      </span>
+                      <p style={{ fontSize: "11px", color: "#71717a", margin: 0, lineHeight: 1.5 }}>
+                        {prob.reasoning}
+                      </p>
+                      {prob.suggestion && (
+                        <p style={{ fontSize: "11px", color: "#A89B8C", margin: 0, fontStyle: "italic" }}>
+                          {prob.suggestion}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
