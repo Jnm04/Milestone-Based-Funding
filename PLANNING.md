@@ -27,7 +27,7 @@
 | **Feature W** — Resubmission Diff Intelligence | ✅ DONE | `070d6a41` | `Proof.aiResubmissionDiff Text?`; Haiku diff vs prior rejection at resubmission; addressed/stillOpen shown startup-only in milestone timeline |
 | **Feature X** — Milestone Completion Probability | ✅ DONE | `7e7f1270` | Inline feasibility indicator in contract form; no DB changes |
 | **Feature Y** — Stakeholder Transparency Report | ✅ DONE | — | Quarterly HTML report (print-to-PDF); 2 `User` cache fields; `Generate Report` button in investor dashboard |
-| **Feature Z** — Contract Counter-Proposal | ⬜ TODO | — | `CounterProposal` model; startup proposes term changes before signing |
+| **Feature Z** — Contract Counter-Proposal | ✅ DONE | — | `CounterProposal` model; startup proposes term changes before signing; investor accepts/rejects; AI rationale improvement |
 
 ---
 
@@ -1498,4 +1498,4 @@ Respond with ONLY the improved rationale as plain text.
 | W — Resubmission Diff | ✅ DONE | `src/services/ai/resubmission-diff.service.ts`, `proof/upload`, `proof/github`, `milestone-timeline.tsx` |
 | X — Completion Probability | ⬜ TODO | new `src/app/api/contracts/milestone-probability/route.ts`, `src/components/contract-form.tsx` |
 | Y — Stakeholder Report | ⬜ TODO | new `src/app/api/dashboard/investor/transparency-report/route.ts`, `src/app/dashboard/investor/page.tsx`, `prisma/schema.prisma` |
-| Z — Counter-Proposal | ⬜ TODO | new counter-proposal API routes, `src/app/dashboard/startup/page.tsx`, `src/app/contract/[id]/page.tsx`, `prisma/schema.prisma` |
+| Z — Counter-Proposal | ✅ DONE | new counter-proposal API routes, `src/app/dashboard/startup/page.tsx`, `src/app/contract/[id]/page.tsx`, `prisma/schema.prisma` |

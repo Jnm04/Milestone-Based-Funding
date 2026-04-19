@@ -18,6 +18,7 @@ import { NftSection } from "@/components/nft-section";
 import { IS_MAINNET } from "@/lib/config";
 import { CalendarButton } from "@/components/calendar-button";
 import { CopyButton } from "@/components/copy-button";
+import { CounterProposalBanner, type CounterProposalData } from "@/components/counter-proposal-banner";
 
 interface ContractPageProps {
   params: Promise<{ id: string }>;
@@ -87,6 +88,14 @@ export default async function ContractPage({ params, searchParams }: ContractPag
             summary: true,
             cachedAt: true,
           },
+        })
+      : null;
+
+  // Fetch counter-proposal — only relevant for investor when contract is DRAFT
+  const counterProposalRecord =
+    isInvestorViewerEarly && contract.status === "DRAFT"
+      ? await prisma.counterProposal.findUnique({
+          where: { contractId: contract.id },
         })
       : null;
 
@@ -342,6 +351,27 @@ export default async function ContractPage({ params, searchParams }: ContractPag
             )}
           </div>
         </div>
+
+        {/* Feature Z: Counter-proposal banner (investor only, DRAFT status) */}
+        {counterProposalRecord && isInvestorViewerEarly && (
+          <CounterProposalBanner
+            contractId={contract.id}
+            startupName={
+              contract.startup?.name ??
+              contract.startup?.companyName ??
+              null
+            }
+            counterProposal={{
+              id: counterProposalRecord.id,
+              status: counterProposalRecord.status,
+              milestoneChanges: counterProposalRecord.milestoneChanges as unknown as CounterProposalData["milestoneChanges"],
+              rationale: counterProposalRecord.rationale,
+              aiImprovedRationale: counterProposalRecord.aiImprovedRationale ?? null,
+              respondedAt: counterProposalRecord.respondedAt?.toISOString() ?? null,
+              createdAt: counterProposalRecord.createdAt.toISOString(),
+            }}
+          />
+        )}
 
         {/* Invite link */}
         {inviteUrl && contract.status === "DRAFT" && (

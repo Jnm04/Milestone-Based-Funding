@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -91,6 +91,15 @@ function StartupDashboardContent() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalContracts, setTotalContracts] = useState(0);
   const PAGE_SIZE = 20;
+
+  // Feature Z: Counter-proposal state
+  const [showCounterForm, setShowCounterForm] = useState(false);
+  const [counterRationale, setCounterRationale] = useState("");
+  const [counterChanges, setCounterChanges] = useState<Record<string, { newAmountUSD: string; newCancelAfter: string }>>({});
+  const [submittingCounter, setSubmittingCounter] = useState(false);
+  const [improvingRationale, setImprovingRationale] = useState(false);
+  const [counterSubmitted, setCounterSubmitted] = useState(false);
+  const counterFormRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     try {
@@ -194,6 +203,81 @@ function StartupDashboardContent() {
       toast.error("Failed to decline invitation.");
     } finally {
       setDeclining(false);
+    }
+  }
+
+  async function handleImproveRationale() {
+    if (!preview || counterRationale.trim().length < 50) return;
+    setImprovingRationale(true);
+    try {
+      const changes = buildMilestoneChanges();
+      const res = await fetch(`/api/contracts/${preview.id}/counter-proposal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          milestoneChanges: changes,
+          rationale: counterRationale,
+          improveWithAi: true,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed");
+      if (data.counterProposal?.aiImprovedRationale) {
+        setCounterRationale(data.counterProposal.aiImprovedRationale);
+        toast.success("Rationale improved by AI");
+        setCounterSubmitted(true);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "AI improvement failed.");
+    } finally {
+      setImprovingRationale(false);
+    }
+  }
+
+  function buildMilestoneChanges() {
+    if (!preview) return [];
+    return preview.milestones.map((ms) => {
+      const override = counterChanges[ms.id] ?? { newAmountUSD: "", newCancelAfter: "" };
+      const change: Record<string, string> = {
+        milestoneId: ms.id,
+        title: ms.title,
+        origAmountUSD: ms.amountUSD,
+        origCancelAfter: ms.cancelAfter,
+      };
+      if (override.newAmountUSD.trim() !== "") change.newAmountUSD = override.newAmountUSD.trim();
+      if (override.newCancelAfter.trim() !== "") change.newCancelAfter = new Date(override.newCancelAfter).toISOString();
+      return change;
+    });
+  }
+
+  async function handleSubmitCounterProposal() {
+    if (!preview) return;
+    if (counterRationale.trim().length < 50) {
+      toast.error("Please provide a rationale of at least 50 characters.");
+      return;
+    }
+    const changes = buildMilestoneChanges();
+    const hasChange = changes.some((c) => c.newAmountUSD !== undefined || c.newCancelAfter !== undefined);
+    if (!hasChange) {
+      toast.error("Propose at least one change (amount or deadline) to a milestone.");
+      return;
+    }
+    setSubmittingCounter(true);
+    try {
+      const res = await fetch(`/api/contracts/${preview.id}/counter-proposal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ milestoneChanges: changes, rationale: counterRationale }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed");
+      setCounterSubmitted(true);
+      setShowCounterForm(false);
+      toast.success("Counter-proposal submitted! The Grant Giver will be notified.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to submit counter-proposal.");
+    } finally {
+      setSubmittingCounter(false);
     }
   }
 
@@ -381,22 +465,187 @@ function StartupDashboardContent() {
               )}
 
               {walletAddress && (
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleJoinContract}
-                    disabled={joining}
-                    className="cs-btn-primary cs-btn-sm"
-                  >
-                    {joining ? "Joining…" : "Accept Invitation"}
-                  </button>
-                  <button
-                    onClick={handleDeclineContract}
-                    disabled={joining || declining}
-                    className="cs-btn-ghost cs-btn-sm"
-                    style={{ borderColor: "rgba(248,113,113,0.4)", color: "#f87171" }}
-                  >
-                    {declining ? "Declining…" : "Decline"}
-                  </button>
+                <div className="flex flex-col gap-3">
+                  {/* Counter-proposal submitted confirmation */}
+                  {counterSubmitted && !showCounterForm && (
+                    <div
+                      className="flex items-start gap-3 p-4 rounded-xl"
+                      style={{ background: "rgba(212,160,60,0.08)", border: "1px solid rgba(212,160,60,0.25)" }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D4A03C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>
+                        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                      </svg>
+                      <div>
+                        <p className="text-sm font-semibold" style={{ color: "#EDE6DD" }}>Counter-proposal sent</p>
+                        <p className="text-xs mt-0.5" style={{ color: "#A89B8C" }}>
+                          The Grant Giver has been notified. You&apos;ll receive an email when they respond.
+                          You can still accept the original terms below if needed.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Primary action buttons */}
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      onClick={handleJoinContract}
+                      disabled={joining || submittingCounter}
+                      className="cs-btn-primary cs-btn-sm"
+                    >
+                      {joining ? "Joining…" : "Accept Invitation"}
+                    </button>
+                    {!counterSubmitted && (
+                      <button
+                        onClick={() => {
+                          setShowCounterForm((v) => !v);
+                          if (!showCounterForm) {
+                            // Initialize changes with empty overrides
+                            const init: Record<string, { newAmountUSD: string; newCancelAfter: string }> = {};
+                            preview?.milestones.forEach((ms) => {
+                              init[ms.id] = { newAmountUSD: "", newCancelAfter: "" };
+                            });
+                            setCounterChanges(init);
+                          }
+                        }}
+                        disabled={joining}
+                        className="cs-btn-ghost cs-btn-sm"
+                      >
+                        {showCounterForm ? "Cancel" : "Propose Changes"}
+                      </button>
+                    )}
+                    <button
+                      onClick={handleDeclineContract}
+                      disabled={joining || declining || submittingCounter}
+                      className="cs-btn-ghost cs-btn-sm"
+                      style={{ borderColor: "rgba(248,113,113,0.4)", color: "#f87171" }}
+                    >
+                      {declining ? "Declining…" : "Decline"}
+                    </button>
+                  </div>
+
+                  {/* Counter-proposal form */}
+                  {showCounterForm && !counterSubmitted && (
+                    <div
+                      ref={counterFormRef}
+                      className="flex flex-col gap-4 p-5 rounded-xl mt-1"
+                      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.2)" }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold" style={{ color: "#EDE6DD" }}>Propose Changes</p>
+                        <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(212,160,60,0.1)", color: "#D4A03C", border: "1px solid rgba(212,160,60,0.25)" }}>
+                          One counter-proposal per contract
+                        </span>
+                      </div>
+
+                      {/* Per-milestone overrides */}
+                      {preview?.milestones && preview.milestones.length > 0 && (
+                        <div className="flex flex-col gap-3">
+                          <p className="text-xs uppercase tracking-wide" style={{ color: "#A89B8C" }}>Milestone Terms</p>
+                          {preview.milestones.map((ms) => (
+                            <div
+                              key={ms.id}
+                              className="flex flex-col gap-2 p-3 rounded-lg"
+                              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.1)" }}
+                            >
+                              <p className="text-xs font-semibold" style={{ color: "#EDE6DD" }}>
+                                {ms.order + 1}. {ms.title}
+                              </p>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-xs" style={{ color: "#A89B8C" }}>
+                                    Amount (USD) <span style={{ color: "#6B5E52" }}>orig: ${Number(ms.amountUSD).toLocaleString()}</span>
+                                  </label>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    placeholder={ms.amountUSD}
+                                    value={counterChanges[ms.id]?.newAmountUSD ?? ""}
+                                    onChange={(e) => setCounterChanges((prev) => ({
+                                      ...prev,
+                                      [ms.id]: { ...prev[ms.id], newAmountUSD: e.target.value },
+                                    }))}
+                                    className="cs-input text-sm py-1.5"
+                                    style={{ fontSize: "13px" }}
+                                  />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-xs" style={{ color: "#A89B8C" }}>
+                                    New Deadline <span style={{ color: "#6B5E52" }}>orig: {new Date(ms.cancelAfter).toLocaleDateString()}</span>
+                                  </label>
+                                  <input
+                                    type="date"
+                                    min={new Date().toISOString().split("T")[0]}
+                                    value={counterChanges[ms.id]?.newCancelAfter ?? ""}
+                                    onChange={(e) => setCounterChanges((prev) => ({
+                                      ...prev,
+                                      [ms.id]: { ...prev[ms.id], newCancelAfter: e.target.value },
+                                    }))}
+                                    className="cs-input text-sm py-1.5"
+                                    style={{ fontSize: "13px", colorScheme: "dark" }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Rationale */}
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs uppercase tracking-wide" style={{ color: "#A89B8C" }}>
+                            Your rationale <span style={{ color: "#6B5E52" }}>min 50 chars</span>
+                          </label>
+                          <span className="text-xs" style={{ color: counterRationale.length < 50 ? "#f87171" : "#A89B8C" }}>
+                            {counterRationale.length} / 800
+                          </span>
+                        </div>
+                        <textarea
+                          value={counterRationale}
+                          onChange={(e) => setCounterRationale(e.target.value.slice(0, 800))}
+                          placeholder="Explain why you are requesting these changes. Be specific — the Grant Giver will see this."
+                          rows={4}
+                          className="cs-input resize-none text-sm"
+                          style={{ fontSize: "13px" }}
+                        />
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex flex-wrap gap-3 items-center">
+                        <button
+                          onClick={handleSubmitCounterProposal}
+                          disabled={submittingCounter || counterRationale.trim().length < 50}
+                          className="cs-btn-primary cs-btn-sm"
+                        >
+                          {submittingCounter ? "Submitting…" : "Submit Counter-Proposal"}
+                        </button>
+                        {process.env.NEXT_PUBLIC_ANTHROPIC_ENABLED !== "false" && (
+                          <button
+                            onClick={handleImproveRationale}
+                            disabled={improvingRationale || counterRationale.trim().length < 50 || submittingCounter}
+                            className="cs-btn-ghost cs-btn-sm flex items-center gap-1.5"
+                          >
+                            {improvingRationale ? (
+                              <>
+                                <div className="w-3 h-3 rounded-full border animate-spin" style={{ borderColor: "rgba(196,112,75,0.3)", borderTopColor: "#C4704B" }} />
+                                Improving…
+                              </>
+                            ) : (
+                              <>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+                                </svg>
+                                Improve with AI
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-xs" style={{ color: "#6B5E52" }}>
+                        You have one counter-proposal per contract. Make it count. After submitting, you can still accept the original terms if the Grant Giver rejects your counter-proposal.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

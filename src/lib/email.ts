@@ -636,3 +636,67 @@ export async function sendProgressUpdateNotifiedEmail({
     `,
   });
 }
+
+// ── Feature Z: Contract Counter-Proposal ────────────────────────────────────
+
+/** Notify the investor that a startup has submitted a counter-proposal. */
+export async function sendCounterProposalSubmittedEmail({
+  to,
+  contractId,
+  contractTitle,
+  startupName,
+  rationale,
+}: {
+  to: string;
+  contractId: string;
+  contractTitle: string;
+  startupName?: string | null;
+  rationale: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Counter-proposal received: ${contractTitle}`,
+    html: `
+      <p>Hi,</p>
+      <p><strong>${esc(startupName) || "A Receiver"}</strong> has submitted a counter-proposal for your contract <strong>${esc(contractTitle)}</strong>.</p>
+      <p>They have proposed changes to the milestone terms and provided this rationale:</p>
+      <blockquote style="border-left:3px solid #C4704B;margin:12px 0;padding:8px 14px;color:#555;">${esc(rationale.slice(0, 600))}${rationale.length > 600 ? "…" : ""}</blockquote>
+      <p>Open the contract to review the proposed changes and accept or reject them.</p>
+      <p><a href="${contractLink(contractId)}">Review counter-proposal →</a></p>
+    `,
+  });
+}
+
+/** Notify the startup that the investor responded to their counter-proposal. */
+export async function sendCounterProposalRespondedEmail({
+  to,
+  contractId,
+  contractTitle,
+  decision,
+  investorName,
+}: {
+  to: string;
+  contractId: string;
+  contractTitle: string;
+  decision: "ACCEPTED" | "REJECTED";
+  investorName?: string | null;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  const accepted = decision === "ACCEPTED";
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Counter-proposal ${accepted ? "accepted" : "rejected"}: ${contractTitle}`,
+    html: `
+      <p>Hi,</p>
+      <p><strong>${esc(investorName) || "The Grant Giver"}</strong> has <strong>${accepted ? "accepted" : "rejected"}</strong> your counter-proposal for <strong>${esc(contractTitle)}</strong>.</p>
+      ${accepted
+        ? `<p>Your proposed terms have been applied. The contract is now awaiting escrow funding — the Grant Giver will lock RLUSD shortly.</p>`
+        : `<p>Your proposed changes were not accepted. The original terms remain in place — you can still accept the original invitation or decline it.</p>`
+      }
+      <p><a href="${contractLink(contractId)}">View contract →</a></p>
+    `,
+  });
+}

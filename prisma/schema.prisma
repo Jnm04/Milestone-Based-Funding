@@ -413,6 +413,30 @@ model CredibilityScore {
   @@index([contractId])
 }
 
+// ── Counter-Proposal ─────────────────────────────────────────────────────────
+
+/// Pre-funding term negotiation: startup proposes changes before accepting invite.
+/// One record per contract (unique). status: "PENDING" | "ACCEPTED" | "REJECTED"
+model CounterProposal {
+  id                  String    @id @default(cuid())
+  contractId          String    @unique
+  /// The startup user who submitted the counter-proposal
+  proposedBy          String
+  /// "PENDING" | "ACCEPTED" | "REJECTED"
+  status              String    @default("PENDING")
+  /// [{milestoneId, title, origAmountUSD, origCancelAfter, newAmountUSD?, newCancelAfter?}]
+  milestoneChanges    Json
+  /// The startup's written rationale (min 50 chars)
+  rationale           String    @db.Text
+  /// Optional AI-polished version of the rationale (Haiku)
+  aiImprovedRationale String?   @db.Text
+  respondedAt         DateTime?
+  createdAt           DateTime  @default(now())
+
+  @@index([contractId])
+  @@index([proposedBy])
+}
+
 // ── Sanctions ─────────────────────────────────────────────────────────────────
 
 /// Cached sanctions list snapshots.
