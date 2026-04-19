@@ -186,10 +186,28 @@ model Milestone {
   extensionDays         Int?
   extensionApprovedAt   DateTime?
 
+  // Feature G: AI Progress Check-ins
+  progressUpdates   ProgressUpdate[]
+
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
   @@index([contractId])
+}
+
+/// Voluntary progress updates logged by the startup while a milestone is FUNDED.
+/// Created via POST /api/contracts/[id]/milestones/[milestoneId]/progress
+/// or automatically prompted by the weekly progress-checkins cron.
+model ProgressUpdate {
+  id          String    @id @default(cuid())
+  milestoneId String
+  milestone   Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  text        String    @db.Text
+  /// "MANUAL" = startup typed it in the UI
+  source      String    @default("MANUAL")
+  createdAt   DateTime  @default(now())
+
+  @@index([milestoneId])
 }
 
 enum MilestoneStatus {

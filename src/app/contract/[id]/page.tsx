@@ -50,7 +50,10 @@ export default async function ContractPage({ params, searchParams }: ContractPag
         proofs: { orderBy: { createdAt: "desc" } },
         milestones: {
           orderBy: { order: "asc" },
-          include: { proofs: { orderBy: { createdAt: "desc" } } },
+          include: {
+            proofs: { orderBy: { createdAt: "desc" } },
+            progressUpdates: { orderBy: { createdAt: "desc" } },
+          },
           // proofGuidance and proofGuidanceCachedAt are scalar fields — included automatically
         },
       },
@@ -405,6 +408,14 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           latestProofAppealStatus={activeMilestone?.proofs[0]?.appealStatus ?? latestProof?.appealStatus ?? null}
           latestProofAppealResult={activeMilestone?.proofs[0]?.appealResult ?? latestProof?.appealResult ?? null}
           latestProofAppealReasoning={activeMilestone?.proofs[0]?.appealReasoning ?? latestProof?.appealReasoning ?? null}
+          progressUpdates={
+            (activeMilestone?.progressUpdates ?? []).map((u) => ({
+              id: u.id,
+              text: u.text,
+              source: u.source,
+              createdAt: u.createdAt.toISOString(),
+            }))
+          }
           renegotiationStatus={activeMilestone?.renegotiationStatus ?? null}
           renegotiationDeadline={activeMilestone?.renegotiationDeadline?.toISOString() ?? null}
           interimUpdateText={activeMilestone?.interimUpdateText ?? null}

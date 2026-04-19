@@ -498,3 +498,57 @@ export async function sendExtensionRejectedEmail({
     `,
   });
 }
+
+// ── Feature G: Progress Check-ins ────────────────────────────────────────────
+
+/** Weekly nudge sent to the startup for a FUNDED milestone. */
+export async function sendProgressCheckinEmail({
+  to,
+  contractId,
+  milestoneTitle,
+}: {
+  to: string;
+  contractId: string;
+  milestoneTitle: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Weekly check-in: ${milestoneTitle}`,
+    html: `
+      <p>Hi,</p>
+      <p>Quick check-in for milestone <strong>${esc(milestoneTitle)}</strong> — how's it going?</p>
+      <p>Share a short progress update on the contract page so the Grant Giver knows where things stand.</p>
+      <p><a href="${contractLink(contractId)}">Log a progress update →</a></p>
+    `,
+  });
+}
+
+/** Notify investor when the startup has logged a progress update. */
+export async function sendProgressUpdateNotifiedEmail({
+  to,
+  contractId,
+  milestoneTitle,
+  updateText,
+  startupName,
+}: {
+  to: string;
+  contractId: string;
+  milestoneTitle: string;
+  updateText: string;
+  startupName?: string | null;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Progress update: ${milestoneTitle}`,
+    html: `
+      <p>Hi,</p>
+      <p><strong>${esc(startupName) || "The Receiver"}</strong> has shared a progress update for milestone <strong>${esc(milestoneTitle)}</strong>:</p>
+      <blockquote style="border-left:3px solid #C4704B;margin:12px 0;padding:8px 14px;color:#555;">${esc(updateText.slice(0, 500))}${updateText.length > 500 ? "…" : ""}</blockquote>
+      <p><a href="${contractLink(contractId)}">View contract →</a></p>
+    `,
+  });
+}

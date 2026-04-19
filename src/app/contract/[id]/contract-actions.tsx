@@ -36,6 +36,9 @@ interface ContractActionsProps {
   latestProofAppealResult: string | null;
   /** Claude's reasoning for the appeal verdict. */
   latestProofAppealReasoning: string | null;
+  // ── Feature G: Progress Check-ins ────────────────────────────────────────
+  /** Progress updates logged by the startup for the active milestone. */
+  progressUpdates: Array<{ id: string; text: string; source: string; createdAt: string }>;
   // ── Feature F: Renegotiation ──────────────────────────────────────────────
   /** Current renegotiation sub-status: null | "RENEGOTIATING" | "EXTENSION_REQUESTED" | "EXTENSION_APPROVED" | "EXTENSION_REJECTED" */
   renegotiationStatus: string | null;
@@ -259,6 +262,7 @@ export function ContractActions({
   latestProofAppealStatus,
   latestProofAppealResult,
   latestProofAppealReasoning,
+  progressUpdates,
   renegotiationStatus,
   renegotiationDeadline,
   interimUpdateText,
@@ -284,6 +288,9 @@ export function ContractActions({
   const [renegotiationExtDays, setRenegotiationExtDays] = useState<7 | 14 | 30>(14);
   const [loadingRenegotiate, setLoadingRenegotiate] = useState(false);
   const [loadingRenegotiateRespond, setLoadingRenegotiateRespond] = useState<"APPROVE" | "REJECT" | null>(null);
+  const [confirmCancelReneg, setConfirmCancelReneg] = useState(false);
+  const [progressUpdateText, setProgressUpdateText] = useState("");
+  const [loadingProgressUpdate, setLoadingProgressUpdate] = useState(false);
 
   // Auto-reset confirm states after 5 seconds to prevent accidental clicks
   useEffect(() => {
@@ -297,6 +304,12 @@ export function ContractActions({
     const t = setTimeout(() => setConfirmReject(false), 5000);
     return () => clearTimeout(t);
   }, [confirmReject]);
+
+  useEffect(() => {
+    if (!confirmCancelReneg) return;
+    const t = setTimeout(() => setConfirmCancelReneg(false), 5000);
+    return () => clearTimeout(t);
+  }, [confirmCancelReneg]);
 
   // ── Mint test RLUSD via MockRLUSD.faucet() ───────────────────────────────
   async function handleFaucet() {
@@ -638,6 +651,30 @@ export function ContractActions({
     }
   }
 
+  // ── Log a voluntary progress update (startup) ────────────────────────────
+  async function handleProgressUpdate() {
+    if (!milestoneId) return;
+    setLoadingProgressUpdate(true);
+    try {
+      const res = await fetch(`/api/contracts/${contractId}/milestones/${milestoneId}/progress`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: progressUpdateText }),
+      });
+      if (!res.ok) {
+        const err = (await res.json()) as { error?: string };
+        throw new Error(err.error ?? "Request failed");
+      }
+      toast.success("Progress update shared with the Grant Giver.");
+      setProgressUpdateText("");
+      setTimeout(() => window.location.reload(), 1200);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Request failed.");
+    } finally {
+      setLoadingProgressUpdate(false);
+    }
+  }
+
   const isExpired = new Date() >= new Date(cancelAfter);
 
   // ── AWAITING_ESCROW: investor funds via MetaMask ──────────────────────────
@@ -704,6 +741,26 @@ export function ContractActions({
           <p className="text-sm font-medium" style={{ color: "#7DB8F7" }}>
             Waiting for the Receiver to upload milestone proof.
           </p>
+          {/* Progress updates list (investor view) */}
+          {progressUpdates.length > 0 && (
+            <div className="flex flex-col gap-2 mt-1">
+              <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "#A89B8C" }}>
+                Progress Updates ({progressUpdates.length})
+              </p>
+              {progressUpdates.map((u) => (
+                <div
+                  key={u.id}
+                  className="flex flex-col gap-0.5 p-3 rounded-lg"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(96,165,250,0.15)" }}
+                >
+                  <p className="text-xs leading-relaxed" style={{ color: "#EDE6DD" }}>{u.text}</p>
+                  <p className="text-xs" style={{ color: "#6B5E52" }}>
+                    {new Date(u.createdAt).toLocaleString()}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       );
     }
@@ -715,6 +772,70 @@ export function ContractActions({
             milestoneId={milestoneId}
             initialGuidance={milestoneGuidance}
           />
+        )}
+        {/* Progress update form (startup view) */}
+        {milestoneId && (
+          <div
+            className="flex flex-col gap-2 p-4 rounded-xl"
+            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.15)" }}
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "#A89B8C" }}>
+                Share a Progress Update
+              </p>
+              {progressUpdates.length > 0 && (
+                <span className="text-xs" style={{ color: "#6B5E52" }}>
+                  {progressUpdates.length} update{progressUpdates.length !== 1 ? "s" : ""} shared
+                </span>
+              )}
+            </div>
+            <p className="text-xs" style={{ color: "rgba(168,155,140,0.7)" }}>
+              Optional — keep the Grant Giver informed of your progress before submitting proof.
+            </p>
+            {progressUpdates.length > 0 && (
+              <div className="flex flex-col gap-1.5 mb-1">
+                {progressUpdates.slice(0, 2).map((u) => (
+                  <div
+                    key={u.id}
+                    className="flex flex-col gap-0.5 p-2.5 rounded-lg"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(196,112,75,0.12)" }}
+                  >
+                    <p className="text-xs leading-relaxed" style={{ color: "#A89B8C" }}>{u.text}</p>
+                    <p className="text-xs" style={{ color: "#6B5E52" }}>
+                      {new Date(u.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+            <textarea
+              value={progressUpdateText}
+              onChange={(e) => setProgressUpdateText(e.target.value)}
+              placeholder="e.g. Backend API is done, working on frontend integration now — 70% complete overall…"
+              rows={3}
+              maxLength={1000}
+              className="w-full rounded-lg p-3 text-sm resize-none outline-none"
+              style={{
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(196,112,75,0.2)",
+                color: "#EDE6DD",
+                fontFamily: "inherit",
+              }}
+            />
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs" style={{ color: "rgba(168,155,140,0.4)" }}>
+                {progressUpdateText.length}/1000
+              </span>
+              <button
+                onClick={handleProgressUpdate}
+                disabled={loadingProgressUpdate || progressUpdateText.trim().length < 20}
+                className="rounded-lg px-3 py-1.5 text-xs font-semibold transition-all disabled:opacity-40"
+                style={{ background: "rgba(196,112,75,0.15)", border: "1px solid rgba(196,112,75,0.35)", color: "#C4704B" }}
+              >
+                {loadingProgressUpdate ? "Sharing…" : "Share Update"}
+              </button>
+            </div>
+          </div>
         )}
         <ProofUpload
           contractId={contractId}
@@ -1176,12 +1297,30 @@ export function ContractActions({
 
         {/* ── Investor: waiting for startup to submit ─────────────────────── */}
         {isInvestor && !extensionRequested && (
-          <p className="text-xs" style={{ color: "#A89B8C" }}>
-            Waiting for the Receiver to submit a progress update.
-            {windowClosed
-              ? " The window has closed — the escrow will be automatically cancelled."
-              : ""}
-          </p>
+          <div className="flex flex-col gap-2">
+            <p className="text-xs" style={{ color: "#A89B8C" }}>
+              Waiting for the Receiver to submit a progress update.
+              {windowClosed
+                ? " The window has closed — the escrow will be automatically cancelled."
+                : ""}
+            </p>
+            <button
+              onClick={() => {
+                if (!confirmCancelReneg) { setConfirmCancelReneg(true); return; }
+                setConfirmCancelReneg(false);
+                handleCancelEscrow();
+              }}
+              disabled={loadingCancel}
+              className="w-full rounded-lg py-2 text-xs font-semibold transition-colors disabled:opacity-50"
+              style={{
+                background: confirmCancelReneg ? "rgba(248,113,113,0.2)" : "rgba(248,113,113,0.07)",
+                color: "#F87171",
+                border: "1px solid rgba(248,113,113,0.25)",
+              }}
+            >
+              {loadingCancel ? "Cancelling…" : confirmCancelReneg ? "Confirm: Cancel escrow & recover funds?" : "Skip renegotiation — cancel escrow"}
+            </button>
+          </div>
         )}
 
         {/* ── Investor: review extension request ─────────────────────────── */}
@@ -1263,7 +1402,7 @@ export function ContractActions({
                   opacity: loadingRenegotiateRespond !== null ? 0.6 : 1,
                 }}
               >
-                {loadingRenegotiateRespond === "REJECT" ? "Rejecting…" : "✗ Reject"}
+                {loadingRenegotiateRespond === "REJECT" ? "Rejecting…" : "✗ Reject & Cancel"}
               </button>
             </div>
           </div>
