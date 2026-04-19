@@ -25,8 +25,8 @@
 | **Feature M** — AI-Personalized Emails | ✅ DONE | `0d372fc3` | Haiku-generated body for proof rejected/approved/deadline reminder/appeal result/renegotiation emails; falls back to static template on failure |
 | **Feature V** — Proof TL;DR for Investors | ✅ DONE | `82e986fa` | `Proof.aiContentSummary Text?`; Haiku bullet summary at upload/github; shown investor-only in milestone timeline |
 | **Feature W** — Resubmission Diff Intelligence | ✅ DONE | `070d6a41` | `Proof.aiResubmissionDiff Text?`; Haiku diff vs prior rejection at resubmission; addressed/stillOpen shown startup-only in milestone timeline |
-| **Feature X** — Milestone Completion Probability | ⬜ TODO | — | Inline feasibility indicator in contract form; no DB changes |
-| **Feature Y** — Stakeholder Transparency Report | ⬜ TODO | — | Quarterly PDF report for investors; 2 `User` cache fields |
+| **Feature X** — Milestone Completion Probability | ✅ DONE | `7e7f1270` | Inline feasibility indicator in contract form; no DB changes |
+| **Feature Y** — Stakeholder Transparency Report | ✅ DONE | — | Quarterly HTML report (print-to-PDF); 2 `User` cache fields; `Generate Report` button in investor dashboard |
 | **Feature Z** — Contract Counter-Proposal | ⬜ TODO | — | `CounterProposal` model; startup proposes term changes before signing |
 
 ---

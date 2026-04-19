@@ -58,6 +58,10 @@ model User {
 
   // Outbound webhooks
   webhookEndpoints WebhookEndpoint[]
+
+  // Feature Y: Stakeholder Transparency Report — cached per quarter
+  lastTransparencyReportUrl    String?
+  lastTransparencyReportPeriod String?   // e.g. "Q1-2026"
 }
 
 enum Role {

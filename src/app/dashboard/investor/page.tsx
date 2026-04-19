@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -186,6 +186,269 @@ function IconEyeOff() {
   );
 }
 
+// ── Transparency Report Modal ────────────────────────────────────────────────
+
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2];
+const QUARTERS = ["Q1", "Q2", "Q3", "Q4"] as const;
+
+function IconFileText() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/>
+      <line x1="16" y1="17" x2="8" y2="17"/>
+      <polyline points="10 9 9 9 8 9"/>
+    </svg>
+  );
+}
+
+function IconX() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18"/>
+      <line x1="6" y1="6" x2="18" y2="18"/>
+    </svg>
+  );
+}
+
+function IconExternalLink() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+      <polyline points="15 3 21 3 21 9"/>
+      <line x1="10" y1="14" x2="21" y2="3"/>
+    </svg>
+  );
+}
+
+function TransparencyReportModal({ onClose }: { onClose: () => void }) {
+  const currentQ = `Q${Math.ceil((new Date().getMonth() + 1) / 3)}` as typeof QUARTERS[number];
+  const [quarter, setQuarter] = useState<typeof QUARTERS[number]>(
+    QUARTERS.includes(currentQ) ? currentQ : "Q1"
+  );
+  const [year, setYear]       = useState(CURRENT_YEAR);
+  const [loading, setLoading] = useState(false);
+  const [reportUrl, setReportUrl] = useState<string | null>(null);
+  const [cached, setCached]       = useState(false);
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  // Close on backdrop click
+  function handleBackdrop(e: React.MouseEvent) {
+    if (e.target === overlayRef.current) onClose();
+  }
+
+  async function generate() {
+    setLoading(true);
+    setReportUrl(null);
+    try {
+      const res = await fetch("/api/dashboard/investor/transparency-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quarter, year }),
+      });
+      const data = await res.json() as { reportUrl?: string; cached?: boolean; error?: string };
+      if (!res.ok || !data.reportUrl) {
+        toast.error(data.error ?? "Failed to generate report.");
+        return;
+      }
+      setReportUrl(data.reportUrl);
+      setCached(data.cached ?? false);
+      toast.success(data.cached ? "Report loaded from cache." : "Report generated successfully.");
+    } catch {
+      toast.error("Could not reach the server. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div
+      ref={overlayRef}
+      onClick={handleBackdrop}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(3px)" }}
+    >
+      <div
+        className="relative w-full max-w-md rounded-2xl overflow-hidden flex flex-col"
+        style={{
+          background: "#1F1A18",
+          border: "1px solid rgba(196,112,75,0.25)",
+          boxShadow: "0 24px 80px rgba(0,0,0,0.6)",
+        }}
+      >
+        {/* Header */}
+        <div
+          className="px-6 py-5 flex items-center justify-between"
+          style={{ borderBottom: "1px solid rgba(196,112,75,0.12)" }}
+        >
+          <div className="flex flex-col gap-0.5">
+            <h2
+              className="text-base font-semibold"
+              style={{ color: "#EDE6DD", fontFamily: "var(--font-libre-franklin)", fontWeight: 400 }}
+            >
+              Stakeholder Transparency Report
+            </h2>
+            <p className="text-xs" style={{ color: "#A89B8C" }}>
+              Board-ready quarterly report for investors, DAOs & donors
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg transition-colors"
+            style={{ color: "#6B5E52" }}
+            onMouseOver={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#A89B8C"; (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.05)"; }}
+            onMouseOut={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#6B5E52"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+          >
+            <IconX />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-6 flex flex-col gap-5">
+          {/* Period selectors */}
+          <div className="flex flex-col gap-2">
+            <label
+              className="text-xs font-semibold uppercase tracking-wide"
+              style={{ color: "#A89B8C", letterSpacing: "0.12em" }}
+            >
+              Report Period
+            </label>
+            <div className="flex gap-3">
+              {/* Quarter */}
+              <div className="flex gap-1.5">
+                {QUARTERS.map((q) => (
+                  <button
+                    key={q}
+                    onClick={() => setQuarter(q)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                    style={{
+                      background: quarter === q ? "rgba(196,112,75,0.2)" : "rgba(255,255,255,0.04)",
+                      border: quarter === q ? "1px solid rgba(196,112,75,0.5)" : "1px solid rgba(255,255,255,0.07)",
+                      color: quarter === q ? "#C4704B" : "#A89B8C",
+                    }}
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+              {/* Year */}
+              <select
+                value={year}
+                onChange={(e) => setYear(Number(e.target.value))}
+                className="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.07)",
+                  color: "#EDE6DD",
+                }}
+              >
+                {YEARS.map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* What's included note */}
+          <div
+            className="rounded-xl p-4"
+            style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.1)" }}
+          >
+            <p className="text-xs" style={{ color: "#A89B8C", lineHeight: 1.6 }}>
+              Includes <strong style={{ color: "#C8BEAF" }}>all contracts active in this period</strong> — milestone outcomes, RLUSD deployed &amp; released, AI confidence scores, on-chain references, and an AI-generated executive narrative.
+            </p>
+          </div>
+
+          {/* Report URL result */}
+          {reportUrl && (
+            <div
+              className="rounded-xl p-4 flex flex-col gap-3"
+              style={{ background: "rgba(22,163,74,0.06)", border: "1px solid rgba(22,163,74,0.2)" }}
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full" style={{ background: "#34d399" }} />
+                <p className="text-xs font-semibold" style={{ color: "#34d399" }}>
+                  {cached ? "Loaded from cache" : "Report ready"}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <a
+                  href={reportUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all"
+                  style={{
+                    background: "rgba(196,112,75,0.16)",
+                    border: "1px solid rgba(196,112,75,0.35)",
+                    color: "#C4704B",
+                  }}
+                >
+                  <IconExternalLink />
+                  Open Report
+                </a>
+                <button
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(reportUrl).catch(() => {});
+                    toast.success("Report link copied.");
+                  }}
+                  className="px-4 py-2 rounded-lg text-xs font-semibold transition-all"
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    color: "#A89B8C",
+                  }}
+                >
+                  Copy link
+                </button>
+              </div>
+              {!cached && (
+                <p className="text-xs" style={{ color: "#6B7280" }}>
+                  Cached for this quarter — re-generating will return this report.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div
+          className="px-6 py-4 flex items-center justify-between gap-3"
+          style={{ borderTop: "1px solid rgba(196,112,75,0.1)" }}
+        >
+          <button
+            onClick={onClose}
+            className="cs-btn-ghost cs-btn-sm"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={generate}
+            disabled={loading}
+            className="cs-btn-primary cs-btn-sm flex items-center gap-2"
+            style={{ opacity: loading ? 0.7 : 1 }}
+          >
+            {loading ? (
+              <>
+                <div className="w-3.5 h-3.5 rounded-full border-2 animate-spin" style={{ borderColor: "rgba(255,255,255,0.3)", borderTopColor: "#fff" }} />
+                Generating…
+              </>
+            ) : (
+              <>
+                <IconFileText />
+                Generate {quarter} {year} Report
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
 export default function InvestorDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -196,6 +459,7 @@ export default function InvestorDashboard() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalContracts, setTotalContracts] = useState(0);
+  const [showReportModal, setShowReportModal] = useState(false);
   const PAGE_SIZE = 20;
 
   useEffect(() => {
@@ -268,6 +532,7 @@ export default function InvestorDashboard() {
     <div className="flex min-h-screen" style={{ background: "#171311" }}>
       <NodeBackground />
       <DashboardSidebar role="investor" />
+      {showReportModal && <TransparencyReportModal onClose={() => setShowReportModal(false)} />}
 
       {/* Main */}
       <main className="flex-1 flex flex-col min-h-screen overflow-x-hidden pb-20 md:pb-0">
@@ -285,18 +550,28 @@ export default function InvestorDashboard() {
             </h1>
             <p className="text-sm mt-1" style={{ color: "#A89B8C" }}>Overview of your contracts and milestones</p>
           </div>
-          {walletAddress && (
-            <div className="flex items-center gap-3">
-              <BuyRlusdModal walletAddress={walletAddress} />
-              <Link
-                href={`/contract/new?investor=${walletAddress}`}
-                className="cs-btn-primary cs-btn-sm"
-              >
-                <IconPlus />
-                New Contract
-              </Link>
-            </div>
-          )}
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              onClick={() => setShowReportModal(true)}
+              className="cs-btn-ghost cs-btn-sm flex items-center gap-1.5"
+              title="Generate quarterly stakeholder transparency report"
+            >
+              <IconFileText />
+              <span className="hidden sm:inline">Generate Report</span>
+            </button>
+            {walletAddress && (
+              <>
+                <BuyRlusdModal walletAddress={walletAddress} />
+                <Link
+                  href={`/contract/new?investor=${walletAddress}`}
+                  className="cs-btn-primary cs-btn-sm"
+                >
+                  <IconPlus />
+                  New Contract
+                </Link>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="px-6 md:px-10 py-8 flex flex-col gap-8">
