@@ -31,7 +31,7 @@ const milestoneItemSchema = z.object({
   title: z
     .string({ required_error: "Milestone title is required" })
     .min(1, "Milestone title cannot be empty")
-    .max(200, "Milestone title must be at most 200 characters")
+    .max(1000, "Milestone title must be at most 1000 characters")
     .trim(),
 
   // Accept number or numeric string — the route already does Number(m.amountUSD)

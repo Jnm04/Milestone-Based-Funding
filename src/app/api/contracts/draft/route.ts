@@ -85,7 +85,7 @@ Rules:
 - amountUSD: integer, min 100, max 200000. Distribute proportionally to effort.
 - deadlineDays: integer, 14–180. Scale to the complexity of each milestone.
 - projectTitle: concise (≤8 words), describes the overall project
-- Milestone title: 1–3 sentences describing exactly what must be delivered and how it will be verified
+- Milestone title: 1–2 sentences (max 300 characters) describing exactly what must be delivered and how it will be verified
 - Never use phrases like "make progress on" or "work towards" — deliverables must be binary (done or not done)`,
       messages: [
         {
