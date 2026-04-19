@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import type { DraftResponse } from "@/app/api/contracts/draft/route";
 
 interface MilestoneInput {
   title: string;
@@ -61,6 +62,12 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
     { title: "", amountUSD: "", deadlineDays: "30" },
   ]);
 
+  // AI Drafting state
+  const [aiDraftOpen, setAiDraftOpen] = useState(false);
+  const [aiDescription, setAiDescription] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiGenerated, setAiGenerated] = useState(false);
+
   function addMilestone() {
     setMilestones((prev) => [...prev, { title: "", amountUSD: "", deadlineDays: "30" }]);
   }
@@ -71,6 +78,41 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
 
   function updateMilestone(index: number, field: keyof MilestoneInput, value: string) {
     setMilestones((prev) => prev.map((m, i) => (i === index ? { ...m, [field]: value } : m)));
+  }
+
+  async function handleAiDraft() {
+    if (aiDescription.trim().length < 20) {
+      toast.error("Please describe your project in at least 20 characters.");
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const res = await fetch("/api/contracts/draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: aiDescription }),
+      });
+      if (!res.ok) {
+        const err = await res.json() as { error?: string };
+        throw new Error(err.error ?? "Failed to generate plan");
+      }
+      const data = await res.json() as DraftResponse;
+      setProjectTitle(data.projectTitle);
+      setMilestones(
+        data.milestones.map((m) => ({
+          title: m.title,
+          amountUSD: String(m.amountUSD),
+          deadlineDays: String(m.deadlineDays),
+        }))
+      );
+      setAiGenerated(true);
+      setAiDraftOpen(false);
+      toast.success("Milestone plan generated — review and edit before creating.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setAiLoading(false);
+    }
   }
 
   const totalAmount = milestones.reduce((sum, m) => sum + (Number(m.amountUSD) || 0), 0);
@@ -150,6 +192,150 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
             : "You will get an invite link to share with the Receiver after creation."}
         </p>
       </div>
+
+      {/* AI Drafting */}
+      <div
+        style={{
+          borderRadius: "12px",
+          border: "1px solid #e4e4e7",
+          overflow: "hidden",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setAiDraftOpen((v) => !v)}
+          style={{
+            width: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "12px 16px",
+            background: aiDraftOpen ? "#fafafa" : "#fff",
+            border: "none",
+            cursor: "pointer",
+            textAlign: "left",
+          }}
+        >
+          <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span
+              style={{
+                fontSize: "10px",
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                padding: "2px 8px",
+                borderRadius: "999px",
+                background: "rgba(196,112,75,0.1)",
+                color: "#C4704B",
+                border: "1px solid rgba(196,112,75,0.25)",
+              }}
+            >
+              AI
+            </span>
+            <span style={{ fontSize: "14px", fontWeight: 500, color: "#18181b" }}>
+              Let AI draft this for you
+            </span>
+          </span>
+          <span style={{ fontSize: "18px", color: "#71717a", lineHeight: 1 }}>
+            {aiDraftOpen ? "−" : "+"}
+          </span>
+        </button>
+
+        {aiDraftOpen && (
+          <div
+            style={{
+              padding: "16px",
+              borderTop: "1px solid #e4e4e7",
+              display: "flex",
+              flexDirection: "column",
+              gap: "12px",
+              background: "#fafafa",
+            }}
+          >
+            <p style={{ fontSize: "13px", color: "#52525b", margin: 0 }}>
+              Describe your project in plain English — AI will generate a verifiable milestone plan.
+            </p>
+            <div style={{ position: "relative" }}>
+              <textarea
+                rows={4}
+                placeholder="e.g. We are building a SaaS tool for freelancers to automate invoicing. The grant will fund our MVP launch, beta testing with 50 users, and first paid customer."
+                value={aiDescription}
+                onChange={(e) => setAiDescription(e.target.value.slice(0, 2000))}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  paddingBottom: "24px",
+                  borderRadius: "8px",
+                  border: "1px solid #e4e4e7",
+                  fontSize: "14px",
+                  fontFamily: "inherit",
+                  resize: "vertical",
+                  background: "#fff",
+                  color: "#18181b",
+                  boxSizing: "border-box",
+                }}
+              />
+              <span
+                style={{
+                  position: "absolute",
+                  bottom: "8px",
+                  right: "10px",
+                  fontSize: "11px",
+                  color: aiDescription.length >= 1900 ? "#ef4444" : "#a1a1aa",
+                  pointerEvents: "none",
+                }}
+              >
+                {aiDescription.length}/2000
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleAiDraft}
+              disabled={aiLoading || aiDescription.trim().length < 20}
+              style={{
+                alignSelf: "flex-start",
+                padding: "8px 18px",
+                borderRadius: "8px",
+                border: "none",
+                background: aiLoading || aiDescription.trim().length < 20 ? "#d4d4d8" : "#C4704B",
+                color: "#fff",
+                fontSize: "14px",
+                fontWeight: 600,
+                cursor: aiLoading || aiDescription.trim().length < 20 ? "not-allowed" : "pointer",
+                transition: "background 0.15s",
+              }}
+            >
+              {aiLoading ? "AI is drafting your milestones…" : "Generate Milestone Plan"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* AI-generated banner */}
+      {aiGenerated && (
+        <div
+          style={{
+            padding: "10px 14px",
+            borderRadius: "8px",
+            background: "rgba(196,112,75,0.08)",
+            border: "1px solid rgba(196,112,75,0.3)",
+            fontSize: "13px",
+            color: "#92400e",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <span style={{ fontWeight: 700 }}>AI-generated</span> — review and edit all fields before creating the contract.
+          <button
+            type="button"
+            onClick={() => setAiGenerated(false)}
+            style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "#92400e", fontSize: "16px", lineHeight: 1 }}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* Milestones */}
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
