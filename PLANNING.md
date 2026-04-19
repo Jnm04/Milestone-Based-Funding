@@ -2,7 +2,7 @@
 
 > This file tracks planned features with full implementation details.
 > Reference this in new Claude sessions to continue work without losing context.
-> Last updated: 2026-04-19 (Feature G done + investor renegotiation cancel)
+> Last updated: 2026-04-19 (Feature I done — AI Proof Pre-Check)
 
 ---
 
@@ -19,7 +19,7 @@
 | **Feature F** — AI Milestone Renegotiation | ✅ DONE | — | `RENEGOTIATING` MilestoneStatus + ContractStatus; 48h window opened by cron; `assessInterimUpdate()` Haiku call; 2 API routes (submit + respond); amber UI block in contract-actions for both parties |
 | **Feature G** — AI Progress Check-ins | ✅ DONE | — | `ProgressUpdate` model; weekly cron (`0 9 * * 2`) sends check-in emails; startup logs updates from FUNDED block; investor sees update list |
 | **Feature H** — AI Reputation System | ⬜ TODO | — | Cross-contract reputation score per startup |
-| **Feature I** — AI Proof Pre-Check | ⬜ TODO | — | Single-model soft check before real submit, no status change |
+| **Feature I** — AI Proof Pre-Check | ✅ DONE | — | `POST /api/proof/precheck`; single Haiku call on latest proof; "Test my proof" + result panel in PROOF_SUBMITTED startup block |
 | **Feature K** — Deal Health Score | ⬜ TODO | — | Traffic-light on dashboard, pure logic no AI call |
 | **Feature M** — AI-Personalized Emails | ⬜ TODO | — | Contextual Haiku-generated body for 5 key email types |
 

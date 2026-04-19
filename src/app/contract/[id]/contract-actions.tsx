@@ -291,6 +291,13 @@ export function ContractActions({
   const [confirmCancelReneg, setConfirmCancelReneg] = useState(false);
   const [progressUpdateText, setProgressUpdateText] = useState("");
   const [loadingProgressUpdate, setLoadingProgressUpdate] = useState(false);
+  // ── Feature I: Proof Pre-Check ────────────────────────────────────────────
+  const [loadingPreCheck, setLoadingPreCheck] = useState(false);
+  const [preCheckResult, setPreCheckResult] = useState<{
+    verdict: "LIKELY_PASS" | "LIKELY_FAIL" | "BORDERLINE";
+    feedback: string;
+    suggestions: string[];
+  } | null>(null);
 
   // Auto-reset confirm states after 5 seconds to prevent accidental clicks
   useEffect(() => {
@@ -675,6 +682,30 @@ export function ContractActions({
     }
   }
 
+  // ── Run AI proof pre-check (Feature I) ───────────────────────────────────
+  async function handlePreCheck() {
+    if (!milestoneId) return;
+    setLoadingPreCheck(true);
+    setPreCheckResult(null);
+    try {
+      const res = await fetch("/api/proof/precheck", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ milestoneId }),
+      });
+      if (!res.ok) {
+        const err = (await res.json()) as { error?: string };
+        throw new Error(err.error ?? "Pre-check failed");
+      }
+      const data = await res.json() as { verdict: "LIKELY_PASS" | "LIKELY_FAIL" | "BORDERLINE"; feedback: string; suggestions: string[] };
+      setPreCheckResult(data);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Pre-check failed.");
+    } finally {
+      setLoadingPreCheck(false);
+    }
+  }
+
   const isExpired = new Date() >= new Date(cancelAfter);
 
   // ── AWAITING_ESCROW: investor funds via MetaMask ──────────────────────────
@@ -870,21 +901,65 @@ export function ContractActions({
           </a>
         )}
         {isStartup && (
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleVerify(latestProofId)}
-              disabled={loadingVerify}
-              className="flex-1 rounded-lg py-2.5 text-sm font-semibold transition-colors disabled:opacity-50"
-              style={{ background: "#C4704B", color: "#171311" }}
-            >
-              {loadingVerify ? "Verifying…" : "Run AI Verification"}
-            </button>
-            <ProofUpload
-              contractId={contractId}
-              milestoneId={milestoneId}
-              onUploaded={() => window.location.reload()}
-              replaceMode
-            />
+          <div className="flex flex-col gap-3">
+            {/* Pre-check result panel */}
+            {preCheckResult && (() => {
+              const isPass = preCheckResult.verdict === "LIKELY_PASS";
+              const isFail = preCheckResult.verdict === "LIKELY_FAIL";
+              const color = isPass ? "#6EE09A" : isFail ? "#F87171" : "#D4A03C";
+              const bg = isPass ? "rgba(74,222,128,0.06)" : isFail ? "rgba(248,113,113,0.06)" : "rgba(212,160,60,0.06)";
+              const border = isPass ? "rgba(74,222,128,0.2)" : isFail ? "rgba(248,113,113,0.2)" : "rgba(212,160,60,0.25)";
+              const label = isPass ? "Likely to Pass" : isFail ? "Likely to Fail" : "Borderline";
+              return (
+                <div className="flex flex-col gap-2 p-3 rounded-lg" style={{ background: bg, border: `1px solid ${border}` }}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-wide" style={{ color }}>
+                      Pre-Check: {label}
+                    </span>
+                  </div>
+                  <p className="text-xs leading-relaxed" style={{ color: "#A89B8C" }}>{preCheckResult.feedback}</p>
+                  {preCheckResult.suggestions.length > 0 && (
+                    <ul className="flex flex-col gap-1 mt-0.5">
+                      {preCheckResult.suggestions.map((s, i) => (
+                        <li key={i} className="flex gap-1.5 text-xs" style={{ color: "#A89B8C" }}>
+                          <span style={{ color, flexShrink: 0 }}>→</span>
+                          <span>{s}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })()}
+            <div className="flex gap-2">
+              <button
+                onClick={handlePreCheck}
+                disabled={loadingPreCheck || loadingVerify}
+                className="rounded-lg py-2.5 px-4 text-sm font-semibold transition-colors disabled:opacity-50"
+                style={{
+                  background: "rgba(196,112,75,0.1)",
+                  color: "#C4704B",
+                  border: "1px solid rgba(196,112,75,0.35)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {loadingPreCheck ? "Checking…" : preCheckResult ? "Re-check" : "Test my proof"}
+              </button>
+              <button
+                onClick={() => handleVerify(latestProofId)}
+                disabled={loadingVerify || loadingPreCheck}
+                className="flex-1 rounded-lg py-2.5 text-sm font-semibold transition-colors disabled:opacity-50"
+                style={{ background: "#C4704B", color: "#171311" }}
+              >
+                {loadingVerify ? "Verifying…" : "Run AI Verification"}
+              </button>
+              <ProofUpload
+                contractId={contractId}
+                milestoneId={milestoneId}
+                onUploaded={() => window.location.reload()}
+                replaceMode
+              />
+            </div>
           </div>
         )}
       </div>
