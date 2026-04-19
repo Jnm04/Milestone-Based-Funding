@@ -1,4 +1,6 @@
 import { Resend } from "resend";
+import Anthropic from "@anthropic-ai/sdk";
+import { prisma } from "@/lib/prisma";
 import {
   tgProofSubmitted,
   tgPendingReview,
@@ -11,6 +13,66 @@ import {
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.EMAIL_FROM ?? "Cascrow <onboarding@resend.dev>";
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+
+// ── Feature M: AI-Personalized Email Copy ────────────────────────────────────
+
+let _anthropic: Anthropic | null = null;
+function getAnthropic() {
+  if (!_anthropic) _anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  return _anthropic;
+}
+
+/**
+ * Generate 1–2 personalized sentences for the email body using Claude Haiku.
+ * Returns null on any error or if the API key is absent — callers fall back to static copy.
+ */
+async function generateEmailBody(
+  emailType: string,
+  context: Record<string, string | number | undefined>
+): Promise<string | null> {
+  if (!process.env.ANTHROPIC_API_KEY) return null;
+  try {
+    const contextStr = Object.entries(context)
+      .filter(([, v]) => v !== undefined && v !== "")
+      .map(([k, v]) => `${k}: ${v}`)
+      .join("\n");
+    const anthropic = getAnthropic();
+    const response = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 80,
+      system: `You write short, professional email body copy for Cascrow — a milestone-based grant escrow platform where investors fund startups by milestone.
+Write exactly 1–2 sentences of personalized notification text for the given email type and context.
+Use the specific names, amounts, and milestone titles provided. Be direct, warm, and action-oriented.
+Respond with ONLY the sentences. No greeting, no subject line, no sign-off, no quotation marks, no HTML.`,
+      messages: [
+        {
+          role: "user",
+          content: `Email type: ${emailType}\n\nContext:\n${contextStr}`,
+        },
+      ],
+    });
+    const text =
+      response.content[0]?.type === "text" ? response.content[0].text.trim() : null;
+    if (text) {
+      void prisma.apiUsage
+        .create({
+          data: {
+            model: "Claude Haiku",
+            inputTokens: response.usage.input_tokens,
+            outputTokens: response.usage.output_tokens,
+            estimatedCostUsd:
+              (0.8 * response.usage.input_tokens + 4.0 * response.usage.output_tokens) /
+              1_000_000,
+            context: "email-personalization",
+          },
+        })
+        .catch(() => {});
+    }
+    return text;
+  } catch {
+    return null;
+  }
+}
 
 /** HTML-encode user-controlled strings before embedding them in email templates. */
 function esc(s: string | null | undefined): string {
@@ -95,13 +157,19 @@ export async function sendProofSubmittedEmail({
     void tgProofSubmitted({ investorId, contractId, milestoneTitle, startupName });
   }
   if (!process.env.RESEND_API_KEY) return;
+  const aiBody = await generateEmailBody("proof-submitted-investor", {
+    "startup name": startupName || "The Receiver",
+    "milestone title": milestoneTitle,
+  });
+  const bodyText = aiBody
+    ?? `<strong>${esc(startupName) || "The Receiver"}</strong> has submitted proof for the milestone <strong>${esc(milestoneTitle)}</strong>.`;
   await resend.emails.send({
     from: FROM,
     to,
     subject: `Proof submitted: ${milestoneTitle}`,
     html: `
       <p>Hi,</p>
-      <p><strong>${esc(startupName) || "The Receiver"}</strong> has submitted proof for the milestone <strong>${esc(milestoneTitle)}</strong>.</p>
+      <p>${aiBody ? esc(aiBody) : bodyText}</p>
       <p>AI verification runs automatically. You will be notified if a manual review is required.</p>
       <p><a href="${contractLink(contractId)}">Open contract →</a></p>
     `,
@@ -158,13 +226,17 @@ export async function sendMilestoneCompletedInvestorEmail({
     void tgMilestoneCompleted({ investorId, contractId, milestoneTitle, amountUSD });
   }
   if (!process.env.RESEND_API_KEY) return;
+  const aiBody = await generateEmailBody("milestone-completed-investor", {
+    "milestone title": milestoneTitle,
+    "amount RLUSD": `$${Number(amountUSD).toLocaleString()}`,
+  });
   await resend.emails.send({
     from: FROM,
     to,
     subject: `Milestone completed: ${milestoneTitle}`,
     html: `
       <p>Hi,</p>
-      <p>Milestone <strong>${esc(milestoneTitle)}</strong> has been successfully completed. The payment of <strong>$${Number(amountUSD).toLocaleString()} RLUSD</strong> has been released.</p>
+      <p>${aiBody ? esc(aiBody) : `Milestone <strong>${esc(milestoneTitle)}</strong> has been successfully completed. The payment of <strong>$${Number(amountUSD).toLocaleString()} RLUSD</strong> has been released.`}</p>
       <p><a href="${contractLink(contractId)}">View contract →</a></p>
     `,
   });
@@ -189,14 +261,18 @@ export async function sendFundedEmail({
     void tgFunded({ startupId, contractId, milestoneTitle, amountUSD });
   }
   if (!process.env.RESEND_API_KEY) return;
+  const aiBody = await generateEmailBody("milestone-funded-startup", {
+    "milestone title": milestoneTitle,
+    "amount RLUSD": `$${Number(amountUSD).toLocaleString()}`,
+  });
   await resend.emails.send({
     from: FROM,
     to,
     subject: `Milestone funded: ${milestoneTitle}`,
     html: `
       <p>Hi,</p>
-      <p>Your milestone <strong>${esc(milestoneTitle)}</strong> has been funded with <strong>$${Number(amountUSD).toLocaleString()} RLUSD</strong>.</p>
-      <p>You can now upload proof to trigger the payment release.</p>
+      <p>${aiBody ? esc(aiBody) : `Your milestone <strong>${esc(milestoneTitle)}</strong> has been funded with <strong>$${Number(amountUSD).toLocaleString()} RLUSD</strong>.`}</p>
+      <p>Upload proof once you have completed the milestone to trigger payment release.</p>
       <p><a href="${contractLink(contractId)}">Upload proof →</a></p>
     `,
   });
@@ -221,13 +297,17 @@ export async function sendVerifiedEmail({
     void tgVerified({ startupId, contractId, milestoneTitle, amountUSD, txHash });
   }
   if (!process.env.RESEND_API_KEY) return;
+  const aiBody = await generateEmailBody("proof-verified-payment-released-startup", {
+    "milestone title": milestoneTitle,
+    "amount RLUSD": `$${Number(amountUSD).toLocaleString()}`,
+  });
   await resend.emails.send({
     from: FROM,
     to,
     subject: `Payment released: ${milestoneTitle}`,
     html: `
       <p>Hi,</p>
-      <p>Congratulations! Your proof for <strong>${esc(milestoneTitle)}</strong> has been approved. <strong>$${Number(amountUSD).toLocaleString()} RLUSD</strong> has been sent to your wallet.</p>
+      <p>${aiBody ? esc(aiBody) : `Congratulations! Your proof for <strong>${esc(milestoneTitle)}</strong> has been approved. <strong>$${Number(amountUSD).toLocaleString()} RLUSD</strong> has been sent to your wallet.`}</p>
       ${txHash ? `<p>Transaction: <code>${txHash}</code></p>` : ""}
       <p><a href="${contractLink(contractId)}">View contract →</a></p>
     `,
@@ -251,14 +331,18 @@ export async function sendRejectedEmail({
     void tgRejected({ startupId, contractId, milestoneTitle, aiReasoning });
   }
   if (!process.env.RESEND_API_KEY) return;
+  const aiBody = await generateEmailBody("proof-rejected-startup", {
+    "milestone title": milestoneTitle,
+    "rejection reason": aiReasoning ?? undefined,
+  });
   await resend.emails.send({
     from: FROM,
     to,
     subject: `Proof rejected: ${milestoneTitle}`,
     html: `
       <p>Hi,</p>
-      <p>Your proof for <strong>${esc(milestoneTitle)}</strong> was rejected by the AI.</p>
-      ${aiReasoning ? `<p><strong>Reason:</strong> ${esc(aiReasoning)}</p>` : ""}
+      <p>${aiBody ? esc(aiBody) : `Your proof for <strong>${esc(milestoneTitle)}</strong> was not accepted by the AI verification system.`}</p>
+      ${!aiBody && aiReasoning ? `<p><strong>Reason:</strong> ${esc(aiReasoning)}</p>` : ""}
       <p>You can submit new proof as long as the deadline has not passed.</p>
       <p><a href="${contractLink(contractId)}">Resubmit →</a></p>
     `,
