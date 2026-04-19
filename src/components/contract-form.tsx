@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import type { DraftResponse } from "@/app/api/contracts/draft/route";
+import type { RiskFlag } from "@/app/api/contracts/risk-preview/route";
 
 interface MilestoneInput {
   title: string;
@@ -68,6 +69,11 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiGenerated, setAiGenerated] = useState(false);
 
+  // AI Risk Preview state
+  const [riskFlags, setRiskFlags] = useState<RiskFlag[] | null>(null);
+  const [loadingRisk, setLoadingRisk] = useState(false);
+  const [riskChecked, setRiskChecked] = useState(false);
+
   function addMilestone() {
     setMilestones((prev) => [...prev, { title: "", amountUSD: "", deadlineDays: "30" }]);
   }
@@ -78,6 +84,11 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
 
   function updateMilestone(index: number, field: keyof MilestoneInput, value: string) {
     setMilestones((prev) => prev.map((m, i) => (i === index ? { ...m, [field]: value } : m)));
+    // Invalidate risk review when milestones change
+    if (riskChecked) {
+      setRiskFlags(null);
+      setRiskChecked(false);
+    }
   }
 
   async function handleAiDraft() {
@@ -107,11 +118,46 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
       );
       setAiGenerated(true);
       setAiDraftOpen(false);
+      setRiskFlags(null);
+      setRiskChecked(false);
       toast.success("Milestone plan generated — review and edit before creating.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setAiLoading(false);
+    }
+  }
+
+  async function handleRiskCheck() {
+    const filled = milestones.filter((m) => m.title.trim() && m.amountUSD && m.deadlineDays);
+    if (filled.length === 0) {
+      toast.error("Fill in at least one milestone before checking for issues.");
+      return;
+    }
+    setLoadingRisk(true);
+    try {
+      const res = await fetch("/api/contracts/risk-preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          milestones: filled.map((m) => ({
+            title: m.title,
+            amountUSD: Number(m.amountUSD),
+            deadlineDays: Number(m.deadlineDays),
+          })),
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json() as { error?: string };
+        throw new Error(err.error ?? "Check failed");
+      }
+      const data = await res.json() as { flags: RiskFlag[] };
+      setRiskFlags(data.flags);
+      setRiskChecked(true);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setLoadingRisk(false);
     }
   }
 
@@ -509,19 +555,131 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
         </button>
       </div>
 
-      <div style={{ display: "flex", gap: "12px" }}>
-        <Button type="submit" disabled={loading} size="lg" style={{ flex: 1 }}>
-          {loading ? "Creating…" : "Create Contract"}
-        </Button>
-        {!loading && (
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            onClick={() => router.back()}
+      {/* AI Risk Review Panel */}
+      {riskChecked && riskFlags !== null && (
+        <div
+          style={{
+            borderRadius: "12px",
+            border: riskFlags.length === 0
+              ? "1px solid rgba(34,197,94,0.3)"
+              : "1px solid rgba(212,160,60,0.3)",
+            overflow: "hidden",
+          }}
+        >
+          {/* Header */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "10px 14px",
+              background: riskFlags.length === 0
+                ? "rgba(34,197,94,0.06)"
+                : "rgba(212,160,60,0.07)",
+              borderBottom: riskFlags.length > 0 ? "1px solid rgba(212,160,60,0.15)" : "none",
+            }}
           >
-            Cancel
+            <span
+              style={{
+                fontSize: "10px",
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                padding: "2px 7px",
+                borderRadius: "999px",
+                background: riskFlags.length === 0
+                  ? "rgba(34,197,94,0.12)"
+                  : "rgba(212,160,60,0.12)",
+                color: riskFlags.length === 0 ? "#16a34a" : "#b45309",
+                border: `1px solid ${riskFlags.length === 0 ? "rgba(34,197,94,0.3)" : "rgba(212,160,60,0.3)"}`,
+              }}
+            >
+              AI Risk Review
+            </span>
+            <span
+              style={{
+                fontSize: "13px",
+                fontWeight: 500,
+                color: riskFlags.length === 0 ? "#15803d" : "#92400e",
+                flex: 1,
+              }}
+            >
+              {riskFlags.length === 0
+                ? "No structural issues found — looks good."
+                : `${riskFlags.filter((f) => f.severity === "WARNING").length} warning${riskFlags.filter((f) => f.severity === "WARNING").length !== 1 ? "s" : ""}${riskFlags.filter((f) => f.severity === "INFO").length > 0 ? `, ${riskFlags.filter((f) => f.severity === "INFO").length} note${riskFlags.filter((f) => f.severity === "INFO").length !== 1 ? "s" : ""}` : ""}`}
+            </span>
+            <button
+              type="button"
+              onClick={() => { setRiskFlags(null); setRiskChecked(false); }}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "#71717a", fontSize: "16px", lineHeight: 1, padding: "0 2px" }}
+            >
+              ×
+            </button>
+          </div>
+
+          {/* Flags */}
+          {riskFlags.length > 0 && (
+            <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: "8px" }}>
+              {riskFlags.map((flag, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "8px",
+                    padding: "9px 12px",
+                    borderRadius: "8px",
+                    background: flag.severity === "WARNING" ? "rgba(212,160,60,0.07)" : "rgba(0,0,0,0.03)",
+                    border: `1px solid ${flag.severity === "WARNING" ? "rgba(212,160,60,0.2)" : "#e4e4e7"}`,
+                  }}
+                >
+                  <span style={{ flexShrink: 0, fontSize: "13px", marginTop: "1px" }}>
+                    {flag.severity === "WARNING" ? "⚠" : "ℹ"}
+                  </span>
+                  <span style={{ fontSize: "13px", color: "#18181b", lineHeight: 1.5 }}>{flag.text}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Actions */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <Button type="submit" disabled={loading} size="lg" style={{ flex: 1 }}>
+            {loading ? "Creating…" : riskFlags !== null && riskFlags.length > 0 ? "Create Contract anyway" : "Create Contract"}
           </Button>
+          {!loading && (
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              onClick={() => router.back()}
+            >
+              Cancel
+            </Button>
+          )}
+        </div>
+        {!riskChecked && !loading && (
+          <button
+            type="button"
+            onClick={handleRiskCheck}
+            disabled={loadingRisk}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: loadingRisk ? "not-allowed" : "pointer",
+              color: loadingRisk ? "#a1a1aa" : "#71717a",
+              fontSize: "13px",
+              padding: "4px 0",
+              textAlign: "center",
+              textDecoration: "underline",
+              textDecorationColor: "rgba(0,0,0,0.2)",
+            }}
+          >
+            {loadingRisk ? "Checking for issues…" : "Check plan for issues with AI"}
+          </button>
         )}
       </div>
     </form>
