@@ -304,6 +304,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
                 aiModelVotes: p.aiModelVotes as import("@/components/ai-result").ModelVote[] | null,
                 authenticityFlags: p.authenticityFlags as { type: string; severity: "WARNING" | "RED_FLAG"; detail: string }[] | null,
                 authenticityScore: p.authenticityScore,
+                aiContentSummary: p.aiContentSummary ?? null,
                 createdAt: p.createdAt.toISOString(),
               })),
             }))}

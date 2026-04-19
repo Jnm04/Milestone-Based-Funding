@@ -144,6 +144,8 @@ model Proof {
   authenticityFlags Json?
   /// 0–100 authenticity score: 100 = no flags, -30 per RED_FLAG, -15 per WARNING
   authenticityScore Int?
+  /// Feature V: AI-generated bullet summary of proof contents (JSON-encoded string[])
+  aiContentSummary  String?  @db.Text
   createdAt     DateTime   @default(now())
 
   @@index([contractId])

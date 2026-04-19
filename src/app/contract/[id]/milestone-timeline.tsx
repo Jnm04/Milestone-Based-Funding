@@ -20,6 +20,7 @@ interface MilestoneProof {
   aiModelVotes?: ModelVote[] | null;
   authenticityFlags?: AuthenticityFlag[] | null;
   authenticityScore?: number | null;
+  aiContentSummary?: string | null;
   createdAt: string;
 }
 
@@ -280,6 +281,34 @@ export function MilestoneTimeline({ milestones, activeMilestoneId, viewerRole, c
                               </span>
                             )}
                           </div>
+                          {/* Feature V: Proof Contents TL;DR — investor only */}
+                          {viewerRole === "investor" && proof.aiContentSummary && (() => {
+                            let items: string[] = [];
+                            try { items = JSON.parse(proof.aiContentSummary) as string[]; } catch { /* skip */ }
+                            if (!Array.isArray(items) || items.length === 0) return null;
+                            return (
+                              <div
+                                style={{
+                                  marginTop: "4px",
+                                  padding: "8px 10px",
+                                  background: "rgba(196,112,75,0.06)",
+                                  border: "1px solid rgba(196,112,75,0.18)",
+                                  borderRadius: "6px",
+                                }}
+                              >
+                                <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#C4704B" }}>
+                                  Proof Contents
+                                </span>
+                                <ul style={{ margin: "5px 0 0 0", padding: "0 0 0 14px", display: "flex", flexDirection: "column", gap: "3px" }}>
+                                  {items.map((item, i) => (
+                                    <li key={i} style={{ fontSize: "11px", color: "#D4B896", lineHeight: 1.4 }}>
+                                      {item}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            );
+                          })()}
                           {/* Per-model vote grid */}
                           {proof.aiModelVotes && proof.aiModelVotes.length > 0 && (
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "4px", marginTop: "2px" }}>

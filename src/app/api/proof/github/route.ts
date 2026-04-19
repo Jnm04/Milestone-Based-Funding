@@ -8,6 +8,7 @@ import { writeAuditLog } from "@/services/evm/audit.service";
 import { fireWebhook } from "@/services/webhook/webhook.service";
 import crypto from "crypto";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { generateAndStoreProofSummary } from "@/services/ai/proof-summary.service";
 
 /**
  * POST /api/proof/github
@@ -163,6 +164,15 @@ export async function POST(request: NextRequest) {
         data: { proofId: proof.id, proofType: "github_url", repoUrl: normalizedUrl, milestoneTitle: milestone.title },
       });
 
+      // Feature V: fire-and-forget proof content summary for investor TL;DR
+      if (process.env.ANTHROPIC_API_KEY) {
+        void generateAndStoreProofSummary({
+          proofId: proof.id,
+          milestoneTitle: milestone.title,
+          extractedText: ghDoc.text,
+        });
+      }
+
       after(() => triggerVerification(proof.id));
 
       return NextResponse.json({
@@ -244,6 +254,15 @@ export async function POST(request: NextRequest) {
         contractId: resolvedContractId,
         data: { proofId: proof.id, proofType: "github_url", repoUrl: normalizedUrl, milestoneTitle: contract.milestone },
       });
+
+      // Feature V: fire-and-forget proof content summary for investor TL;DR
+      if (process.env.ANTHROPIC_API_KEY) {
+        void generateAndStoreProofSummary({
+          proofId: proof.id,
+          milestoneTitle: contract.milestone,
+          extractedText: ghDoc.text,
+        });
+      }
 
       after(() => triggerVerification(proof.id));
 

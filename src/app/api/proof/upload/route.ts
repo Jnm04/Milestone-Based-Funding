@@ -9,6 +9,7 @@ import path from "path";
 import crypto from "crypto";
 import { writeAuditLog } from "@/services/evm/audit.service";
 import { fireWebhook } from "@/services/webhook/webhook.service";
+import { generateAndStoreProofSummary } from "@/services/ai/proof-summary.service";
 
 async function triggerVerification(proofId: string) {
   try {
@@ -245,6 +246,15 @@ export async function POST(request: NextRequest) {
         data: { proofId: proof.id, fileName, milestoneTitle: milestone.title },
       }).catch((err) => console.error("[webhook] proof.submitted failed:", err));
 
+      // Feature V: fire-and-forget proof content summary for investor TL;DR
+      if (process.env.ANTHROPIC_API_KEY) {
+        void generateAndStoreProofSummary({
+          proofId: proof.id,
+          milestoneTitle: milestone.title,
+          extractedText,
+        });
+      }
+
       // Auto-trigger AI verification after response is sent
       after(() => triggerVerification(proof.id));
 
@@ -318,6 +328,15 @@ export async function POST(request: NextRequest) {
         contractId: resolvedContractId,
         data: { proofId: proof.id, fileName, milestoneTitle: contract.milestone },
       }).catch((err) => console.error("[webhook] proof.submitted failed:", err));
+
+      // Feature V: fire-and-forget proof content summary for investor TL;DR
+      if (process.env.ANTHROPIC_API_KEY) {
+        void generateAndStoreProofSummary({
+          proofId: proof.id,
+          milestoneTitle: contract.milestone,
+          extractedText,
+        });
+      }
 
       // Auto-trigger AI verification after response is sent
       after(() => triggerVerification(proof.id));
