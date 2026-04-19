@@ -136,6 +136,10 @@ model Proof {
   appealResult    String?    // "OVERTURNED" | "UPHELD"
   appealReasoning String?    @db.Text
   appealedAt      DateTime?
+  /// [{type: string, severity: "WARNING"|"RED_FLAG", detail: string}] — fraud pre-screen flags (run before 5-model vote)
+  authenticityFlags Json?
+  /// 0–100 authenticity score: 100 = no flags, -30 per RED_FLAG, -15 per WARNING
+  authenticityScore Int?
   createdAt     DateTime   @default(now())
 
   @@index([contractId])

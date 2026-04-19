@@ -2,7 +2,7 @@
 
 > This file tracks planned features with full implementation details.
 > Reference this in new Claude sessions to continue work without losing context.
-> Last updated: 2026-04-19
+> Last updated: 2026-04-19 (Feature E done)
 
 ---
 
@@ -15,7 +15,7 @@
 | **Feature C** — AI Dispute Arbitration | ✅ DONE | `8ffc14ff` | 6 new `Proof` fields (`aiObjections`, `appealStatus/Text/Result/Reasoning/At`), `POST /api/proof/[proofId]/appeal`, Appeal Wizard UI in contract-actions |
 | **Feature A** — AI Contract Drafting | ✅ DONE | `c47a3d65` | `POST /api/contracts/draft`, collapsible AI panel in `contract-form.tsx`, rate-limited 10/hr |
 | **Feature J** — AI Contract Risk Flags | ✅ DONE | `c47a3d65+1` | `Contract.riskFlags Json?`, Haiku fire-and-forget in `POST /api/contracts`, collapsible `<details>` panel in `page.tsx` |
-| **Feature E** — AI Fraud Detection | ⬜ TODO | — | Pre-screen before 5-model vote; `authenticityFlags` + `authenticityScore` on Proof |
+| **Feature E** — AI Fraud Detection | ✅ DONE | — | `Proof.authenticityFlags Json?` + `authenticityScore Int?`; `runFraudPreScreen()` in verifier service; runs before 5-model vote; flags shown in milestone timeline |
 | **Feature F** — AI Milestone Renegotiation | ⬜ TODO | — | `RENEGOTIATING` status, 48h window, interim update + Haiku plausibility check |
 | **Feature G** — AI Progress Check-ins | ⬜ TODO | — | Scheduled nudges/reminders via email/Telegram |
 | **Feature H** — AI Reputation System | ⬜ TODO | — | Cross-contract reputation score per startup |

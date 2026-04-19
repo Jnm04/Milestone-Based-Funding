@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
-import { verifyMilestone, verifyMilestoneImage, mockVerifyMilestone, categorizeFile, VERIFICATION_PROMPT_HASH, isInsufficientModels, generateRejectionObjections } from "@/services/ai/verifier.service";
+import { verifyMilestone, verifyMilestoneImage, mockVerifyMilestone, categorizeFile, VERIFICATION_PROMPT_HASH, isInsufficientModels, generateRejectionObjections, runFraudPreScreen, buildFraudContext } from "@/services/ai/verifier.service";
 import { storeBrainData } from "@/services/brain/training.service";
 import { buildEnrichmentContext } from "@/services/brain/proof-enrichment.service";
 import { releaseMilestone } from "@/services/evm/escrow.service";
@@ -123,6 +123,32 @@ export async function POST(request: NextRequest) {
       })
     : "";
 
+  // ── Feature E: Fraud pre-screen (runs before 5-model vote, non-fatal) ────
+  let fraudContext = "";
+  if (hasApiKey) {
+    try {
+      const preScreen = await runFraudPreScreen({
+        proofId: proof.id,
+        fileHash: proof.fileHash,
+        contractId: contract.id,
+        extractedText,
+        fileCategory: category,
+      });
+      // Persist results on the proof record (fire-and-forget)
+      void prisma.proof.update({
+        where: { id: proofId },
+        data: {
+          authenticityFlags: preScreen.flags as never,
+          authenticityScore: preScreen.score,
+        },
+      }).catch((err) => console.warn("[fraud-prescreen] DB write failed:", err));
+
+      fraudContext = buildFraudContext(preScreen);
+    } catch (err) {
+      console.warn("[fraud-prescreen] Pre-screen failed:", err instanceof Error ? err.message : err);
+    }
+  }
+
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -157,7 +183,7 @@ export async function POST(request: NextRequest) {
           if (!hasApiKey) return mockVerifyMilestone({ milestone: milestoneTitle, extractedText });
           if (category === "image" && imageBuffer) {
             try {
-              return await verifyMilestoneImage({ milestone: milestoneTitle, imageBuffer, mimeType, enrichmentContext });
+              return await verifyMilestoneImage({ milestone: milestoneTitle, imageBuffer, mimeType, enrichmentContext: enrichmentContext + fraudContext });
             } catch (imgErr) {
               console.warn("[verify] Image verification failed, falling back to Claude-only:", imgErr);
               const { callClaudeImageOnly } = await import("@/services/ai/verifier.service");
@@ -167,7 +193,7 @@ export async function POST(request: NextRequest) {
           return verifyMilestone({
             milestone: milestoneTitle,
             extractedText: extractedText || "(No text could be extracted from this document.)",
-            enrichmentContext,
+            enrichmentContext: enrichmentContext + fraudContext,
           });
         };
 

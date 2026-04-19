@@ -3,6 +3,12 @@
 import { useState } from "react";
 import type { ModelVote } from "@/components/ai-result";
 
+interface AuthenticityFlag {
+  type: string;
+  severity: "WARNING" | "RED_FLAG";
+  detail: string;
+}
+
 interface MilestoneProof {
   id: string;
   fileName: string;
@@ -12,6 +18,8 @@ interface MilestoneProof {
   aiReasoning: string | null;
   aiConfidence: number | null;
   aiModelVotes?: ModelVote[] | null;
+  authenticityFlags?: AuthenticityFlag[] | null;
+  authenticityScore?: number | null;
   createdAt: string;
 }
 
@@ -283,6 +291,59 @@ export function MilestoneTimeline({ milestones, activeMilestoneId }: MilestoneTi
                               >
                                 {proof.fileHash.slice(0, 16)}…{proof.fileHash.slice(-8)}
                               </code>
+                            </div>
+                          )}
+                          {/* Authenticity flags (shown when pre-screen found issues) */}
+                          {proof.authenticityFlags && proof.authenticityFlags.length > 0 && (
+                            <div
+                              style={{
+                                marginTop: "2px",
+                                padding: "8px 10px",
+                                background: "rgba(248,113,113,0.06)",
+                                border: "1px solid rgba(248,113,113,0.2)",
+                                borderRadius: "6px",
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: "6px",
+                              }}
+                            >
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.05em", color: "#F87171", textTransform: "uppercase" }}>
+                                  Authenticity Screen
+                                </span>
+                                {proof.authenticityScore !== null && proof.authenticityScore !== undefined && (
+                                  <span style={{
+                                    fontSize: "10px",
+                                    fontWeight: 600,
+                                    padding: "1px 6px",
+                                    borderRadius: "999px",
+                                    background: proof.authenticityScore >= 70 ? "rgba(74,222,128,0.1)" : proof.authenticityScore >= 40 ? "rgba(212,160,60,0.1)" : "rgba(248,113,113,0.1)",
+                                    color: proof.authenticityScore >= 70 ? "#6EE09A" : proof.authenticityScore >= 40 ? "#D4A03C" : "#F87171",
+                                  }}>
+                                    {proof.authenticityScore}/100
+                                  </span>
+                                )}
+                              </div>
+                              {proof.authenticityFlags.map((flag, fi) => (
+                                <div key={fi} style={{ display: "flex", gap: "6px", alignItems: "flex-start" }}>
+                                  <span style={{
+                                    flexShrink: 0,
+                                    fontSize: "10px",
+                                    fontWeight: 700,
+                                    padding: "1px 5px",
+                                    borderRadius: "4px",
+                                    background: flag.severity === "RED_FLAG" ? "rgba(248,113,113,0.15)" : "rgba(212,160,60,0.12)",
+                                    color: flag.severity === "RED_FLAG" ? "#F87171" : "#D4A03C",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.04em",
+                                  }}>
+                                    {flag.severity === "RED_FLAG" ? "Red Flag" : "Warning"}
+                                  </span>
+                                  <span style={{ fontSize: "11px", color: "#EDE6DD", lineHeight: 1.4 }}>
+                                    {flag.detail}
+                                  </span>
+                                </div>
+                              ))}
                             </div>
                           )}
                           <p style={{ fontSize: "11px", color: "#6B5E52", margin: 0 }}>

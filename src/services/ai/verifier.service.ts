@@ -556,6 +556,117 @@ Rules:
     .slice(0, 4);
 }
 
+// ─── Feature E: Fraud Pre-Screen ─────────────────────────────────────────────
+
+export interface AuthenticityFlag {
+  type: string;
+  severity: "WARNING" | "RED_FLAG";
+  detail: string;
+}
+
+export interface FraudPreScreenResult {
+  flags: AuthenticityFlag[];
+  score: number; // 0–100, 100 = no issues
+}
+
+/**
+ * Lightweight fraud pre-screen that runs before the 5-model vote.
+ * Checks:
+ *   1. Cross-contract duplicate file (same SHA-256 hash on a different contract)
+ *   2. AI-generated text detection via a single Claude Haiku call (PDFs / office docs only)
+ *
+ * Never throws — always returns a result (empty flags on error).
+ */
+export async function runFraudPreScreen(params: {
+  proofId: string;
+  fileHash: string | null;
+  contractId: string;
+  extractedText: string | null;
+  fileCategory: FileCategory;
+}): Promise<FraudPreScreenResult> {
+  const flags: AuthenticityFlag[] = [];
+
+  // ─ Check 1: cross-contract duplicate file hash ────────────────────────────
+  if (params.fileHash) {
+    try {
+      const duplicate = await prisma.proof.findFirst({
+        where: {
+          fileHash: params.fileHash,
+          contractId: { not: params.contractId },
+          id: { not: params.proofId },
+        },
+        select: { id: true, contractId: true },
+      });
+      if (duplicate) {
+        flags.push({
+          type: "DUPLICATE_FILE",
+          severity: "RED_FLAG",
+          detail: `This exact file has been submitted as proof on another contract (${duplicate.contractId.slice(0, 8)}…). Reusing identical files across contracts is a strong indicator of fraudulent proof.`,
+        });
+      }
+    } catch (err) {
+      console.warn("[fraud-prescreen] Duplicate check failed:", err instanceof Error ? err.message : err);
+    }
+  }
+
+  // ─ Check 2: AI-generated text detection ──────────────────────────────────
+  if (
+    params.extractedText &&
+    params.extractedText.length > 200 &&
+    (params.fileCategory === "pdf" || params.fileCategory === "office" || params.fileCategory === "text") &&
+    process.env.ANTHROPIC_API_KEY
+  ) {
+    try {
+      const excerpt = params.extractedText.slice(0, 3000);
+      const response = await getAnthropic().messages.create({
+        model: CLAUDE_MODEL,
+        max_tokens: 256,
+        system: `You are an authenticity analyst for a grant escrow platform.
+Analyze this document excerpt for signs it may be AI-generated or otherwise inauthentic.
+Respond ONLY with valid JSON (no markdown): {"aiGenerated": true|false, "confidence": 0-100, "reason": "one sentence or null"}
+Signs of AI-generated text: unnaturally uniform sentence length, generic/vague language with no specific data or timestamps, absence of imperfections, repetitive sentence patterns.
+Only set aiGenerated: true if confidence > 70. When uncertain, return aiGenerated: false.`,
+        messages: [{ role: "user", content: `Document excerpt:\n\n${excerpt}` }],
+      });
+
+      logUsage("Claude Haiku", response.usage.input_tokens, response.usage.output_tokens, "fraud-prescreen");
+
+      const rawText = response.content[0]?.type === "text" ? response.content[0].text.trim() : "{}";
+      const jsonText = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+      const parsed = JSON.parse(jsonText) as { aiGenerated?: boolean; confidence?: number; reason?: string };
+
+      if (parsed.aiGenerated && (parsed.confidence ?? 0) > 70) {
+        flags.push({
+          type: "AI_GENERATED_TEXT",
+          severity: "WARNING",
+          detail: parsed.reason ?? "Document text shows patterns consistent with AI-generated content — may lack authentic work evidence.",
+        });
+      }
+    } catch (err) {
+      console.warn("[fraud-prescreen] AI text check failed:", err instanceof Error ? err.message : err);
+    }
+  }
+
+  // ─ Score ──────────────────────────────────────────────────────────────────
+  let score = 100;
+  for (const f of flags) score -= f.severity === "RED_FLAG" ? 30 : 15;
+  score = Math.max(0, score);
+
+  return { flags, score };
+}
+
+/**
+ * Formats fraud pre-screen results as an enrichment context string
+ * to append to the AI verification prompt.
+ */
+export function buildFraudContext(preScreen: FraudPreScreenResult): string {
+  if (preScreen.flags.length === 0) return "";
+  const lines = preScreen.flags.map(
+    (f) => `- ${f.severity}: ${f.detail}`
+  );
+  return `\n\n[FRAUD PRE-SCREEN — Authenticity Score: ${preScreen.score}/100]\n${lines.join("\n")}\nTake these findings into account when assessing the proof's authenticity.`;
+}
+
 /**
  * Mock verifier for development without real API keys.
  * Always returns YES with 80% confidence.

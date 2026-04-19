@@ -295,6 +295,8 @@ export default async function ContractPage({ params, searchParams }: ContractPag
                 aiReasoning: p.aiReasoning,
                 aiConfidence: p.aiConfidence,
                 aiModelVotes: p.aiModelVotes as import("@/components/ai-result").ModelVote[] | null,
+                authenticityFlags: p.authenticityFlags as { type: string; severity: "WARNING" | "RED_FLAG"; detail: string }[] | null,
+                authenticityScore: p.authenticityScore,
                 createdAt: p.createdAt.toISOString(),
               })),
             }))}
