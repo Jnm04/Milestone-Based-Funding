@@ -150,6 +150,11 @@ model Milestone {
   nftTxHash         String?   // XRPL: tx hash of the NFTokenMint transaction
   nftImageUrl       String?   // XRPL: public URL of the certificate SVG image
   proofs            Proof[]
+
+  // Feature D: AI Proof Guidance — generated once, cached permanently
+  proofGuidance         Json?      // { tone: string, checklist: [{ item, why }] }
+  proofGuidanceCachedAt DateTime?
+
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 

@@ -9,6 +9,7 @@ import { AIResult } from "@/components/ai-result";
 import { AuditTrail } from "@/components/audit-trail";
 import { ContractStatus } from "@/types";
 import { ContractActions } from "./contract-actions";
+import type { ProofGuidanceData } from "@/components/proof-guidance";
 import { MilestoneTimeline } from "./milestone-timeline";
 import { ContractPoller } from "./contract-poller";
 import { NodeBackground } from "@/components/node-background";
@@ -49,6 +50,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
         milestones: {
           orderBy: { order: "asc" },
           include: { proofs: { orderBy: { createdAt: "desc" } } },
+          // proofGuidance and proofGuidanceCachedAt are scalar fields — included automatically
         },
       },
     }),
@@ -271,6 +273,9 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           latestProofFileUrl={activeMilestone?.proofs[0]?.fileUrl ?? latestProof?.fileUrl ?? null}
           latestProofFileName={activeMilestone?.proofs[0]?.fileName ?? latestProof?.fileName ?? null}
           viewerWallet={viewerWallet}
+          milestoneGuidance={
+            (activeMilestone?.proofGuidance as ProofGuidanceData | null) ?? null
+          }
         />
 
         {/* AI result */}

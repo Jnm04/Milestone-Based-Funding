@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ProofUpload } from "@/components/proof-upload";
+import { ProofGuidance, type ProofGuidanceData } from "@/components/proof-guidance";
 import { toast } from "sonner";
 import { ContractStatus } from "@/types";
 import { XRPL_EVM_CHAIN_ID, ERC20_ABI, toRLUSDUnits } from "@/lib/evm-abi";
@@ -25,6 +26,8 @@ interface ContractActionsProps {
   latestProofFileUrl: string | null;
   latestProofFileName: string | null;
   viewerWallet: string | null;
+  /** Pre-fetched AI proof guidance for the active milestone (null = not yet generated). */
+  milestoneGuidance: ProofGuidanceData | null;
 }
 
 // ─── MetaMask helpers ────────────────────────────────────────────────────────
@@ -230,6 +233,7 @@ export function ContractActions({
   latestProofFileUrl,
   latestProofFileName,
   viewerWallet,
+  milestoneGuidance,
 }: ContractActionsProps) {
   const [fundingStep, setFundingStep] = useState<
     "idle" | "approving" | "funding" | "confirming" | "done"
@@ -589,11 +593,20 @@ export function ContractActions({
       );
     }
     return (
-      <ProofUpload
-        contractId={contractId}
-        milestoneId={milestoneId}
-        onUploaded={() => window.location.reload()}
-      />
+      <div className="flex flex-col gap-3">
+        {milestoneId && (
+          <ProofGuidance
+            contractId={contractId}
+            milestoneId={milestoneId}
+            initialGuidance={milestoneGuidance}
+          />
+        )}
+        <ProofUpload
+          contractId={contractId}
+          milestoneId={milestoneId}
+          onUploaded={() => window.location.reload()}
+        />
+      </div>
     );
   }
 
