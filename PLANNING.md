@@ -2,7 +2,7 @@
 
 > This file tracks planned features with full implementation details.
 > Reference this in new Claude sessions to continue work without losing context.
-> Last updated: 2026-04-19 (Feature I done — AI Proof Pre-Check)
+> Last updated: 2026-04-19 (Feature W done — Resubmission Diff Intelligence)
 
 ---
 
@@ -10,18 +10,24 @@
 
 | Feature | Status | Commit | Notes |
 |---|---|---|---|
-| **Feature D** — AI Proof Guidance | ✅ DONE | `029737fb` | `Milestone.proofGuidance`, `GET /api/contracts/[id]/milestones/[milestoneId]/guidance`, `<ProofGuidance>` in contract-actions |
+| **Feature A** — AI Contract Drafting | ✅ DONE | `c47a3d65` | `POST /api/contracts/draft`, collapsible AI panel in `contract-form.tsx`, rate-limited 10/hr |
 | **Feature B** — AI Credibility Score | ✅ DONE | `9908f894` | `CredibilityScore` DB model, `GET /api/contracts/[id]/credibility`, `<CredibilityPanel>` component, 7-day cache |
 | **Feature C** — AI Dispute Arbitration | ✅ DONE | `8ffc14ff` | 6 new `Proof` fields (`aiObjections`, `appealStatus/Text/Result/Reasoning/At`), `POST /api/proof/[proofId]/appeal`, Appeal Wizard UI in contract-actions |
-| **Feature A** — AI Contract Drafting | ✅ DONE | `c47a3d65` | `POST /api/contracts/draft`, collapsible AI panel in `contract-form.tsx`, rate-limited 10/hr |
-| **Feature J** — AI Contract Risk Flags | ✅ DONE | `c47a3d65+1` | `Contract.riskFlags Json?`, Haiku fire-and-forget in `POST /api/contracts`, collapsible `<details>` panel in `page.tsx` |
-| **Feature E** — AI Fraud Detection | ✅ DONE | — | `Proof.authenticityFlags Json?` + `authenticityScore Int?`; `runFraudPreScreen()` in verifier service; runs before 5-model vote; flags shown in milestone timeline |
-| **Feature F** — AI Milestone Renegotiation | ✅ DONE | — | `RENEGOTIATING` MilestoneStatus + ContractStatus; 48h window opened by cron; `assessInterimUpdate()` Haiku call; 2 API routes (submit + respond); amber UI block in contract-actions for both parties |
-| **Feature G** — AI Progress Check-ins | ✅ DONE | — | `ProgressUpdate` model; weekly cron (`0 9 * * 2`) sends check-in emails; startup logs updates from FUNDED block; investor sees update list |
-| **Feature H** — AI Reputation System | ⬜ TODO | — | Cross-contract reputation score per startup |
-| **Feature I** — AI Proof Pre-Check | ✅ DONE | — | `POST /api/proof/precheck`; single Haiku call on latest proof; "Test my proof" + result panel in PROOF_SUBMITTED startup block |
-| **Feature K** — Deal Health Score | ⬜ TODO | — | Traffic-light on dashboard, pure logic no AI call |
-| **Feature M** — AI-Personalized Emails | ⬜ TODO | — | Contextual Haiku-generated body for 5 key email types |
+| **Feature D** — AI Proof Guidance | ✅ DONE | `029737fb` | `Milestone.proofGuidance`, `GET /api/contracts/[id]/milestones/[milestoneId]/guidance`, `<ProofGuidance>` in contract-actions |
+| **Feature E** — AI Fraud Detection | ✅ DONE | `2df84c13` | `Proof.authenticityFlags Json?` + `authenticityScore Int?`; `runFraudPreScreen()` in verifier service; runs before 5-model vote; flags shown in milestone timeline |
+| **Feature F** — AI Milestone Renegotiation | ✅ DONE | `6b3d0dd7` | `RENEGOTIATING` MilestoneStatus + ContractStatus; 48h window opened by cron; `assessInterimUpdate()` Haiku call; 2 API routes (submit + respond); amber UI block in contract-actions for both parties |
+| **Feature G** — AI Progress Check-ins | ✅ DONE | `69f61c52` | `ProgressUpdate` model; weekly cron (`0 9 * * 2`) sends check-in emails; startup logs updates from FUNDED block; investor sees update list |
+| **Feature H** — AI Reputation System | ✅ DONE | `352d2dbb` | `Milestone.reputationSummary/Public/Category`; Haiku call at completion; opt-in toggle in milestone timeline; `GET /api/contracts/[id]/milestones/[milestoneId]/reputation` |
+| **Feature I** — AI Proof Pre-Check | ✅ DONE | `029a0b33` | `POST /api/proof/precheck`; single Haiku call on latest proof; "Test my proof" + result panel in PROOF_SUBMITTED startup block |
+| **Feature J** — AI Contract Risk Flags | ✅ DONE | `28759a83` | `Contract.riskFlags Json?`, Haiku fire-and-forget in `POST /api/contracts`, collapsible risk panel in `page.tsx` |
+| **Feature K** — Deal Health Score | ✅ DONE | `1b6abe81` | `Contract.healthScore Int?` + `healthNote String?`; pure-logic traffic-light on investor dashboard; Haiku context note cached 24h |
+| **Feature L** — AI Completion Report | ✅ DONE | `83006db3` | `Milestone.completionReportUrl`; Haiku narrative call at completion; `GET /api/contracts/[id]/milestones/[milestoneId]/completion-report`; download button in milestone timeline |
+| **Feature M** — AI-Personalized Emails | ✅ DONE | `0d372fc3` | Haiku-generated body for proof rejected/approved/deadline reminder/appeal result/renegotiation emails; falls back to static template on failure |
+| **Feature V** — Proof TL;DR for Investors | ✅ DONE | `82e986fa` | `Proof.aiContentSummary Text?`; Haiku bullet summary at upload/github; shown investor-only in milestone timeline |
+| **Feature W** — Resubmission Diff Intelligence | ✅ DONE | `070d6a41` | `Proof.aiResubmissionDiff Text?`; Haiku diff vs prior rejection at resubmission; addressed/stillOpen shown startup-only in milestone timeline |
+| **Feature X** — Milestone Completion Probability | ⬜ TODO | — | Inline feasibility indicator in contract form; no DB changes |
+| **Feature Y** — Stakeholder Transparency Report | ⬜ TODO | — | Quarterly PDF report for investors; 2 `User` cache fields |
+| **Feature Z** — Contract Counter-Proposal | ⬜ TODO | — | `CounterProposal` model; startup proposes term changes before signing |
 
 ---
 
@@ -826,16 +832,18 @@ approvalEmailBody   String?  @db.Text
 ## Complete AI Lifecycle Map
 
 ```
-Contract Creation  → A: AI drafts milestones + J: Risk flags on all milestones
-Funding Decision   → B: AI credibility score (GitHub + history + profile)
-Ongoing Monitoring → K: Deal health score on dashboard + G: Weekly check-ins
-Proof Preparation  → D: AI proof coach (checklist) + I: Proof pre-check
-Proof Submission   → E: AI fraud pre-screen (before verification)
+Contract Creation  → A: AI drafts milestones ✅ + J: Risk flags on all milestones ✅
+Funding Decision   → B: AI credibility score (GitHub + history + profile) ✅
+Ongoing Monitoring → K: Deal health score on dashboard ✅ + G: Weekly check-ins ✅
+Proof Preparation  → D: AI proof coach (checklist) ✅ + I: Proof pre-check ✅
+Proof Submission   → E: AI fraud pre-screen (before verification) ✅
+                     V: Proof TL;DR for investor ✅
 Verification       → 5-model majority vote ✅ (live)
-Rejection          → C: AI dispute arbitration (guided appeal wizard)
-Deadline Expired   → F: AI renegotiation (interim update → grant giver approval)
-Completion         → H: AI reputation card + L: AI completion report PDF
-Communications     → M: AI-personalized email notifications throughout
+Rejection          → C: AI dispute arbitration (guided appeal wizard) ✅
+Resubmission       → W: Resubmission diff (addressed vs still-open objections) ✅
+Deadline Expired   → F: AI renegotiation (interim update → grant giver approval) ✅
+Completion         → H: AI reputation card ✅ + L: AI completion report PDF ✅
+Communications     → M: AI-personalized email notifications throughout ✅
 ```
 
 No human intermediary is required at any step. Humans are only invoked when AI has genuinely exhausted its judgment (final appeal escalation, renegotiation approval by grant giver).
@@ -1484,10 +1492,10 @@ Respond with ONLY the improved rationale as plain text.
 
 ## Phase 5 Key Files
 
-| Feature | Primary Files |
-|---|---|
-| V — Proof TL;DR | `src/app/api/proof/upload/route.ts`, `src/app/api/proof/github/route.ts`, new `src/services/ai/proof-summary.service.ts`, `prisma/schema.prisma` |
-| W — Resubmission Diff | `src/app/api/proof/upload/route.ts`, new `src/services/ai/resubmission-diff.service.ts`, `prisma/schema.prisma` |
-| X — Completion Probability | new `src/app/api/contracts/milestone-probability/route.ts`, `src/components/contract-form.tsx` |
-| Y — Stakeholder Report | new `src/app/api/dashboard/investor/transparency-report/route.ts`, `src/app/dashboard/investor/page.tsx`, `prisma/schema.prisma` |
-| Z — Counter-Proposal | new counter-proposal API routes, `src/app/dashboard/startup/page.tsx`, `src/app/contract/[id]/page.tsx`, `prisma/schema.prisma` |
+| Feature | Status | Primary Files |
+|---|---|---|
+| V — Proof TL;DR | ✅ DONE | `src/services/ai/proof-summary.service.ts`, `proof/upload`, `proof/github`, `milestone-timeline.tsx` |
+| W — Resubmission Diff | ✅ DONE | `src/services/ai/resubmission-diff.service.ts`, `proof/upload`, `proof/github`, `milestone-timeline.tsx` |
+| X — Completion Probability | ⬜ TODO | new `src/app/api/contracts/milestone-probability/route.ts`, `src/components/contract-form.tsx` |
+| Y — Stakeholder Report | ⬜ TODO | new `src/app/api/dashboard/investor/transparency-report/route.ts`, `src/app/dashboard/investor/page.tsx`, `prisma/schema.prisma` |
+| Z — Counter-Proposal | ⬜ TODO | new counter-proposal API routes, `src/app/dashboard/startup/page.tsx`, `src/app/contract/[id]/page.tsx`, `prisma/schema.prisma` |
