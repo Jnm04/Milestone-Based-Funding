@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
-import { verifyMilestone, verifyMilestoneImage, mockVerifyMilestone, categorizeFile, VERIFICATION_PROMPT_HASH, isInsufficientModels } from "@/services/ai/verifier.service";
+import { verifyMilestone, verifyMilestoneImage, mockVerifyMilestone, categorizeFile, VERIFICATION_PROMPT_HASH, isInsufficientModels, generateRejectionObjections } from "@/services/ai/verifier.service";
 import { storeBrainData } from "@/services/brain/training.service";
 import { buildEnrichmentContext } from "@/services/brain/proof-enrichment.service";
 import { releaseMilestone } from "@/services/evm/escrow.service";
@@ -317,6 +317,22 @@ export async function POST(request: NextRequest) {
               aiReasoning: result.reasoning,
               startupId: contract.startupId ?? undefined,
             }).catch((err) => console.error("[email] sendRejectedEmail failed:", err));
+          }
+
+          // Generate structured objections for the Appeal Wizard — best-effort, non-fatal
+          if (hasApiKey) {
+            generateRejectionObjections({
+              milestone: milestoneTitle,
+              extractedText,
+              aiReasoning: result.reasoning,
+            })
+              .then((objections) =>
+                prisma.proof.update({
+                  where: { id: proofId },
+                  data: { aiObjections: objections as never },
+                })
+              )
+              .catch((err) => console.warn("[verify] Failed to generate objections:", err));
           }
         }
 

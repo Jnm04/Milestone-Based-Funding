@@ -126,6 +126,14 @@ model Proof {
   proofType     String     @default("file")
   /// For github_url proofs: the submitted GitHub repo URL
   proofUrl      String?
+  /// [{code, description}] — structured rejection reasons generated at rejection time
+  aiObjections  Json?
+  /// Appeal filed by the startup after AI rejection
+  appealStatus    String?    // null = no appeal | "APPROVED" = overturned → PENDING_REVIEW | "REJECTED" = upheld
+  appealText      String?    @db.Text
+  appealResult    String?    // "OVERTURNED" | "UPHELD"
+  appealReasoning String?    @db.Text
+  appealedAt      DateTime?
   createdAt     DateTime   @default(now())
 
   @@index([contractId])

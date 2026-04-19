@@ -286,7 +286,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
                 ? ({
                     score: credibilityRecord.score,
                     tier: credibilityRecord.tier as "HIGH" | "MEDIUM" | "LOW",
-                    signals: credibilityRecord.signals as CredibilityScoreData["signals"],
+                    signals: credibilityRecord.signals as unknown as CredibilityScoreData["signals"],
                     summary: credibilityRecord.summary,
                     cachedAt: credibilityRecord.cachedAt.toISOString(),
                   } satisfies CredibilityScoreData)
@@ -323,6 +323,12 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           milestoneGuidance={
             (activeMilestone?.proofGuidance as ProofGuidanceData | null) ?? null
           }
+          latestProofAiObjections={
+            ((activeMilestone?.proofs[0]?.aiObjections ?? latestProof?.aiObjections) as Array<{ code: string; description: string }> | null) ?? null
+          }
+          latestProofAppealStatus={activeMilestone?.proofs[0]?.appealStatus ?? latestProof?.appealStatus ?? null}
+          latestProofAppealResult={activeMilestone?.proofs[0]?.appealResult ?? latestProof?.appealResult ?? null}
+          latestProofAppealReasoning={activeMilestone?.proofs[0]?.appealReasoning ?? latestProof?.appealReasoning ?? null}
         />
 
         {/* AI result */}

@@ -92,8 +92,8 @@ export async function GET(
   if (existing && Date.now() - existing.cachedAt.getTime() < CACHE_TTL_MS) {
     return NextResponse.json({
       score: existing.score,
-      tier: existing.tier,
-      signals: existing.signals as CredibilitySignal[],
+      tier: existing.tier as "HIGH" | "MEDIUM" | "LOW",
+      signals: existing.signals as unknown as CredibilitySignal[],
       summary: existing.summary,
       cachedAt: existing.cachedAt.toISOString(),
       fromCache: true,

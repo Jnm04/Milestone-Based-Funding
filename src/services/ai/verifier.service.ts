@@ -513,6 +513,50 @@ export async function callClaudeImageOnly(params: {
 }
 
 /**
+ * Generates structured rejection objections for a failed proof.
+ * Called after a REJECTED verdict — best-effort, never fatal.
+ * Returns 2–4 items: [{code, description}]
+ */
+export async function generateRejectionObjections(params: {
+  milestone: string;
+  extractedText: string;
+  aiReasoning: string;
+}): Promise<Array<{ code: string; description: string }>> {
+  const anthropic = getAnthropic();
+  const response = await anthropic.messages.create({
+    model: CLAUDE_MODEL,
+    max_tokens: 512,
+    system: `You are a rejection analyst for a milestone escrow platform.
+Given a failed milestone verification, identify the specific evidence gaps that caused rejection.
+Respond ONLY with valid JSON (no markdown, no code blocks): [{"code": "SHORT_CODE", "description": "One sentence"}]
+Rules:
+- 2–4 items only
+- code: UPPER_SNAKE_CASE ≤4 words (e.g. MISSING_EVIDENCE, WRONG_DATE, INSUFFICIENT_DETAIL, NO_PROOF_OF_LIVE)
+- description: specific and actionable — what is missing or wrong, 1–2 sentences
+- Focus on gaps, not praise`,
+    messages: [
+      {
+        role: "user",
+        content: `Milestone: "${params.milestone}"\n\nAI rejection reasoning: "${params.aiReasoning}"\n\nDocument excerpt:\n${params.extractedText.slice(0, 2000)}\n\nList the specific evidence gaps.`,
+      },
+    ],
+  });
+
+  logUsage("Claude Haiku", response.usage.input_tokens, response.usage.output_tokens, "verification");
+
+  const rawText = response.content[0]?.type === "text" ? response.content[0].text.trim() : "[]";
+  const jsonText = rawText
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+
+  const parsed = JSON.parse(jsonText) as Array<{ code: string; description: string }>;
+  return parsed
+    .filter((o) => typeof o.code === "string" && typeof o.description === "string")
+    .slice(0, 4);
+}
+
+/**
  * Mock verifier for development without real API keys.
  * Always returns YES with 80% confidence.
  */
