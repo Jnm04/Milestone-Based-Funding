@@ -288,7 +288,7 @@ export async function GET(request: NextRequest) {
         include: {
           investor: true,
           startup: true,
-          milestones: { select: { status: true }, orderBy: { order: "asc" } },
+          milestones: { select: { status: true, cancelAfter: true }, orderBy: { order: "asc" } },
         },
         orderBy: { createdAt: "desc" },
         skip,

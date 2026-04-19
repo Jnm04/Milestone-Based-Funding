@@ -86,6 +86,9 @@ model Contract {
   inviteLink          String?        @unique
   /// [{severity: "WARNING"|"INFO", text: string}] — structural risk flags generated at contract creation
   riskFlags           Json?
+  /// Feature K: AI-generated single-sentence deal health note, cached 24h
+  healthNote          String?        @db.Text
+  healthNoteUpdatedAt DateTime?
   proofs              Proof[]
   milestones          Milestone[]
   auditLogs           AuditLog[]

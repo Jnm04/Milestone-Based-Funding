@@ -41,11 +41,38 @@ interface Contract {
   milestone: string;
   amountUSD: string;
   status: string;
+  cancelAfter: string;
   inviteLink: string | null;
   startup: { walletAddress: string | null } | null;
-  milestones: { status: string }[];
+  milestones: { status: string; cancelAfter: string }[];
+  healthNote: string | null;
+  healthNoteUpdatedAt: string | null;
   createdAt: string;
 }
+
+type DealHealth = "GREEN" | "YELLOW" | "RED";
+
+function dealHealth(contract: Contract): DealHealth {
+  const terminal = ["COMPLETED", "EXPIRED", "DECLINED", "DRAFT"];
+  if (terminal.includes(contract.status)) return "GREEN";
+  if (contract.status === "RENEGOTIATING") return "RED";
+
+  const active = contract.milestones.find(
+    (m) => !["COMPLETED", "PENDING"].includes(m.status)
+  );
+  const deadline = active?.cancelAfter ?? contract.cancelAfter;
+  if (new Date(deadline) < new Date()) return "RED";
+
+  const daysLeft = (new Date(deadline).getTime() - Date.now()) / 86_400_000;
+  if (daysLeft <= 7 && ["AWAITING_ESCROW", "FUNDED"].includes(contract.status)) return "YELLOW";
+  return "GREEN";
+}
+
+const HEALTH_CONFIG: Record<DealHealth, { color: string; label: string; bg: string; border: string }> = {
+  GREEN:  { color: "#34d399", label: "On Track",  bg: "rgba(52,211,153,0.12)",  border: "rgba(52,211,153,0.3)"  },
+  YELLOW: { color: "#f59e0b", label: "Watch",     bg: "rgba(245,158,11,0.12)",  border: "rgba(245,158,11,0.3)"  },
+  RED:    { color: "#f87171", label: "At Risk",   bg: "rgba(248,113,113,0.12)", border: "rgba(248,113,113,0.3)" },
+};
 
 function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
@@ -71,6 +98,83 @@ function IconPlus() {
 }
 
 const LS_KEY = "cascrow_hidden_contracts";
+const NOTE_TTL_MS = 24 * 60 * 60 * 1000;
+
+function HealthDot({ contract }: { contract: Contract }) {
+  const health = dealHealth(contract);
+  const cfg = HEALTH_CONFIG[health];
+
+  // Don't show dot for terminal / draft statuses
+  if (["COMPLETED", "EXPIRED", "DECLINED", "DRAFT"].includes(contract.status)) return null;
+
+  const [note, setNote] = useState<string | null>(null);
+  const [noteLoading, setNoteLoading] = useState(false);
+  const [hovered, setHovered] = useState(false);
+
+  // Use cached note from contract data if fresh
+  const cachedFresh =
+    contract.healthNote &&
+    contract.healthNoteUpdatedAt &&
+    Date.now() - new Date(contract.healthNoteUpdatedAt).getTime() < NOTE_TTL_MS;
+
+  function handleMouseEnter() {
+    setHovered(true);
+    if (cachedFresh && !note) {
+      setNote(contract.healthNote);
+      return;
+    }
+    if (!note && !noteLoading && !cachedFresh) {
+      setNoteLoading(true);
+      fetch(`/api/contracts/${contract.id}/health`)
+        .then((r) => r.json())
+        .then((d: { note?: string | null }) => { if (d.note) setNote(d.note); })
+        .catch(() => {})
+        .finally(() => setNoteLoading(false));
+    }
+  }
+
+  return (
+    <div
+      className="relative flex items-center gap-1.5 select-none"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <div
+        className="w-2 h-2 rounded-full shrink-0"
+        style={{ background: cfg.color, boxShadow: `0 0 5px ${cfg.color}55` }}
+      />
+      <span className="text-xs font-medium hidden sm:inline" style={{ color: cfg.color }}>
+        {cfg.label}
+      </span>
+
+      {/* Tooltip */}
+      {hovered && (
+        <div
+          className="absolute z-50 bottom-full left-0 mb-2 p-3 rounded-xl text-xs max-w-xs pointer-events-none"
+          style={{
+            background: "#1F1A18",
+            border: `1px solid ${cfg.border}`,
+            color: "#EDE6DD",
+            width: "220px",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+          }}
+        >
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <div className="w-2 h-2 rounded-full shrink-0" style={{ background: cfg.color }} />
+            <span className="font-semibold" style={{ color: cfg.color }}>{cfg.label}</span>
+          </div>
+          {noteLoading ? (
+            <span style={{ color: "#A89B8C" }}>Loading insight…</span>
+          ) : note ? (
+            <span style={{ color: "#C8BEAF" }}>{note}</span>
+          ) : (
+            <span style={{ color: "#A89B8C" }}>Hover again for AI insight.</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function IconEyeOff() {
   return (
@@ -363,13 +467,14 @@ export default function InvestorDashboard() {
                 >
                   {/* Table header row */}
                   <div
-                    className="hidden md:grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-4 px-5 py-3 text-xs uppercase tracking-wide"
+                    className="hidden md:grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] gap-4 px-5 py-3 text-xs uppercase tracking-wide"
                     style={{ background: "rgba(255,255,255,0.02)", color: "#A89B8C", borderBottom: "1px solid rgba(196,112,75,0.08)" }}
                   >
                     <span>Contract</span>
                     <span>Receiver</span>
                     <span>Amount</span>
                     <span>Status</span>
+                    <span>Health</span>
                     <span>Actions</span>
                     <span></span>
                   </div>
@@ -396,6 +501,7 @@ export default function InvestorDashboard() {
                           <div className="flex items-start justify-between gap-2">
                             <p className="text-sm font-medium line-clamp-2 flex-1" style={{ color: "#EDE6DD" }}>{c.milestone}</p>
                             <div className="flex items-center gap-2 shrink-0">
+                              <HealthDot contract={c} />
                               <span className={STATUS_CLASS[c.status] ?? "cs-badge cs-badge-draft"}>
                                 {STATUS_LABELS[c.status] ?? c.status}
                               </span>
@@ -437,7 +543,7 @@ export default function InvestorDashboard() {
                         </div>
 
                         {/* Desktop layout */}
-                        <div className="hidden md:grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-4 items-center">
+                        <div className="hidden md:grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] gap-4 items-center">
                           <div className="flex flex-col gap-1.5 min-w-0">
                             <p className="text-sm font-medium truncate" style={{ color: "#EDE6DD" }}>{c.milestone}</p>
                             {totalMs > 1 && (
@@ -461,6 +567,7 @@ export default function InvestorDashboard() {
                           <span className={STATUS_CLASS[c.status] ?? "cs-badge cs-badge-draft"}>
                             {STATUS_LABELS[c.status] ?? c.status}
                           </span>
+                          <HealthDot contract={c} />
                           {!isHidden ? (
                             <div className="flex items-center gap-2">
                               <Link
