@@ -8,6 +8,7 @@ import { sendVerifiedEmail, sendMilestoneCompletedInvestorEmail } from "@/lib/em
 import { writeAuditLog } from "@/services/evm/audit.service";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { generateAndStoreReputationForMilestone } from "@/services/ai/reputation.service";
+import { generateAndStoreCompletionNarrative } from "@/services/ai/completion-report.service";
 
 /**
  * POST /api/escrow/finish
@@ -170,6 +171,20 @@ export async function POST(request: NextRequest) {
           milestoneDescription: contract.milestone, // project description stored on contract
           amountUSD: completedMs.amountUSD.toString(),
           startupId: contract.startupId,
+        });
+      }
+    }
+
+    // Feature L: fire-and-forget AI completion report narrative
+    if (milestoneId && process.env.ANTHROPIC_API_KEY) {
+      const completedMs = contract.milestones.find((m) => m.id === milestoneId);
+      if (completedMs) {
+        void generateAndStoreCompletionNarrative({
+          milestoneId: completedMs.id,
+          milestoneTitle: completedMs.title,
+          projectDescription: contract.milestone,
+          amountUSD: completedMs.amountUSD.toString(),
+          completedOnTime: new Date() <= completedMs.cancelAfter,
         });
       }
     }

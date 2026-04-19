@@ -390,6 +390,52 @@ export function MilestoneTimeline({ milestones, activeMilestoneId, viewerRole, c
                     <p style={{ fontSize: "12px", color: "#6B5E52" }}>No proofs submitted yet for this milestone.</p>
                   )}
 
+                  {/* Feature L: Completion report download — shown to both parties on completed milestones */}
+                  {isCompleted && contractId && (
+                    <div
+                      style={{
+                        marginTop: "4px",
+                        padding: "10px 12px",
+                        background: "rgba(74,222,128,0.05)",
+                        border: "1px solid rgba(74,222,128,0.2)",
+                        borderRadius: "8px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "12px",
+                      }}
+                    >
+                      <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                        <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "#6EE09A" }}>
+                          Completion Report
+                        </span>
+                        <p style={{ fontSize: "11px", color: "#A89B8C", margin: 0 }}>
+                          AI-verified proof-of-delivery document
+                        </p>
+                      </div>
+                      <a
+                        href={`/api/contracts/${contractId}/milestones/${ms.id}/completion-report`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          flexShrink: 0,
+                          fontSize: "11px",
+                          fontWeight: 600,
+                          padding: "4px 12px",
+                          borderRadius: "6px",
+                          border: "1px solid rgba(74,222,128,0.3)",
+                          background: "rgba(74,222,128,0.1)",
+                          color: "#6EE09A",
+                          textDecoration: "none",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        View Report
+                      </a>
+                    </div>
+                  )}
+
                   {/* Feature H: Reputation opt-in for startup on completed milestones */}
                   {isCompleted && viewerRole === "startup" && ms.reputationSummary && (
                     <div

@@ -200,6 +200,11 @@ model Milestone {
   /// "MVP" | "REVENUE" | "PARTNERSHIP" | "GITHUB" | "BETA" | "OTHER"
   reputationCategory String?
 
+  // Feature L: AI Completion Report
+  /// AI-generated 2-3 sentence narrative for the completion report
+  completionNarrative   String?   @db.Text
+  completionNarrativeAt DateTime?
+
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
