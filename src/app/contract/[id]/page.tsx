@@ -305,6 +305,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
                 authenticityFlags: p.authenticityFlags as { type: string; severity: "WARNING" | "RED_FLAG"; detail: string }[] | null,
                 authenticityScore: p.authenticityScore,
                 aiContentSummary: p.aiContentSummary ?? null,
+                aiResubmissionDiff: p.aiResubmissionDiff ?? null,
                 createdAt: p.createdAt.toISOString(),
               })),
             }))}

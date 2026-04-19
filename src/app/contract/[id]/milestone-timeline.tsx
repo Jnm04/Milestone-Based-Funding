@@ -21,6 +21,7 @@ interface MilestoneProof {
   authenticityFlags?: AuthenticityFlag[] | null;
   authenticityScore?: number | null;
   aiContentSummary?: string | null;
+  aiResubmissionDiff?: string | null;
   createdAt: string;
 }
 
@@ -306,6 +307,56 @@ export function MilestoneTimeline({ milestones, activeMilestoneId, viewerRole, c
                                     </li>
                                   ))}
                                 </ul>
+                              </div>
+                            );
+                          })()}
+                          {/* Feature W: Resubmission Diff — startup only */}
+                          {viewerRole === "startup" && proof.aiResubmissionDiff && (() => {
+                            let diff: { addressed?: string[]; stillOpen?: string[] } = {};
+                            try { diff = JSON.parse(proof.aiResubmissionDiff) as typeof diff; } catch { /* skip */ }
+                            const hasAddressed = Array.isArray(diff.addressed) && diff.addressed.length > 0;
+                            const hasStillOpen = Array.isArray(diff.stillOpen) && diff.stillOpen.length > 0;
+                            if (!hasAddressed && !hasStillOpen) return null;
+                            return (
+                              <div
+                                style={{
+                                  marginTop: "4px",
+                                  padding: "10px 12px",
+                                  background: "rgba(255,255,255,0.03)",
+                                  border: "1px solid rgba(196,112,75,0.2)",
+                                  borderRadius: "6px",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: "8px",
+                                }}
+                              >
+                                <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#C4704B" }}>
+                                  Resubmission Analysis
+                                </span>
+                                {hasAddressed && (
+                                  <div>
+                                    <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6EE09A" }}>
+                                      Addressed
+                                    </span>
+                                    <ul style={{ margin: "4px 0 0 0", padding: "0 0 0 14px", display: "flex", flexDirection: "column", gap: "3px" }}>
+                                      {diff.addressed!.map((item, i) => (
+                                        <li key={i} style={{ fontSize: "11px", color: "#A8D4B4", lineHeight: 1.4 }}>{item}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                {hasStillOpen && (
+                                  <div>
+                                    <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#F87171" }}>
+                                      Still Open
+                                    </span>
+                                    <ul style={{ margin: "4px 0 0 0", padding: "0 0 0 14px", display: "flex", flexDirection: "column", gap: "3px" }}>
+                                      {diff.stillOpen!.map((item, i) => (
+                                        <li key={i} style={{ fontSize: "11px", color: "#F4A5A5", lineHeight: 1.4 }}>{item}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
                               </div>
                             );
                           })()}

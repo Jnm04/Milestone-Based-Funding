@@ -10,6 +10,7 @@ import crypto from "crypto";
 import { writeAuditLog } from "@/services/evm/audit.service";
 import { fireWebhook } from "@/services/webhook/webhook.service";
 import { generateAndStoreProofSummary } from "@/services/ai/proof-summary.service";
+import { generateAndStoreResubmissionDiff } from "@/services/ai/resubmission-diff.service";
 
 async function triggerVerification(proofId: string) {
   try {
@@ -255,6 +256,23 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      // Feature W: fire-and-forget resubmission diff (if a prior rejected proof exists)
+      if (process.env.ANTHROPIC_API_KEY) {
+        const prevRejected = await prisma.proof.findFirst({
+          where: { milestoneId, aiDecision: "NO", aiReasoning: { not: null } },
+          orderBy: { createdAt: "desc" },
+          select: { aiReasoning: true },
+        });
+        if (prevRejected?.aiReasoning) {
+          void generateAndStoreResubmissionDiff({
+            newProofId: proof.id,
+            milestoneTitle: milestone.title,
+            previousReasoning: prevRejected.aiReasoning,
+            newExtractedText: extractedText,
+          });
+        }
+      }
+
       // Auto-trigger AI verification after response is sent
       after(() => triggerVerification(proof.id));
 
@@ -336,6 +354,23 @@ export async function POST(request: NextRequest) {
           milestoneTitle: contract.milestone,
           extractedText,
         });
+      }
+
+      // Feature W: fire-and-forget resubmission diff (if a prior rejected proof exists)
+      if (process.env.ANTHROPIC_API_KEY) {
+        const prevRejected = await prisma.proof.findFirst({
+          where: { contractId: resolvedContractId, milestoneId: null, aiDecision: "NO", aiReasoning: { not: null } },
+          orderBy: { createdAt: "desc" },
+          select: { aiReasoning: true },
+        });
+        if (prevRejected?.aiReasoning) {
+          void generateAndStoreResubmissionDiff({
+            newProofId: proof.id,
+            milestoneTitle: contract.milestone,
+            previousReasoning: prevRejected.aiReasoning,
+            newExtractedText: extractedText,
+          });
+        }
       }
 
       // Auto-trigger AI verification after response is sent

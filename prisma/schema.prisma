@@ -146,6 +146,8 @@ model Proof {
   authenticityScore Int?
   /// Feature V: AI-generated bullet summary of proof contents (JSON-encoded string[])
   aiContentSummary  String?  @db.Text
+  /// Feature W: AI-generated resubmission diff (JSON: {addressed: string[], stillOpen: string[]})
+  aiResubmissionDiff  String?  @db.Text
   createdAt     DateTime   @default(now())
 
   @@index([contractId])

@@ -9,6 +9,7 @@ import { fireWebhook } from "@/services/webhook/webhook.service";
 import crypto from "crypto";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { generateAndStoreProofSummary } from "@/services/ai/proof-summary.service";
+import { generateAndStoreResubmissionDiff } from "@/services/ai/resubmission-diff.service";
 
 /**
  * POST /api/proof/github
@@ -173,6 +174,23 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      // Feature W: fire-and-forget resubmission diff (if a prior rejected proof exists)
+      if (process.env.ANTHROPIC_API_KEY) {
+        const prevRejected = await prisma.proof.findFirst({
+          where: { milestoneId, aiDecision: "NO", aiReasoning: { not: null } },
+          orderBy: { createdAt: "desc" },
+          select: { aiReasoning: true },
+        });
+        if (prevRejected?.aiReasoning) {
+          void generateAndStoreResubmissionDiff({
+            newProofId: proof.id,
+            milestoneTitle: milestone.title,
+            previousReasoning: prevRejected.aiReasoning,
+            newExtractedText: ghDoc.text,
+          });
+        }
+      }
+
       after(() => triggerVerification(proof.id));
 
       return NextResponse.json({
@@ -262,6 +280,23 @@ export async function POST(request: NextRequest) {
           milestoneTitle: contract.milestone,
           extractedText: ghDoc.text,
         });
+      }
+
+      // Feature W: fire-and-forget resubmission diff (if a prior rejected proof exists)
+      if (process.env.ANTHROPIC_API_KEY) {
+        const prevRejected = await prisma.proof.findFirst({
+          where: { contractId: resolvedContractId, milestoneId: null, aiDecision: "NO", aiReasoning: { not: null } },
+          orderBy: { createdAt: "desc" },
+          select: { aiReasoning: true },
+        });
+        if (prevRejected?.aiReasoning) {
+          void generateAndStoreResubmissionDiff({
+            newProofId: proof.id,
+            milestoneTitle: contract.milestone,
+            previousReasoning: prevRejected.aiReasoning,
+            newExtractedText: ghDoc.text,
+          });
+        }
       }
 
       after(() => triggerVerification(proof.id));
