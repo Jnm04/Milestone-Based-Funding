@@ -2,7 +2,22 @@
 
 > This file tracks planned features with full implementation details.
 > Reference this in new Claude sessions to continue work without losing context.
-> Last updated: 2026-04-18
+> Last updated: 2026-04-19
+
+---
+
+## Implementation Status
+
+| Feature | Status | Commit | Notes |
+|---|---|---|---|
+| **Feature D** — AI Proof Guidance | ✅ DONE | `029737fb` | `Milestone.proofGuidance`, `GET /api/contracts/[id]/milestones/[milestoneId]/guidance`, `<ProofGuidance>` in contract-actions |
+| **Feature B** — AI Credibility Score | ✅ DONE | `9908f894` | `CredibilityScore` DB model, `GET /api/contracts/[id]/credibility`, `<CredibilityPanel>` component, 7-day cache |
+| **Feature C** — AI Dispute Arbitration | ✅ DONE | `8ffc14ff` | 6 new `Proof` fields (`aiObjections`, `appealStatus/Text/Result/Reasoning/At`), `POST /api/proof/[proofId]/appeal`, Appeal Wizard UI in contract-actions |
+| **Feature A** — AI Contract Drafting | ✅ DONE | `c47a3d65` | `POST /api/contracts/draft`, collapsible AI panel in `contract-form.tsx`, rate-limited 10/hr |
+| **Feature E** — AI Fraud Detection | ⬜ TODO | — | Pre-screen before 5-model vote; `authenticityFlags` + `authenticityScore` on Proof |
+| **Feature F** — AI Milestone Renegotiation | ⬜ TODO | — | `RENEGOTIATING` status, 48h window, interim update + Haiku plausibility check |
+| **Feature G** — AI Progress Check-ins | ⬜ TODO | — | Scheduled nudges/reminders via email/Telegram |
+| **Feature H** — AI Reputation System | ⬜ TODO | — | Cross-contract reputation score per startup |
 
 ---
 
@@ -12,11 +27,11 @@ The goal is to position cascrow not as "an escrow platform with AI features" but
 
 | Contract Phase | Without AI | With New Features |
 |---|---|---|
-| Contract creation | Investor writes manually | **Feature A: AI drafts milestones** |
-| Funding decision | Investor has no info on startup | **Feature B: AI Credibility Score** |
-| Proof preparation | Startup guesses what to submit | **Feature D: AI Proof Coach** |
+| Contract creation | Investor writes manually | **Feature A: AI drafts milestones** ✅ |
+| Funding decision | Investor has no info on startup | **Feature B: AI Credibility Score** ✅ |
+| Proof preparation | Startup guesses what to submit | **Feature D: AI Proof Coach** ✅ |
 | Verification | 5-model vote ✅ (live) | Already done |
-| Rejection | Straight to human admin | **Feature C: AI Dispute Arbitration** |
+| Rejection | Straight to human admin | **Feature C: AI Dispute Arbitration** ✅ |
 
 ---
 
@@ -24,10 +39,10 @@ The goal is to position cascrow not as "an escrow platform with AI features" but
 
 Build in this order — smallest risk and highest visible impact first:
 
-1. **Feature D** — Proof Guidance (2 DB fields, 1 API route, no risk)
-2. **Feature A** — AI Contract Drafting (no DB changes, high marketing impact)
-3. **Feature B** — Credibility Scoring (new DB model, GitHub API, no flow changes)
-4. **Feature C** — Dispute Arbitration (most complex, touches money flow, do last)
+1. **Feature D** — Proof Guidance (2 DB fields, 1 API route, no risk) ✅ DONE
+2. **Feature A** — AI Contract Drafting (no DB changes, high marketing impact) ✅ DONE
+3. **Feature B** — Credibility Scoring (new DB model, GitHub API, no flow changes) ✅ DONE
+4. **Feature C** — Dispute Arbitration (most complex, touches money flow, do last) ✅ DONE
 
 ---
 
