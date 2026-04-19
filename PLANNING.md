@@ -14,10 +14,14 @@
 | **Feature B** — AI Credibility Score | ✅ DONE | `9908f894` | `CredibilityScore` DB model, `GET /api/contracts/[id]/credibility`, `<CredibilityPanel>` component, 7-day cache |
 | **Feature C** — AI Dispute Arbitration | ✅ DONE | `8ffc14ff` | 6 new `Proof` fields (`aiObjections`, `appealStatus/Text/Result/Reasoning/At`), `POST /api/proof/[proofId]/appeal`, Appeal Wizard UI in contract-actions |
 | **Feature A** — AI Contract Drafting | ✅ DONE | `c47a3d65` | `POST /api/contracts/draft`, collapsible AI panel in `contract-form.tsx`, rate-limited 10/hr |
+| **Feature J** — AI Contract Risk Flags | ✅ DONE | `c47a3d65+1` | `Contract.riskFlags Json?`, Haiku fire-and-forget in `POST /api/contracts`, collapsible `<details>` panel in `page.tsx` |
 | **Feature E** — AI Fraud Detection | ⬜ TODO | — | Pre-screen before 5-model vote; `authenticityFlags` + `authenticityScore` on Proof |
 | **Feature F** — AI Milestone Renegotiation | ⬜ TODO | — | `RENEGOTIATING` status, 48h window, interim update + Haiku plausibility check |
 | **Feature G** — AI Progress Check-ins | ⬜ TODO | — | Scheduled nudges/reminders via email/Telegram |
 | **Feature H** — AI Reputation System | ⬜ TODO | — | Cross-contract reputation score per startup |
+| **Feature I** — AI Proof Pre-Check | ⬜ TODO | — | Single-model soft check before real submit, no status change |
+| **Feature K** — Deal Health Score | ⬜ TODO | — | Traffic-light on dashboard, pure logic no AI call |
+| **Feature M** — AI-Personalized Emails | ⬜ TODO | — | Contextual Haiku-generated body for 5 key email types |
 
 ---
 

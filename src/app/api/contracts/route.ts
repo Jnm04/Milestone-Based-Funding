@@ -7,6 +7,84 @@ import { writeAuditLog } from "@/services/evm/audit.service";
 import { fireWebhook } from "@/services/webhook/webhook.service";
 import { createContractSchema } from "@/lib/zod-schemas";
 import { checkRateLimit } from "@/lib/rate-limit";
+import Anthropic from "@anthropic-ai/sdk";
+
+// ─── Lazy Anthropic client ────────────────────────────────────────────────────
+let _anthropic: Anthropic | null = null;
+function getAnthropic() {
+  if (!_anthropic) _anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  return _anthropic;
+}
+
+// ─── Feature J: AI Contract Risk Flags ───────────────────────────────────────
+// Best-effort, non-blocking. Fires after contract is created and response sent.
+async function generateAndStoreRiskFlags(
+  contractId: string,
+  milestones: { title: string; amountUSD: number; cancelAfter: string }[]
+) {
+  const milestoneLines = milestones.map((m, i) => {
+    const deadlineDays = Math.round(
+      (new Date(m.cancelAfter).getTime() - Date.now()) / 86_400_000
+    );
+    return `${i + 1}. "${m.title}" — $${m.amountUSD} RLUSD, deadline in ${deadlineDays} days`;
+  });
+
+  const anthropic = getAnthropic();
+  const response = await anthropic.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 512,
+    system: `You are a contract risk analyst for a milestone-based grant escrow platform.
+Review the milestone plan and identify structural problems that could cause disputes or failed verifications.
+Respond ONLY with valid JSON (no markdown, no code blocks): [{"severity": "WARNING"|"INFO", "text": "string"}]
+
+Rules:
+- Return an empty array [] if no issues found
+- Maximum 5 flags
+- "WARNING": real risk — vague/unverifiable milestone, unrealistic deadline, disproportionate amount, multiple distinct deliverables bundled
+- "INFO": advisory — suggestion to strengthen the plan, not a blocker
+- text: one concise sentence, actionable, references the specific milestone by number
+- Do NOT flag things that are fine. Only flag genuine structural issues.`,
+    messages: [
+      {
+        role: "user",
+        content: `Review this milestone plan for structural risks:\n\n${milestoneLines.join("\n")}`,
+      },
+    ],
+  });
+
+  const rawText = response.content[0]?.type === "text" ? response.content[0].text.trim() : "[]";
+  const jsonText = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  const flags = JSON.parse(jsonText) as Array<{ severity: string; text: string }>;
+
+  const validated = flags
+    .filter(
+      (f) =>
+        typeof f.text === "string" &&
+        f.text.length > 0 &&
+        ["WARNING", "INFO"].includes(f.severity)
+    )
+    .slice(0, 5);
+
+  if (validated.length > 0) {
+    await prisma.contract.update({
+      where: { id: contractId },
+      data: { riskFlags: validated as never },
+    });
+  }
+
+  void prisma.apiUsage
+    .create({
+      data: {
+        model: "Claude Haiku",
+        inputTokens: response.usage.input_tokens,
+        outputTokens: response.usage.output_tokens,
+        estimatedCostUsd:
+          (0.8 * response.usage.input_tokens + 4.0 * response.usage.output_tokens) / 1_000_000,
+        context: "risk-flags",
+      },
+    })
+    .catch(() => {});
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -161,6 +239,13 @@ export async function POST(request: NextRequest) {
         cancelAfter: result.cancelAfter.toISOString(),
       },
     }).catch((err) => console.error("[webhook] contract.created failed:", err));
+
+    // Feature J: generate AI risk flags — best-effort, never blocks the response
+    if (process.env.ANTHROPIC_API_KEY) {
+      generateAndStoreRiskFlags(result.id, msData).catch((err) =>
+        console.warn("[contracts] Risk flag generation failed:", err)
+      );
+    }
 
     return NextResponse.json({
       contractId: result.id,

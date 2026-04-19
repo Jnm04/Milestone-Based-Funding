@@ -84,6 +84,8 @@ model Contract {
   nftImageUrl         String?   // XRPL: public URL of the certificate SVG image
   cancelAfter         DateTime
   inviteLink          String?        @unique
+  /// [{severity: "WARNING"|"INFO", text: string}] — structural risk flags generated at contract creation
+  riskFlags           Json?
   proofs              Proof[]
   milestones          Milestone[]
   auditLogs           AuditLog[]

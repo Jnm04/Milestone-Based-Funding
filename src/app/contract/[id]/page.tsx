@@ -202,6 +202,79 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           </div>
         </div>
 
+        {/* AI Risk Flags */}
+        {Array.isArray(contract.riskFlags) && (contract.riskFlags as unknown[]).length > 0 && (
+          <details
+            style={{
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(196,112,75,0.2)",
+              borderTop: "1px solid rgba(212,160,60,0.5)",
+              borderRadius: "16px",
+              overflow: "hidden",
+            }}
+          >
+            <summary
+              style={{
+                padding: "14px 20px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                listStyle: "none",
+                userSelect: "none",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  padding: "2px 8px",
+                  borderRadius: "999px",
+                  background: "rgba(212,160,60,0.12)",
+                  color: "#D4A03C",
+                  border: "1px solid rgba(212,160,60,0.3)",
+                  flexShrink: 0,
+                }}
+              >
+                AI
+              </span>
+              <span style={{ fontSize: "13px", fontWeight: 500, color: "#EDE6DD", flex: 1 }}>
+                Contract Risk Review
+              </span>
+              <span style={{ fontSize: "12px", color: "#A89B8C" }}>
+                {(contract.riskFlags as Array<{ severity: string }>).filter((f) => f.severity === "WARNING").length > 0
+                  ? `${(contract.riskFlags as Array<{ severity: string }>).filter((f) => f.severity === "WARNING").length} warning${(contract.riskFlags as Array<{ severity: string }>).filter((f) => f.severity === "WARNING").length !== 1 ? "s" : ""}`
+                  : "advisory notes"}
+              </span>
+            </summary>
+            <div style={{ padding: "0 20px 16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+              {(contract.riskFlags as Array<{ severity: string; text: string }>).map((flag, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "10px",
+                    padding: "10px 12px",
+                    borderRadius: "10px",
+                    background: flag.severity === "WARNING"
+                      ? "rgba(212,160,60,0.07)"
+                      : "rgba(255,255,255,0.04)",
+                    border: `1px solid ${flag.severity === "WARNING" ? "rgba(212,160,60,0.2)" : "rgba(255,255,255,0.06)"}`,
+                  }}
+                >
+                  <span style={{ flexShrink: 0, marginTop: "1px", fontSize: "13px" }}>
+                    {flag.severity === "WARNING" ? "⚠" : "ℹ"}
+                  </span>
+                  <span style={{ fontSize: "13px", color: "#EDE6DD", lineHeight: 1.5 }}>{flag.text}</span>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+
         {/* Milestone timeline */}
         {contract.milestones.length > 0 && (
           <MilestoneTimeline
