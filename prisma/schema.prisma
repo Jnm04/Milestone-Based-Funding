@@ -297,6 +297,27 @@ model TelegramChat {
   createdAt   DateTime  @default(now())
 }
 
+// ── Credibility ───────────────────────────────────────────────────────────────
+
+/// AI-generated credibility score for a startup on a specific contract.
+/// Generated on demand by the investor, cached for 7 days.
+model CredibilityScore {
+  id         String   @id @default(cuid())
+  startupId  String
+  contractId String
+  score      Int                // 0-100
+  tier       String             // "HIGH" | "MEDIUM" | "LOW"
+  signals    Json               // [{label, value, positive}]
+  summary    String   @db.Text
+  rawSignals Json               // raw data for audit/debugging
+  cachedAt   DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@unique([startupId, contractId])
+  @@index([startupId])
+  @@index([contractId])
+}
+
 // ── Sanctions ─────────────────────────────────────────────────────────────────
 
 /// Cached sanctions list snapshots.

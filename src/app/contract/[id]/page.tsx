@@ -10,6 +10,7 @@ import { AuditTrail } from "@/components/audit-trail";
 import { ContractStatus } from "@/types";
 import { ContractActions } from "./contract-actions";
 import type { ProofGuidanceData } from "@/components/proof-guidance";
+import { CredibilityPanel, type CredibilityScoreData } from "@/components/credibility-panel";
 import { MilestoneTimeline } from "./milestone-timeline";
 import { ContractPoller } from "./contract-poller";
 import { NodeBackground } from "@/components/node-background";
@@ -61,6 +62,30 @@ export default async function ContractPage({ params, searchParams }: ContractPag
   ]);
 
   if (!contract) return notFound();
+
+  // Determine viewer role early so we can conditionally fetch credibility
+  const isInvestorViewerEarly =
+    viewerWallet && viewerWallet === contract.investor.walletAddress;
+
+  // Fetch cached credibility score for the investor (if startup has accepted)
+  const credibilityRecord =
+    isInvestorViewerEarly && contract.startup
+      ? await prisma.credibilityScore.findUnique({
+          where: {
+            startupId_contractId: {
+              startupId: contract.startup.id,
+              contractId: contract.id,
+            },
+          },
+          select: {
+            score: true,
+            tier: true,
+            signals: true,
+            summary: true,
+            cachedAt: true,
+          },
+        })
+      : null;
 
   const latestProof = contract.proofs[0] ?? null;
   const inviteUrl = contract.inviteLink
@@ -250,6 +275,28 @@ export default async function ContractPage({ params, searchParams }: ContractPag
 
         {/* On-chain audit trail */}
         <AuditTrail logs={auditLogs} />
+
+        {/* AI Credibility Score — investor-only, shown when startup has accepted */}
+        {isInvestorViewerEarly && contract.startup && (
+          <CredibilityPanel
+            contractId={contract.id}
+            startupName={contract.startup.name ?? contract.startup.companyName ?? null}
+            initialScore={
+              credibilityRecord
+                ? ({
+                    score: credibilityRecord.score,
+                    tier: credibilityRecord.tier as "HIGH" | "MEDIUM" | "LOW",
+                    signals: credibilityRecord.signals as CredibilityScoreData["signals"],
+                    summary: credibilityRecord.summary,
+                    cachedAt: credibilityRecord.cachedAt.toISOString(),
+                  } satisfies CredibilityScoreData)
+                : null
+            }
+            defaultCollapsed={
+              !["AWAITING_ESCROW"].includes(contract.status)
+            }
+          />
+        )}
 
         {/* Interactive actions (client component) */}
         <ContractActions
