@@ -560,9 +560,13 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
         <div
           style={{
             borderRadius: "12px",
+            background: "rgba(255,255,255,0.03)",
             border: riskFlags.length === 0
-              ? "1px solid rgba(34,197,94,0.3)"
-              : "1px solid rgba(212,160,60,0.3)",
+              ? "1px solid rgba(74,222,128,0.25)"
+              : "1px solid rgba(212,160,60,0.35)",
+            borderTop: riskFlags.length === 0
+              ? "1px solid rgba(74,222,128,0.5)"
+              : "1px solid rgba(212,160,60,0.7)",
             overflow: "hidden",
           }}
         >
@@ -572,11 +576,8 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
               display: "flex",
               alignItems: "center",
               gap: "8px",
-              padding: "10px 14px",
-              background: riskFlags.length === 0
-                ? "rgba(34,197,94,0.06)"
-                : "rgba(212,160,60,0.07)",
-              borderBottom: riskFlags.length > 0 ? "1px solid rgba(212,160,60,0.15)" : "none",
+              padding: "12px 16px",
+              borderBottom: riskFlags.length > 0 ? "1px solid rgba(255,255,255,0.06)" : "none",
             }}
           >
             <span
@@ -585,25 +586,19 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
                 fontWeight: 700,
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
-                padding: "2px 7px",
+                padding: "2px 8px",
                 borderRadius: "999px",
                 background: riskFlags.length === 0
-                  ? "rgba(34,197,94,0.12)"
-                  : "rgba(212,160,60,0.12)",
-                color: riskFlags.length === 0 ? "#16a34a" : "#b45309",
-                border: `1px solid ${riskFlags.length === 0 ? "rgba(34,197,94,0.3)" : "rgba(212,160,60,0.3)"}`,
+                  ? "rgba(74,222,128,0.1)"
+                  : "rgba(212,160,60,0.1)",
+                color: riskFlags.length === 0 ? "#86efac" : "#D4A03C",
+                border: `1px solid ${riskFlags.length === 0 ? "rgba(74,222,128,0.3)" : "rgba(212,160,60,0.3)"}`,
+                flexShrink: 0,
               }}
             >
               AI Risk Review
             </span>
-            <span
-              style={{
-                fontSize: "13px",
-                fontWeight: 500,
-                color: riskFlags.length === 0 ? "#15803d" : "#92400e",
-                flex: 1,
-              }}
-            >
+            <span style={{ fontSize: "13px", color: "#EDE6DD", flex: 1 }}>
               {riskFlags.length === 0
                 ? "No structural issues found — looks good."
                 : `${riskFlags.filter((f) => f.severity === "WARNING").length} warning${riskFlags.filter((f) => f.severity === "WARNING").length !== 1 ? "s" : ""}${riskFlags.filter((f) => f.severity === "INFO").length > 0 ? `, ${riskFlags.filter((f) => f.severity === "INFO").length} note${riskFlags.filter((f) => f.severity === "INFO").length !== 1 ? "s" : ""}` : ""}`}
@@ -611,7 +606,7 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
             <button
               type="button"
               onClick={() => { setRiskFlags(null); setRiskChecked(false); }}
-              style={{ background: "none", border: "none", cursor: "pointer", color: "#71717a", fontSize: "16px", lineHeight: 1, padding: "0 2px" }}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "#A89B8C", fontSize: "18px", lineHeight: 1, padding: "0 2px" }}
             >
               ×
             </button>
@@ -619,24 +614,26 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
 
           {/* Flags */}
           {riskFlags.length > 0 && (
-            <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: "8px" }}>
+            <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: "8px" }}>
               {riskFlags.map((flag, i) => (
                 <div
                   key={i}
                   style={{
                     display: "flex",
                     alignItems: "flex-start",
-                    gap: "8px",
-                    padding: "9px 12px",
+                    gap: "10px",
+                    padding: "10px 12px",
                     borderRadius: "8px",
-                    background: flag.severity === "WARNING" ? "rgba(212,160,60,0.07)" : "rgba(0,0,0,0.03)",
-                    border: `1px solid ${flag.severity === "WARNING" ? "rgba(212,160,60,0.2)" : "#e4e4e7"}`,
+                    background: flag.severity === "WARNING"
+                      ? "rgba(212,160,60,0.08)"
+                      : "rgba(255,255,255,0.04)",
+                    border: `1px solid ${flag.severity === "WARNING" ? "rgba(212,160,60,0.25)" : "rgba(255,255,255,0.08)"}`,
                   }}
                 >
-                  <span style={{ flexShrink: 0, fontSize: "13px", marginTop: "1px" }}>
+                  <span style={{ flexShrink: 0, fontSize: "13px", marginTop: "1px", color: flag.severity === "WARNING" ? "#D4A03C" : "#A89B8C" }}>
                     {flag.severity === "WARNING" ? "⚠" : "ℹ"}
                   </span>
-                  <span style={{ fontSize: "13px", color: "#18181b", lineHeight: 1.5 }}>{flag.text}</span>
+                  <span style={{ fontSize: "13px", color: "#EDE6DD", lineHeight: 1.6 }}>{flag.text}</span>
                 </div>
               ))}
             </div>
@@ -670,12 +667,12 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
               background: "none",
               border: "none",
               cursor: loadingRisk ? "not-allowed" : "pointer",
-              color: loadingRisk ? "#a1a1aa" : "#71717a",
+              color: loadingRisk ? "#6b5e54" : "#A89B8C",
               fontSize: "13px",
               padding: "4px 0",
               textAlign: "center",
               textDecoration: "underline",
-              textDecorationColor: "rgba(0,0,0,0.2)",
+              textDecorationColor: "rgba(168,155,140,0.3)",
             }}
           >
             {loadingRisk ? "Checking for issues…" : "Check plan for issues with AI"}
