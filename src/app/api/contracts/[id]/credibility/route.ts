@@ -156,6 +156,12 @@ export async function GET(
     }
   }
 
+  // ── Feature H: Reputation score (if available) ───────────────────────────
+  const reputation = await prisma.reputationScore.findUnique({
+    where: { userId: startup.id },
+    select: { totalCompleted: true, onTimeRate: true, avgAiConfidence: true, avgResubmissions: true },
+  });
+
   const rawSignals = {
     emailVerified: startup.emailVerified,
     kycTier: startup.kycTier,
@@ -166,6 +172,14 @@ export async function GET(
     completedContracts,
     failedContracts,
     github: githubData,
+    reputation: reputation
+      ? {
+          totalCompleted: reputation.totalCompleted,
+          onTimeRate: reputation.onTimeRate,
+          avgAiConfidence: reputation.avgAiConfidence,
+          avgResubmissions: reputation.avgResubmissions,
+        }
+      : null,
   };
 
   // ── Build human-readable signal summary for the prompt ────────────────────
@@ -177,6 +191,23 @@ export async function GET(
     `Website: ${startup.website ? `Provided (${startup.website})` : "Not provided"}`,
     `Past cascrow contracts: ${totalPastContracts} total, ${completedContracts} completed, ${failedContracts} failed`,
   ];
+
+  if (reputation && reputation.totalCompleted > 0) {
+    signalLines.push(
+      `cascrow reputation: ${reputation.totalCompleted} verified milestone(s) completed`,
+      reputation.onTimeRate !== null
+        ? `On-time delivery rate: ${Math.round(reputation.onTimeRate * 100)}%`
+        : "On-time delivery rate: unknown",
+      reputation.avgAiConfidence !== null
+        ? `Average AI verification confidence: ${Math.round(reputation.avgAiConfidence)}%`
+        : "Average AI verification confidence: unknown",
+      reputation.avgResubmissions !== null
+        ? `Average proof resubmissions before approval: ${reputation.avgResubmissions.toFixed(1)}`
+        : "Average proof resubmissions: unknown"
+    );
+  } else {
+    signalLines.push("cascrow reputation: No completed milestones yet");
+  }
 
   if (githubData) {
     signalLines.push(
@@ -205,7 +236,8 @@ Rules:
 - "signals": 4–8 items — one per meaningful signal provided. label is short (≤4 words), value is factual, positive is true/false
 - "summary": 2–3 sentences. Investor-facing. Professional tone. Explain what gives you confidence or concern.
 - Scoring guide: 80–100 = low risk, 50–79 = moderate risk, 0–49 = high risk
-- Weight: completed contracts > GitHub activity > KYC tier > profile completeness > email verified`,
+- Weight: cascrow reputation score > completed contracts > GitHub activity > KYC tier > profile completeness > email verified
+- cascrow reputation: each verified completed milestone with high AI confidence and on-time delivery is strong positive evidence`,
       messages: [
         {
           role: "user",

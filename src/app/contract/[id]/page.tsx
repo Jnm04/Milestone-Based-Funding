@@ -290,6 +290,9 @@ export default async function ContractPage({ params, searchParams }: ContractPag
               status: ms.status,
               order: ms.order,
               escrowSequence: ms.escrowSequence,
+              reputationSummary: ms.reputationSummary ?? null,
+              reputationPublic: ms.reputationPublic,
+              reputationCategory: ms.reputationCategory ?? null,
               proofs: ms.proofs.map((p) => ({
                 id: p.id,
                 fileName: p.fileName,
@@ -305,6 +308,14 @@ export default async function ContractPage({ params, searchParams }: ContractPag
               })),
             }))}
             activeMilestoneId={activeMilestone?.id ?? null}
+            viewerRole={
+              viewerWallet && viewerWallet === contract.investor.walletAddress
+                ? "investor"
+                : viewerWallet && viewerWallet === contract.startup?.walletAddress
+                ? "startup"
+                : null
+            }
+            contractId={contract.id}
           />
         )}
 

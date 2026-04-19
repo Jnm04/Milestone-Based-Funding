@@ -189,6 +189,14 @@ model Milestone {
   // Feature G: AI Progress Check-ins
   progressUpdates   ProgressUpdate[]
 
+  // Feature H: AI Reputation System
+  /// AI-generated privacy-safe summary of this milestone's achievement (no names, URLs, revenue figures)
+  reputationSummary  String?   @db.Text
+  /// Startup opted in to show this card on their public profile (default: private)
+  reputationPublic   Boolean   @default(false)
+  /// "MVP" | "REVENUE" | "PARTNERSHIP" | "GITHUB" | "BETA" | "OTHER"
+  reputationCategory String?
+
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
@@ -345,6 +353,27 @@ model TelegramChat {
   connectToken       String?   @unique
   connectTokenExpiry DateTime?
   createdAt   DateTime  @default(now())
+}
+
+// ── Reputation ────────────────────────────────────────────────────────────────
+
+/// Aggregated AI reputation score for a startup user.
+/// Recalculated on every milestone completion. One row per startup.
+model ReputationScore {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  totalCompleted   Int      @default(0)
+  /// 0.0–1.0 ratio of milestones completed on or before their deadline
+  onTimeRate       Float?
+  /// Average AI confidence score across all verified milestones (0–100)
+  avgAiConfidence  Float?
+  /// Average number of proof submissions before approval
+  avgResubmissions Float?
+  /// JSON object: { MVP: 2, REVENUE: 1, PARTNERSHIP: 0, GITHUB: 1, BETA: 0, OTHER: 0 }
+  categories       Json
+  lastCalculatedAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 // ── Credibility ───────────────────────────────────────────────────────────────

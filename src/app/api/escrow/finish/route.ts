@@ -7,6 +7,7 @@ import { decryptFulfillment } from "@/lib/crypto";
 import { sendVerifiedEmail, sendMilestoneCompletedInvestorEmail } from "@/lib/email";
 import { writeAuditLog } from "@/services/evm/audit.service";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { generateAndStoreReputationForMilestone } from "@/services/ai/reputation.service";
 
 /**
  * POST /api/escrow/finish
@@ -158,6 +159,20 @@ export async function POST(request: NextRequest) {
 
     // NFT minting is triggered by the frontend ContractPoller after COMPLETED status
     // is detected — decoupled to avoid Vercel serverless timeout issues.
+
+    // Feature H: fire-and-forget reputation generation for the completed milestone
+    if (milestoneId && contract.startupId) {
+      const completedMs = contract.milestones.find((m) => m.id === milestoneId);
+      if (completedMs) {
+        void generateAndStoreReputationForMilestone({
+          milestoneId: completedMs.id,
+          milestoneTitle: completedMs.title,
+          milestoneDescription: contract.milestone, // project description stored on contract
+          amountUSD: completedMs.amountUSD.toString(),
+          startupId: contract.startupId,
+        });
+      }
+    }
 
     return NextResponse.json({ ok: true, action: "completed", txHash });
   } catch (err) {

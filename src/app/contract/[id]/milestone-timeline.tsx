@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import type { ModelVote } from "@/components/ai-result";
 
 interface AuthenticityFlag {
@@ -41,11 +41,17 @@ interface MilestoneItem {
   order: number;
   escrowSequence: number | null;
   proofs: MilestoneProof[];
+  reputationSummary?: string | null;
+  reputationPublic?: boolean;
+  reputationCategory?: string | null;
 }
 
 interface MilestoneTimelineProps {
   milestones: MilestoneItem[];
   activeMilestoneId: string | null;
+  /** "startup" = show reputation opt-in toggle on completed milestones */
+  viewerRole?: "investor" | "startup" | null;
+  contractId?: string;
 }
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -74,8 +80,33 @@ const STATUS_LABELS: Record<string, string> = {
   COMPLETED:       "Completed",
 };
 
-export function MilestoneTimeline({ milestones, activeMilestoneId }: MilestoneTimelineProps) {
+export function MilestoneTimeline({ milestones, activeMilestoneId, viewerRole, contractId }: MilestoneTimelineProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Track reputation public state locally so toggle is instant
+  const [reputationPublicMap, setReputationPublicMap] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(milestones.map((ms) => [ms.id, ms.reputationPublic ?? false]))
+  );
+  const [reputationToggling, setReputationToggling] = useState<string | null>(null);
+
+  const handleReputationToggle = useCallback(async (milestoneId: string, newValue: boolean) => {
+    if (!contractId) return;
+    setReputationToggling(milestoneId);
+    try {
+      const res = await fetch(
+        `/api/contracts/${contractId}/milestones/${milestoneId}/reputation`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ public: newValue }),
+        }
+      );
+      if (res.ok) {
+        setReputationPublicMap((prev) => ({ ...prev, [milestoneId]: newValue }));
+      }
+    } finally {
+      setReputationToggling(null);
+    }
+  }, [contractId]);
 
   if (milestones.length === 0) return null;
 
@@ -89,6 +120,7 @@ export function MilestoneTimeline({ milestones, activeMilestoneId }: MilestoneTi
           const isPending = ms.status === "PENDING";
           const isExpanded = expandedId === ms.id;
           const colors = STATUS_COLORS[ms.status] ?? STATUS_COLORS.PENDING;
+          const isRepPublic = reputationPublicMap[ms.id] ?? false;
 
           return (
             <div key={ms.id}>
@@ -356,6 +388,54 @@ export function MilestoneTimeline({ milestones, activeMilestoneId }: MilestoneTi
                     </div>
                   ) : (
                     <p style={{ fontSize: "12px", color: "#6B5E52" }}>No proofs submitted yet for this milestone.</p>
+                  )}
+
+                  {/* Feature H: Reputation opt-in for startup on completed milestones */}
+                  {isCompleted && viewerRole === "startup" && ms.reputationSummary && (
+                    <div
+                      style={{
+                        marginTop: "4px",
+                        padding: "10px 12px",
+                        background: isRepPublic ? "rgba(74,222,128,0.06)" : "rgba(255,255,255,0.03)",
+                        border: isRepPublic ? "1px solid rgba(74,222,128,0.2)" : "1px solid rgba(196,112,75,0.15)",
+                        borderRadius: "8px",
+                        display: "flex",
+                        alignItems: "flex-start",
+                        justifyContent: "space-between",
+                        gap: "12px",
+                      }}
+                    >
+                      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                        <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: isRepPublic ? "#6EE09A" : "#C4704B" }}>
+                          Reputation Card
+                        </span>
+                        <p style={{ fontSize: "11px", color: "#A89B8C", margin: 0, lineHeight: 1.4, maxWidth: "260px" }}>
+                          {isRepPublic
+                            ? "This achievement is visible on your public profile."
+                            : "Share this achievement on your public profile."}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={reputationToggling === ms.id}
+                        onClick={(e) => { e.stopPropagation(); void handleReputationToggle(ms.id, !isRepPublic); }}
+                        style={{
+                          flexShrink: 0,
+                          fontSize: "11px",
+                          fontWeight: 600,
+                          padding: "4px 10px",
+                          borderRadius: "6px",
+                          border: isRepPublic ? "1px solid rgba(74,222,128,0.3)" : "1px solid rgba(196,112,75,0.3)",
+                          background: isRepPublic ? "rgba(74,222,128,0.1)" : "rgba(196,112,75,0.12)",
+                          color: isRepPublic ? "#6EE09A" : "#E8935A",
+                          cursor: reputationToggling === ms.id ? "not-allowed" : "pointer",
+                          opacity: reputationToggling === ms.id ? 0.5 : 1,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {reputationToggling === ms.id ? "…" : isRepPublic ? "Make Private" : "Make Public"}
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
