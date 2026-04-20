@@ -271,6 +271,150 @@ The enterprise section is already live (teaser, "Talk to our team" CTA). Once AT
 
 ---
 
+## Phase 2 Innovation Features
+
+These features are not required for the MVP (steps 1–10 above) but are high-value differentiators to build after the core flow is live.
+
+---
+
+### Feature I — Regulatory Mapping (CSRD / ESRS / GRI Auto-Tagging)
+
+**What:** When creating a goal, AI automatically maps it to the relevant regulatory framework articles. The mapping is stored on the attestation entry and printed on the certificate.
+
+**Why it matters:** EU CSRD mandates that ~50,000 companies report against specific ESRS articles (E1-4, S1-8, G1-2, etc.). Today their compliance teams map manually — error-prone and time-consuming. cascrow does it automatically and the on-chain attestation proves it.
+
+**How it works:**
+1. User describes goal in the Goal Wizard (or manually)
+2. AI call: `POST /api/attestation/wizard` (extend existing) — add `regulatoryMapping` to response
+3. Response includes: `[{ framework: "CSRD", article: "ESRS E1-4", clause: "§12(b)", confidence: 0.91 }]`
+4. Stored in `AttestationEntry.regulatoryMapping` (JSON field)
+5. Printed on Attestation Certificate under "Regulatory Frameworks Addressed"
+6. Filterable in the Board Report Pack (see below)
+
+**DB addition:**
+```prisma
+// AttestationEntry
+regulatoryMapping   Json?   // [{ framework, article, clause, confidence }]
+```
+
+**Supported frameworks (MVP):** CSRD/ESRS, GRI Standards, UN SDGs
+**Competitive angle:** No existing tool auto-maps + attests + stores on-chain. This alone is a procurement reason for large EU corporates.
+
+---
+
+### Feature II — Early Warning / Trend Monitoring
+
+**What:** For recurring attestations (monthly/quarterly), the platform runs lightweight "pulse checks" between official verification dates. If the data is trending toward a miss, the owner is notified in advance.
+
+**Why it matters:** Attestation is not just about proving a result — it's about not being surprised. A CFO who gets a warning in month 8 of 12 can course-correct. A CFO who only finds out at month 12 cannot.
+
+**How it works:**
+1. For milestones with `scheduleType = "MONTHLY" | "QUARTERLY"`, a separate cron job runs a "pulse check" on a configurable interval (e.g., mid-period)
+2. Pulse check: fetch data source → AI extracts current value → compare to target trajectory
+3. If AI predicts `< 70% probability of meeting target`: send `EARLY_WARNING` email + Telegram notification
+4. Pulse check does NOT write to chain (no cost, no official record)
+5. If owner acts and improves: no record that a warning was issued (privacy-preserving)
+
+**New DB fields:**
+```prisma
+// Milestone
+pulseCheckEnabled   Boolean  @default(false)
+pulseCheckInterval  String?  // "MID_PERIOD" | "WEEKLY" | "BIWEEKLY"
+lastPulseCheckAt    DateTime?
+lastPulseCheckRisk  String?  // "ON_TRACK" | "AT_RISK" | "LIKELY_MISS"
+```
+
+**New API:** `POST /api/cron/pulse-checks` — Vercel cron, runs weekly, finds at-risk recurring milestones
+
+---
+
+### Feature III — Board Report Pack (One-Click PDF)
+
+**What:** A company can generate a single, board-ready PDF containing all attestations for a given year/period, organized by framework, with trend charts and an executive summary.
+
+**Why it matters:** CFOs and sustainability officers need to present KPI performance to boards and regulators. Today this means manually assembling data from multiple sources. cascrow generates it in one click from verified, on-chain data.
+
+**Contents of the report:**
+- Executive Summary (AI-generated, 2-3 paragraphs)
+- Table: All attestations in period — Goal | Verdict | Verification Date | XRPL TX
+- By regulatory framework: CSRD, GRI, SDG sections with relevant attestations grouped
+- Trend charts for recurring KPIs (simple SVG sparklines)
+- Appendix: individual attestation certificate links (QR codes)
+- Footer: "All data verified by cascrow AI and recorded on XRP Ledger. Report generated [date]. cascrow.com"
+
+**How it works:**
+- `POST /api/reports/board-pack` — accepts `{ contractId, period: "2026", frameworks: ["CSRD"] }`
+- Aggregates all `AttestationEntry` records for that contract in the period
+- AI generates executive summary from the results
+- PDF generated server-side (same Vercel Blob pattern as existing cert-image.service.ts)
+- Returns Blob URL, stored in `Report` DB model
+
+**New model:**
+```prisma
+model Report {
+  id          String   @id @default(cuid())
+  contractId  String
+  period      String   // "2026", "2026-Q1", etc.
+  type        String   // "BOARD_PACK"
+  blobUrl     String
+  generatedAt DateTime @default(now())
+  @@index([contractId])
+}
+```
+
+---
+
+### Feature IV — Independent Auditor Re-Run Portal
+
+**What:** External auditors (KPMG, Deloitte, PWC) can request an independent re-verification of any attestation. They authenticate via a one-time token, provide their own data source credentials, and the platform runs the same AI verification — creating a second, auditor-triggered `AttestationEntry` linked to the original.
+
+**Why it matters:** The company's attestation proves what *they* claim. An auditor re-run proves what an *independent party* verified. This combination is what Big 4 firms need to sign off on CSRD reports. cascrow becomes the technical layer beneath the audit engagement.
+
+**How it works:**
+1. Company owner issues an "auditor access token" from dashboard — `POST /api/contracts/[id]/auditor-invite`
+2. Token sent to auditor email — one-time, 7-day expiry
+3. Auditor visits `/audit/[token]` — read-only view of all attestation configs (no API keys visible)
+4. For any attestation, auditor can click "Re-Run with My Credentials" — provides their own API key
+5. Platform runs identical verification: fetch → hash → AI → XRPL write
+6. New `AttestationEntry` created with `type: "AUDITOR_RERUN"`, linked to original entry
+7. Both entries shown on the public certificate page side by side
+
+**DB addition:**
+```prisma
+// AttestationEntry
+type          String  @default("PLATFORM")  // "PLATFORM" | "AUDITOR_RERUN"
+linkedEntryId String?  // for AUDITOR_RERUN: points to original PLATFORM entry
+auditorEmail  String?
+```
+
+**Competitive angle:** No other platform lets a Big 4 auditor independently re-execute a KPI verification and write the result to blockchain. This is the feature that converts cascrow from "nice tool" to "part of the official audit workflow."
+
+---
+
+### Feature V — Opt-In Peer Benchmarking
+
+**What:** Companies that opt in can see how their verified KPIs compare to anonymized peers in the same industry/sector. Shown as percentile ranks, not raw data. Example: "Your Scope 2 reduction of 15% is in the top 28% of verified companies in this sector."
+
+**Why it matters:** Boards and investors ask "how are we doing compared to peers?" This is currently impossible to answer with verified data. cascrow has the verified data — and can surface it responsibly.
+
+**How it works:**
+1. Company opts in per milestone at creation time (`benchmarkOptIn: Boolean @default(false)`)
+2. Verified `AttestationEntry` records with `benchmarkOptIn=true` feed an anonymized aggregate
+3. No raw data shared — only percentile rank computed server-side, never exposed in DB
+4. Shown in dashboard after attestation: "Industry Percentile: Top 28%"
+5. Leaderboard: public, anonymized "Top ESG Performers This Quarter" — drives organic marketing
+
+**DB addition:**
+```prisma
+// Milestone
+benchmarkOptIn  Boolean  @default(false)
+benchmarkSector String?  // "MANUFACTURING" | "TECH" | "FINANCE" | etc.
+```
+
+**Privacy:** Raw values never stored in a benchmark table. Only pre-aggregated percentiles computed on query. Companies can opt out at any time (removes future entries, not historical).
+
+---
+
 ## Open Questions / Decisions Needed
 
 | Question | Options | Status |
@@ -303,3 +447,9 @@ The enterprise section is already live (teaser, "Talk to our team" CTA). Once AT
 | UI — contract detail | `src/app/contract/[id]/contract-actions.tsx` (ATTESTATION-specific blocks) |
 | Cron | `src/app/api/cron/` (new route for scheduled attestation runs) |
 | Encryption helper | new `src/lib/encrypt.ts` (AES-256 for API keys) |
+| **Phase 2** | |
+| Regulatory mapping | extend `src/app/api/attestation/wizard/route.ts` + `AttestationEntry` schema |
+| Pulse checks | new `src/app/api/cron/pulse-checks/route.ts` |
+| Board report pack | new `src/app/api/reports/board-pack/route.ts` + `src/services/attestation/report.service.ts` |
+| Auditor portal | new `src/app/api/contracts/[id]/auditor-invite/route.ts` + `src/app/audit/[token]/page.tsx` |
+| Peer benchmarking | new `src/app/api/attestation/benchmark/route.ts` (server-side percentile only, no raw data) |
