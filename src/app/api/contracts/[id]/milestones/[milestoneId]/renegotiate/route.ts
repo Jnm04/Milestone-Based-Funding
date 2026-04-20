@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { assessInterimUpdate } from "@/services/ai/renegotiation.service";
 import { sendExtensionRequestedEmail } from "@/lib/email";
 
@@ -44,6 +45,14 @@ export async function POST(
     return NextResponse.json(
       { error: "Forbidden — only the Receiver can submit a renegotiation request" },
       { status: 403 }
+    );
+  }
+
+  // Rate limit: 5 renegotiation requests per user per hour (AI call + investor email)
+  if (!(await checkRateLimit(`renegotiate:${session.user.id}`, 5, 60 * 60 * 1000))) {
+    return NextResponse.json(
+      { error: "Too many renegotiation requests. Please wait before submitting again." },
+      { status: 429, headers: { "Retry-After": "3600" } }
     );
   }
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
 import crypto from "crypto";
 
 /**
@@ -21,6 +22,14 @@ const BOT_USERNAME = () => process.env.TELEGRAM_BOT_USERNAME ?? "";
 export async function POST() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Rate limit: 10 token generations per user per hour
+  if (!(await checkRateLimit(`telegram-connect:${session.user.id}`, 10, 60 * 60 * 1000))) {
+    return NextResponse.json(
+      { error: "Too many requests. Please wait before trying again." },
+      { status: 429, headers: { "Retry-After": "3600" } }
+    );
+  }
 
   const botUsername = BOT_USERNAME();
   if (!botUsername) {
