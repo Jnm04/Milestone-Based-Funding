@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
-import { put } from "@vercel/blob";
+import { put, del } from "@vercel/blob";
 import Anthropic from "@anthropic-ai/sdk";
 
 /**
@@ -276,6 +276,15 @@ Respond with ONLY the narrative paragraph as plain text.`,
         avgConfidence,
       },
     });
+
+    // Delete the previous report blob for this period to prevent stale reports
+    // from remaining publicly accessible after regeneration.
+    if (
+      investor.lastTransparencyReportUrl &&
+      investor.lastTransparencyReportPeriod === periodKey
+    ) {
+      await del(investor.lastTransparencyReportUrl).catch(() => {});
+    }
 
     // ── Upload to Vercel Blob ─────────────────────────────────────────────────
     const blobPath = `reports/${session.user.id}/${periodKey}-${Date.now()}.html`;

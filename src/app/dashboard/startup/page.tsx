@@ -218,6 +218,7 @@ function StartupDashboardContent() {
           milestoneChanges: changes,
           rationale: counterRationale,
           improveWithAi: true,
+          inviteToken: inviteCode,
         }),
       });
       const data = await res.json();
@@ -267,7 +268,7 @@ function StartupDashboardContent() {
       const res = await fetch(`/api/contracts/${preview.id}/counter-proposal`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ milestoneChanges: changes, rationale: counterRationale }),
+        body: JSON.stringify({ milestoneChanges: changes, rationale: counterRationale, inviteToken: inviteCode }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed");

@@ -64,9 +64,15 @@ export async function GET(
       return NextResponse.json({ error: "Contract not found" }, { status: 404 });
     }
 
+    // Also allow the proposer to view their own CP even before startupId is assigned
+    const cpForProposer = await prisma.counterProposal.findUnique({
+      where: { contractId: id },
+      select: { proposedBy: true },
+    });
     const isParty =
       contract.investorId === session.user.id ||
-      contract.startupId === session.user.id;
+      contract.startupId === session.user.id ||
+      cpForProposer?.proposedBy === session.user.id;
     if (!isParty) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -137,10 +143,12 @@ export async function POST(
       milestoneChanges,
       rationale,
       improveWithAi = false,
+      inviteToken,
     } = body as {
       milestoneChanges?: unknown;
       rationale?: string;
       improveWithAi?: boolean;
+      inviteToken?: string;
     };
 
     if (!Array.isArray(milestoneChanges) || milestoneChanges.length === 0) {
@@ -157,7 +165,7 @@ export async function POST(
       );
     }
 
-    // Validate at least one milestone has a proposed change
+    // Validate at least one milestone has a proposed change, and values are sane
     const hasAnyChange = (milestoneChanges as MilestoneChange[]).some(
       (mc) => mc.newAmountUSD !== undefined || mc.newCancelAfter !== undefined
     );
@@ -167,8 +175,22 @@ export async function POST(
         { status: 400 }
       );
     }
+    for (const mc of milestoneChanges as MilestoneChange[]) {
+      if (mc.newAmountUSD !== undefined) {
+        const parsed = parseFloat(mc.newAmountUSD);
+        if (isNaN(parsed) || parsed < 1) {
+          return NextResponse.json({ error: "newAmountUSD must be at least $1" }, { status: 400 });
+        }
+      }
+      if (mc.newCancelAfter !== undefined) {
+        const d = new Date(mc.newCancelAfter);
+        if (isNaN(d.getTime()) || d <= new Date()) {
+          return NextResponse.json({ error: "newCancelAfter must be a future date" }, { status: 400 });
+        }
+      }
+    }
 
-    // Load contract with investor info
+    // Load contract with investor info (inviteLink is a base field, always returned)
     const contract = await prisma.contract.findUnique({
       where: { id },
       include: {
@@ -191,6 +213,12 @@ export async function POST(
         { error: "Counter-proposals can only be submitted while the contract is in DRAFT status" },
         { status: 409 }
       );
+    }
+
+    // Verify the startup has the invite token — prevents anyone with a contract ID
+    // from submitting a counter-proposal to contracts they weren't invited to.
+    if (!inviteToken || inviteToken !== contract.inviteLink) {
+      return NextResponse.json({ error: "Invalid invite token" }, { status: 403 });
     }
 
     // Check no existing PENDING counter-proposal

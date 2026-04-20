@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { sendProgressUpdateNotifiedEmail } from "@/lib/email";
 
 export async function POST(
@@ -42,6 +43,14 @@ export async function POST(
     return NextResponse.json(
       { error: "Forbidden — only the Receiver can log progress updates" },
       { status: 403 }
+    );
+  }
+
+  // Rate limit: 10 updates per user per hour to prevent email spam to investor
+  if (!(await checkRateLimit(`progress-update:${session.user.id}`, 10, 60 * 60 * 1000))) {
+    return NextResponse.json(
+      { error: "Too many progress updates. Please wait before submitting again." },
+      { status: 429, headers: { "Retry-After": "3600" } }
     );
   }
 

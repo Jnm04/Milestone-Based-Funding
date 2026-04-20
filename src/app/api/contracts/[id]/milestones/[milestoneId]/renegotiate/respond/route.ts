@@ -74,97 +74,112 @@ export async function POST(
   const { contract } = milestone;
   const startup = contract.startup;
 
-  if (decision === "APPROVE") {
-    // ── Approve: extend deadline, reset milestone to FUNDED ─────────────────
-    const extensionDays = milestone.extensionDays ?? 14;
-    const newCancelAfter = new Date(Date.now() + extensionDays * 24 * 60 * 60 * 1000);
+  try {
+    if (decision === "APPROVE") {
+      // ── Approve: extend deadline, reset milestone to FUNDED ─────────────────
+      const extensionDays = milestone.extensionDays ?? 14;
+      const newCancelAfter = new Date(Date.now() + extensionDays * 24 * 60 * 60 * 1000);
 
-    await prisma.milestone.update({
-      where: { id: milestoneId },
-      data: {
-        status: "FUNDED" as never,
-        cancelAfter: newCancelAfter,
-        renegotiationStatus: "EXTENSION_APPROVED",
-        extensionApprovedAt: new Date(),
-      },
-    });
+      // Transaction prevents double-approval under concurrent requests
+      await prisma.$transaction(async (tx) => {
+        const current = await tx.milestone.findUnique({
+          where: { id: milestoneId },
+          select: { renegotiationStatus: true },
+        });
+        if (current?.renegotiationStatus !== "EXTENSION_REQUESTED") {
+          const e = new Error("Extension request already responded to") as Error & { code: string };
+          e.code = "ALREADY_RESPONDED";
+          throw e;
+        }
+        await tx.milestone.update({
+          where: { id: milestoneId },
+          data: {
+            status: "FUNDED" as never,
+            cancelAfter: newCancelAfter,
+            renegotiationStatus: "EXTENSION_APPROVED",
+            extensionApprovedAt: new Date(),
+          },
+        });
+        const otherActive = contract.milestones.find(
+          (m) => m.id !== milestoneId && !["PENDING", "COMPLETED", "EXPIRED"].includes(m.status)
+        );
+        const newContractStatus = otherActive ? otherActive.status : "FUNDED";
+        await tx.contract.update({
+          where: { id: contractId },
+          data: { status: newContractStatus as never },
+        });
+      });
 
-    // Determine new contract status based on remaining milestones
-    const otherActive = contract.milestones.find(
-      (m) => m.id !== milestoneId && !["PENDING", "COMPLETED", "EXPIRED"].includes(m.status)
-    );
-    const newContractStatus = otherActive ? otherActive.status : "FUNDED";
-    await prisma.contract.update({
-      where: { id: contractId },
-      data: { status: newContractStatus as never },
-    });
-
-    await writeAuditLog({
-      contractId,
-      milestoneId,
-      event: "EXTENSION_APPROVED",
-      actor: session.user.id,
-      metadata: { extensionDays, newDeadline: newCancelAfter.toISOString() },
-    });
-
-    // Notify startup (fire-and-forget)
-    if (startup) {
-      sendExtensionApprovedEmail({
-        to: startup.email,
+      await writeAuditLog({
         contractId,
-        milestoneTitle: milestone.title,
-        extensionDays,
-        newDeadline: newCancelAfter,
-      }).catch((err) => console.error("[email] sendExtensionApprovedEmail failed:", err));
-    }
+        milestoneId,
+        event: "EXTENSION_APPROVED",
+        actor: session.user.id,
+        metadata: { extensionDays, newDeadline: newCancelAfter.toISOString() },
+      });
 
-    return NextResponse.json({ ok: true, decision: "APPROVE", newDeadline: newCancelAfter.toISOString() });
-  } else {
-    // ── Reject: cancel escrow on-chain, set milestone EXPIRED ───────────────
-    let txHash: string | undefined;
-    try {
-      txHash = await cancelMilestone(contractId, milestone.order);
-    } catch (err) {
-      console.error("[renegotiate/respond] cancelMilestone failed:", err);
-      // If on-chain cancel fails (already cancelled, etc.) we still proceed with DB update
-    }
+      if (startup) {
+        sendExtensionApprovedEmail({
+          to: startup.email,
+          contractId,
+          milestoneTitle: milestone.title,
+          extensionDays,
+          newDeadline: newCancelAfter,
+        }).catch((err) => console.error("[email] sendExtensionApprovedEmail failed:", err));
+      }
 
-    await prisma.milestone.update({
-      where: { id: milestoneId },
-      data: {
-        status: "EXPIRED" as never,
-        renegotiationStatus: "EXTENSION_REJECTED",
-        ...(txHash ? { evmTxHash: txHash } : {}),
-      },
-    });
+      return NextResponse.json({ ok: true, decision: "APPROVE", newDeadline: newCancelAfter.toISOString() });
+    } else {
+      // ── Reject: cancel escrow on-chain, set milestone EXPIRED ───────────────
+      let txHash: string | undefined;
+      try {
+        txHash = await cancelMilestone(contractId, milestone.order);
+      } catch (err) {
+        console.error("[renegotiate/respond] cancelMilestone failed:", err);
+      }
 
-    // Determine new contract status
-    const remaining = contract.milestones.find(
-      (m) => m.id !== milestoneId && !["PENDING", "COMPLETED", "EXPIRED"].includes(m.status)
-    );
-    const newContractStatus = remaining ? remaining.status : "EXPIRED";
-    await prisma.contract.update({
-      where: { id: contractId },
-      data: { status: newContractStatus as never },
-    });
+      await prisma.milestone.update({
+        where: { id: milestoneId },
+        data: {
+          status: "EXPIRED" as never,
+          renegotiationStatus: "EXTENSION_REJECTED",
+          ...(txHash ? { evmTxHash: txHash } : {}),
+        },
+      });
 
-    await writeAuditLog({
-      contractId,
-      milestoneId,
-      event: "EXTENSION_REJECTED",
-      actor: session.user.id,
-      metadata: { txHash },
-    });
+      const remaining = contract.milestones.find(
+        (m) => m.id !== milestoneId && !["PENDING", "COMPLETED", "EXPIRED"].includes(m.status)
+      );
+      const newContractStatus = remaining ? remaining.status : "EXPIRED";
+      await prisma.contract.update({
+        where: { id: contractId },
+        data: { status: newContractStatus as never },
+      });
 
-    // Notify startup (fire-and-forget)
-    if (startup) {
-      sendExtensionRejectedEmail({
-        to: startup.email,
+      await writeAuditLog({
         contractId,
-        milestoneTitle: milestone.title,
-      }).catch((err) => console.error("[email] sendExtensionRejectedEmail failed:", err));
-    }
+        milestoneId,
+        event: "EXTENSION_REJECTED",
+        actor: session.user.id,
+        metadata: { txHash },
+      });
 
-    return NextResponse.json({ ok: true, decision: "REJECT" });
+      if (startup) {
+        sendExtensionRejectedEmail({
+          to: startup.email,
+          contractId,
+          milestoneTitle: milestone.title,
+        }).catch((err) => console.error("[email] sendExtensionRejectedEmail failed:", err));
+      }
+
+      return NextResponse.json({ ok: true, decision: "REJECT" });
+    }
+  } catch (err) {
+    const code = (err as Error & { code?: string }).code;
+    if (code === "ALREADY_RESPONDED") {
+      return NextResponse.json({ error: "Extension request already responded to" }, { status: 409 });
+    }
+    console.error("[renegotiate/respond] unexpected error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
