@@ -93,6 +93,37 @@ function IconCheck() {
     </svg>
   );
 }
+function IconBuilding() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C4704B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M9 3v18" />
+      <path d="M3 9h6" />
+      <path d="M3 15h6" />
+      <path d="M13 9h5" />
+      <path d="M13 15h5" />
+    </svg>
+  );
+}
+function IconBarChart() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C4704B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="20" x2="18" y2="10" />
+      <line x1="12" y1="20" x2="12" y2="4" />
+      <line x1="6"  y1="20" x2="6"  y2="14" />
+      <line x1="2"  y1="20" x2="22" y2="20" />
+    </svg>
+  );
+}
+function IconFileCheck() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C4704B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <polyline points="9 15 11 17 15 13" />
+    </svg>
+  );
+}
 function IconTrending() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C4704B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -370,10 +401,11 @@ export default function LandingPage() {
           </Link>
 
           <div className="hidden md:flex items-center gap-8 text-sm" style={{ color: "#A89B8C" }}>
-            <a href="#problem" className="transition-colors hover:text-[#EDE6DD]">Why us</a>
-            <a href="#how"     className="transition-colors hover:text-[#EDE6DD]">How it works</a>
-            <a href="#features" className="transition-colors hover:text-[#EDE6DD]">Features</a>
-            <Link href="/guide" className="transition-colors hover:text-[#EDE6DD]">Guide</Link>
+            <a href="#problem"    className="transition-colors hover:text-[#EDE6DD]">Why us</a>
+            <a href="#how"        className="transition-colors hover:text-[#EDE6DD]">How it works</a>
+            <a href="#features"   className="transition-colors hover:text-[#EDE6DD]">Features</a>
+            <a href="#enterprise" className="transition-colors hover:text-[#EDE6DD]" style={{ color: "#C4704B" }}>Enterprise</a>
+            <Link href="/guide"   className="transition-colors hover:text-[#EDE6DD]">Guide</Link>
           </div>
 
           <div className="flex items-center gap-4">
@@ -401,8 +433,9 @@ export default function LandingPage() {
             {[
               { href: "#problem", label: "Why us" },
               { href: "#how",     label: "How it works" },
-              { href: "#features",label: "Features" },
-              { href: "/guide",   label: "Guide" },
+              { href: "#features",   label: "Features" },
+              { href: "#enterprise",label: "Enterprise" },
+              { href: "/guide",     label: "Guide" },
             ].map(({ href, label }) => (
               <a
                 key={label}
@@ -1005,6 +1038,180 @@ export default function LandingPage() {
               </div>
             </ScrollReveal>
           </div>
+        </div>
+      </section>
+
+      <GlowDivider />
+
+      {/* ══════════════════════════════════════════════════
+          ENTERPRISE
+      ═══════════════════════════════════════════════════ */}
+      <section id="enterprise" className="py-32 px-6" style={{ position: "relative", zIndex: 1 }}>
+        {/* Subtle radial glow behind the section */}
+        <div
+          className="absolute left-1/2 -translate-x-1/2 w-[900px] h-[600px] rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(ellipse, rgba(196,112,75,0.05) 0%, transparent 70%)" }}
+        />
+
+        <div className="max-w-5xl mx-auto">
+          {/* Header */}
+          <ScrollReveal className="text-center mb-20">
+            <div
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-widest border mb-6"
+              style={{ borderColor: "rgba(196,112,75,0.4)", color: "#C4704B", background: "rgba(196,112,75,0.07)" }}
+            >
+              Enterprise · Early Access
+            </div>
+            <h2
+              className="text-4xl md:text-5xl tracking-tight mb-5"
+              style={{ fontFamily: "var(--font-libre-franklin)", fontWeight: 600, color: "#EDE6DD" }}
+            >
+              Corporate goals.<br />AI-verified. Blockchain-secured.
+            </h2>
+            <p className="text-lg max-w-2xl mx-auto" style={{ color: "#A89B8C" }}>
+              Set targets with your stakeholders. Submit evidence when they&apos;re met.
+              AI verifies against real data. An immutable record lands on-chain — no auditor required.
+            </p>
+          </ScrollReveal>
+
+          {/* Use-case cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-16 items-stretch">
+            {[
+              {
+                Icon: IconBarChart,
+                label: "KPI Attestation",
+                title: "10 % revenue increase Q1",
+                desc: "Agree on targets with board or investors. Upload your quarterly report at deadline. AI cross-references the numbers and issues a tamper-proof certificate on-chain.",
+              },
+              {
+                Icon: IconBuilding,
+                label: "Group Compliance",
+                title: "License usage across subsidiaries",
+                desc: "Track SaaS spend, headcount limits, or regulatory quotas across every entity in your group. Each subsidiary submits, AI aggregates, headquarters sees a live dashboard.",
+              },
+              {
+                Icon: IconFileCheck,
+                label: "ESG & CSRD Reporting",
+                title: "Verified sustainability targets",
+                desc: "CSRD mandates auditable proof for ESG commitments from 2025. Replace expensive external auditors with continuous AI verification and an on-chain audit trail.",
+              },
+            ].map((item, i) => (
+              <ScrollReveal key={item.label} delay={i * 100} className="h-full">
+                <div
+                  className="flex flex-col gap-5 p-7 rounded-2xl h-full"
+                  style={{
+                    background: "rgba(196,112,75,0.03)",
+                    border: "1px solid rgba(196,112,75,0.18)",
+                    transition: "border-color 0.2s, background 0.2s",
+                  }}
+                  onMouseOver={(e) => {
+                    const el = e.currentTarget as HTMLDivElement;
+                    el.style.background = "rgba(196,112,75,0.07)";
+                    el.style.borderColor = "rgba(196,112,75,0.35)";
+                  }}
+                  onMouseOut={(e) => {
+                    const el = e.currentTarget as HTMLDivElement;
+                    el.style.background = "rgba(196,112,75,0.03)";
+                    el.style.borderColor = "rgba(196,112,75,0.18)";
+                  }}
+                >
+                  <div
+                    className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.2)" }}
+                  >
+                    <item.Icon />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: "#C4704B" }}>{item.label}</p>
+                    <h3 className="font-semibold text-base mb-2" style={{ color: "#EDE6DD" }}>{item.title}</h3>
+                    <p className="text-sm leading-relaxed" style={{ color: "#A89B8C" }}>{item.desc}</p>
+                  </div>
+                </div>
+              </ScrollReveal>
+            ))}
+          </div>
+
+          {/* How it integrates */}
+          <ScrollReveal>
+            <div
+              className="rounded-2xl p-8 md:p-12"
+              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.14)" }}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+                <div className="flex flex-col gap-6">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "#C4704B" }}>Zero-friction integration</p>
+                    <h3 className="text-2xl font-semibold mb-3" style={{ color: "#EDE6DD" }}>No system changes. Just upload.</h3>
+                    <p className="text-sm leading-relaxed" style={{ color: "#A89B8C" }}>
+                      cascrow sits as a layer on top of your existing tools — SAP, Salesforce, Google Workspace, or a simple Excel export.
+                      No API integration required, no IT project, no vendor lock-in.
+                      The person running verification is your CFO or compliance lead, not your engineering team.
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    {[
+                      "Works with PDF, Excel, ERP exports and API feeds",
+                      "AI describes what evidence it needs — you just provide it",
+                      "On-chain record usable as regulatory audit evidence",
+                      "Recurring schedules: monthly, quarterly or custom",
+                    ].map((point) => (
+                      <CheckItem key={point}>{point}</CheckItem>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Mini flow diagram */}
+                <div className="flex flex-col gap-3">
+                  {[
+                    { step: "01", title: "Define targets",   desc: "Both parties sign a structured commitment on-chain" },
+                    { step: "02", title: "Collect evidence", desc: "Upload any file you already have — report, CSV, screenshot" },
+                    { step: "03", title: "AI verifies",      desc: "Five models cross-check your evidence against the agreed criteria" },
+                    { step: "04", title: "Record & report",  desc: "Immutable blockchain attestation + shareable PDF report" },
+                  ].map((item) => (
+                    <div key={item.step} className="flex items-start gap-4 p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.08)" }}>
+                      <span
+                        style={{
+                          fontFamily: "var(--font-libre-franklin)",
+                          fontWeight: 300,
+                          fontSize: 28,
+                          lineHeight: 1,
+                          color: "#C4704B",
+                          opacity: 0.7,
+                          minWidth: 36,
+                        }}
+                      >
+                        {item.step}
+                      </span>
+                      <div>
+                        <p className="font-semibold text-sm mb-0.5" style={{ color: "#EDE6DD" }}>{item.title}</p>
+                        <p className="text-xs leading-relaxed" style={{ color: "#A89B8C" }}>{item.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* CTA row */}
+              <div
+                className="mt-10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-6"
+                style={{ borderTop: "1px solid rgba(196,112,75,0.12)" }}
+              >
+                <div>
+                  <p className="font-semibold mb-1" style={{ color: "#EDE6DD" }}>Interested in early access?</p>
+                  <p className="text-sm" style={{ color: "#A89B8C" }}>
+                    We&apos;re onboarding a small number of pilot companies. No commitment required.
+                  </p>
+                </div>
+                <a
+                  href="mailto:enterprise@cascrow.com"
+                  className="cs-btn-primary whitespace-nowrap shrink-0"
+                  style={{ minWidth: 180, textAlign: "center" }}
+                >
+                  Talk to our team
+                </a>
+              </div>
+            </div>
+          </ScrollReveal>
         </div>
       </section>
 
