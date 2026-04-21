@@ -32,13 +32,25 @@ export async function POST(req: NextRequest) {
   const { email, waitlistId } = await req.json();
   if (!email) return NextResponse.json({ error: "email required" }, { status: 400 });
 
-  let user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({ where: { email } });
 
   if (!user) {
-    return NextResponse.json({ error: "No account found for this email. Ask them to register first." }, { status: 404 });
+    // No account yet — pre-activate so the flag is set automatically when they register
+    await prisma.enterpriseWaitlist.updateMany({
+      where: { email },
+      data: { preActivated: true },
+    });
+    // If there was no waitlist entry either, create one so the flag is persisted
+    const existing = await prisma.enterpriseWaitlist.findFirst({ where: { email } });
+    if (!existing) {
+      await prisma.enterpriseWaitlist.create({
+        data: { name: "", email, company: "", useCase: "OTHER", preActivated: true },
+      });
+    }
+    return NextResponse.json({ ok: true, pending: true, message: "No account yet — pre-activated. Enterprise access will be granted automatically when they register." });
   }
 
-  user = await prisma.user.update({
+  await prisma.user.update({
     where: { email },
     data: { isEnterprise: true, enterpriseActivatedAt: new Date() },
   });

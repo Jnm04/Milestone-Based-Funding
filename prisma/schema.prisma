@@ -445,13 +445,14 @@ model CounterProposal {
 
 /// Interest registrations from companies wanting early access to Attestation Mode.
 model EnterpriseWaitlist {
-  id          String   @id @default(cuid())
-  name        String
-  email       String
-  company     String
-  useCase     String   // "CSRD" | "KPI" | "COMPLIANCE" | "OTHER"
-  message     String?  @db.Text
-  createdAt   DateTime @default(now())
+  id             String   @id @default(cuid())
+  name           String
+  email          String
+  company        String
+  useCase        String   // "CSRD" | "KPI" | "COMPLIANCE" | "OTHER"
+  message        String?  @db.Text
+  preActivated   Boolean  @default(false) // true = admin approved before account exists
+  createdAt      DateTime @default(now())
 
   @@index([email])
 }

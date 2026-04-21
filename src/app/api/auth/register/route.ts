@@ -96,6 +96,18 @@ export async function POST(request: NextRequest) {
       console.error("[register] Failed to send verification email:", err);
     }
 
+    // Auto-grant enterprise access if admin pre-activated this email before account existed
+    const waitlistEntry = await prisma.enterpriseWaitlist.findFirst({
+      where: { email, preActivated: true },
+    });
+    if (waitlistEntry) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { isEnterprise: true, enterpriseActivatedAt: new Date() },
+      });
+      await prisma.enterpriseWaitlist.delete({ where: { id: waitlistEntry.id } }).catch(() => {});
+    }
+
     // Sanctions screening — fire-and-forget, never blocks registration.
     // Marks the user record with CLEAR or HIT for compliance review.
     void (async () => {

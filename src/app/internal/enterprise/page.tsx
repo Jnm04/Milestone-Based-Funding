@@ -17,6 +17,7 @@ interface WaitlistEntry {
   company: string;
   useCase: string;
   message: string | null;
+  preActivated: boolean;
   createdAt: string;
 }
 
@@ -61,7 +62,10 @@ export default function EnterpriseAdminPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        setFeedback({ id: key, ok: true, msg: `Access activated for ${email}` });
+        const msg = data.pending
+          ? `Pre-activated ${email} — enterprise access will be granted automatically when they register.`
+          : `Access activated for ${email}`;
+        setFeedback({ id: key, ok: true, msg });
         await load();
         setManualEmail("");
       } else {
@@ -99,7 +103,8 @@ export default function EnterpriseAdminPage() {
       <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.15)", borderRadius: 12, padding: 24 }}>
         <p style={{ color: "#EDE6DD", fontWeight: 600, fontSize: 14, margin: "0 0 12px" }}>Activate by email</p>
         <p style={{ color: "#A89B8C", fontSize: 12, margin: "0 0 16px" }}>
-          The user must already have a cascrow account. Enterprise access will be granted and they&apos;ll receive the activation email.
+          If the user already has a cascrow account, they&apos;ll get access immediately + activation email.
+          If not, their email is pre-activated — enterprise access is granted automatically when they register.
         </p>
         <div style={{ display: "flex", gap: 10 }}>
           <input
@@ -177,22 +182,37 @@ export default function EnterpriseAdminPage() {
                       ) : <span style={{ color: "#5a5047" }}>—</span>}
                     </td>
                     <td style={cell}>
-                      <button
-                        onClick={() => activate(entry.email, entry.id)}
-                        disabled={activating === entry.id}
-                        style={{
-                          padding: "6px 14px",
+                      {entry.preActivated ? (
+                        <span style={{
+                          display: "inline-block",
+                          padding: "4px 10px",
                           borderRadius: 6,
-                          background: activating === entry.id ? "rgba(110,224,154,0.1)" : "rgba(110,224,154,0.15)",
-                          color: "#6ee09a",
-                          border: "1px solid rgba(110,224,154,0.2)",
-                          cursor: "pointer",
-                          fontSize: 12,
+                          background: "rgba(59,130,246,0.12)",
+                          color: "#60a5fa",
+                          border: "1px solid rgba(59,130,246,0.2)",
+                          fontSize: 11,
                           fontWeight: 600,
-                        }}
-                      >
-                        {activating === entry.id ? "…" : "Activate"}
-                      </button>
+                        }}>
+                          Pre-activated
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => activate(entry.email, entry.id)}
+                          disabled={activating === entry.id}
+                          style={{
+                            padding: "6px 14px",
+                            borderRadius: 6,
+                            background: activating === entry.id ? "rgba(110,224,154,0.1)" : "rgba(110,224,154,0.15)",
+                            color: "#6ee09a",
+                            border: "1px solid rgba(110,224,154,0.2)",
+                            cursor: "pointer",
+                            fontSize: 12,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {activating === entry.id ? "…" : "Activate"}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
