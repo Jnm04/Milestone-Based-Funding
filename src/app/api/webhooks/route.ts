@@ -4,29 +4,54 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { WEBHOOK_EVENTS } from "@/services/webhook/webhook.service";
 import crypto from "crypto";
+import dns from "dns/promises";
+import net from "net";
 
 const MAX_ENDPOINTS_PER_USER = 10;
 
+function isPrivateIp(ip: string): boolean {
+  const v = ip.toLowerCase().replace(/^::ffff:/, "");
+  if (net.isIP(v) === 4) {
+    const [a, b] = v.split(".").map(Number);
+    if (a === 127 || a === 10 || a === 0) return true;
+    if (a === 169 && b === 254) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    if (a >= 224) return true;
+    return false;
+  }
+  if (net.isIP(v) === 6) {
+    if (v === "::1" || v === "::") return true;
+    if (v.startsWith("fc") || v.startsWith("fd")) return true;
+    if (v.startsWith("fe80")) return true;
+    return false;
+  }
+  return false;
+}
+
 /**
  * Rejects URLs that resolve to private/internal network ranges to prevent SSRF.
- * Covers loopback, RFC 1918 private ranges, link-local (AWS metadata), and
- * common internal hostname suffixes.
+ * DNS-resolves the hostname so attacker-controlled domains pointing at RFC 1918
+ * space are also blocked.
  */
-function isPrivateUrl(urlStr: string): boolean {
+async function isPrivateUrl(urlStr: string): Promise<boolean> {
   try {
-    const { hostname } = new URL(urlStr);
+    const { hostname, protocol } = new URL(urlStr);
+    if (protocol !== "https:") return true;
     if (/^(localhost|0\.0\.0\.0)$/i.test(hostname)) return true;
-    if (/^127\./.test(hostname)) return true;            // 127.x.x.x loopback
-    if (/^10\./.test(hostname)) return true;             // 10.0.0.0/8
-    if (/^172\.(1[6-9]|2\d|3[01])\./.test(hostname)) return true; // 172.16–31.x.x
-    if (/^192\.168\./.test(hostname)) return true;       // 192.168.0.0/16
-    if (/^169\.254\./.test(hostname)) return true;       // link-local / AWS metadata
-    if (/^224\./.test(hostname)) return true;            // multicast 224.0.0.0/4
-    if (/^::1$|\[::1\]/.test(hostname)) return true;    // IPv6 loopback
     if (/\.(local|internal|localhost|intranet)$/i.test(hostname)) return true;
+    if (net.isIP(hostname)) return isPrivateIp(hostname);
+    try {
+      const addrs = await dns.lookup(hostname, { all: true });
+      for (const a of addrs) {
+        if (isPrivateIp(a.address)) return true;
+      }
+    } catch {
+      return true;
+    }
     return false;
   } catch {
-    return true; // unparseable URL → reject
+    return true;
   }
 }
 
@@ -77,7 +102,7 @@ export async function POST(request: NextRequest) {
   if (url.length > 500) {
     return NextResponse.json({ error: "url too long" }, { status: 400 });
   }
-  if (isPrivateUrl(url)) {
+  if (await isPrivateUrl(url)) {
     return NextResponse.json(
       { error: "Webhook URL must point to a public internet address" },
       { status: 400 }

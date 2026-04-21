@@ -99,9 +99,8 @@ function LoginForm() {
         setUnverifiedEmail(email);
         return;
       }
-      if (res?.error?.startsWith("TooManyAttempts:")) {
-        const minutes = res.error.split(":")[1];
-        toast.error(`Too many failed attempts. Account locked for ${minutes} minute${minutes === "1" ? "" : "s"}.`);
+      if (res?.error === "TooManyAttempts" || res?.error?.startsWith("TooManyAttempts")) {
+        toast.error("Too many failed attempts. Please try again later.");
         return;
       }
       if (res?.error) {

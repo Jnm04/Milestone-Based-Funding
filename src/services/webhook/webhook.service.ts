@@ -20,21 +20,54 @@
  */
 
 import crypto from "crypto";
+import dns from "dns/promises";
+import net from "net";
 import { prisma } from "@/lib/prisma";
 
-// H10: reject webhook deliveries to private/internal network ranges (DNS-rebinding defence)
-function isPrivateUrl(urlStr: string): boolean {
+function isPrivateIp(ip: string): boolean {
+  const v = ip.toLowerCase().replace(/^::ffff:/, "");
+  if (net.isIP(v) === 4) {
+    const [a, b] = v.split(".").map(Number);
+    if (a === 127 || a === 10 || a === 0) return true;
+    if (a === 169 && b === 254) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    if (a >= 224) return true;
+    return false;
+  }
+  if (net.isIP(v) === 6) {
+    if (v === "::1" || v === "::") return true;
+    if (v.startsWith("fc") || v.startsWith("fd")) return true;
+    if (v.startsWith("fe80")) return true;
+    return false;
+  }
+  return false;
+}
+
+function isPrivateHostnameString(hostname: string): boolean {
+  if (/^(localhost|0\.0\.0\.0)$/i.test(hostname)) return true;
+  if (/\.(local|internal|localhost|intranet)$/i.test(hostname)) return true;
+  if (net.isIP(hostname) && isPrivateIp(hostname)) return true;
+  return false;
+}
+
+// Reject deliveries to private/internal ranges. DNS-resolves to guard against
+// DNS-rebinding and indirect SSRF (user-registered hostname resolving to 127.0.0.1).
+async function isPrivateUrl(urlStr: string): Promise<boolean> {
   try {
-    const { hostname } = new URL(urlStr);
-    if (/^(localhost|0\.0\.0\.0)$/i.test(hostname)) return true;
-    if (/^127\./.test(hostname)) return true;
-    if (/^10\./.test(hostname)) return true;
-    if (/^172\.(1[6-9]|2\d|3[01])\./.test(hostname)) return true;
-    if (/^192\.168\./.test(hostname)) return true;
-    if (/^169\.254\./.test(hostname)) return true;
-    if (/^224\./.test(hostname)) return true;
-    if (/^::1$|\[::1\]/.test(hostname)) return true;
-    if (/\.(local|internal|localhost|intranet)$/i.test(hostname)) return true;
+    const parsed = new URL(urlStr);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return true;
+    const { hostname } = parsed;
+    if (isPrivateHostnameString(hostname)) return true;
+    if (net.isIP(hostname)) return false;
+    try {
+      const addrs = await dns.lookup(hostname, { all: true });
+      for (const a of addrs) {
+        if (isPrivateIp(a.address)) return true;
+      }
+    } catch {
+      return true;
+    }
     return false;
   } catch {
     return true;
@@ -81,7 +114,7 @@ function sign(secret: string, timestampMs: number, body: string): string {
 
 async function deliver(url: string, secret: string, payload: WebhookPayload): Promise<boolean> {
   // Re-validate at delivery time to defend against DNS rebinding attacks
-  if (isPrivateUrl(url)) {
+  if (await isPrivateUrl(url)) {
     console.warn(`[webhook] Blocked delivery to private/internal URL: ${url}`);
     return false;
   }
@@ -104,6 +137,7 @@ async function deliver(url: string, secret: string, payload: WebhookPayload): Pr
       },
       body,
       signal: controller.signal,
+      redirect: "manual",
     });
     return res.ok;
   } catch {

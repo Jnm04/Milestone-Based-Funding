@@ -31,11 +31,9 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        // Check lockout
+        // Check lockout — generic error, do not leak remaining time
         if (user.lockoutUntil && user.lockoutUntil > new Date()) {
-          const remainingMs = user.lockoutUntil.getTime() - Date.now();
-          const remainingMin = Math.ceil(remainingMs / 60000);
-          throw new Error(`TooManyAttempts:${remainingMin}`);
+          throw new Error("TooManyAttempts");
         }
 
         const valid = await bcrypt.compare(credentials.password, user.passwordHash);

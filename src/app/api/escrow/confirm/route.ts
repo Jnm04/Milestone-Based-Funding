@@ -66,6 +66,14 @@ export async function POST(request: NextRequest) {
       // milestone-fund confirmations both read the milestone list and disagree
       // on whether all milestones are funded.
       const result = await prisma.$transaction(async (tx) => {
+        // IDOR guard: ensure the milestoneId actually belongs to this contract
+        const existing = await tx.milestone.findFirst({
+          where: { id: milestoneId, contractId },
+          select: { id: true },
+        });
+        if (!existing) {
+          throw new Error("MILESTONE_CONTRACT_MISMATCH");
+        }
         const updatedMilestone = await tx.milestone.update({
           where: { id: milestoneId },
           data: { status: "FUNDED", evmTxHash: txHash },
