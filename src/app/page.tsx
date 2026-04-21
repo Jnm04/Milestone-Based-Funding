@@ -1203,11 +1203,11 @@ export default function LandingPage() {
                   </p>
                 </div>
                 <a
-                  href="mailto:enterprise@cascrow.com"
+                  href="/enterprise"
                   className="cs-btn-primary whitespace-nowrap shrink-0"
                   style={{ minWidth: 180, textAlign: "center" }}
                 >
-                  Talk to our team
+                  Request early access
                 </a>
               </div>
             </div>

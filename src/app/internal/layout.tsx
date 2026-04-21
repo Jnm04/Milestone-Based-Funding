@@ -105,6 +105,7 @@ export default function InternalLayout({ children }: { children: React.ReactNode
           { href: "/internal/graph", label: "Brain Map" },
           { href: "/internal/usage", label: "Usage" },
           { href: "/internal/errors", label: "Errors" },
+          { href: "/internal/enterprise", label: "Enterprise" },
         ].map(({ href, label }) => (
           <a key={href} href={href} style={{ color: "#A89B8C", fontSize: 13, textDecoration: "none" }}
             onMouseEnter={(e) => (e.currentTarget.style.color = "#EDE6DD")}

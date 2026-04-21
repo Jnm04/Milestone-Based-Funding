@@ -45,6 +45,10 @@ model User {
   passwordResetToken       String?   @unique
   passwordResetTokenExpiry DateTime?
 
+  // Enterprise Attestation Mode access
+  isEnterprise       Boolean   @default(false)
+  enterpriseActivatedAt DateTime?
+
   // KYC tiers: 0=email only ($1k limit), 1=sanctions CLEAR ($10k), 2=manual KYC ($100k), 3=KYB (unlimited)
   kycTier            Int       @default(0)
 
@@ -435,6 +439,21 @@ model CounterProposal {
 
   @@index([contractId])
   @@index([proposedBy])
+}
+
+// ── Enterprise Waitlist ───────────────────────────────────────────────────────
+
+/// Interest registrations from companies wanting early access to Attestation Mode.
+model EnterpriseWaitlist {
+  id          String   @id @default(cuid())
+  name        String
+  email       String
+  company     String
+  useCase     String   // "CSRD" | "KPI" | "COMPLIANCE" | "OTHER"
+  message     String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  @@index([email])
 }
 
 // ── Sanctions ─────────────────────────────────────────────────────────────────
