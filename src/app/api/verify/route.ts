@@ -456,7 +456,7 @@ export async function POST(request: NextRequest) {
             const errMsg = releaseErr instanceof Error ? releaseErr.message : String(releaseErr);
 
             // Attestation mode: no escrow — mark COMPLETED directly without escrow release
-            if ((contract as { mode?: string }).mode === "ATTESTATION") {
+            if (contract.mode === "ATTESTATION") {
               try {
                 if (proof.milestoneId) {
                   const completedMs = await prisma.milestone.update({

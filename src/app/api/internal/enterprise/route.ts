@@ -35,18 +35,17 @@ export async function POST(req: NextRequest) {
   const user = await prisma.user.findUnique({ where: { email } });
 
   if (!user) {
-    // No account yet — pre-activate so the flag is set automatically when they register
-    await prisma.enterpriseWaitlist.updateMany({
-      where: { email },
-      data: { preActivated: true },
+    // No account yet — pre-activate within a transaction to avoid a TOCTOU race
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.enterpriseWaitlist.findFirst({ where: { email } });
+      if (existing) {
+        await tx.enterpriseWaitlist.update({ where: { id: existing.id }, data: { preActivated: true } });
+      } else {
+        await tx.enterpriseWaitlist.create({
+          data: { name: "", email, company: "", useCase: "OTHER", preActivated: true },
+        });
+      }
     });
-    // If there was no waitlist entry either, create one so the flag is persisted
-    const existing = await prisma.enterpriseWaitlist.findFirst({ where: { email } });
-    if (!existing) {
-      await prisma.enterpriseWaitlist.create({
-        data: { name: "", email, company: "", useCase: "OTHER", preActivated: true },
-      });
-    }
     return NextResponse.json({ ok: true, pending: true, message: "No account yet — pre-activated. Enterprise access will be granted automatically when they register." });
   }
 

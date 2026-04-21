@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function GET(
   _request: NextRequest,
@@ -13,6 +14,11 @@ export async function GET(
   }
   if (!session.user.isEnterprise) {
     return NextResponse.json({ error: "Enterprise access required" }, { status: 403 });
+  }
+
+  // Polled every 3s by the client; 300/10 min = 5 req/s ceiling — well above normal usage
+  if (!(await checkRateLimit(`enterprise-poll:${session.user.id}`, 300, 10 * 60 * 1000))) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429, headers: { "Retry-After": "60" } });
   }
 
   const { id } = await params;
