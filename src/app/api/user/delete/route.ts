@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 /**
  * POST /api/user/delete
@@ -30,6 +31,10 @@ export async function POST(req: NextRequest) {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON", code: "VALIDATION_ERROR" }, { status: 400 });
+  }
+
+  if (!(await checkRateLimit(`account-delete:${session.user.id}`, 5, 24 * 60 * 60 * 1000))) {
+    return NextResponse.json({ error: "Too many requests", code: "RATE_LIMITED" }, { status: 429 });
   }
 
   if (!body.confirmEmail) {

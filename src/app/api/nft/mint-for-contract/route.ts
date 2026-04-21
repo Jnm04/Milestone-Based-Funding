@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { mintCompletionNFT } from "@/services/xrpl/nft.service";
 import { writeAuditLog } from "@/services/evm/audit.service";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const maxDuration = 60;
 
@@ -12,6 +13,10 @@ export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!(await checkRateLimit(`nft-mint:${session.user.id}`, 10, 60 * 60 * 1000))) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
   const { contractId, milestoneId } = await request.json();
