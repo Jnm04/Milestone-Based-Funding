@@ -67,6 +67,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name ?? user.email,
           role: user.role,
           walletAddress: user.walletAddress ?? null,
+          isEnterprise: user.isEnterprise,
         };
       },
     }),
@@ -77,6 +78,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = (user as unknown as { role: string }).role;
         token.walletAddress = (user as unknown as { walletAddress: string | null }).walletAddress;
+        token.isEnterprise = (user as unknown as { isEnterprise: boolean }).isEnterprise ?? false;
         return token;
       }
       // Allow updating wallet address via session update
@@ -108,6 +110,7 @@ export const authOptions: NextAuthOptions = {
       session.user.id = token.id as string;
       session.user.role = token.role as string;
       session.user.walletAddress = (token.walletAddress as string | null) ?? null;
+      session.user.isEnterprise = (token.isEnterprise as boolean) ?? false;
       return session;
     },
   },

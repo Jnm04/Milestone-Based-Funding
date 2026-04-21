@@ -56,6 +56,8 @@ function LoginForm() {
           const role = session?.user?.role;
           if (callbackUrl && callbackUrl.startsWith("/")) {
             router.push(callbackUrl);
+          } else if (session?.user?.isEnterprise) {
+            router.push("/enterprise/dashboard");
           } else if (role === "INVESTOR") {
             router.push("/dashboard/investor");
           } else if (role === "STARTUP") {
@@ -121,6 +123,8 @@ function LoginForm() {
 
       if (callbackUrl && callbackUrl.startsWith("/")) {
         router.push(callbackUrl);
+      } else if (session?.user?.isEnterprise) {
+        router.push("/enterprise/dashboard");
       } else if (role === "INVESTOR") {
         router.push("/dashboard/investor");
       } else if (role === "STARTUP") {

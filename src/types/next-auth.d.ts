@@ -8,6 +8,7 @@ declare module "next-auth" {
       name?: string | null;
       role: string;
       walletAddress: string | null;
+      isEnterprise: boolean;
     };
   }
 }
