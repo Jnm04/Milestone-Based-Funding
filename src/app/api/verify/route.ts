@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
   const proof = await prisma.proof.findUnique({
     where: { id: proofId },
     include: {
-      contract: { include: { investor: true, startup: true } },
+      contract: { include: { investor: true, startup: true, milestones: { orderBy: { order: "asc" } } } },
       milestone: true,
     },
   });
@@ -454,6 +454,33 @@ export async function POST(request: NextRequest) {
             return;
           } catch (releaseErr) {
             const errMsg = releaseErr instanceof Error ? releaseErr.message : String(releaseErr);
+
+            // Attestation mode: no escrow — mark COMPLETED directly without escrow release
+            if ((contract as { mode?: string }).mode === "ATTESTATION") {
+              try {
+                if (proof.milestoneId) {
+                  const completedMs = await prisma.milestone.update({
+                    where: { id: proof.milestoneId },
+                    data: { status: "COMPLETED" },
+                    include: { contract: { include: { milestones: { orderBy: { order: "asc" } } } } },
+                  });
+                  const remaining = completedMs.contract.milestones.find(
+                    (m) => m.id !== proof.milestoneId && !["COMPLETED", "EXPIRED"].includes(m.status)
+                  );
+                  await prisma.contract.update({
+                    where: { id: contract.id },
+                    data: { status: remaining ? "FUNDED" : "COMPLETED" },
+                  });
+                } else {
+                  await prisma.contract.update({ where: { id: contract.id }, data: { status: "COMPLETED" } });
+                }
+                action = "COMPLETED";
+              } catch (attestErr) {
+                console.error("[verify] Attestation auto-complete failed:", attestErr);
+              }
+              return;
+            }
+
             console.error("[verify] Auto-release failed:", errMsg);
             writeAuditLog({
               contractId: contract.id,

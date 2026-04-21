@@ -97,6 +97,8 @@ model Contract {
   /// Feature K: AI-generated single-sentence deal health note, cached 24h
   healthNote          String?        @db.Text
   healthNoteUpdatedAt DateTime?
+  /// "ESCROW" | "ATTESTATION" — attestation mode skips all financial/crypto flows
+  mode                String         @default("ESCROW")
   proofs              Proof[]
   milestones          Milestone[]
   auditLogs           AuditLog[]
@@ -167,6 +169,7 @@ model Milestone {
   contractId        String
   contract          Contract        @relation(fields: [contractId], references: [id])
   title             String
+  description       String?        @db.Text
   amountUSD         Decimal
   amountRLUSD       String?
   cancelAfter       DateTime
