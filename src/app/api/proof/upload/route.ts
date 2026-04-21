@@ -11,6 +11,7 @@ import { writeAuditLog } from "@/services/evm/audit.service";
 import { fireWebhook } from "@/services/webhook/webhook.service";
 import { generateAndStoreProofSummary } from "@/services/ai/proof-summary.service";
 import { generateAndStoreResubmissionDiff } from "@/services/ai/resubmission-diff.service";
+import { getPostHogClient } from "@/lib/posthog-server";
 
 async function triggerVerification(proofId: string) {
   try {
@@ -246,6 +247,18 @@ export async function POST(request: NextRequest) {
         milestoneId,
         data: { proofId: proof.id, fileName, milestoneTitle: milestone.title },
       }).catch((err) => console.error("[webhook] proof.submitted failed:", err));
+
+      getPostHogClient().capture({
+        distinctId: session.user.id,
+        event: "proof_submitted",
+        properties: {
+          contract_id: milestone.contractId,
+          milestone_id: milestoneId,
+          proof_id: proof.id,
+          file_category: category,
+          text_extracted: extractedText !== null,
+        },
+      });
 
       // Feature V: fire-and-forget proof content summary for investor TL;DR
       if (process.env.ANTHROPIC_API_KEY) {

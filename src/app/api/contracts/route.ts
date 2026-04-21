@@ -7,6 +7,7 @@ import { writeAuditLog } from "@/services/evm/audit.service";
 import { fireWebhook } from "@/services/webhook/webhook.service";
 import { createContractSchema } from "@/lib/zod-schemas";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getPostHogClient } from "@/lib/posthog-server";
 import Anthropic from "@anthropic-ai/sdk";
 
 // ─── Lazy Anthropic client ────────────────────────────────────────────────────
@@ -239,6 +240,17 @@ export async function POST(request: NextRequest) {
         cancelAfter: result.cancelAfter.toISOString(),
       },
     }).catch((err) => console.error("[webhook] contract.created failed:", err));
+
+    getPostHogClient().capture({
+      distinctId: session.user.id,
+      event: "contract_created",
+      properties: {
+        contract_id: result.id,
+        milestone_count: msData.length,
+        total_amount_usd: msData.reduce((s, m) => s + Number(m.amountUSD), 0),
+        directly_linked: !!receiver,
+      },
+    });
 
     // Feature J: generate AI risk flags — best-effort, never blocks the response
     if (process.env.ANTHROPIC_API_KEY) {

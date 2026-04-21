@@ -11,6 +11,7 @@ import { sendPendingReviewEmail, sendRejectedEmail, sendVerifiedEmail, sendMiles
 import { contractIdToBytes32 } from "@/services/evm/escrow.service";
 import { writeAuditLog } from "@/services/evm/audit.service";
 import { fireWebhook } from "@/services/webhook/webhook.service";
+import { getPostHogClient } from "@/lib/posthog-server";
 import { isValidCronSecret } from "@/lib/cron-auth";
 
 // 150s: up to 3 AI attempts (10s + 60s waits) + XRPL/NFT overhead
@@ -303,6 +304,30 @@ export async function POST(request: NextRequest) {
           milestoneId: proof.milestoneId ?? undefined,
           data: { decision: result.decision, confidence: result.confidence, action, milestoneTitle },
         }).catch((err) => console.error("[webhook] ai.decision failed:", err));
+
+        const distinctId = proof.contract.startupId ?? proof.contract.investorId;
+        if (action === "VERIFIED") {
+          getPostHogClient().capture({
+            distinctId,
+            event: "milestone_verified",
+            properties: {
+              contract_id: contract.id,
+              milestone_id: proof.milestoneId ?? null,
+              ai_confidence: result.confidence,
+            },
+          });
+        } else if (action === "REJECTED") {
+          getPostHogClient().capture({
+            distinctId,
+            event: "milestone_rejected",
+            properties: {
+              contract_id: contract.id,
+              milestone_id: proof.milestoneId ?? null,
+              ai_confidence: result.confidence,
+              proof_id: proofId,
+            },
+          });
+        }
 
         if (action === "PENDING_REVIEW") {
           fireWebhook({

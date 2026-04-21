@@ -6,6 +6,7 @@ import { verifyFundTx } from "@/services/evm/escrow.service";
 import { sendFundedEmail } from "@/lib/email";
 import { writeAuditLog } from "@/services/evm/audit.service";
 import { fireWebhook } from "@/services/webhook/webhook.service";
+import { getPostHogClient } from "@/lib/posthog-server";
 import { ethers } from "ethers";
 
 /**
@@ -114,6 +115,17 @@ export async function POST(request: NextRequest) {
       event: "ESCROW_FUNDED",
       actor: session.user.walletAddress ?? session.user.id,
       metadata: { txHash, amountUSD: fundedAmountUSD, milestoneHash },
+    });
+
+    getPostHogClient().capture({
+      distinctId: session.user.id,
+      event: "escrow_funded",
+      properties: {
+        contract_id: contractId,
+        milestone_id: milestoneId ?? null,
+        amount_usd: fundedAmountUSD,
+        tx_hash: txHash,
+      },
     });
 
     // Email + webhook: milestone funded

@@ -3,6 +3,7 @@
 import { useState, Suspense, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import posthog from "posthog-js";
 import { toast } from "sonner";
 import { Logo } from "@/components/logo";
 import { NodeBackground } from "@/components/node-background";
@@ -107,6 +108,9 @@ function RegisterForm() {
         setTurnstileToken(null);
         return;
       }
+      const data = await res.json();
+      posthog.identify(data.id, { role: data.role });
+      posthog.capture("user_signed_up", { role, has_name: !!name });
       setRegistered(true);
       setResendCooldown(60);
     } catch {

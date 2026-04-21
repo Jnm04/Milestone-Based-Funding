@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import posthog from "posthog-js";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Logo } from "@/components/logo";
@@ -111,6 +112,12 @@ function LoginForm() {
       const sessionRes = await fetch("/api/auth/session");
       const session = await sessionRes.json();
       const role = session?.user?.role;
+      const userId = session?.user?.id;
+
+      if (userId) {
+        posthog.identify(userId, { role });
+        posthog.capture("user_logged_in", { role });
+      }
 
       if (callbackUrl && callbackUrl.startsWith("/")) {
         router.push(callbackUrl);

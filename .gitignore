@@ -47,3 +47,4 @@ public/uploads/
 
 # Serena MCP
 .serena/
+.env.local

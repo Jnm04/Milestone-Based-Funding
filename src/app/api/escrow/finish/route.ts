@@ -9,6 +9,7 @@ import { writeAuditLog } from "@/services/evm/audit.service";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { generateAndStoreReputationForMilestone } from "@/services/ai/reputation.service";
 import { generateAndStoreCompletionNarrative } from "@/services/ai/completion-report.service";
+import { getPostHogClient } from "@/lib/posthog-server";
 
 /**
  * POST /api/escrow/finish
@@ -157,6 +158,17 @@ export async function POST(request: NextRequest) {
         amountUSD: completedAmount,
       });
     }
+
+    getPostHogClient().capture({
+      distinctId: session.user.id,
+      event: "funds_released",
+      properties: {
+        contract_id: contractId,
+        milestone_id: milestoneId ?? null,
+        amount_usd: completedAmount,
+        tx_hash: txHash,
+      },
+    });
 
     // NFT minting is triggered by the frontend ContractPoller after COMPLETED status
     // is detected — decoupled to avoid Vercel serverless timeout issues.

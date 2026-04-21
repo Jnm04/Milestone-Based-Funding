@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { getPostHogClient } from "@/lib/posthog-server";
 
 export async function POST(request: NextRequest) {
   try {
@@ -74,6 +75,12 @@ export async function POST(request: NextRequest) {
     await prisma.milestone.updateMany({
       where: { contractId: contract.id },
       data: { status: "AWAITING_ESCROW" },
+    });
+
+    getPostHogClient().capture({
+      distinctId: session.user.id,
+      event: "contract_joined",
+      properties: { contract_id: updated.id },
     });
 
     return NextResponse.json({ contractId: updated.id });

@@ -6,6 +6,7 @@ import { validateName } from "@/lib/validate-name";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { registerSchema } from "@/lib/zod-schemas";
 import { verifyTurnstile } from "@/lib/turnstile";
+import { getPostHogClient } from "@/lib/posthog-server";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
@@ -119,6 +120,12 @@ export async function POST(request: NextRequest) {
         console.warn("[sanctions] Screening failed on registration (non-fatal):", err);
       }
     })();
+
+    getPostHogClient().capture({
+      distinctId: user.id,
+      event: "user_registered",
+      properties: { role, has_name: !!name, has_dob: !!parsedDOB },
+    });
 
     return NextResponse.json({ id: user.id, email: user.email, role: user.role });
   } catch (err) {

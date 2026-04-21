@@ -16,8 +16,8 @@ const nextConfig: NextConfig = {
       "style-src 'self' 'unsafe-inline'",
       // Vercel Blob for uploaded PDFs + cert images; data:/blob: for local previews
       "img-src 'self' data: blob: https://*.vercel-storage.com",
-      // XRPL EVM RPC (HTTPS + WebSocket for ethers.js), native XRPL JSON-RPC, Turnstile, Sentry
-      "connect-src 'self' challenges.cloudflare.com https://rpc.testnet.xrplevm.org wss://rpc.testnet.xrplevm.org https://s1.ripple.com https://s2.ripple.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io",
+      // XRPL EVM RPC (HTTPS + WebSocket for ethers.js), native XRPL JSON-RPC, Turnstile, Sentry, PostHog
+      "connect-src 'self' challenges.cloudflare.com https://rpc.testnet.xrplevm.org wss://rpc.testnet.xrplevm.org https://s1.ripple.com https://s2.ripple.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io https://eu.i.posthog.com https://eu-assets.i.posthog.com",
       // Turnstile widget loads in an iframe
       "frame-src challenges.cloudflare.com",
       "font-src 'self' data:",
@@ -46,6 +46,24 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return [
+      {
+        source: "/ingest/static/:path*",
+        destination: "https://eu-assets.i.posthog.com/static/:path*",
+      },
+      {
+        source: "/ingest/array/:path*",
+        destination: "https://eu-assets.i.posthog.com/array/:path*",
+      },
+      {
+        source: "/ingest/:path*",
+        destination: "https://eu.i.posthog.com/:path*",
+      },
+    ];
+  },
+  // Required to support PostHog trailing slash API requests
+  skipTrailingSlashRedirect: true,
   async redirects() {
     return [
       {
