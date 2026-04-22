@@ -465,6 +465,16 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           interimAiAssessment={activeMilestone?.interimAiAssessment ?? null}
           interimAiPositive={activeMilestone?.interimAiPositive ?? null}
           extensionDays={activeMilestone?.extensionDays ?? null}
+          contractMode={contract.mode}
+          dataSourceType={activeMilestone?.dataSourceType ?? null}
+          dataSourceUrl={activeMilestone?.dataSourceUrl ?? null}
+          dataSourceApiKeyHint={activeMilestone?.dataSourceApiKeyHint ?? null}
+          dataSourceLockedAt={activeMilestone?.dataSourceLockedAt?.toISOString() ?? null}
+          scheduleType={activeMilestone?.scheduleType ?? null}
+          scheduleNextRun={activeMilestone?.scheduleNextRun?.toISOString() ?? null}
+          attestationFetchedAt={activeMilestone?.attestationFetchedAt?.toISOString() ?? null}
+          attestationFetchedHash={activeMilestone?.attestationFetchedHash ?? null}
+          attestationCertUrl={activeMilestone?.attestationCertUrl ?? null}
         />
 
         {/* AI result */}

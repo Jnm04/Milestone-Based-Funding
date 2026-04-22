@@ -5,6 +5,10 @@
       "schedule": "0 * * * *"
     },
     {
+      "path": "/api/cron/run-attestations",
+      "schedule": "0 * * * *"
+    },
+    {
       "path": "/api/cron/refresh-sanctions",
       "schedule": "0 6 * * *"
     },
@@ -35,6 +39,12 @@
     },
     "src/app/api/escrow/webhook/route.ts": {
       "maxDuration": 30
+    },
+    "src/app/api/cron/run-attestations/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/contracts/[id]/milestones/[milestoneId]/attestation/run/route.ts": {
+      "maxDuration": 60
     }
   },
   "headers": [

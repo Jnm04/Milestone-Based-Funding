@@ -51,18 +51,42 @@ const MILESTONE_TEMPLATES: { label: string; text: string }[] = [
   },
 ];
 
-interface ContractFormProps {
-  investorAddress: string;
+interface AttestationMilestoneInput {
+  title: string;
+  deadlineDays: string;
+  scheduleType: "ONE_OFF" | "MONTHLY" | "QUARTERLY" | "ANNUAL";
 }
 
-export function ContractForm({ investorAddress }: ContractFormProps) {
+const SCHEDULE_LABELS: Record<string, string> = {
+  ONE_OFF: "One-off",
+  MONTHLY: "Monthly",
+  QUARTERLY: "Quarterly",
+  ANNUAL: "Annual",
+};
+
+interface ContractFormProps {
+  investorAddress: string;
+  isEnterprise?: boolean;
+}
+
+export function ContractForm({ investorAddress, isEnterprise = false }: ContractFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState<"ESCROW" | "ATTESTATION">("ESCROW");
   const [projectTitle, setProjectTitle] = useState("");
   const [receiverWallet, setReceiverWallet] = useState("");
   const [milestones, setMilestones] = useState<MilestoneInput[]>([
     { title: "", amountUSD: "", deadlineDays: "30" },
   ]);
+
+  // Attestation mode state
+  const [auditorEmail, setAuditorEmail] = useState("");
+  const [attestationMilestones, setAttestationMilestones] = useState<AttestationMilestoneInput[]>([
+    { title: "", deadlineDays: "90", scheduleType: "ONE_OFF" },
+  ]);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardDescription, setWizardDescription] = useState("");
+  const [wizardLoading, setWizardLoading] = useState(false);
 
   // AI Drafting state
   const [aiDraftOpen, setAiDraftOpen] = useState(false);
@@ -180,6 +204,106 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
     }
   }
 
+  // ── Attestation milestone helpers ─────────────────────────────────────────
+
+  function addAttestationMilestone() {
+    setAttestationMilestones((prev) => [...prev, { title: "", deadlineDays: "90", scheduleType: "ONE_OFF" }]);
+  }
+
+  function removeAttestationMilestone(index: number) {
+    setAttestationMilestones((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function updateAttestationMilestone(
+    index: number,
+    field: keyof AttestationMilestoneInput,
+    value: string
+  ) {
+    setAttestationMilestones((prev) =>
+      prev.map((m, i) => (i === index ? { ...m, [field]: value } : m))
+    );
+  }
+
+  async function handleGoalWizard() {
+    if (wizardDescription.trim().length < 20) {
+      toast.error("Please describe your goal in at least 20 characters.");
+      return;
+    }
+    setWizardLoading(true);
+    try {
+      const res = await fetch("/api/attestation/wizard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: wizardDescription }),
+      });
+      if (!res.ok) {
+        const err = (await res.json()) as { error?: string };
+        throw new Error(err.error ?? "Failed to generate goal");
+      }
+      const data = (await res.json()) as {
+        title: string;
+        goalDescription: string;
+        suggestedDeadline: string;
+      };
+      const deadlineDays = Math.max(
+        1,
+        Math.round(
+          (new Date(data.suggestedDeadline).getTime() - Date.now()) / 86_400_000
+        )
+      );
+      setAttestationMilestones((prev) => [
+        ...prev.filter((m) => m.title.trim()),
+        { title: data.title + (data.goalDescription ? `\n\n${data.goalDescription}` : ""), deadlineDays: String(deadlineDays), scheduleType: "ONE_OFF" },
+      ]);
+      setWizardOpen(false);
+      setWizardDescription("");
+      toast.success("Goal structured — review and edit before creating.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setWizardLoading(false);
+    }
+  }
+
+  async function handleAttestationSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const invalid = attestationMilestones.some((m) => !m.title.trim() || !m.deadlineDays);
+    if (invalid) {
+      toast.error("Please fill in all milestone fields.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const payload = {
+        mode: "ATTESTATION",
+        auditorEmail: auditorEmail.trim() || undefined,
+        attestationMilestones: attestationMilestones.map((m) => ({
+          title: m.title.trim(),
+          cancelAfter: new Date(
+            Date.now() + Number(m.deadlineDays) * 24 * 60 * 60 * 1000
+          ).toISOString(),
+          scheduleType: m.scheduleType,
+        })),
+      };
+      const res = await fetch("/api/contracts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = (await res.json()) as { error?: string };
+        throw new Error(err.error ?? "Failed to create attestation contract");
+      }
+      const { contractId } = (await res.json()) as { contractId: string };
+      toast.success("Attestation contract created.");
+      router.push(`/contract/${contractId}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleRiskCheck() {
     const filled = milestones.filter((m) => m.title.trim() && m.amountUSD && m.deadlineDays);
     if (filled.length === 0) {
@@ -217,6 +341,7 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (mode === "ATTESTATION") return handleAttestationSubmit(e);
 
     const invalid = milestones.some((m) => !m.title || !m.amountUSD || !m.deadlineDays);
     if (invalid) {
@@ -261,6 +386,190 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
 
   return (
     <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+
+      {/* Mode toggle — only shown to enterprise users */}
+      {isEnterprise && (
+        <div style={{ display: "flex", gap: "8px", padding: "4px", background: "#f4f4f5", borderRadius: "10px" }}>
+          {(["ESCROW", "ATTESTATION"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMode(m)}
+              style={{
+                flex: 1,
+                padding: "8px 16px",
+                borderRadius: "7px",
+                border: "none",
+                fontWeight: 600,
+                fontSize: "13px",
+                cursor: "pointer",
+                transition: "all 0.15s",
+                background: mode === m ? "#18181b" : "transparent",
+                color: mode === m ? "#fff" : "#52525b",
+                boxShadow: mode === m ? "0 1px 4px rgba(0,0,0,0.12)" : "none",
+              }}
+            >
+              {m === "ESCROW" ? "💰 Escrow" : "🏢 Attestation"}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── ATTESTATION MODE FORM ──────────────────────────────────────────── */}
+      {mode === "ATTESTATION" && (
+        <>
+          <div
+            style={{
+              padding: "10px 14px",
+              borderRadius: "8px",
+              background: "rgba(196,112,75,0.06)",
+              border: "1px solid rgba(196,112,75,0.2)",
+              fontSize: "13px",
+              color: "#92400e",
+            }}
+          >
+            <strong>Enterprise Attestation Mode</strong> — No escrow or RLUSD required. The platform fetches your data source autonomously and writes the AI verdict to the XRP Ledger.
+          </div>
+
+          {/* Goal Wizard */}
+          <div style={{ borderRadius: "12px", border: "1px solid #e4e4e7", overflow: "hidden" }}>
+            <button
+              type="button"
+              onClick={() => setWizardOpen((v) => !v)}
+              style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: wizardOpen ? "#fafafa" : "#fff", border: "none", cursor: "pointer", textAlign: "left" }}
+            >
+              <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", padding: "2px 8px", borderRadius: "999px", background: "rgba(196,112,75,0.1)", color: "#C4704B", border: "1px solid rgba(196,112,75,0.25)" }}>
+                  AI
+                </span>
+                <span style={{ fontSize: "14px", fontWeight: 500, color: "#18181b" }}>Goal Wizard — structure your KPI from plain language</span>
+              </span>
+              <span style={{ fontSize: "18px", color: "#71717a", lineHeight: 1 }}>{wizardOpen ? "−" : "+"}</span>
+            </button>
+            {wizardOpen && (
+              <div style={{ padding: "16px", borderTop: "1px solid #e4e4e7", display: "flex", flexDirection: "column", gap: "12px", background: "#fafafa" }}>
+                <p style={{ fontSize: "13px", color: "#52525b", margin: 0 }}>
+                  Describe your business goal — AI will structure it into a formal attestation milestone with a suggested data source.
+                </p>
+                <div style={{ position: "relative" }}>
+                  <textarea
+                    rows={4}
+                    placeholder="e.g. We want to prove our Scope 2 carbon emissions decreased by 20% vs last year. We publish an annual sustainability report every December."
+                    value={wizardDescription}
+                    onChange={(e) => setWizardDescription(e.target.value.slice(0, 2000))}
+                    style={{ width: "100%", padding: "10px 12px", paddingBottom: "24px", borderRadius: "8px", border: "1px solid #e4e4e7", fontSize: "14px", fontFamily: "inherit", resize: "vertical", background: "#fff", color: "#18181b", boxSizing: "border-box" }}
+                  />
+                  <span style={{ position: "absolute", bottom: "8px", right: "10px", fontSize: "11px", color: wizardDescription.length >= 1900 ? "#ef4444" : "#a1a1aa", pointerEvents: "none" }}>
+                    {wizardDescription.length}/2000
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleGoalWizard}
+                  disabled={wizardLoading || wizardDescription.trim().length < 20}
+                  style={{ alignSelf: "flex-start", padding: "8px 18px", borderRadius: "8px", border: "none", background: wizardLoading || wizardDescription.trim().length < 20 ? "#d4d4d8" : "#C4704B", color: "#fff", fontSize: "14px", fontWeight: 600, cursor: wizardLoading || wizardDescription.trim().length < 20 ? "not-allowed" : "pointer" }}
+                >
+                  {wizardLoading ? "AI is structuring your goal…" : "Structure this Goal"}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Attestation milestones */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <span style={{ fontSize: "14px", fontWeight: 600, color: "#18181b" }}>KPI Milestones</span>
+            {attestationMilestones.map((ms, idx) => (
+              <div key={idx} style={{ display: "flex", flexDirection: "column", gap: "12px", padding: "16px", background: "#fafafa", border: "1px solid #e4e4e7", borderRadius: "12px", color: "#18181b" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ width: "24px", height: "24px", borderRadius: "50%", background: "#18181b", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 700, flexShrink: 0 }}>
+                    {idx + 1}
+                  </span>
+                  {attestationMilestones.length > 1 && (
+                    <button type="button" onClick={() => removeAttestationMilestone(idx)} style={{ fontSize: "12px", color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}>
+                      Remove
+                    </button>
+                  )}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <Label htmlFor={`at-title-${idx}`}>Goal / KPI Description</Label>
+                  <textarea
+                    id={`at-title-${idx}`}
+                    rows={3}
+                    placeholder="e.g. Scope 1+2 carbon emissions ≤ 80% of 2024 baseline by December 2026"
+                    value={ms.title}
+                    onChange={(e) => updateAttestationMilestone(idx, "title", e.target.value)}
+                    required
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e4e4e7", fontSize: "14px", fontFamily: "inherit", resize: "vertical", background: "#fff", color: "#18181b", boxSizing: "border-box" }}
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: "12px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <Label htmlFor={`at-deadline-${idx}`}>Verification Deadline (days)</Label>
+                    <Input
+                      id={`at-deadline-${idx}`}
+                      type="number"
+                      min="1"
+                      max="1825"
+                      placeholder="90"
+                      value={ms.deadlineDays}
+                      onChange={(e) => updateAttestationMilestone(idx, "deadlineDays", e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <Label htmlFor={`at-schedule-${idx}`}>Schedule</Label>
+                    <select
+                      id={`at-schedule-${idx}`}
+                      value={ms.scheduleType}
+                      onChange={(e) => updateAttestationMilestone(idx, "scheduleType", e.target.value)}
+                      style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #e4e4e7", fontSize: "14px", background: "#fff", color: "#18181b" }}
+                    >
+                      {Object.entries(SCHEDULE_LABELS).map(([val, label]) => (
+                        <option key={val} value={val}>{label}</option>
+                      ))}
+                    </select>
+                    <p style={{ fontSize: "11px", color: "#71717a" }}>Recurring runs auto-verify on schedule</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addAttestationMilestone}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "10px 16px", borderRadius: "8px", border: "1.5px dashed #d4d4d8", background: "transparent", color: "#52525b", fontSize: "14px", fontWeight: 500, cursor: "pointer" }}
+            >
+              + Add KPI Milestone
+            </button>
+          </div>
+
+          {/* Auditor email */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <Label htmlFor="auditorEmail">Auditor Email <span style={{ color: "#a1a1aa", fontWeight: 400 }}>(optional)</span></Label>
+            <Input
+              id="auditorEmail"
+              type="email"
+              placeholder="auditor@kpmg.com — receives results but cannot modify"
+              value={auditorEmail}
+              onChange={(e) => setAuditorEmail(e.target.value)}
+            />
+            <p style={{ fontSize: "12px", color: "#71717a" }}>The auditor will be CC&apos;d on all attestation results and have read-only access.</p>
+          </div>
+
+          {/* Attestation submit */}
+          <div style={{ display: "flex", gap: "10px" }}>
+            <Button type="submit" disabled={loading} size="lg" style={{ flex: 1 }}>
+              {loading ? "Creating…" : "Create Attestation Contract"}
+            </Button>
+            <Button type="button" variant="outline" size="lg" onClick={() => router.back()}>
+              Cancel
+            </Button>
+          </div>
+        </>
+      )}
+
+      {/* ── ESCROW MODE FORM (unchanged, hidden in ATTESTATION mode) ─────── */}
+      {mode === "ESCROW" && (
+        <>
       {/* Project title */}
       <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
         <Label htmlFor="projectTitle">Project Title</Label>
@@ -783,6 +1092,8 @@ export function ContractForm({ investorAddress }: ContractFormProps) {
           </button>
         )}
       </div>
+        </>
+      )}
     </form>
   );
 }

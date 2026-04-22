@@ -110,9 +110,21 @@ export async function POST(request: NextRequest) {
       const message = parsed.error.issues[0]?.message ?? "Invalid input";
       return NextResponse.json({ error: message }, { status: 400 });
     }
-    const { milestone, amountUSD, cancelAfter, milestones: milestonesInput, receiverWalletAddress } = parsed.data;
+    const {
+      milestone,
+      amountUSD,
+      cancelAfter,
+      milestones: milestonesInput,
+      receiverWalletAddress,
+      mode = "ESCROW",
+      auditorEmail,
+      attestationMilestones,
+    } = parsed.data;
 
-    if (!session.user.walletAddress) {
+    const isAttestation = mode === "ATTESTATION";
+
+    // ATTESTATION mode: no wallet required — no financial flows
+    if (!isAttestation && !session.user.walletAddress) {
       return NextResponse.json(
         { error: "Connect your XRPL wallet before creating a contract" },
         { status: 422 }
@@ -122,24 +134,33 @@ export async function POST(request: NextRequest) {
     const investor = await prisma.user.findUnique({ where: { id: session.user.id } });
     if (!investor) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-    // KYC tier limits
-    const KYC_LIMITS: Record<number, number> = { 0: 1_000, 1: 10_000 };
-    const tierLimit = KYC_LIMITS[investor.kycTier];
-    if (tierLimit !== undefined) {
-      const msData_pre: { amountUSD: number }[] =
-        (milestonesInput ?? [{ amountUSD }]).map((m: { amountUSD: unknown }) => ({ amountUSD: Number(m.amountUSD) }));
-      const totalUSD = msData_pre.reduce((sum, m) => sum + m.amountUSD, 0);
-      if (totalUSD > tierLimit) {
-        const tierLabel = investor.kycTier === 0
-          ? "Email-verified accounts (Tier 0) are limited to $1,000 per contract. Complete name & sanctions screening to increase your limit to $10,000."
-          : `Your current verification level (Tier ${investor.kycTier}) allows up to $${tierLimit.toLocaleString()} per contract.`;
-        return NextResponse.json({ error: tierLabel, kycTier: investor.kycTier, limit: tierLimit }, { status: 403 });
+    if (isAttestation && !investor.isEnterprise) {
+      return NextResponse.json(
+        { error: "Enterprise Attestation Mode is not enabled for your account. Request access from the team." },
+        { status: 403 }
+      );
+    }
+
+    // KYC tier limits — ESCROW mode only
+    if (!isAttestation) {
+      const KYC_LIMITS: Record<number, number> = { 0: 1_000, 1: 10_000 };
+      const tierLimit = KYC_LIMITS[investor.kycTier];
+      if (tierLimit !== undefined) {
+        const msData_pre: { amountUSD: number }[] =
+          (milestonesInput ?? [{ amountUSD }]).map((m: { amountUSD: unknown }) => ({ amountUSD: Number(m.amountUSD) }));
+        const totalUSD = msData_pre.reduce((sum, m) => sum + m.amountUSD, 0);
+        if (totalUSD > tierLimit) {
+          const tierLabel = investor.kycTier === 0
+            ? "Email-verified accounts (Tier 0) are limited to $1,000 per contract. Complete name & sanctions screening to increase your limit to $10,000."
+            : `Your current verification level (Tier ${investor.kycTier}) allows up to $${tierLimit.toLocaleString()} per contract.`;
+          return NextResponse.json({ error: tierLabel, kycTier: investor.kycTier, limit: tierLimit }, { status: 403 });
+        }
       }
     }
 
-    // If a receiver wallet was provided, look up that user now
+    // If a receiver wallet was provided, look up that user now (ESCROW only)
     let receiver: { id: string } | null = null;
-    if (receiverWalletAddress) {
+    if (!isAttestation && receiverWalletAddress) {
       receiver = await prisma.user.findUnique({
         where: { walletAddress: receiverWalletAddress },
       });
@@ -153,9 +174,59 @@ export async function POST(request: NextRequest) {
 
     const inviteLink = nanoid(32);
 
-    // Validate amounts before entering the transaction
-    // Build msData with explicit narrowing — Zod refine() guarantees milestone is set
-    // when milestonesInput is absent, but TypeScript can't infer that automatically.
+    // ── ATTESTATION MODE path ─────────────────────────────────────────────────
+    if (isAttestation) {
+      const atMs = attestationMilestones!;
+      const latestDeadline = atMs.reduce(
+        (latest, m) => (m.cancelAfter > latest ? m.cancelAfter : latest),
+        atMs[0].cancelAfter
+      );
+
+      const result = await prisma.$transaction(async (tx) => {
+        const contract = await tx.contract.create({
+          data: {
+            investorId: investor.id,
+            milestone: atMs[0].title,
+            amountUSD: 0,
+            cancelAfter: new Date(latestDeadline),
+            status: "DRAFT",
+            mode: "ATTESTATION",
+            auditorEmail: auditorEmail ?? null,
+          },
+        });
+
+        await tx.milestone.createMany({
+          data: atMs.map((m, i) => ({
+            contractId: contract.id,
+            title: m.title,
+            amountUSD: m.amountUSD ?? 0,
+            cancelAfter: new Date(m.cancelAfter),
+            order: i,
+            status: "PENDING",
+            scheduleType: m.scheduleType ?? "ONE_OFF",
+          })),
+        });
+
+        return contract;
+      });
+
+      await writeAuditLog({
+        contractId: result.id,
+        event: "ATTESTATION_CONTRACT_CREATED",
+        actor: session.user.id,
+        metadata: { milestoneCount: atMs.length, mode: "ATTESTATION" },
+      });
+
+      getPostHogClient().capture({
+        distinctId: session.user.id,
+        event: "attestation_contract_created",
+        properties: { contract_id: result.id, milestone_count: atMs.length },
+      });
+
+      return NextResponse.json({ contractId: result.id, inviteLink: null, directlyLinked: false });
+    }
+
+    // ── ESCROW MODE path ──────────────────────────────────────────────────────
     let msData: { title: string; amountUSD: number; cancelAfter: string }[];
     if (milestonesInput) {
       msData = milestonesInput;

@@ -700,3 +700,48 @@ export async function sendCounterProposalRespondedEmail({
     `,
   });
 }
+
+/** Notify auditor (and optionally owner) of an attestation run result. */
+export async function sendAttestationResultEmail({
+  to,
+  milestoneTitle,
+  period,
+  verdict,
+  reasoning,
+  certUrl,
+  xrplTxHash,
+  contractId,
+}: {
+  to: string;
+  milestoneTitle: string;
+  period: string;
+  verdict: "YES" | "NO" | "INCONCLUSIVE";
+  reasoning: string;
+  certUrl: string | null;
+  xrplTxHash: string | null;
+  contractId: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const verdictLabel = verdict === "YES" ? "✅ VERIFIED" : verdict === "NO" ? "❌ NOT MET" : "⚠️ INCONCLUSIVE";
+  const isTestnet = process.env.XRPL_NETWORK === "testnet";
+  const xrplExplorer = isTestnet ? "testnet.xrpscan.com" : "xrpscan.com";
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Attestation result: ${milestoneTitle} — ${verdict}`,
+    html: `
+      <p>An attestation run has completed for the following milestone:</p>
+      <table style="border-collapse:collapse;width:100%;max-width:560px">
+        <tr><td style="padding:6px 0;color:#666;font-size:13px">Milestone</td><td style="padding:6px 0;font-weight:bold">${esc(milestoneTitle)}</td></tr>
+        <tr><td style="padding:6px 0;color:#666;font-size:13px">Period</td><td style="padding:6px 0">${esc(period)}</td></tr>
+        <tr><td style="padding:6px 0;color:#666;font-size:13px">Verdict</td><td style="padding:6px 0;font-weight:bold">${verdictLabel}</td></tr>
+      </table>
+      <p style="background:#f7f7f7;padding:12px;border-left:3px solid #C4704B;font-style:italic">${esc(reasoning)}</p>
+      ${xrplTxHash ? `<p style="font-size:12px;color:#666">On-chain record: <a href="https://${xrplExplorer}/transactions/${xrplTxHash}">${xrplTxHash.slice(0, 20)}…</a></p>` : ""}
+      ${certUrl ? `<p><a href="${certUrl}">View attestation certificate →</a></p>` : ""}
+      <p><a href="${contractLink(contractId)}">View contract →</a></p>
+    `,
+  });
+}

@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { ContractForm } from "@/components/contract-form";
 import { NodeBackground } from "@/components/node-background";
@@ -32,7 +33,9 @@ function LogoMark() {
 
 function NewContractContent() {
   const params = useSearchParams();
+  const { data: session } = useSession();
   const investorAddress = params.get("investor") ?? "";
+  const isEnterprise = session?.user?.isEnterprise ?? false;
 
   if (!investorAddress) {
     return (
@@ -120,7 +123,7 @@ function NewContractContent() {
           borderTop: "1px solid #C4704B",
         }}
       >
-        <ContractForm investorAddress={investorAddress} />
+        <ContractForm investorAddress={investorAddress} isEnterprise={isEnterprise} />
       </div>
     </div>
   );

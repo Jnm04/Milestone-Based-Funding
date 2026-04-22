@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 export type AuditEvent =
   | "CONTRACT_CREATED"
+  | "ATTESTATION_CONTRACT_CREATED"
   | "ESCROW_FUNDED"
   | "PROOF_SUBMITTED"
   | "AI_DECISION"

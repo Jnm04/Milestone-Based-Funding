@@ -52,6 +52,18 @@ interface ContractActionsProps {
   interimAiPositive: boolean | null;
   /** Extension days requested: 7 | 14 | 30 */
   extensionDays: number | null;
+  // ── Enterprise Attestation Mode ───────────────────────────────────────────
+  /** "ESCROW" | "ATTESTATION" */
+  contractMode: string;
+  dataSourceType: string | null;
+  dataSourceUrl: string | null;
+  dataSourceApiKeyHint: string | null;
+  dataSourceLockedAt: string | null;
+  scheduleType: string | null;
+  scheduleNextRun: string | null;
+  attestationFetchedAt: string | null;
+  attestationFetchedHash: string | null;
+  attestationCertUrl: string | null;
 }
 
 // ─── MetaMask helpers ────────────────────────────────────────────────────────
@@ -269,6 +281,16 @@ export function ContractActions({
   interimAiAssessment,
   interimAiPositive,
   extensionDays,
+  contractMode,
+  dataSourceType,
+  dataSourceUrl,
+  dataSourceApiKeyHint,
+  dataSourceLockedAt,
+  scheduleType,
+  scheduleNextRun,
+  attestationFetchedAt,
+  attestationFetchedHash,
+  attestationCertUrl,
 }: ContractActionsProps) {
   const [fundingStep, setFundingStep] = useState<
     "idle" | "approving" | "funding" | "confirming" | "done"
@@ -317,6 +339,264 @@ export function ContractActions({
     const t = setTimeout(() => setConfirmCancelReneg(false), 5000);
     return () => clearTimeout(t);
   }, [confirmCancelReneg]);
+
+  // ── Attestation state ─────────────────────────────────────────────────────
+  const [lockingSource, setLockingSource] = useState(false);
+  const [sourceType, setSourceType] = useState<string>(dataSourceType ?? "URL_SCRAPE");
+  const [sourceUrl, setSourceUrl] = useState(dataSourceUrl ?? "");
+  const [sourceApiKey, setSourceApiKey] = useState("");
+  const [testingSource, setTestingSource] = useState(false);
+  const [testPreview, setTestPreview] = useState<string | null>(null);
+  const [runningAttestation, setRunningAttestation] = useState(false);
+  const [attestationResult, setAttestationResult] = useState<{
+    verdict: string; reasoning: string; certUrl: string | null;
+  } | null>(null);
+
+  async function handleLockSource() {
+    setLockingSource(true);
+    try {
+      const res = await fetch(
+        `/api/contracts/${contractId}/milestones/${milestoneId}/attestation/lock-source`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            dataSourceType: sourceType,
+            dataSourceUrl: sourceUrl || undefined,
+            apiKey: sourceApiKey || undefined,
+          }),
+        }
+      );
+      if (!res.ok) {
+        const err = (await res.json()) as { error?: string };
+        throw new Error(err.error ?? "Lock failed");
+      }
+      toast.success("Data source locked — it cannot be changed after this point.");
+      window.location.reload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setLockingSource(false);
+    }
+  }
+
+  async function handleTestSource() {
+    setTestingSource(true);
+    setTestPreview(null);
+    try {
+      const res = await fetch("/api/attestation/test-source", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dataSourceType: sourceType,
+          dataSourceUrl: sourceUrl,
+          apiKey: sourceApiKey || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const err = (await res.json()) as { error?: string };
+        throw new Error(err.error ?? "Test failed");
+      }
+      const data = (await res.json()) as { preview: string; totalLength: number };
+      setTestPreview(`${data.preview.slice(0, 600)}${data.totalLength > 600 ? "…" : ""}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setTestingSource(false);
+    }
+  }
+
+  async function handleRunAttestation() {
+    setRunningAttestation(true);
+    try {
+      const res = await fetch(
+        `/api/contracts/${contractId}/milestones/${milestoneId}/attestation/run`,
+        { method: "POST" }
+      );
+      if (!res.ok) {
+        const err = (await res.json()) as { error?: string };
+        throw new Error(err.error ?? "Run failed");
+      }
+      const data = (await res.json()) as { verdict: string; reasoning: string; certUrl: string | null };
+      setAttestationResult(data);
+      toast.success(`Attestation complete — verdict: ${data.verdict}`);
+      setTimeout(() => window.location.reload(), 2000);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setRunningAttestation(false);
+    }
+  }
+
+  // ATTESTATION MODE — render separate UI
+  if (contractMode === "ATTESTATION" && milestoneId) {
+    const isLocked = !!dataSourceLockedAt;
+    const verdictColor: Record<string, string> = { YES: "#4ade80", NO: "#f87171", INCONCLUSIVE: "#fbbf24" };
+
+    return (
+      <div className="flex flex-col gap-4">
+        {/* Attestation status banner */}
+        <div
+          className="rounded-xl p-4"
+          style={{ background: "rgba(196,112,75,0.06)", border: "1px solid rgba(196,112,75,0.2)" }}
+        >
+          <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: "#C4704B" }}>
+            Enterprise Attestation Mode
+          </p>
+          <p className="text-sm" style={{ color: "#D4B896" }}>
+            {isLocked
+              ? `Data source locked · ${dataSourceType?.replace("_", " ")}${dataSourceApiKeyHint ? ` (key: …${dataSourceApiKeyHint})` : ""}`
+              : "Configure and lock the data source before running attestation."}
+          </p>
+          {scheduleType && scheduleType !== "ONE_OFF" && (
+            <p className="text-xs mt-1" style={{ color: "#8B7355" }}>
+              Schedule: {scheduleType}{scheduleNextRun ? ` · Next run: ${new Date(scheduleNextRun).toLocaleDateString()}` : ""}
+            </p>
+          )}
+        </div>
+
+        {/* Last result */}
+        {attestationFetchedAt && (
+          <div
+            className="rounded-xl p-4"
+            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            <p className="text-xs uppercase tracking-wider mb-2" style={{ color: "#8B7355" }}>Last Attestation Run</p>
+            <p className="text-xs font-mono mb-1" style={{ color: "#A89B8C" }}>
+              {new Date(attestationFetchedAt).toLocaleString()} · hash: {attestationFetchedHash?.slice(0, 12)}…
+            </p>
+            {attestationCertUrl && (
+              <a
+                href={attestationCertUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-medium"
+                style={{ color: "#C4704B" }}
+              >
+                View certificate →
+              </a>
+            )}
+          </div>
+        )}
+
+        {/* New attestation result */}
+        {attestationResult && (
+          <div
+            className="rounded-xl p-4"
+            style={{
+              background: "rgba(255,255,255,0.03)",
+              border: `1px solid ${verdictColor[attestationResult.verdict] ?? "#fbbf24"}40`,
+            }}
+          >
+            <p className="text-sm font-bold mb-1" style={{ color: verdictColor[attestationResult.verdict] ?? "#fbbf24" }}>
+              {attestationResult.verdict}
+            </p>
+            <p className="text-sm italic" style={{ color: "#D4B896" }}>{attestationResult.reasoning}</p>
+            {attestationResult.certUrl && (
+              <a href={attestationResult.certUrl} target="_blank" rel="noopener noreferrer" className="text-xs mt-2 block" style={{ color: "#C4704B" }}>
+                View certificate →
+              </a>
+            )}
+          </div>
+        )}
+
+        {/* Data source config — only if not locked */}
+        {!isLocked && (
+          <div className="flex flex-col gap-3">
+            <div>
+              <label className="text-xs uppercase tracking-wider block mb-1" style={{ color: "#8B7355" }}>Data Source Type</label>
+              <select
+                value={sourceType}
+                onChange={(e) => setSourceType(e.target.value)}
+                className="w-full rounded-lg px-3 py-2 text-sm"
+                style={{ background: "#1A1512", border: "1px solid rgba(196,112,75,0.3)", color: "#EDE6DD" }}
+              >
+                <option value="URL_SCRAPE">URL Scrape — public webpage</option>
+                <option value="REST_API">REST API — live business data</option>
+                <option value="FILE_UPLOAD">File Upload — PDF / report</option>
+                <option value="MANUAL_REVIEW">Manual Review — human confirmation</option>
+              </select>
+            </div>
+
+            {(sourceType === "URL_SCRAPE" || sourceType === "REST_API") && (
+              <div>
+                <label className="text-xs uppercase tracking-wider block mb-1" style={{ color: "#8B7355" }}>
+                  {sourceType === "REST_API" ? "API Endpoint URL" : "URL to Scrape"}
+                </label>
+                <input
+                  type="url"
+                  value={sourceUrl}
+                  onChange={(e) => setSourceUrl(e.target.value)}
+                  placeholder="https://…"
+                  className="w-full rounded-lg px-3 py-2 text-sm"
+                  style={{ background: "#1A1512", border: "1px solid rgba(196,112,75,0.3)", color: "#EDE6DD" }}
+                />
+              </div>
+            )}
+
+            {sourceType === "REST_API" && (
+              <div>
+                <label className="text-xs uppercase tracking-wider block mb-1" style={{ color: "#8B7355" }}>API Key (Bearer)</label>
+                <input
+                  type="password"
+                  value={sourceApiKey}
+                  onChange={(e) => setSourceApiKey(e.target.value)}
+                  placeholder="sk-… or your API key"
+                  className="w-full rounded-lg px-3 py-2 text-sm"
+                  style={{ background: "#1A1512", border: "1px solid rgba(196,112,75,0.3)", color: "#EDE6DD" }}
+                />
+                <p className="text-xs mt-1" style={{ color: "#5A4A3A" }}>Stored AES-256 encrypted. Only the last 4 chars are shown after locking.</p>
+              </div>
+            )}
+
+            {/* Test + Lock buttons */}
+            <div className="flex gap-2">
+              {(sourceType === "URL_SCRAPE" || sourceType === "REST_API") && (
+                <button
+                  onClick={handleTestSource}
+                  disabled={testingSource || !sourceUrl}
+                  className="flex-1 rounded-lg py-2 text-sm font-medium disabled:opacity-40"
+                  style={{ background: "rgba(196,112,75,0.1)", color: "#C4704B", border: "1px solid rgba(196,112,75,0.3)" }}
+                >
+                  {testingSource ? "Fetching preview…" : "Test Source"}
+                </button>
+              )}
+              <button
+                onClick={handleLockSource}
+                disabled={lockingSource || (sourceType !== "FILE_UPLOAD" && sourceType !== "MANUAL_REVIEW" && !sourceUrl)}
+                className="flex-1 rounded-lg py-2 text-sm font-semibold disabled:opacity-40"
+                style={{ background: "#C4704B", color: "#fff" }}
+              >
+                {lockingSource ? "Locking…" : "Lock Data Source"}
+              </button>
+            </div>
+
+            {/* Preview */}
+            {testPreview && (
+              <div
+                className="rounded-lg p-3 text-xs font-mono overflow-auto max-h-40"
+                style={{ background: "#0E0B0A", border: "1px solid rgba(255,255,255,0.08)", color: "#8B7355", whiteSpace: "pre-wrap" }}
+              >
+                {testPreview}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Run attestation — only if locked */}
+        {isLocked && (
+          <button
+            onClick={handleRunAttestation}
+            disabled={runningAttestation}
+            className="w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-40"
+            style={{ background: "rgba(74,222,128,0.1)", color: "#4ade80", border: "1px solid rgba(74,222,128,0.3)" }}
+          >
+            {runningAttestation ? "Running attestation…" : "Run Attestation Now"}
+          </button>
+        )}
+      </div>
+    );
+  }
 
   // ── Mint test RLUSD via MockRLUSD.faucet() ───────────────────────────────
   async function handleFaucet() {

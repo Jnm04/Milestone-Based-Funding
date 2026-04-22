@@ -99,6 +99,8 @@ model Contract {
   healthNoteUpdatedAt DateTime?
   /// "ESCROW" | "ATTESTATION" — attestation mode skips all financial/crypto flows
   mode                String         @default("ESCROW")
+  /// Optional auditor email — CC'd on attestation results, read-only access
+  auditorEmail        String?
   proofs              Proof[]
   milestones          Milestone[]
   auditLogs           AuditLog[]
@@ -220,10 +222,67 @@ model Milestone {
   completionNarrative   String?   @db.Text
   completionNarrativeAt DateTime?
 
+  // Enterprise Attestation Mode — data source (defined before verification date, locked)
+  /// "URL_SCRAPE" | "REST_API" | "FILE_UPLOAD" | "MANUAL_REVIEW"
+  dataSourceType          String?
+  /// URL to scrape or REST API endpoint
+  dataSourceUrl           String?
+  /// AES-256-GCM encrypted API key (enc:<iv>:<ct>:<tag>), stored only if REST_API
+  dataSourceApiKeyEnc     String?   @db.Text
+  /// Last 4 chars of API key — shown in UI for confirmation, never the full key
+  dataSourceApiKeyHint    String?
+  /// Additional config: { method, headers, responsePath } for REST_API
+  dataSourceConfig        Json?
+  /// When the source was locked — no edits allowed after this point
+  dataSourceLockedAt      DateTime?
+
+  // Enterprise Attestation Mode — results (written after platform fetch)
+  attestationFetchedAt    DateTime?
+  /// SHA-256 of the raw fetched response
+  attestationFetchedHash  String?
+  /// Vercel Blob URL of the raw fetched content (for audit, never shown to owner)
+  attestationFetchedBlob  String?
+  /// URL of the generated attestation certificate PDF
+  attestationCertUrl      String?
+
+  // Recurring schedule
+  /// "ONE_OFF" | "MONTHLY" | "QUARTERLY" | "ANNUAL"
+  scheduleType            String?
+  scheduleNextRun         DateTime?
+  schedulePreviousRun     DateTime?
+
+  attestationEntries AttestationEntry[]
+
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
   @@index([contractId])
+}
+
+/// One attestation run result for a milestone.
+/// Created by the platform runner on each scheduled or manual run.
+model AttestationEntry {
+  id            String    @id @default(cuid())
+  milestoneId   String
+  milestone     Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  /// e.g. "2026-Q1", "2026-04", "2026" — identifies the period being attested
+  period        String
+  fetchedAt     DateTime
+  fetchedHash   String
+  fetchedBlobUrl String?
+  /// "YES" | "NO" | "INCONCLUSIVE"
+  aiVerdict     String
+  aiReasoning   String    @db.Text
+  xrplTxHash    String?
+  certUrl       String?
+  /// "PLATFORM" | "AUDITOR_RERUN"
+  type          String    @default("PLATFORM")
+  /// For AUDITOR_RERUN: points to the original PLATFORM entry
+  linkedEntryId String?
+  auditorEmail  String?
+  createdAt     DateTime  @default(now())
+
+  @@index([milestoneId])
 }
 
 /// Voluntary progress updates logged by the startup while a milestone is FUNDED.

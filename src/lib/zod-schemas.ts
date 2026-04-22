@@ -47,6 +47,30 @@ const milestoneItemSchema = z.object({
     .refine((val) => new Date(val) > new Date(), { message: "Deadline must be in the future" }),
 });
 
+// Attestation milestone — amountUSD is optional (repurposed as "tracked value")
+const attestationMilestoneItemSchema = z.object({
+  title: z
+    .string({ required_error: "Milestone title is required" })
+    .min(1, "Milestone title cannot be empty")
+    .max(1000, "Milestone title must be at most 1000 characters")
+    .trim(),
+
+  amountUSD: z.coerce
+    .number()
+    .nonnegative("amountUSD must be non-negative")
+    .max(999_999_999)
+    .optional()
+    .default(0),
+
+  cancelAfter: z
+    .string({ required_error: "cancelAfter is required" })
+    .min(1, "cancelAfter cannot be empty")
+    .refine((val) => !isNaN(new Date(val).getTime()), { message: "cancelAfter must be a valid date" })
+    .refine((val) => new Date(val) > new Date(), { message: "Deadline must be in the future" }),
+
+  scheduleType: z.enum(["ONE_OFF", "MONTHLY", "QUARTERLY", "ANNUAL"]).optional().default("ONE_OFF"),
+});
+
 export const createContractSchema = z
   .object({
     // Single-milestone shorthand
@@ -62,9 +86,23 @@ export const createContractSchema = z
       .optional(),
 
     receiverWalletAddress: z.string().max(100).optional(),
+
+    // Enterprise Attestation Mode
+    mode: z.enum(["ESCROW", "ATTESTATION"]).optional().default("ESCROW"),
+    auditorEmail: z.string().email("Invalid auditor email").max(254).optional(),
+    attestationMilestones: z
+      .array(attestationMilestoneItemSchema)
+      .min(1, "At least one milestone is required")
+      .max(20, "A contract can have at most 20 attestation milestones")
+      .optional(),
   })
   .refine(
-    (data) => data.milestone || (data.milestones && data.milestones.length > 0),
+    (data) => {
+      if (data.mode === "ATTESTATION") {
+        return data.attestationMilestones && data.attestationMilestones.length > 0;
+      }
+      return data.milestone || (data.milestones && data.milestones.length > 0);
+    },
     { message: "milestone or milestones array is required" }
   );
 

@@ -48,6 +48,7 @@ interface Contract {
   healthNote: string | null;
   healthNoteUpdatedAt: string | null;
   createdAt: string;
+  mode: string;
 }
 
 type DealHealth = "GREEN" | "YELLOW" | "RED";
@@ -820,7 +821,14 @@ export default function InvestorDashboard() {
                         {/* Desktop layout */}
                         <div className="hidden md:grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] gap-4 items-center">
                           <div className="flex flex-col gap-1.5 min-w-0">
-                            <p className="text-sm font-medium truncate" style={{ color: "#EDE6DD" }}>{c.milestone}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium truncate" style={{ color: "#EDE6DD" }}>{c.milestone}</p>
+                              {c.mode === "ATTESTATION" && (
+                                <span className="text-xs px-2 py-0.5 rounded-full font-semibold shrink-0" style={{ background: "rgba(196,112,75,0.15)", border: "1px solid rgba(196,112,75,0.3)", color: "#C4704B" }}>
+                                  Attestation
+                                </span>
+                              )}
+                            </div>
                             {totalMs > 1 && (
                               <div className="flex items-center gap-2">
                                 <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
