@@ -19,6 +19,10 @@
     {
       "path": "/api/cron/progress-checkins",
       "schedule": "0 9 * * 2"
+    },
+    {
+      "path": "/api/cron/pulse-checks",
+      "schedule": "0 7 * * 1"
     }
   ],
   "functions": {
@@ -44,6 +48,12 @@
       "maxDuration": 60
     },
     "src/app/api/contracts/[id]/milestones/[milestoneId]/attestation/run/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/cron/pulse-checks/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/reports/board-pack/route.ts": {
       "maxDuration": 60
     }
   },

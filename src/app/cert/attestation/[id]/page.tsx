@@ -41,6 +41,22 @@ export default async function AttestationCertPage({
   const verdictLabel = VERDICT_LABEL[entry.aiVerdict] ?? entry.aiVerdict;
   const shortHash = entry.fetchedHash.slice(0, 16) + "…" + entry.fetchedHash.slice(-8);
 
+  interface RegMapItem { framework: string; article: string; clause?: string; confidence: number }
+  let regulatoryMapping: RegMapItem[] = [];
+  try {
+    if (Array.isArray(entry.regulatoryMapping)) {
+      regulatoryMapping = entry.regulatoryMapping as unknown as RegMapItem[];
+    }
+  } catch { /**/ }
+
+  const FRAMEWORK_COLORS: Record<string, { bg: string; color: string }> = {
+    CSRD: { bg: "#DCFCE7", color: "#14532D" },
+    GRI:  { bg: "#EDE9FE", color: "#3B0764" },
+    SDG:  { bg: "#DBEAFE", color: "#1E3A5F" },
+    TCFD: { bg: "#FEF3C7", color: "#78350F" },
+    ISO:  { bg: "#F1F5F9", color: "#1E293B" },
+  };
+
   return (
     <div className="min-h-screen bg-[#0E0B0A] text-[#EDE6DD] flex flex-col items-center py-12 px-4">
       <div className="w-full max-w-2xl">
@@ -116,6 +132,31 @@ export default async function AttestationCertPage({
               >
                 {entry.xrplTxHash.slice(0, 24)}…
               </a>
+            </div>
+          )}
+
+          {/* Regulatory Mapping */}
+          {regulatoryMapping.length > 0 && (
+            <div className="mb-6">
+              <p className="text-[#C4704B] text-xs uppercase tracking-wider mb-2">Regulatory Frameworks Addressed</p>
+              <div className="flex flex-wrap gap-2">
+                {regulatoryMapping.map((m, i) => {
+                  const fc = FRAMEWORK_COLORS[m.framework] ?? { bg: "#F3F4F6", color: "#374151" };
+                  return (
+                    <span
+                      key={i}
+                      title={m.clause ? `${m.clause} — ${Math.round(m.confidence * 100)}% confidence` : `${Math.round(m.confidence * 100)}% confidence`}
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: 4,
+                        padding: "3px 10px", borderRadius: 6, fontSize: 11.5, fontWeight: 600,
+                        background: fc.bg, color: fc.color,
+                      }}
+                    >
+                      {m.article}
+                    </span>
+                  );
+                })}
+              </div>
             </div>
           )}
 

@@ -11,6 +11,13 @@ function getAnthropic() {
   return _anthropic;
 }
 
+export interface RegulatoryMappingItem {
+  framework: "CSRD" | "GRI" | "SDG" | "TCFD" | "ISO";
+  article: string;
+  clause?: string;
+  confidence: number;
+}
+
 export interface WizardResponse {
   title: string;
   goalDescription: string;
@@ -18,11 +25,13 @@ export interface WizardResponse {
   suggestedDataSourceHint: string;
   suggestedDeadline: string;
   verificationCriteria: string[];
+  regulatoryMapping: RegulatoryMappingItem[];
 }
 
 /**
  * POST /api/attestation/wizard
- * Takes a plain-language goal description and returns a structured attestation milestone.
+ * Takes a plain-language goal description and returns a structured attestation milestone
+ * including AI-generated regulatory framework mapping (CSRD/GRI/SDG/TCFD/ISO).
  * Rate limited: 10/hour per user.
  */
 export async function POST(req: NextRequest) {
@@ -54,14 +63,22 @@ export async function POST(req: NextRequest) {
 
   const response = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 768,
+    max_tokens: 1024,
     system: `You are a KPI structuring assistant for cascrow, an enterprise attestation platform.
-A company describes a goal in plain language. You structure it into a formal attestation milestone.
+A company describes a goal in plain language. You structure it into a formal attestation milestone
+AND automatically map it to relevant regulatory frameworks.
 
 Data source types:
 - FILE_UPLOAD: best for annual reports, PDFs, spreadsheets, certificates
 - URL_SCRAPE: best for public web pages, sustainability reports online, regulatory registries
 - REST_API: best for live business data (Stripe, analytics, HR systems, internal APIs)
+
+Regulatory frameworks to map against (only include if genuinely relevant, min confidence 0.6):
+- CSRD/ESRS: E1 (climate), E2 (pollution), E3 (water), E4 (biodiversity), E5 (resource use), S1-S4 (social), G1 (governance)
+- GRI Standards: 201-205 (economic), 302-308 (environmental), 401-406 (social)
+- SDG: 1-17 (UN Sustainable Development Goals)
+- TCFD: GOVERNANCE, STRATEGY, RISK, METRICS
+- ISO: 14001 (environment), 45001 (safety), 50001 (energy), 26000 (social responsibility)
 
 Respond ONLY with valid JSON (no markdown):
 {
@@ -69,9 +86,14 @@ Respond ONLY with valid JSON (no markdown):
   "goalDescription": "formal description of what must be true for this milestone to be met (1-2 sentences, measurable)",
   "suggestedDataSourceType": "FILE_UPLOAD" | "URL_SCRAPE" | "REST_API",
   "suggestedDataSourceHint": "plain-English explanation of what the company should provide as the data source",
-  "suggestedDeadline": "ISO date string (YYYY-MM-DD) — deadline by which the goal should be verified",
-  "verificationCriteria": ["criterion 1", "criterion 2", "criterion 3"]
-}`,
+  "suggestedDeadline": "ISO date string (YYYY-MM-DD)",
+  "verificationCriteria": ["criterion 1", "criterion 2", "criterion 3"],
+  "regulatoryMapping": [
+    { "framework": "CSRD", "article": "ESRS E1-4", "clause": "§12(b)", "confidence": 0.91 }
+  ]
+}
+
+If no regulatory frameworks apply, return an empty array for regulatoryMapping.`,
     messages: [
       {
         role: "user",
@@ -85,7 +107,20 @@ Respond ONLY with valid JSON (no markdown):
 
   let result: WizardResponse;
   try {
-    result = JSON.parse(jsonText) as WizardResponse;
+    const parsed = JSON.parse(jsonText) as Partial<WizardResponse>;
+    result = {
+      title: parsed.title ?? "",
+      goalDescription: parsed.goalDescription ?? "",
+      suggestedDataSourceType: parsed.suggestedDataSourceType ?? "FILE_UPLOAD",
+      suggestedDataSourceHint: parsed.suggestedDataSourceHint ?? "",
+      suggestedDeadline: parsed.suggestedDeadline ?? "",
+      verificationCriteria: Array.isArray(parsed.verificationCriteria) ? parsed.verificationCriteria : [],
+      regulatoryMapping: Array.isArray(parsed.regulatoryMapping)
+        ? (parsed.regulatoryMapping as RegulatoryMappingItem[]).filter(
+            (m) => m.framework && m.article && typeof m.confidence === "number" && m.confidence >= 0.6
+          )
+        : [],
+    };
   } catch {
     return NextResponse.json({ error: "AI returned invalid JSON — please try again" }, { status: 500 });
   }

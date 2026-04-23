@@ -254,6 +254,20 @@ model Milestone {
   // Regulatory mapping — JSON array of tag strings e.g. ["CSRD:E1", "GRI:305-1"]
   regulatoryTags          String?   @db.Text
 
+  // Feature II: Early Warning / Pulse Checks — lightweight trend monitoring between official runs
+  /// Whether pulse checks are active for this milestone (recurring schedules only)
+  pulseCheckEnabled       Boolean   @default(false)
+  /// "MID_PERIOD" | "WEEKLY" | "BIWEEKLY"
+  pulseCheckInterval      String?
+  lastPulseCheckAt        DateTime?
+  /// "ON_TRACK" | "AT_RISK" | "LIKELY_MISS"
+  lastPulseCheckRisk      String?
+
+  // Feature V: Peer Benchmarking — opt-in anonymized percentile comparison
+  benchmarkOptIn          Boolean   @default(false)
+  /// "MANUFACTURING" | "TECH" | "FINANCE" | "ENERGY" | "HEALTHCARE" | "RETAIL" | "OTHER"
+  benchmarkSector         String?
+
   attestationEntries AttestationEntry[]
 
   createdAt         DateTime        @default(now())
@@ -283,6 +297,8 @@ model AttestationEntry {
   /// For AUDITOR_RERUN: points to the original PLATFORM entry
   linkedEntryId String?
   auditorEmail  String?
+  /// Feature I: AI-generated regulatory mapping [{framework, article, clause, confidence}]
+  regulatoryMapping Json?
   createdAt     DateTime  @default(now())
 
   @@index([milestoneId])
@@ -504,6 +520,24 @@ model CounterProposal {
 
   @@index([contractId])
   @@index([proposedBy])
+}
+
+// ── Enterprise Reports ────────────────────────────────────────────────────────
+
+/// Board-ready PDF reports generated from verified AttestationEntry records.
+/// Created by POST /api/reports/board-pack.
+model Report {
+  id          String   @id @default(cuid())
+  contractId  String
+  /// "2026", "2026-Q1", "2026-04", etc.
+  period      String
+  /// "BOARD_PACK"
+  type        String   @default("BOARD_PACK")
+  /// Vercel Blob URL of the generated HTML/PDF
+  blobUrl     String
+  generatedAt DateTime @default(now())
+
+  @@index([contractId])
 }
 
 // ── Enterprise Waitlist ───────────────────────────────────────────────────────

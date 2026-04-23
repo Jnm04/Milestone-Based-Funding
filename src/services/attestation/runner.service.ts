@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { Prisma } from "@prisma/client";
 import Anthropic from "@anthropic-ai/sdk";
 import { put } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
@@ -128,7 +129,20 @@ Rules:
 - Answer INCONCLUSIVE only if the evidence is ambiguous, incomplete, or cannot be reliably interpreted
 - Be factual and specific — reference exact figures or statements from the evidence
 - Do not infer or assume data that is not in the evidence
-- Respond ONLY with valid JSON (no markdown): {"verdict": "YES"|"NO"|"INCONCLUSIVE", "reasoning": "2-3 sentence explanation referencing specific evidence"}`;
+
+Also map the milestone to relevant regulatory frameworks (only include if genuinely relevant, confidence ≥ 0.6):
+- CSRD/ESRS: E1 (climate), E2 (pollution), E3 (water), E4 (biodiversity), E5 (resource use), S1-S4 (social), G1 (governance)
+- GRI Standards: 201-205 (economic), 302-308 (environmental), 401-406 (social)
+- SDG: 1-17 (UN Sustainable Development Goals)
+- TCFD: GOVERNANCE, STRATEGY, RISK, METRICS
+- ISO: 14001, 45001, 50001, 26000
+
+Respond ONLY with valid JSON (no markdown):
+{
+  "verdict": "YES"|"NO"|"INCONCLUSIVE",
+  "reasoning": "2-3 sentence explanation referencing specific evidence",
+  "regulatoryMapping": [{ "framework": "CSRD", "article": "ESRS E1-4", "clause": "§12(b)", "confidence": 0.91 }]
+}`;
 
   const userPrompt = `Milestone to verify:
 Title: ${milestone.title}
@@ -144,11 +158,12 @@ Does the evidence show this milestone is met?`;
 
   let verdict: "YES" | "NO" | "INCONCLUSIVE" = "INCONCLUSIVE";
   let reasoning = "AI evaluation failed — verdict set to INCONCLUSIVE.";
+  let regulatoryMapping: unknown[] = [];
 
   try {
     const response = await anthropic.messages.create({
       model: CLAUDE_MODEL,
-      max_tokens: 512,
+      max_tokens: 768,
       system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }],
     });
@@ -157,12 +172,16 @@ Does the evidence show this milestone is met?`;
     const parsed = JSON.parse(rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim()) as {
       verdict?: string;
       reasoning?: string;
+      regulatoryMapping?: unknown[];
     };
 
     if (["YES", "NO", "INCONCLUSIVE"].includes(parsed.verdict ?? "")) {
       verdict = parsed.verdict as "YES" | "NO" | "INCONCLUSIVE";
     }
     if (parsed.reasoning) reasoning = parsed.reasoning;
+    if (Array.isArray(parsed.regulatoryMapping)) {
+      regulatoryMapping = parsed.regulatoryMapping;
+    }
 
     void prisma.apiUsage.create({
       data: {
@@ -220,6 +239,9 @@ Does the evidence show this milestone is met?`;
       certUrl,
       type: entryType,
       auditorEmail: options?.auditorEmail ?? null,
+      regulatoryMapping: regulatoryMapping.length > 0
+        ? (JSON.parse(JSON.stringify(regulatoryMapping)) as Prisma.InputJsonValue)
+        : undefined,
     },
   });
 

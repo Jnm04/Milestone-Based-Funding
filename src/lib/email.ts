@@ -89,6 +89,10 @@ function contractLink(contractId: string) {
   return `${BASE_URL}/contract/${contractId}`;
 }
 
+function enterpriseLink(contractId: string) {
+  return `${BASE_URL}/enterprise/dashboard/attestations/${contractId}`;
+}
+
 // ── Email verification ──────────────────────────────────────────────────────
 
 export async function sendVerificationEmail({
@@ -742,6 +746,47 @@ export async function sendAttestationResultEmail({
       ${xrplTxHash ? `<p style="font-size:12px;color:#666">On-chain record: <a href="https://${xrplExplorer}/transactions/${xrplTxHash}">${xrplTxHash.slice(0, 20)}…</a></p>` : ""}
       ${certUrl ? `<p><a href="${certUrl}">View attestation certificate →</a></p>` : ""}
       <p><a href="${contractLink(contractId)}">View contract →</a></p>
+    `,
+  });
+}
+
+// ── Enterprise Early Warning ──────────────────────────────────────────────────
+
+export async function sendEarlyWarningEmail({
+  to,
+  milestoneTitle,
+  contractId,
+  risk,
+  aiAssessment,
+  period,
+}: {
+  to: string;
+  milestoneTitle: string;
+  contractId: string;
+  risk: "AT_RISK" | "LIKELY_MISS";
+  aiAssessment: string;
+  period: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const riskLabel = risk === "LIKELY_MISS" ? "⚠️ Likely to miss target" : "⚠️ At risk of missing target";
+  const riskColor = risk === "LIKELY_MISS" ? "#DC2626" : "#D97706";
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Early warning: "${milestoneTitle}" — ${riskLabel}`,
+    html: `
+      <p style="font-weight:bold;color:${riskColor}">${riskLabel}</p>
+      <p>A pulse check on the following milestone suggests it may not be on track:</p>
+      <table style="border-collapse:collapse;width:100%;max-width:560px">
+        <tr><td style="padding:6px 0;color:#666;font-size:13px">Milestone</td><td style="padding:6px 0;font-weight:bold">${esc(milestoneTitle)}</td></tr>
+        <tr><td style="padding:6px 0;color:#666;font-size:13px">Period</td><td style="padding:6px 0">${esc(period)}</td></tr>
+        <tr><td style="padding:6px 0;color:#666;font-size:13px">Risk Level</td><td style="padding:6px 0;font-weight:bold;color:${riskColor}">${riskLabel}</td></tr>
+      </table>
+      <p style="background:#fff7ed;padding:12px;border-left:3px solid ${riskColor};font-style:italic">${esc(aiAssessment)}</p>
+      <p style="font-size:13px;color:#666">This is an early warning based on a lightweight data check — not an official attestation run. No blockchain record has been created.</p>
+      <p><a href="${enterpriseLink(contractId)}">Review and take action →</a></p>
     `,
   });
 }
