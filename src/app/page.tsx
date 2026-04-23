@@ -1282,6 +1282,7 @@ export default function LandingPage() {
         className="px-6 border-t"
         style={{ borderColor: "rgba(196,112,75,0.12)", position: "relative", zIndex: 1 }}
       >
+        {/* Row 1 — branding + main nav */}
         <div className="max-w-6xl mx-auto flex items-center justify-between py-6 text-sm" style={{ color: "#A89B8C" }}>
           {/* Left — logo */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1315,18 +1316,26 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Right — copyright + nav */}
-          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            <span style={{ fontSize: 11, color: "#3D342C" }}>© 2026 Cascrow</span>
-            <div className="flex gap-6">
-              <Link href="/login"        className="transition-colors hover:text-[#EDE6DD]">Sign in</Link>
-              <Link href="/register"     className="transition-colors hover:text-[#EDE6DD]">Register</Link>
-              <Link href="/stats"        className="transition-colors hover:text-[#EDE6DD]">Stats</Link>
-              <Link href="/terms"         className="transition-colors hover:text-[#EDE6DD]">Terms of Use</Link>
-              <Link href="/datenschutz"  className="transition-colors hover:text-[#EDE6DD]">Privacy Policy</Link>
-              <Link href="/risiken"      className="transition-colors hover:text-[#EDE6DD]">Risk Disclosure</Link>
-              <Link href="/widerruf"     className="transition-colors hover:text-[#EDE6DD]">Withdrawal</Link>
-            </div>
+          {/* Right — main nav */}
+          <div className="flex gap-6">
+            <Link href="/login"    className="transition-colors hover:text-[#EDE6DD]">Sign in</Link>
+            <Link href="/register" className="transition-colors hover:text-[#EDE6DD]">Register</Link>
+            <Link href="/stats"    className="transition-colors hover:text-[#EDE6DD]">Stats</Link>
+          </div>
+        </div>
+
+        {/* Row 2 — legal bar */}
+        <div
+          className="max-w-6xl mx-auto flex items-center justify-between pb-5"
+          style={{ borderTop: "1px solid rgba(196,112,75,0.06)", paddingTop: 14, fontSize: 11, color: "#3D342C" }}
+        >
+          <span>© 2026 Cascrow</span>
+          <div className="flex gap-5">
+            <Link href="/terms"       className="transition-colors hover:text-[#A89B8C]">Terms</Link>
+            <Link href="/datenschutz" className="transition-colors hover:text-[#A89B8C]">Privacy</Link>
+            <Link href="/risiken"     className="transition-colors hover:text-[#A89B8C]">Risk Disclosure</Link>
+            <Link href="/widerruf"    className="transition-colors hover:text-[#A89B8C]">Withdrawal</Link>
+            <Link href="/avv"         className="transition-colors hover:text-[#A89B8C]">DPA</Link>
           </div>
         </div>
       </footer>
