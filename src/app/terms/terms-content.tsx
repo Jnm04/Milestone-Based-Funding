@@ -413,8 +413,12 @@ export function TermsContent() {
         <Section title={de ? "15. Widerrufsrecht (Verbraucher)" : "15. Right of Withdrawal (Consumers)"}>
           <p>
             {de
-              ? "Wenn du als Verbraucher (§ 13 BGB) einen Nutzungsvertrag mit Cascrow abschließt, steht dir grundsätzlich ein gesetzliches Widerrufsrecht von 14 Tagen zu."
-              : "If you enter into a user agreement with Cascrow as a consumer (§ 13 BGB), you generally have a statutory right of withdrawal of 14 days."}
+              ? "Wenn du als Verbraucher (§ 13 BGB) einen Nutzungsvertrag mit Cascrow abschließt, steht dir grundsätzlich ein gesetzliches Widerrufsrecht von 14 Tagen zu. Die vollständige Widerrufsbelehrung sowie das Muster-Widerrufsformular findest du unter "
+              : "If you enter into a user agreement with Cascrow as a consumer (§ 13 BGB), you generally have a statutory right of withdrawal of 14 days. The full withdrawal notice and model withdrawal form are available at "}
+            <Link href="/widerruf" style={{ color: "#C4704B" }}>
+              {de ? "cascrow.com/widerruf" : "cascrow.com/widerruf"}
+            </Link>
+            {"."}
           </p>
           <p className="mt-3">
             {de

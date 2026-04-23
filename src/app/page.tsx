@@ -1324,6 +1324,8 @@ export default function LandingPage() {
               <Link href="/stats"        className="transition-colors hover:text-[#EDE6DD]">Stats</Link>
               <Link href="/terms"         className="transition-colors hover:text-[#EDE6DD]">Terms of Use</Link>
               <Link href="/datenschutz"  className="transition-colors hover:text-[#EDE6DD]">Privacy Policy</Link>
+              <Link href="/risiken"      className="transition-colors hover:text-[#EDE6DD]">Risk Disclosure</Link>
+              <Link href="/widerruf"     className="transition-colors hover:text-[#EDE6DD]">Withdrawal</Link>
             </div>
           </div>
         </div>

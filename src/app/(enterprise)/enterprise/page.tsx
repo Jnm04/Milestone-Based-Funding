@@ -463,8 +463,14 @@ export default function EnterprisePage() {
             <Link href="/terms" style={{ fontSize: "0.875rem", color: "var(--ent-muted)" }} className="hover:opacity-80 transition-opacity">
               Terms
             </Link>
+            <Link href="/avv" style={{ fontSize: "0.875rem", color: "var(--ent-muted)" }} className="hover:opacity-80 transition-opacity">
+              DPA / AVV
+            </Link>
             <Link href="/datenschutz" style={{ fontSize: "0.875rem", color: "var(--ent-muted)" }} className="hover:opacity-80 transition-opacity">
               Privacy
+            </Link>
+            <Link href="/risiken" style={{ fontSize: "0.875rem", color: "var(--ent-muted)" }} className="hover:opacity-80 transition-opacity">
+              Risk Disclosure
             </Link>
             <Link href="/" style={{ fontSize: "0.875rem", color: "var(--ent-muted)" }} className="hover:opacity-80 transition-opacity">
               cascrow.com
