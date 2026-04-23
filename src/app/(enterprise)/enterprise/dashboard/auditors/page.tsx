@@ -3,13 +3,15 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { AuditorShare } from "./auditor-share";
+import { getEnterpriseContext } from "@/lib/enterprise-context";
 
 export default async function AuditorsPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect("/login");
+  const { effectiveUserId } = await getEnterpriseContext(session.user.id);
 
   const goalSets = await prisma.contract.findMany({
-    where: { investorId: session.user.id, mode: "ATTESTATION" },
+    where: { investorId: effectiveUserId, mode: "ATTESTATION" },
     select: { id: true, milestone: true, createdAt: true, milestones: { select: { status: true } } },
     orderBy: { createdAt: "desc" },
   });

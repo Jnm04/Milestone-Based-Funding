@@ -126,10 +126,35 @@ export default function SettingsPage() {
 
   return (
     <div style={{ padding: "32px 36px", maxWidth: 680 }}>
-      <div style={{ marginBottom: 32 }}>
-        <h1 style={{ margin: "0 0 4px", fontSize: 24, fontWeight: 700, color: "var(--ent-text)", letterSpacing: "-0.02em" }}>
+      <div style={{ marginBottom: 28 }}>
+        <h1 style={{ margin: "0 0 20px", fontSize: 24, fontWeight: 700, color: "var(--ent-text)", letterSpacing: "-0.02em" }}>
           Settings
         </h1>
+        {/* Settings sub-navigation */}
+        <div style={{ display: "flex", gap: 4, borderBottom: "1px solid var(--ent-border)", marginBottom: 28 }}>
+          {[
+            { href: "/enterprise/dashboard/settings", label: "Profile" },
+            { href: "/enterprise/dashboard/settings/team", label: "Team Members" },
+            { href: "/enterprise/dashboard/settings/api-keys", label: "API Keys" },
+            { href: "/enterprise/dashboard/settings/webhooks", label: "Webhooks" },
+          ].map((tab) => (
+            <a
+              key={tab.href}
+              href={tab.href}
+              style={{
+                padding: "8px 14px",
+                fontSize: 13.5,
+                fontWeight: tab.href === "/enterprise/dashboard/settings" ? 600 : 500,
+                color: tab.href === "/enterprise/dashboard/settings" ? "var(--ent-accent)" : "var(--ent-muted)",
+                borderBottom: tab.href === "/enterprise/dashboard/settings" ? "2px solid var(--ent-accent)" : "2px solid transparent",
+                textDecoration: "none",
+                marginBottom: -1,
+              }}
+            >
+              {tab.label}
+            </a>
+          ))}
+        </div>
         <p style={{ margin: 0, fontSize: 14, color: "var(--ent-muted)" }}>
           {profile?.email}
         </p>

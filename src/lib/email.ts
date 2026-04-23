@@ -947,3 +947,39 @@ export async function sendAttestationDeadlineReminderEmail({
     `,
   });
 }
+
+// ── Team Invite Email ─────────────────────────────────────────────────────────
+
+export async function sendTeamInviteEmail({
+  to,
+  inviterName,
+  companyName,
+  role,
+  inviteToken,
+}: {
+  to: string;
+  inviterName: string;
+  companyName: string;
+  role: string;
+  inviteToken: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  const acceptUrl = `${BASE_URL}/api/enterprise/team/accept?token=${inviteToken}`;
+  const roleLabel = role === "EDITOR" ? "Editor" : "Viewer";
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `${esc(inviterName)} invited you to ${esc(companyName)}'s cascrow workspace`,
+    html: `
+      <p>Hi,</p>
+      <p><strong>${esc(inviterName)}</strong> has invited you to join <strong>${esc(companyName)}'s</strong> cascrow enterprise workspace as a <strong>${roleLabel}</strong>.</p>
+      <p>cascrow is an AI-powered attestation platform for KPI reporting and ESG compliance.</p>
+      <p style="margin:24px 0">
+        <a href="${acceptUrl}" style="background:#2563EB;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;font-weight:600">Accept Invitation →</a>
+      </p>
+      <p style="font-size:12px;color:#999">This invitation expires in 7 days. If you don't have a cascrow account yet, you'll be asked to register first.</p>
+      <p style="font-size:12px;color:#999">If you did not expect this invitation, you can safely ignore this email.</p>
+    `,
+  });
+}

@@ -3,14 +3,16 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { getEnterpriseContext } from "@/lib/enterprise-context";
 
 export default async function CertificatesPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect("/login");
+  const { effectiveUserId } = await getEnterpriseContext(session.user.id);
 
   const milestones = await prisma.milestone.findMany({
     where: {
-      contract: { investorId: session.user.id, mode: "ATTESTATION" },
+      contract: { investorId: effectiveUserId, mode: "ATTESTATION" },
       attestationEntries: { some: { aiVerdict: "YES" } },
     },
     include: {

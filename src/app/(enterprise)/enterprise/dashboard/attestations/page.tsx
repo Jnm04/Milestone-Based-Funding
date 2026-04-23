@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import { getEnterpriseContext } from "@/lib/enterprise-context";
 import Link from "next/link";
 
 function getGoalSetStatus(milestones: { status: string }[]): { label: string; color: string; bg: string } {
@@ -18,9 +19,10 @@ function getGoalSetStatus(milestones: { status: string }[]): { label: string; co
 export default async function AttestationsPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect("/login");
+  const { effectiveUserId } = await getEnterpriseContext(session.user.id);
 
   const goalSets = await prisma.contract.findMany({
-    where: { investorId: session.user.id, mode: "ATTESTATION" },
+    where: { investorId: effectiveUserId, mode: "ATTESTATION" },
     include: { milestones: { orderBy: { order: "asc" } } },
     orderBy: { createdAt: "desc" },
   });

@@ -160,12 +160,14 @@ export function EnterpriseSidebar({ user }: Props) {
             </div>
           </div>
         </div>
-        <Link
-          href="/login"
-          style={{ display: "block", marginTop: 12, fontSize: 12, color: "var(--ent-muted)", textDecoration: "none" }}
-        >
-          Sign out
-        </Link>
+        <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+          <Link href="/security" style={{ fontSize: 12, color: "var(--ent-muted)", textDecoration: "none" }}>
+            Security
+          </Link>
+          <Link href="/login" style={{ fontSize: 12, color: "var(--ent-muted)", textDecoration: "none" }}>
+            Sign out
+          </Link>
+        </div>
       </div>
     </aside>
   );

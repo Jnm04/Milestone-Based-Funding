@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { getEnterpriseContext } from "@/lib/enterprise-context";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   VERIFIED:        { label: "Verified",        color: "#059669", bg: "#ECFDF5" },
@@ -16,7 +17,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 
 export default async function EnterpriseDashboardPage() {
   const session = await getServerSession(authOptions);
-  const userId = session!.user.id;
+  const { effectiveUserId: userId } = await getEnterpriseContext(session!.user.id);
 
   // Load all contracts + their milestones for this user
   const contracts = await prisma.contract.findMany({

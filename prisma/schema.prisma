@@ -63,6 +63,13 @@ model User {
   // Outbound webhooks
   webhookEndpoints WebhookEndpoint[]
 
+  // API keys for programmatic access
+  apiKeys          ApiKey[]
+
+  // Organization / team members
+  ownedOrgMembers  OrgMember[] @relation("OrgOwner")
+  orgMemberships   OrgMember[] @relation("OrgMember")
+
   // Feature Y: Stakeholder Transparency Report — cached per quarter
   lastTransparencyReportUrl    String?
   lastTransparencyReportPeriod String?   // e.g. "Q1-2026"
@@ -645,6 +652,51 @@ model MaterialityAssessment {
 
   @@index([userId])
   @@index([contractId])
+}
+
+// ── API Keys ──────────────────────────────────────────────────────────────────
+
+/// API key for programmatic access to the enterprise API.
+/// The full key is shown once at creation and never stored — only its SHA-256 hash is kept.
+model ApiKey {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  /// SHA-256(fullKey) — used to authenticate incoming requests
+  keyHash     String    @unique
+  /// First 8 chars of the key — shown in UI as identifier, never the full key
+  keyPrefix   String
+  lastUsedAt  DateTime?
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([keyHash])
+}
+
+// ── Organization / Team Members ───────────────────────────────────────────────
+
+/// A colleague invited to view an enterprise account's attestation data.
+/// ownerId = the enterprise account; memberId = the invited colleague (set after acceptance).
+model OrgMember {
+  id           String    @id @default(cuid())
+  ownerId      String
+  owner        User      @relation("OrgOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  email        String
+  name         String?
+  /// "VIEWER" | "EDITOR"
+  role         String    @default("VIEWER")
+  inviteToken  String?   @unique
+  inviteExpiry DateTime?
+  memberId     String?
+  member       User?     @relation("OrgMember", fields: [memberId], references: [id], onDelete: SetNull)
+  acceptedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@unique([ownerId, email])
+  @@index([ownerId])
+  @@index([memberId])
 }
 
 // ── Phase 3: Feature XI — Multi-Party Consensus Attestation ──────────────────
