@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import crypto from "crypto";
 import { sendConsensusVoteInviteEmail } from "@/lib/email";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({
   enabled:   z.boolean(),
@@ -22,6 +23,10 @@ export async function POST(
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  if (!(await checkRateLimit(`consensus-configure:${session.user.id}`, 10, 3600))) {
+    return NextResponse.json({ error: "Rate limit exceeded — 10/hour" }, { status: 429 });
+  }
 
   const { id: contractId, milestoneId } = await params;
 

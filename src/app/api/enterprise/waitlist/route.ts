@@ -38,18 +38,19 @@ export async function POST(req: NextRequest) {
       COMPLIANCE: "Group-wide Compliance Tracking",
       OTHER: "Other",
     };
+    const h = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     await resend.emails.send({
       from: process.env.EMAIL_FROM ?? "cascrow <noreply@cascrow.com>",
       to: "enterprise@cascrow.com",
-      subject: `Enterprise access request — ${company}`,
+      subject: `Enterprise access request — ${h(company)}`,
       html: `
         <p><strong>New enterprise access request</strong></p>
         <table style="border-collapse:collapse;font-family:sans-serif;font-size:14px">
-          <tr><td style="padding:4px 12px 4px 0;color:#64748b">Name</td><td>${name}</td></tr>
-          <tr><td style="padding:4px 12px 4px 0;color:#64748b">Email</td><td><a href="mailto:${email}">${email}</a></td></tr>
-          <tr><td style="padding:4px 12px 4px 0;color:#64748b">Company</td><td>${company}</td></tr>
+          <tr><td style="padding:4px 12px 4px 0;color:#64748b">Name</td><td>${h(name)}</td></tr>
+          <tr><td style="padding:4px 12px 4px 0;color:#64748b">Email</td><td><a href="mailto:${h(email)}">${h(email)}</a></td></tr>
+          <tr><td style="padding:4px 12px 4px 0;color:#64748b">Company</td><td>${h(company)}</td></tr>
           <tr><td style="padding:4px 12px 4px 0;color:#64748b">Use case</td><td>${useCaseLabel[useCase]}</td></tr>
-          ${message ? `<tr><td style="padding:4px 12px 4px 0;color:#64748b;vertical-align:top">Message</td><td>${message}</td></tr>` : ""}
+          ${message ? `<tr><td style="padding:4px 12px 4px 0;color:#64748b;vertical-align:top">Message</td><td>${h(message)}</td></tr>` : ""}
         </table>
       `,
     }).catch(() => {});
