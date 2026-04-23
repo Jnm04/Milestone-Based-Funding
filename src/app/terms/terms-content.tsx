@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { SiteFooter } from "@/components/site-footer";
 
 type Lang = "de" | "en";
 
@@ -10,6 +11,7 @@ export function TermsContent() {
   const de = lang === "de";
 
   return (
+    <>
     <main
       className="min-h-screen px-4 py-16"
       style={{ background: "#171311", color: "#EDE6DD" }}
@@ -474,6 +476,8 @@ export function TermsContent() {
         </div>
       </div>
     </main>
+    <SiteFooter />
+    </>
   );
 }
 
