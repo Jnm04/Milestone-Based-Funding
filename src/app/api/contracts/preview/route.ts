@@ -15,9 +15,16 @@ export async function GET(request: NextRequest) {
 
   const contract = await prisma.contract.findUnique({
     where: { inviteLink: invite },
-    include: {
-      investor: true,
-      milestones: { orderBy: { order: "asc" } },
+    select: {
+      id: true,
+      milestone: true,
+      amountUSD: true,
+      status: true,
+      cancelAfter: true,
+      milestones: {
+        orderBy: { order: "asc" },
+        select: { id: true, title: true, amountUSD: true, cancelAfter: true, order: true },
+      },
     },
   });
 
@@ -25,19 +32,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Contract not found" }, { status: 404 });
   }
 
-  // Mask wallet: show only first 6 and last 4 chars to prevent chain analysis
-  const wallet = contract.investor.walletAddress ?? "";
-  const maskedWallet = wallet.length > 10
-    ? `${wallet.slice(0, 6)}...${wallet.slice(-4)}`
-    : "****";
-
   return NextResponse.json({
     id: contract.id,
     milestone: contract.milestone,
     amountUSD: contract.amountUSD.toString(),
     status: contract.status,
     cancelAfter: contract.cancelAfter,
-    investorWallet: maskedWallet,
     milestones: contract.milestones.map((m) => ({
       id: m.id,
       title: m.title,

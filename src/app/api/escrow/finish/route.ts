@@ -46,10 +46,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Contract not found" }, { status: 404 });
     }
 
-    const isParty =
-      contract.investorId === session.user.id ||
-      contract.startupId === session.user.id;
-    if (!isParty) {
+    if (contract.investorId !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

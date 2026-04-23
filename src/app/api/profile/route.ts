@@ -17,7 +17,7 @@ export async function GET() {
       createdAt: true,
       notifyProofSubmitted: true, notifyPendingReview: true, notifyMilestoneCompleted: true,
       notifyFunded: true, notifyVerified: true, notifyRejected: true,
-      kycTier: true, sanctionsStatus: true, sanctionsCheckedAt: true,
+      kycTier: true,
       dateOfBirth: true,
     },
   });
