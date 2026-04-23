@@ -23,6 +23,10 @@
     {
       "path": "/api/cron/pulse-checks",
       "schedule": "0 7 * * 1"
+    },
+    {
+      "path": "/api/cron/consensus-timeout",
+      "schedule": "0 8 * * *"
     }
   ],
   "functions": {
@@ -55,6 +59,15 @@
     },
     "src/app/api/reports/board-pack/route.ts": {
       "maxDuration": 60
+    },
+    "src/app/api/reports/xbrl/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/attestation/materiality/[id]/generate/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/cron/consensus-timeout/route.ts": {
+      "maxDuration": 30
     }
   },
   "headers": [

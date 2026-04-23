@@ -9,6 +9,11 @@ import { fetchUrl } from "./fetchers/url-scrape";
 import { fetchRestApi } from "./fetchers/rest-api";
 import { generateAttestationCert } from "./cert.service";
 import { sendAttestationResultEmail } from "@/lib/email";
+import { buildEvidenceChain } from "@/lib/evidence-chain";
+import { fetchFromConnector } from "./connectors";
+import { checkConsensusThreshold } from "@/lib/consensus";
+
+const SYSTEM_PROMPT_VERSION = "v1";
 
 const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
 
@@ -96,6 +101,16 @@ export async function runAttestation(
   } else if (sourceType === "MANUAL_REVIEW") {
     // MANUAL_REVIEW verdict is set externally — this path shouldn't be called by the runner
     throw new Error("MANUAL_REVIEW sources are not processed by the automated runner");
+  } else if (sourceType === "ENTERPRISE_CONNECTOR") {
+    if (!milestone.dataSourceConfig) throw new Error("dataSourceConfig not set for ENTERPRISE_CONNECTOR");
+    const config = milestone.dataSourceConfig as Record<string, unknown>;
+    if (milestone.dataSourceApiKeyEnc) {
+      const decrypted = JSON.parse(decryptApiKey(milestone.dataSourceApiKeyEnc)) as Record<string, string>;
+      if (decrypted.clientSecret) config.clientSecret = decrypted.clientSecret;
+      if (decrypted.password) config.password = decrypted.password;
+    }
+    const result = await fetchFromConnector(config as unknown as Parameters<typeof fetchFromConnector>[0]);
+    rawContent = result.content;
   } else {
     throw new Error(`Unknown dataSourceType: ${sourceType}`);
   }
@@ -159,6 +174,7 @@ Does the evidence show this milestone is met?`;
   let verdict: "YES" | "NO" | "INCONCLUSIVE" = "INCONCLUSIVE";
   let reasoning = "AI evaluation failed — verdict set to INCONCLUSIVE.";
   let regulatoryMapping: unknown[] = [];
+  let rawAiResponseText = "{}";
 
   try {
     const response = await anthropic.messages.create({
@@ -168,7 +184,8 @@ Does the evidence show this milestone is met?`;
       messages: [{ role: "user", content: userPrompt }],
     });
 
-    const rawText = response.content[0]?.type === "text" ? response.content[0].text.trim() : "{}";
+    rawAiResponseText = response.content[0]?.type === "text" ? response.content[0].text.trim() : "{}";
+    const rawText = rawAiResponseText;
     const parsed = JSON.parse(rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim()) as {
       verdict?: string;
       reasoning?: string;
@@ -206,6 +223,16 @@ Does the evidence show this milestone is met?`;
     metadata: { period, verdict, fetchedHash, sourceType },
   });
 
+  // ── 5b. Build cryptographic evidence chain ────────────────────────────────
+  const evidenceChain = buildEvidenceChain(
+    rawContent,
+    systemPrompt,
+    userPrompt,
+    rawAiResponseText,
+    xrplTxHash,
+    SYSTEM_PROMPT_VERSION
+  );
+
   // ── 6. Generate certificate ───────────────────────────────────────────────
   let certUrl: string | null = null;
   try {
@@ -242,6 +269,7 @@ Does the evidence show this milestone is met?`;
       regulatoryMapping: regulatoryMapping.length > 0
         ? (JSON.parse(JSON.stringify(regulatoryMapping)) as Prisma.InputJsonValue)
         : undefined,
+      evidenceChain: evidenceChain as unknown as Prisma.InputJsonValue,
     },
   });
 
@@ -273,6 +301,30 @@ Does the evidence show this milestone is met?`;
       xrplTxHash,
       contractId: milestone.contractId,
     }).catch((err) => console.warn("[attestation] auditor email failed:", err));
+  }
+
+  // ── 10. Consensus: record AI_PLATFORM vote ────────────────────────────────
+  if (milestone.consensusEnabled) {
+    const aiToken = `ai-${milestoneId}-${period}`;
+    await prisma.consensusVote.upsert({
+      where: { token: aiToken },
+      create: {
+        milestoneId,
+        partyEmail: "ai@cascrow.com",
+        partyRole: "AI_PLATFORM",
+        vote: verdict,
+        reasoning,
+        xrplTxHash,
+        entryId: entry.id,
+        token: aiToken,
+        tokenUsed: true,
+        tokenExpiry: new Date(0),
+      },
+      update: { vote: verdict, reasoning, xrplTxHash, entryId: entry.id, tokenUsed: true },
+    });
+    await checkConsensusThreshold(milestoneId).catch((err) =>
+      console.warn("[attestation] consensus threshold check failed:", err)
+    );
   }
 
   return { entryId: entry.id, verdict, reasoning, fetchedHash, xrplTxHash, certUrl };

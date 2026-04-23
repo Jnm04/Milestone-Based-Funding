@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Image from "next/image";
+import { EvidenceChainSection } from "./evidence-chain-section";
 
 const IS_TESTNET = process.env.XRPL_NETWORK === "testnet";
 const XRPL_EXPLORER = IS_TESTNET ? "https://testnet.xrpscan.com" : "https://xrpscan.com";
@@ -33,6 +34,7 @@ export default async function AttestationCertPage({
       },
     },
   });
+  type EvidenceChainJson = { step0: string; step1: string; step2: string; step3: string; promptHash: string; systemPromptVersion: string; chainRoot: string } | null;
 
   if (!entry) notFound();
 
@@ -172,6 +174,19 @@ export default async function AttestationCertPage({
               />
             </div>
           )}
+
+          {/* Evidence Chain (Feature IX) */}
+          {entry.evidenceChain && (
+            <div className="mt-6 pt-6 border-t border-[#C4704B]/20">
+              <EvidenceChainSection
+                entryId={entry.id}
+                chain={entry.evidenceChain as EvidenceChainJson}
+                xrplTxHash={entry.xrplTxHash}
+                fetchedAt={entry.fetchedAt.toISOString()}
+              />
+            </div>
+          )}
+
         </div>
 
         {/* Footer */}

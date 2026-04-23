@@ -16,10 +16,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isValidCronSecret } from "@/lib/cron-auth";
-import { sendEarlyWarningEmail } from "@/lib/email";
+import { sendEarlyWarningEmail, sendPredictiveMissEmail } from "@/lib/email";
 import { fetchUrl } from "@/services/attestation/fetchers/url-scrape";
 import { fetchRestApi } from "@/services/attestation/fetchers/rest-api";
 import { decryptApiKey } from "@/lib/encrypt";
+import { computePrediction } from "@/services/attestation/predictor.service";
 import Anthropic from "@anthropic-ai/sdk";
 
 const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
@@ -129,7 +130,8 @@ export async function GET(request: NextRequest) {
       const period = currentPeriod(milestone.scheduleType ?? "MONTHLY");
 
       const sysPrompt = `You are a KPI trend analyst for cascrow. Given current data from a pre-committed source, assess whether a milestone is on track.
-Respond ONLY with valid JSON: {"risk": "ON_TRACK"|"AT_RISK"|"LIKELY_MISS", "assessment": "1-2 sentence explanation of current trend"}`;
+Respond ONLY with valid JSON:
+{"risk":"ON_TRACK"|"AT_RISK"|"LIKELY_MISS","assessment":"1-2 sentence explanation","extractedValue":"current metric value e.g. €4.2M","targetValue":"what the milestone requires e.g. €5M","confidence":0.85}`;
 
       const userMsg = `Milestone: ${milestone.title}
 ${milestone.description ? `Goal: ${milestone.description}` : ""}
@@ -153,13 +155,18 @@ Is this milestone on track to be met by the deadline?`;
       const rawText = aiResp.content[0]?.type === "text" ? aiResp.content[0].text.trim() : "{}";
       const parsed = JSON.parse(
         rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim()
-      ) as { risk?: string; assessment?: string };
+      ) as { risk?: string; assessment?: string; extractedValue?: string; targetValue?: string; confidence?: number };
 
       const risk = (["ON_TRACK", "AT_RISK", "LIKELY_MISS"].includes(parsed.risk ?? "")
         ? parsed.risk
         : "AT_RISK") as "ON_TRACK" | "AT_RISK" | "LIKELY_MISS";
 
       const assessment = parsed.assessment ?? "Trend data could not be assessed.";
+      const extractedValue = parsed.extractedValue ?? null;
+      const targetValue = parsed.targetValue ?? null;
+      const aiConfidence = typeof parsed.confidence === "number"
+        ? Math.max(0, Math.min(1, parsed.confidence))
+        : 0.5;
 
       void prisma.apiUsage.create({
         data: {
@@ -172,7 +179,19 @@ Is this milestone on track to be met by the deadline?`;
         },
       }).catch(() => {});
 
+      // Save snapshot for predictive analysis (Feature VI)
+      await prisma.pulseCheckSnapshot.create({
+        data: {
+          milestoneId: milestone.id,
+          risk,
+          rawValue: extractedValue,
+          targetValue,
+          confidence: aiConfidence,
+        },
+      });
+
       // Update pulse check fields
+      const prevRisk = milestone.lastPulseCheckRisk;
       await prisma.milestone.update({
         where: { id: milestone.id },
         data: {
@@ -181,7 +200,10 @@ Is this milestone on track to be met by the deadline?`;
         },
       });
 
-      // Send early warning email only when at risk
+      // Run prediction after snapshot (Feature VI)
+      const prediction = await computePrediction(milestone.id).catch(() => null);
+
+      // Send early warning email when at risk
       if (risk !== "ON_TRACK") {
         const ownerEmail = milestone.contract.investor.email;
         if (ownerEmail) {
@@ -193,6 +215,27 @@ Is this milestone on track to be met by the deadline?`;
             aiAssessment: assessment,
             period,
           }).catch((err) => console.warn("[pulse-checks] email failed:", err));
+        }
+      }
+
+      // Send predictive miss email if prediction flipped to NO/INCONCLUSIVE (Feature VI)
+      if (
+        prediction &&
+        (prediction.predictedOutcome === "NO" || prediction.predictedOutcome === "INCONCLUSIVE") &&
+        prevRisk === "ON_TRACK"
+      ) {
+        const ownerEmail = milestone.contract.investor.email;
+        if (ownerEmail) {
+          await sendPredictiveMissEmail({
+            to: ownerEmail,
+            milestoneTitle: milestone.title,
+            contractId: milestone.contract.id,
+            predictedOutcome: prediction.predictedOutcome,
+            confidence: prediction.confidence,
+            weeksToDeadline: prediction.weeksToDeadline,
+            lastRawValue: prediction.lastRawValue,
+            targetValue,
+          }).catch((err) => console.warn("[pulse-checks] predictive miss email failed:", err));
         }
       }
 

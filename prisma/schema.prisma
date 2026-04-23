@@ -66,6 +66,9 @@ model User {
   // Feature Y: Stakeholder Transparency Report — cached per quarter
   lastTransparencyReportUrl    String?
   lastTransparencyReportPeriod String?   // e.g. "Q1-2026"
+
+  // Phase 3 — Feature VII: Double Materiality Wizard
+  materialityAssessments MaterialityAssessment[]
 }
 
 enum Role {
@@ -268,7 +271,28 @@ model Milestone {
   /// "MANUFACTURING" | "TECH" | "FINANCE" | "ENERGY" | "HEALTHCARE" | "RETAIL" | "OTHER"
   benchmarkSector         String?
 
+  // Phase 3 — Feature VI: Predictive Miss Detection
+  /// "YES" | "NO" | "INCONCLUSIVE" — current AI prediction based on pulse-check trend
+  predictedOutcome        String?
+  /// 0.0–1.0 confidence from linear regression R² × avg snapshot confidence
+  predictedConfidence     Float?
+  predictedUpdatedAt      DateTime?
+
+  // Phase 3 — Feature X: Enterprise System Connectors
+  /// "SAP" | "WORKDAY" | "SALESFORCE" | "NETSUITE" — set when dataSourceType=ENTERPRISE_CONNECTOR
+  dataSourceConnector     String?
+
+  // Phase 3 — Feature XI: Multi-Party Consensus
+  consensusEnabled        Boolean   @default(false)
+  /// M — minimum YES votes required (AI + humans combined)
+  consensusThreshold      Int?
+  /// "AWAITING_VOTES" | "REACHED" | "FAILED" | "TIMED_OUT"
+  consensusStatus         String?
+  consensusDeadline       DateTime?
+
   attestationEntries AttestationEntry[]
+  pulseSnapshots     PulseCheckSnapshot[]
+  consensusVotes     ConsensusVote[]
 
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
@@ -299,6 +323,9 @@ model AttestationEntry {
   auditorEmail  String?
   /// Feature I: AI-generated regulatory mapping [{framework, article, clause, confidence}]
   regulatoryMapping Json?
+  /// Phase 3 — Feature IX: Cryptographic Evidence Chain
+  /// {step0, step1, step2, step3, promptHash, systemPromptVersion, chainRoot}
+  evidenceChain Json?
   createdAt     DateTime  @default(now())
 
   @@index([milestoneId])
@@ -570,4 +597,79 @@ model SanctionsCache {
   publishedAt String?
   updatedAt   DateTime @updatedAt
   createdAt   DateTime @default(now())
+}
+
+// ── Phase 3: Feature VI — Predictive Miss Detection ───────────────────────────
+
+/// Stores every pulse-check snapshot for trend analysis.
+/// Used by predictor.service.ts to compute regression-based predictions.
+model PulseCheckSnapshot {
+  id          String   @id @default(cuid())
+  milestoneId String
+  milestone   Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  capturedAt  DateTime  @default(now())
+  /// "ON_TRACK" | "AT_RISK" | "LIKELY_MISS"
+  risk        String
+  /// Extracted metric value as a string, e.g. "€4.2M"
+  rawValue    String?
+  /// Target value at time of check, e.g. "€5M"
+  targetValue String?
+  /// AI confidence in the extracted value (0.0–1.0)
+  confidence  Float
+
+  @@index([milestoneId, capturedAt])
+}
+
+// ── Phase 3: Feature VII — Double Materiality Wizard ─────────────────────────
+
+/// CSRD double-materiality assessment for a company.
+/// Created by the wizard flow at /enterprise/materiality/[id].
+model MaterialityAssessment {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Optional link to an existing attestation contract
+  contractId String?
+  /// "MANUFACTURING" | "TECH" | "FINANCE" | "ENERGY" | "HEALTHCARE" | "RETAIL" | "OTHER"
+  sector     String
+  /// Wizard Q&A: [{question, answer}]
+  answers    Json     @default("[]")
+  /// Materiality matrix: [{topic, financialScore, impactScore, material, esrsArticles, griStandards, rationale}]
+  matrix     Json?
+  /// AI-generated 2-paragraph executive summary
+  summary    String?  @db.Text
+  /// "IN_PROGRESS" | "COMPLETE"
+  status     String   @default("IN_PROGRESS")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+  @@index([contractId])
+}
+
+// ── Phase 3: Feature XI — Multi-Party Consensus Attestation ──────────────────
+
+/// Individual vote cast by a party (AI or human) in a consensus attestation.
+model ConsensusVote {
+  id          String   @id @default(cuid())
+  milestoneId String
+  milestone   Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  partyEmail  String
+  /// "AI_PLATFORM" | "AUDITOR" | "REGULATOR" | "INVESTOR" | "COMMITTEE"
+  partyRole   String
+  /// "YES" | "NO" | "ABSTAIN" — null while pending
+  vote        String?
+  reasoning   String?  @db.Text
+  votedAt     DateTime?
+  /// XRPL tx hash — each vote is anchored on-chain
+  xrplTxHash  String?
+  /// For AI_PLATFORM votes: linked AttestationEntry id
+  entryId     String?
+  /// One-time token sent via email to human voters
+  token       String   @unique
+  tokenUsed   Boolean  @default(false)
+  tokenExpiry DateTime
+
+  @@index([milestoneId])
+  @@index([token])
 }

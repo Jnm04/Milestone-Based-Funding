@@ -790,3 +790,120 @@ export async function sendEarlyWarningEmail({
     `,
   });
 }
+
+// ── Phase 3 — Feature VI: Predictive Miss ─────────────────────────────────────
+
+export async function sendPredictiveMissEmail({
+  to,
+  milestoneTitle,
+  contractId,
+  predictedOutcome,
+  confidence,
+  weeksToDeadline,
+  lastRawValue,
+  targetValue,
+}: {
+  to: string;
+  milestoneTitle: string;
+  contractId: string;
+  predictedOutcome: "NO" | "INCONCLUSIVE";
+  confidence: number;
+  weeksToDeadline: number;
+  lastRawValue: string | null;
+  targetValue: string | null;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const color = predictedOutcome === "NO" ? "#ef4444" : "#f59e0b";
+  const label = predictedOutcome === "NO" ? "Trending to MISS" : "Trending INCONCLUSIVE";
+  const pct = Math.round(confidence * 100);
+  const weeks = Math.round(weeksToDeadline * 10) / 10;
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `⚠ Predictive Warning: "${milestoneTitle}" is trending to miss`,
+    html: `
+      <p style="font-weight:bold;color:${color}">Predictive Warning — ${label}</p>
+      <p>Based on pulse-check trend data, cascrow predicts this milestone is unlikely to be met on time.</p>
+      <table style="border-collapse:collapse;width:100%;max-width:560px">
+        <tr><td style="padding:6px 0;color:#666;font-size:13px">Milestone</td><td style="padding:6px 0;font-weight:bold">${esc(milestoneTitle)}</td></tr>
+        <tr><td style="padding:6px 0;color:#666;font-size:13px">Predicted Outcome</td><td style="padding:6px 0;font-weight:bold;color:${color}">${label} (${pct}% confidence)</td></tr>
+        <tr><td style="padding:6px 0;color:#666;font-size:13px">Time Remaining</td><td style="padding:6px 0">~${weeks} weeks</td></tr>
+        ${lastRawValue ? `<tr><td style="padding:6px 0;color:#666;font-size:13px">Last Measured Value</td><td style="padding:6px 0">${esc(lastRawValue)}</td></tr>` : ""}
+        ${targetValue ? `<tr><td style="padding:6px 0;color:#666;font-size:13px">Target</td><td style="padding:6px 0">${esc(targetValue)}</td></tr>` : ""}
+      </table>
+      <p style="font-size:13px;color:#666">No blockchain record has been written — this is a private early-warning signal. You have time to course-correct before the official verification date.</p>
+      <p><a href="${enterpriseLink(contractId)}">Review milestone →</a></p>
+    `,
+  });
+}
+
+// ── Phase 3 — Feature XI: Multi-Party Consensus ───────────────────────────────
+
+export async function sendConsensusVoteInviteEmail({
+  to,
+  milestoneTitle,
+  contractId,
+  partyRole,
+  voteToken,
+  deadline,
+}: {
+  to: string;
+  milestoneTitle: string;
+  contractId: string;
+  partyRole: string;
+  voteToken: string;
+  deadline: Date;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const baseUrl = process.env.NEXTAUTH_URL ?? "https://cascrow.com";
+  const voteUrl = `${baseUrl}/vote/${voteToken}`;
+  const deadlineStr = deadline.toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `You're invited to verify: "${milestoneTitle}"`,
+    html: `
+      <p>You have been invited as a <strong>${esc(partyRole)}</strong> to participate in the consensus attestation of the following milestone:</p>
+      <p style="font-weight:bold;font-size:1.1em">${esc(milestoneTitle)}</p>
+      <p>Your vote is required by <strong>${deadlineStr}</strong>.</p>
+      <p>Click below to view the evidence and cast your vote:</p>
+      <p><a href="${voteUrl}" style="background:#1D4ED8;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block">Cast Your Vote →</a></p>
+      <p style="font-size:12px;color:#666">This link is unique to you and can only be used once. If you have questions, contact the contract owner.</p>
+    `,
+  });
+}
+
+export async function sendConsensusReachedEmail({
+  to,
+  milestoneTitle,
+  contractId,
+  yesVotes,
+  totalParties,
+  certUrl,
+}: {
+  to: string;
+  milestoneTitle: string;
+  contractId: string;
+  yesVotes: number;
+  totalParties: number;
+  certUrl: string | null;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Consensus reached: "${milestoneTitle}" VERIFIED`,
+    html: `
+      <p>The consensus attestation for the following milestone has been completed:</p>
+      <p style="font-weight:bold;font-size:1.1em">${esc(milestoneTitle)}</p>
+      <p>Result: <strong style="color:#16a34a">VERIFIED</strong> — ${yesVotes} of ${totalParties} parties confirmed.</p>
+      ${certUrl ? `<p><a href="${certUrl}">Download Attestation Certificate →</a></p>` : ""}
+      <p><a href="${enterpriseLink(contractId)}">View full results →</a></p>
+    `,
+  });
+}
