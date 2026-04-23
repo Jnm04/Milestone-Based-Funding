@@ -1,7 +1,7 @@
 # cascrow — Enterprise Attestation Mode (Phase 6)
 
 > **Last updated:** 2026-04-23
-> **Status:** Phase 2 complete (2026-04-23). Phase 3 planned — see below.
+> **Status:** Phase 3 complete (2026-04-23). All 11 enterprise features shipped. Post-Phase 3 enterprise GTM features also complete — see section below.
 > See [PLANNING.md](PLANNING.md) for the main feature roadmap (Phases 1–5).
 
 ---
@@ -419,9 +419,9 @@ benchmarkSector String?  // "MANUFACTURING" | "TECH" | "FINANCE" | etc.
 
 ## Phase 3 — Differentiating Features (Unique Market Position)
 
-> **Status:** Planning — Phase 2 complete as of 2026-04-23
+> **Status:** COMPLETE — all six features shipped as of 2026-04-23.
 > These six features are what separates cascrow from every ESG/KPI tool on the market.
-> None requires a full rewrite — each extends the existing attestation infrastructure.
+> All are live in production.
 
 ---
 
@@ -1447,24 +1447,71 @@ if (milestone.consensusEnabled) {
 
 ## Phase 3 — Summary & Build Order
 
-| Feature | Effort | Impact | Builds On |
-|---------|--------|--------|-----------|
-| VI — Predictive Miss Detection | 1.5 days | High | Phase 2 Pulse Checks |
-| IX — Cryptographic Evidence Chain | 1.5 days | High | runner.service.ts |
-| VIII — XBRL Filing Export | 2.5 days | Very High | Board Reports + Reg Mapping |
-| VII — Double Materiality Wizard | 3 days | Very High | Wizard + Reg Mapping |
-| XI — Multi-Party Consensus | 3 days | Very High | runner.service.ts + Auditor Portal |
-| X — Enterprise Connectors | 4 days | Extreme | runner.service.ts fetchers |
+| Feature | Effort | Impact | Status |
+|---------|--------|--------|--------|
+| VI — Predictive Miss Detection | 1.5 days | High | ✅ Complete |
+| IX — Cryptographic Evidence Chain | 1.5 days | High | ✅ Complete |
+| VIII — XBRL Filing Export | 2.5 days | Very High | ✅ Complete |
+| VII — Double Materiality Wizard | 3 days | Very High | ✅ Complete |
+| XI — Multi-Party Consensus | 3 days | Very High | ✅ Complete |
+| X — Enterprise Connectors | 4 days | Extreme | ✅ Complete |
 
-**Recommended sprint order:**
-1. Feature IX (Evidence Chain) — lowest risk, highest credibility uplift, 1.5 days
-2. Feature VI (Predictive Miss) — extends existing pulse-check infra, 1.5 days
-3. Feature VIII (XBRL) — major enterprise sales trigger, 2.5 days
-4. Feature VII (Materiality Wizard) — CSRD compliance entry point, 3 days
-5. Feature XI (Multi-Party Consensus) — Big 4 partnership enabler, 3 days
-6. Feature X (Enterprise Connectors) — SAP/Workday integrations, 4 days
+All Phase 3 features shipped 2026-04-23. Total actual effort: ~15 days.
 
-Total Phase 3 estimated effort: ~15–16 days
+---
+
+## Post-Phase 3 — Enterprise GTM Features
+
+> **Status:** Complete — shipped 2026-04-23 (two implementation sessions)
+> These features were added after Phase 3 to support enterprise go-to-market and sales.
+
+### Already shipped (Session 1 — 2026-04-23)
+
+| Feature | What | Key Files |
+|---------|------|-----------|
+| **Bulk Run** | "Run All (N)" button runs all locked milestones in one click | `POST /api/enterprise/attestations/[id]/bulk-run`, `attestation-detail.tsx` |
+| **Public Verification Page** | `/verify/[id]` — no login required, shareable with regulators and board | `src/app/verify/[id]/page.tsx`, `GET /api/enterprise/verify/[id]` |
+| **Trend Chart** | 6-month SVG bar chart on enterprise dashboard overview (total vs. YES runs) | `src/app/(enterprise)/enterprise/dashboard/page.tsx` |
+| **Deadline Email Reminders** | Daily cron emails owner 7 days before attestation deadline (if no recent run) | `src/app/api/cron/attestation-reminders/route.ts`, `sendAttestationDeadlineReminderEmail()` |
+| **Webhook Alerts** | `attestation.completed` event fires at end of every `runAttestation()` call | `runner.service.ts`, `webhook.service.ts` |
+
+### Already shipped (Session 2 — 2026-04-23)
+
+| Feature | What | Key Files |
+|---------|------|-----------|
+| **Team Members** | Invite colleagues by email (VIEWER/EDITOR), accept flow, team member sees owner's full workspace | `OrgMember` schema, `/api/enterprise/team/`, `/settings/team/page.tsx`, `getEnterpriseContext()` |
+| **API Key Management** | Create/list/revoke `csk_` prefixed keys (SHA-256 stored, secret shown once, max 10) | `ApiKey` schema, `/api/enterprise/api-keys/`, `/settings/api-keys/page.tsx` |
+| **Webhook Management UI** | Full endpoint CRUD in enterprise settings: add/disable/delete/rotate secret | `/settings/webhooks/page.tsx` (uses existing `/api/webhooks/` backend) |
+| **Security & Trust Page** | `/security` — EU data residency, GDPR, XRPL immutability, encryption, brute-force protection | `src/app/security/page.tsx` |
+
+### DB models added (Post-Phase 3)
+
+```prisma
+model ApiKey {
+  id, userId, name, keyHash (SHA-256), keyPrefix (first 12 chars), lastUsedAt, active, createdAt
+}
+
+model OrgMember {
+  id, ownerId, email, name, role (VIEWER|EDITOR), inviteToken, inviteExpiry, memberId, acceptedAt, createdAt
+}
+```
+
+### What the enterprise package now covers
+
+A sales prospect can be shown:
+- Full KPI attestation lifecycle (define → lock → run → certify → share)
+- AI + XRPL audit trail + cryptographic evidence chain
+- CSRD/GRI/TCFD/SDG regulatory mapping on every attestation
+- Board-ready PDF reports and XBRL export
+- Double materiality wizard for CSRD compliance onboarding
+- Multi-party consensus (Big 4 auditor + AI + investor sign-off)
+- SAP / Workday / Salesforce / NetSuite direct connectors
+- Public verification page (no login, shareable with regulators)
+- Team workspace with role-based access
+- API keys for developer integrations
+- Webhooks with HMAC signing for system integrations
+- Deadline reminders, pulse checks, predictive miss warnings
+- Security & Trust Center (EU data residency, GDPR, immutability proof)
 
 ---
 
@@ -1472,13 +1519,15 @@ Total Phase 3 estimated effort: ~15–16 days
 
 | Question | Options | Status |
 |----------|---------|--------|
-| How to handle API key storage? | Encrypt at rest with AES-256 using `ATTESTATION_KEY_SECRET` env var; never expose to client | Decided |
-| Public cert page — what's visible? | Verdict, reasoning, source type, evidence hash, XRPL link — NOT the raw fetched data | Decided |
-| Pricing model | Per attestation run (€10-50/run) or subscription (€200-2000/month) | Open |
-| Data residency for EU companies | Vercel EU region for fetched blobs; XRPL mainnet (no choice) | Open |
-| What happens if source fetch fails at verification time? | Retry 3× then mark `INCONCLUSIVE`, notify owner, do NOT mark as failed | Decided |
-| CSRD-specific fields? | Could add `csrdArticle`, `reportingStandard` (GRI/ESRS/TCFD) — probably Phase 2 | Open |
-| Multi-source milestones? | One primary source + one secondary optional cross-check — enough for MVP | Decided (MVP: one primary) |
+| How to handle API key storage? | Encrypt at rest with AES-256 using `ATTESTATION_KEY_SECRET` env var; never expose to client | ✅ Decided & shipped — SHA-256 hash stored, secret shown once |
+| Public cert page — what's visible? | Verdict, reasoning, source type, evidence hash, XRPL link — NOT the raw fetched data | ✅ Decided & shipped |
+| Pricing model | Per attestation run (€10-50/run) or subscription (€200-2000/month) | Open — not yet decided |
+| Data residency for EU companies | Vercel EU region for fetched blobs; XRPL mainnet (no choice) | Partially decided — Neon DB in EU-Central, Vercel Blob default region TBC |
+| What happens if source fetch fails at verification time? | Retry 3× then mark `INCONCLUSIVE`, notify owner, do NOT mark as failed | ✅ Decided & shipped |
+| CSRD-specific fields? | Regulatory mapping (CSRD/GRI/TCFD/SDG) auto-tagged per attestation entry | ✅ Shipped in Phase 2 Feature I |
+| Multi-source milestones? | One primary source + one secondary optional cross-check — enough for MVP | ✅ Decided (MVP: one primary) |
+| SSO / SAML for large enterprises? | Would need a third-party library (e.g. BoxyHQ SAML Jackson) | Open — not yet started |
+| White-label / custom domain? | Enterprises embed cascrow attestation certs on their own domain | Open — not yet started |
 
 ---
 
