@@ -1,7 +1,7 @@
 # cascrow — Enterprise Attestation Mode (Phase 6)
 
-> **Last updated:** 2026-04-20
-> **Status:** Planning — not yet started
+> **Last updated:** 2026-04-23
+> **Status:** Phase 2 complete (2026-04-23). Phase 3 planned — see below.
 > See [PLANNING.md](PLANNING.md) for the main feature roadmap (Phases 1–5).
 
 ---
@@ -412,6 +412,1059 @@ benchmarkSector String?  // "MANUFACTURING" | "TECH" | "FINANCE" | etc.
 ```
 
 **Privacy:** Raw values never stored in a benchmark table. Only pre-aggregated percentiles computed on query. Companies can opt out at any time (removes future entries, not historical).
+
+---
+
+---
+
+## Phase 3 — Differentiating Features (Unique Market Position)
+
+> **Status:** Planning — Phase 2 complete as of 2026-04-23
+> These six features are what separates cascrow from every ESG/KPI tool on the market.
+> None requires a full rewrite — each extends the existing attestation infrastructure.
+
+---
+
+### Feature VI — Predictive Miss Detection
+
+**What:** Before a milestone misses its deadline, cascrow predicts it weeks in advance using trend data from pulse checks. No other attestation platform offers forecasting — only backward-looking verdicts.
+
+**Why it's unique:** Every ESG tool tells you *after the fact* whether a goal was met. cascrow tells you *before* — with a confidence score and projected timeline.
+
+**User-facing output example:**
+> "Based on 8 pulse checks, this milestone is on a trajectory to **miss** the June 30 deadline.
+> Predicted outcome: NO — 81% confidence. You have ~5 weeks to course-correct."
+
+---
+
+#### DB Changes
+
+```prisma
+// New model — stores every pulse check snapshot for trend analysis
+model PulseCheckSnapshot {
+  id           String   @id @default(cuid())
+  milestoneId  String
+  capturedAt   DateTime @default(now())
+  risk         String   // "ON_TRACK" | "AT_RISK" | "LIKELY_MISS"
+  rawValue     String?  // extracted metric value as a string (e.g. "€4.2M")
+  targetValue  String?  // target at time of check (e.g. "€5M")
+  confidence   Float    // 0.0–1.0 — AI confidence in the extracted value
+  @@index([milestoneId, capturedAt])
+}
+
+// Milestone additions
+predictedOutcome     String?  // "YES" | "NO" | "INCONCLUSIVE" — current projection
+predictedConfidence  Float?   // 0.0–1.0
+predictedUpdatedAt   DateTime?
+```
+
+---
+
+#### New Service: `src/services/attestation/predictor.service.ts`
+
+```typescript
+export interface Prediction {
+  predictedOutcome: "YES" | "NO" | "INCONCLUSIVE";
+  confidence: number;        // 0.0–1.0
+  weeksToDeadline: number;
+  trendSlope: number;        // positive = improving, negative = worsening
+  snapshotCount: number;
+  lastRawValue: string | null;
+}
+
+export async function computePrediction(milestoneId: string): Promise<Prediction | null>
+```
+
+**Algorithm:**
+1. Load all `PulseCheckSnapshot` records ordered by `capturedAt` (min 3 required, else return null)
+2. Map `risk` to numeric score: ON_TRACK=1.0, AT_RISK=0.5, LIKELY_MISS=0.0
+3. Run simple linear regression over (time_offset_days → risk_score) pairs
+4. Project slope to deadline → predicted risk score at T=deadline
+5. If projected score < 0.35 → `predictedOutcome = "NO"`, 0.35–0.65 → `"INCONCLUSIVE"`, >0.65 → `"YES"`
+6. Confidence = R² of the regression × average `snapshot.confidence`
+7. Save result to `Milestone.predictedOutcome + predictedConfidence + predictedUpdatedAt`
+8. Return `Prediction`
+
+**Called from:**
+- End of `pulse-checks` cron after each snapshot is saved
+- `GET /api/contracts/[id]/milestones/[milestoneId]/attestation/prediction` (on-demand)
+
+---
+
+#### Modified: Pulse Checks Cron (`src/app/api/cron/pulse-checks/route.ts`)
+
+After each pulse check run, before updating `lastPulseCheckAt`:
+1. Save `PulseCheckSnapshot` with extracted `rawValue` + `confidence`
+2. Call `computePrediction(milestoneId)`
+3. If prediction flips from ON_TRACK to LIKELY_MISS → send `sendPredictiveMissEmail()`
+4. Update `Milestone.predictedOutcome + predictedConfidence + predictedUpdatedAt`
+
+The AI prompt for pulse checks must be extended to also return:
+```json
+{
+  "risk": "ON_TRACK" | "AT_RISK" | "LIKELY_MISS",
+  "assessment": "string",
+  "extractedValue": "€4.2M",   // NEW — current metric value
+  "targetValue": "€5M",         // NEW — what the milestone requires
+  "confidence": 0.82            // NEW — how confident AI is in the extraction
+}
+```
+
+---
+
+#### New Email: `sendPredictiveMissEmail`
+
+Add to `src/lib/email.ts`:
+```typescript
+sendPredictiveMissEmail({
+  to: string,
+  milestoneTitle: string,
+  contractId: string,
+  predictedOutcome: "NO" | "INCONCLUSIVE",
+  confidence: number,          // e.g. 0.81 → "81%"
+  weeksToDeadline: number,
+  lastRawValue: string | null,
+  targetValue: string | null,
+})
+```
+
+Email subject: `"⚠ Predictive Warning: "${milestoneTitle}" is trending to miss"`
+Color: `#f59e0b` (amber) for AT_RISK, `#ef4444` (red) for LIKELY_MISS.
+Note: "No blockchain record has been written — this is a private early-warning signal."
+
+---
+
+#### New API Route: `GET /api/contracts/[id]/milestones/[milestoneId]/attestation/prediction`
+
+Auth: owner only.
+Returns: `Prediction | { error: "insufficient_data", snapshotCount: number }`.
+Used by the dashboard to show the "Predicted Outcome" card.
+
+---
+
+#### Cron Addition (`vercel.json`)
+
+Pulse checks already run `0 7 * * 1` (Mondays at 7am). No additional cron needed — prediction runs inside the pulse-checks handler.
+
+---
+
+#### Key Files
+
+| File | Change |
+|------|--------|
+| `prisma/schema.prisma` | Add `PulseCheckSnapshot` model + `Milestone.predicted*` fields |
+| `src/services/attestation/predictor.service.ts` | New — regression-based prediction |
+| `src/app/api/cron/pulse-checks/route.ts` | Save snapshots + call predictor |
+| `src/lib/email.ts` | Add `sendPredictiveMissEmail` |
+| `src/app/api/contracts/[id]/milestones/[milestoneId]/attestation/prediction/route.ts` | New GET endpoint |
+
+**Estimated effort:** 1.5 days
+
+---
+
+---
+
+### Feature VII — Double Materiality Assessment Wizard
+
+**What:** EU CSRD mandates a "double materiality assessment" — every reporting company must identify which ESG topics are material from both (a) a financial impact perspective and (b) an environmental/social impact perspective. Today this is done manually by consultants over weeks. cascrow automates it in minutes and links the output directly to attestation milestones.
+
+**Why it's unique:** No SaaS tool automates CSRD double materiality. SAP Sustainability Footprint Manager is €200k/year and still requires consultants. cascrow does it AI-first for a fraction of the cost, and connects the assessment to live, blockchain-verified KPIs.
+
+**User-facing output:** An interactive materiality matrix (scatter plot) where each ESG topic is plotted on two axes, color-coded by materiality threshold, with recommended ESRS articles and a "Create Attestation Milestone" button for each material topic.
+
+---
+
+#### DB Changes
+
+```prisma
+model MaterialityAssessment {
+  id          String   @id @default(cuid())
+  userId      String
+  contractId  String?  // optional: link to existing attestation contract
+  sector      String   // e.g. "MANUFACTURING", "TECH"
+  answers     Json     // wizard Q&A: [{ question, answer }]
+  matrix      Json     // [{ topic, financialScore, impactScore, material, esrsArticles, griStandards }]
+  summary     String?  @db.Text  // AI-generated 2-paragraph executive summary
+  status      String   @default("IN_PROGRESS")  // "IN_PROGRESS" | "COMPLETE"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@index([userId])
+  @@index([contractId])
+}
+```
+
+---
+
+#### Wizard Question Set (12 questions, answered in 3 steps)
+
+**Step 1 — Company Profile (4 questions):**
+1. What sector does your company operate in? (dropdown: MANUFACTURING, TECH, FINANCE, ENERGY, HEALTHCARE, RETAIL, OTHER)
+2. In which regions do you operate? (checkboxes: EU, North America, Asia-Pacific, Other)
+3. How many employees does your company have? (dropdown: <50, 50–250, 250–1000, 1000–5000, >5000)
+4. Does your company have a supply chain with significant environmental or labor impacts? (Yes / No / Partially)
+
+**Step 2 — ESG Exposure (5 questions):**
+5. Which environmental topics are most relevant to your business? (multi-select: Climate, Pollution, Water, Biodiversity, Circular Economy)
+6. Does your business significantly affect any communities or workers (directly or through supply chain)? (scale 1–5)
+7. How dependent is your revenue on fossil fuels or carbon-intensive activities? (scale 1–5)
+8. Are any of your products or services subject to significant regulatory environmental requirements? (Yes/No + text)
+9. Have any ESG topics caused financial risk (litigation, fines, stranded assets) in the last 3 years? (Yes/No + text)
+
+**Step 3 — Stakeholder Concerns (3 questions):**
+10. What ESG topics do your investors most frequently ask about? (free text, max 300 chars)
+11. Have any ESG topics been raised by employees, customers, or civil society in the last 2 years? (free text)
+12. Which regulatory reporting obligations apply to your company? (checkboxes: CSRD, TCFD, GRI, SEC ESG, None)
+
+---
+
+#### AI Processing: `POST /api/attestation/materiality/[id]/generate`
+
+System prompt instructs Claude to:
+1. Analyze 12 answers to produce 15–20 ESG topic scores
+2. For each topic, output `{ topic, financialScore (0–5), impactScore (0–5), material (bool), esrsArticles: string[], griStandards: string[], rationale: string }`
+3. `material = true` if financialScore ≥ 3 OR impactScore ≥ 3 (CSRD "or" threshold)
+4. Generate a 2-paragraph executive summary of the materiality profile
+5. Recommend priority attestation milestones for the top 5 material topics
+
+Model: Claude Haiku. Max tokens: 2000. Rate limit: 3/hour per user.
+
+**Example output item:**
+```json
+{
+  "topic": "Scope 1+2 GHG Emissions",
+  "financialScore": 4.2,
+  "impactScore": 4.8,
+  "material": true,
+  "esrsArticles": ["ESRS E1-1", "ESRS E1-4", "ESRS E1-6"],
+  "griStandards": ["GRI 305-1", "GRI 305-2"],
+  "rationale": "High energy intensity and EU ETS exposure creates transition risk; Scope 2 reduction is both a financial and impact imperative."
+}
+```
+
+---
+
+#### API Routes
+
+| Route | Method | What |
+|-------|--------|------|
+| `POST /api/attestation/materiality` | POST | Create new assessment, returns `{ id }` |
+| `PUT /api/attestation/materiality/[id]/answers` | PUT | Save answers (can be called multiple times as user progresses) |
+| `POST /api/attestation/materiality/[id]/generate` | POST | Trigger AI matrix generation |
+| `GET /api/attestation/materiality/[id]` | GET | Get current state (for multi-step UI) |
+| `GET /api/attestation/materiality` | GET | List all assessments for current user |
+
+All routes: `getServerSession` auth, owner-only access.
+
+---
+
+#### New Pages
+
+- `/enterprise/materiality` — landing + "Start New Assessment" button
+- `/enterprise/materiality/[id]` — multi-step wizard (step 1→2→3→generating→results)
+- `/enterprise/materiality/[id]/matrix` — interactive scatter plot + milestone creation CTAs
+
+The matrix visualization: SVG-based scatter plot (no heavy charting library), quadrants labeled "Monitor", "Manage", "Prioritize", "Report", using the existing dark copper theme.
+
+---
+
+#### Key Files
+
+| File | Change |
+|------|--------|
+| `prisma/schema.prisma` | Add `MaterialityAssessment` model |
+| `src/app/api/attestation/materiality/route.ts` | New — POST list + GET list |
+| `src/app/api/attestation/materiality/[id]/route.ts` | New — GET, PUT answers |
+| `src/app/api/attestation/materiality/[id]/generate/route.ts` | New — AI generation |
+| `src/app/(enterprise)/enterprise/materiality/[id]/page.tsx` | New — wizard UI |
+| `src/components/materiality-matrix.tsx` | New — SVG scatter plot component |
+
+**Estimated effort:** 3 days
+
+---
+
+---
+
+### Feature VIII — XBRL / iXBRL Regulatory Filing Export
+
+**What:** Export board report data as machine-readable XBRL-tagged XML, the mandated format for submissions to ESMA (EU), SEC (US), and BaFin (Germany). Compliance teams can submit directly to regulators without re-entering data.
+
+**Why it's unique:** CSRD requires iXBRL-tagged sustainability reports from 2026 onwards. No ESG attestation tool generates XBRL output. EY and KPMG charge €50k+ to do this manually per report. cascrow generates it automatically from verified attestation data.
+
+**What XBRL is:** A structured XML format where each data point is tagged with a standardized concept from a regulatory taxonomy (e.g., `esrs:Scope1GHGEmissions` with unit `tCO2e` for period `2026-01-01/2026-12-31`).
+
+---
+
+#### Supported Taxonomies (MVP)
+
+| Taxonomy | Regulator | Key concepts |
+|----------|-----------|-------------|
+| ESRS (CSRD) | ESMA | E1 climate, S1 workforce, G1 governance metrics |
+| GRI Universal | GRI | 2-1 org profile, 3-1 material topics, disclosure items |
+| TCFD | FSB | GOVERNANCE, STRATEGY, RISK_MANAGEMENT, METRICS |
+
+MVP supports ESRS — the most urgent for EU companies. GRI and TCFD added in subsequent releases.
+
+---
+
+#### XBRL Output Structure
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<xbrl xmlns="http://www.xbrl.org/2003/instance"
+      xmlns:esrs="https://xbrl.efrag.org/taxonomy/esrs/2024-10-29"
+      xmlns:iso4217="http://www.xbrl.org/2003/iso4217"
+      xmlns:xbrli="http://www.xbrl.org/2003/instance">
+
+  <xbrli:context id="CTX_2026">
+    <xbrli:entity>
+      <xbrli:identifier scheme="http://standards.iso.org/iso/17442">
+        {LEI_CODE}
+      </xbrli:identifier>
+    </xbrli:entity>
+    <xbrli:period>
+      <xbrli:startDate>2026-01-01</xbrli:startDate>
+      <xbrli:endDate>2026-12-31</xbrli:endDate>
+    </xbrli:period>
+  </xbrli:context>
+
+  <!-- One fact element per attested data point -->
+  <esrs:E1-6_GrossScope1GHGEmissions contextRef="CTX_2026" unitRef="tCO2e" decimals="0">
+    4200
+  </esrs:E1-6_GrossScope1GHGEmissions>
+
+  <!-- Attestation provenance — cascrow extension -->
+  <cascrow:AttestationReference contextRef="CTX_2026">
+    {xrplTxHash}
+  </cascrow:AttestationReference>
+
+</xbrl>
+```
+
+---
+
+#### ESRS Concept Mapping Table (MVP — 20 core concepts)
+
+Stored as a static lookup in `src/services/attestation/xbrl/esrs-concepts.ts`:
+
+```typescript
+export const ESRS_CONCEPTS: Record<string, XbrlConcept> = {
+  "scope1_emissions":      { tag: "esrs:E1-6_GrossScope1GHGEmissions", unit: "tCO2e", dataType: "decimal" },
+  "scope2_emissions":      { tag: "esrs:E1-6_GrossScope2GHGEmissions", unit: "tCO2e", dataType: "decimal" },
+  "scope3_emissions":      { tag: "esrs:E1-6_GrossScope3GHGEmissions", unit: "tCO2e", dataType: "decimal" },
+  "energy_consumption":    { tag: "esrs:E1-5_TotalEnergyConsumption", unit: "MWh", dataType: "decimal" },
+  "renewable_energy_pct":  { tag: "esrs:E1-5_EnergyFromRenewables", unit: "pure", dataType: "decimal" },
+  "water_consumption":     { tag: "esrs:E3-4_TotalWaterConsumption", unit: "m3", dataType: "decimal" },
+  "headcount":             { tag: "esrs:S1-6_NumberOfEmployees", unit: "people", dataType: "integer" },
+  "gender_pay_gap":        { tag: "esrs:S1-16_GenderPayGap", unit: "pure", dataType: "decimal" },
+  "board_gender_diversity":{ tag: "esrs:G1-1_BoardGenderDiversity", unit: "pure", dataType: "decimal" },
+  "corruption_incidents":  { tag: "esrs:G1-4_CorruptionIncidents", unit: "count", dataType: "integer" },
+  // ... 10 more
+};
+```
+
+---
+
+#### New Service: `src/services/attestation/xbrl/xbrl.service.ts`
+
+```typescript
+interface XbrlGenerationOptions {
+  contractId: string;
+  period: string;         // "2026"
+  taxonomy: "ESRS";
+  companyName: string;
+  leiCode?: string;       // Legal Entity Identifier (20-char alphanumeric)
+  reportingCurrency?: string;  // default "EUR"
+}
+
+export async function generateXbrlReport(options: XbrlGenerationOptions): Promise<{
+  xml: string;
+  blobUrl: string;
+  conceptsTagged: number;
+  untaggedMilestones: string[];  // milestone titles that couldn't be mapped
+}>
+```
+
+**Generation algorithm:**
+1. Load all `AttestationEntry` records for the contract + period with `aiVerdict = "YES"`
+2. For each entry, read `regulatoryMapping` field
+3. Map each ESRS article in `regulatoryMapping` to a concept in `ESRS_CONCEPTS`
+4. Extract the data point value: run a lightweight AI call to extract the number from `aiReasoning` (e.g., "Scope 1 emissions: 4,200 tCO2e" → 4200)
+5. Build the XBRL XML document
+6. Store to Vercel Blob: `reports/xbrl/{contractId}/{period}-esrs.xbrl`
+7. Create `Report` record with `type: "XBRL_ESRS"`
+
+---
+
+#### New API Route: `POST /api/reports/xbrl`
+
+```typescript
+// Request body (Zod schema)
+const xbrlSchema = z.object({
+  contractId: z.string().min(1).max(50),
+  period: z.string().regex(/^\d{4}(-Q[1-4]|-\d{2})?$/),  // "2026" or "2026-Q1" or "2026-04"
+  taxonomy: z.enum(["ESRS"]),
+  companyName: z.string().min(1).max(200),
+  leiCode: z.string().regex(/^[A-Z0-9]{20}$/).optional(),
+});
+
+// Response
+{
+  reportId: string;
+  blobUrl: string;         // .xbrl file download URL
+  conceptsTagged: number;
+  untaggedMilestones: string[];
+  period: string;
+}
+```
+
+Auth: session required, must be contract owner or auditor email.
+Rate limit: `xbrl-report:{userId}` — 10/hour.
+maxDuration: 60s (add to `vercel.json`).
+
+---
+
+#### Validation & Download
+
+- The generated `.xbrl` file references the official ESRS 2024 taxonomy schema at `xsi:schemaLocation`
+- The `Report` record stores `type: "XBRL_ESRS"` (extend `type` field values)
+- The board-pack page adds a "Download XBRL Filing" button when XBRL report exists for the period
+- Note in UI: "Validate with ESMA's ESEF validator before submission"
+
+---
+
+#### Key Files
+
+| File | Change |
+|------|--------|
+| `src/services/attestation/xbrl/esrs-concepts.ts` | New — ESRS concept lookup table |
+| `src/services/attestation/xbrl/xbrl.service.ts` | New — XML generation |
+| `src/app/api/reports/xbrl/route.ts` | New — POST endpoint |
+| `vercel.json` | Add `maxDuration: 60` for xbrl route |
+| `prisma/schema.prisma` | Extend `Report.type` accepted values in docs |
+
+**Estimated effort:** 2.5 days
+
+---
+
+---
+
+### Feature IX — Cryptographic Evidence Chain
+
+**What:** Every attestation run produces a 4-step cryptographic chain that anyone can independently verify. Each step hashes the previous step's output plus new data, creating a tamper-evident audit trail that proves: (1) what data was fetched, (2) what AI prompt was used, (3) what the AI responded, (4) what was written on-chain. No other attestation platform provides this level of cryptographic transparency.
+
+**Why it's unique:** Currently, a skeptic could say "how do I know cascrow didn't feed the AI different data or alter the response?" The evidence chain answers this definitively. It is the cryptographic equivalent of a notarized chain of custody, and it's what forensic auditors and regulators need.
+
+**Analogy:** Similar in concept to Certificate Transparency logs or Git's commit DAG — each step commits to all previous steps.
+
+---
+
+#### Chain Structure
+
+```
+Step 0 — Raw Evidence Hash
+  input:  raw fetched content (bytes)
+  output: SHA256(rawContent)               → already stored as fetchedHash
+
+Step 1 — Prompt Commitment
+  input:  fetchedHash + systemPrompt + userPrompt (before AI call)
+  output: SHA256(fetchedHash + systemPrompt + userPrompt)
+
+Step 2 — Response Commitment
+  input:  step1Hash + rawAiResponseText
+  output: SHA256(step1Hash + rawAiResponseText)
+
+Step 3 — On-Chain Anchor
+  input:  step2Hash + xrplTxHash (or "NO_CHAIN_WRITE" if null)
+  output: SHA256(step2Hash + xrplTxHash)
+```
+
+Final `chainRoot = step3Hash`. Stored in `AttestationEntry.evidenceChain`.
+
+---
+
+#### DB Changes
+
+```prisma
+// AttestationEntry additions
+evidenceChain  Json?
+// Stored structure:
+// {
+//   step0: string,  // = fetchedHash (SHA256 of raw content)
+//   step1: string,  // SHA256(step0 + systemPrompt + userPrompt)
+//   step2: string,  // SHA256(step1 + rawAiResponse)
+//   step3: string,  // SHA256(step2 + xrplTxHash|"NO_CHAIN_WRITE")
+//   promptHash: string,  // SHA256(systemPrompt + userPrompt) — allows prompt verification
+//   systemPromptVersion: string,  // short version tag for the system prompt (e.g. "v1.2")
+//   chainRoot: string,  // = step3 — the canonical fingerprint of this entire attestation run
+// }
+```
+
+---
+
+#### New Utility: `src/lib/evidence-chain.ts`
+
+```typescript
+import crypto from "crypto";
+
+export interface EvidenceChain {
+  step0: string;
+  step1: string;
+  step2: string;
+  step3: string;
+  promptHash: string;
+  systemPromptVersion: string;
+  chainRoot: string;
+}
+
+function sha256(input: string): string {
+  return crypto.createHash("sha256").update(input, "utf8").digest("hex");
+}
+
+export function buildEvidenceChain(
+  rawContent: string,
+  systemPrompt: string,
+  userPrompt: string,
+  rawAiResponse: string,
+  xrplTxHash: string | null,
+  systemPromptVersion = "v1"
+): EvidenceChain {
+  const step0 = sha256(rawContent);
+  const step1 = sha256(step0 + systemPrompt + userPrompt);
+  const step2 = sha256(step1 + rawAiResponse);
+  const step3 = sha256(step2 + (xrplTxHash ?? "NO_CHAIN_WRITE"));
+  return {
+    step0,
+    step1,
+    step2,
+    step3,
+    promptHash: sha256(systemPrompt + userPrompt),
+    systemPromptVersion,
+    chainRoot: step3,
+  };
+}
+```
+
+Called in `runner.service.ts` after the XRPL write. The `rawAiResponse` is the full text from `response.content[0].text` before JSON parsing.
+
+The chain is saved to `prisma.attestationEntry.create(...)` as `evidenceChain: buildEvidenceChain(...) as Prisma.InputJsonValue`.
+
+---
+
+#### Modified: `runner.service.ts`
+
+```typescript
+import { buildEvidenceChain } from "@/lib/evidence-chain";
+
+// Inside runAttestation():
+// After step 5 (XRPL write), before step 7 (create AttestationEntry):
+const evidenceChain = buildEvidenceChain(
+  rawContent,
+  systemPrompt,
+  userPrompt,
+  rawAiResponseText,  // store the raw text before JSON.parse
+  xrplTxHash,
+  "v1"
+);
+
+// In prisma.attestationEntry.create():
+evidenceChain: evidenceChain as Prisma.InputJsonValue,
+```
+
+---
+
+#### Public Verification API: `POST /api/attestation/verify-chain`
+
+No authentication required — fully public. This is the key to making the evidence chain useful for auditors.
+
+```typescript
+// Request body
+{
+  entryId: string,
+  rawContent?: string,     // optional: provide the raw evidence to verify step0
+  systemPrompt?: string,   // optional: provide to verify step1
+  userPrompt?: string,
+  aiResponse?: string,     // optional: provide to verify step2
+}
+
+// Response
+{
+  valid: boolean,
+  chainRoot: string,          // the stored chain root from DB
+  stepsVerified: {
+    step0: boolean | null,    // null if rawContent not provided
+    step1: boolean | null,
+    step2: boolean | null,
+    step3: boolean,           // always computable from DB data
+  },
+  firstFailingStep: 0 | 1 | 2 | 3 | null,
+}
+```
+
+Rate limit: `verify-chain:{ip}` — 30/minute.
+
+**How an auditor uses this:**
+1. Download the "Verification Package" from the certificate page (see below)
+2. The package contains all inputs needed to recompute the chain
+3. Submit to `POST /api/attestation/verify-chain` (or compute locally using SHA256)
+4. If all steps match → the attestation is provably unaltered
+
+---
+
+#### Certificate Page Extension (`/cert/attestation/[id]`)
+
+Add a "Verification" section below the XRPL link:
+
+```
+Evidence Chain Fingerprint
+[step0 hash truncated]  ← Raw evidence hash
+[step1 hash truncated]  ← Prompt commitment
+[step2 hash truncated]  ← AI response commitment
+[step3 hash truncated]  ← On-chain anchor
+Chain Root: [full chainRoot]
+
+[Download Verification Package ↓]   [Verify Chain →]
+```
+
+"Download Verification Package" button: generates a JSON file client-side containing:
+```json
+{
+  "entryId": "...",
+  "fetchedAt": "...",
+  "xrplTxHash": "...",
+  "chain": { "step0": "...", "step1": "...", "step2": "...", "step3": "...", "chainRoot": "..." },
+  "systemPromptVersion": "v1",
+  "verifyUrl": "https://cascrow.com/api/attestation/verify-chain",
+  "instructions": "POST rawContent + systemPrompt + userPrompt + aiResponse to verifyUrl to recompute the chain."
+}
+```
+
+---
+
+#### Key Files
+
+| File | Change |
+|------|--------|
+| `src/lib/evidence-chain.ts` | New — SHA256 chain builder |
+| `src/services/attestation/runner.service.ts` | Call `buildEvidenceChain`, save to entry |
+| `prisma/schema.prisma` | Add `AttestationEntry.evidenceChain Json?` |
+| `src/app/api/attestation/verify-chain/route.ts` | New — public verification POST |
+| `src/app/cert/attestation/[id]/page.tsx` | Add chain display + download button |
+
+**Estimated effort:** 1.5 days
+
+---
+
+---
+
+### Feature X — Enterprise System Connectors (SAP / Workday / Salesforce)
+
+**What:** Instead of manually providing a URL or API key, enterprise customers connect their existing ERP/CRM systems as certified data sources. The platform pulls KPI data directly — eliminating manual exports, copy-paste errors, and data manipulation risk.
+
+**Why it's unique:** This is the integration layer that makes cascrow part of the enterprise data stack rather than a standalone tool. No other attestation platform has SAP or Workday connectors.
+
+**New `dataSourceType` value:** `ENTERPRISE_CONNECTOR`
+
+---
+
+#### Supported Connectors (MVP)
+
+| System | Protocol | Auth | Primary Use Cases |
+|--------|----------|------|-------------------|
+| **SAP S/4HANA** | OData v4 | Basic / OAuth2 PKCE | Revenue, cost centers, emission data |
+| **Workday** | RaaS REST | API client credentials | Headcount, pay gap, diversity metrics |
+| **Salesforce** | SOQL REST API | OAuth2 connected app | Pipeline revenue, NPS, customer metrics |
+| **NetSuite** | SuiteQL REST | OAuth 1.0a | Financial reporting, P&L |
+
+Phase 2 connectors (post-MVP): Microsoft Dynamics 365, HubSpot, Google Analytics 4, Stripe.
+
+---
+
+#### Connector Architecture
+
+```
+src/services/attestation/connectors/
+├── types.ts           // ConnectorConfig, ConnectorResult interfaces
+├── index.ts           // ConnectorRegistry — dispatches to correct connector
+├── sap.connector.ts   // SAP S/4HANA OData v4
+├── workday.connector.ts
+├── salesforce.connector.ts
+└── netsuite.connector.ts
+```
+
+**`src/services/attestation/connectors/types.ts`:**
+
+```typescript
+export interface ConnectorConfig {
+  system: "SAP" | "WORKDAY" | "SALESFORCE" | "NETSUITE";
+  baseUrl: string;           // e.g. "https://mycompany.my.sap.com"
+  authType: "BASIC" | "OAUTH2_CLIENT" | "OAUTH1";
+  // Auth fields (all encrypted at rest via existing encrypt.ts):
+  clientId?: string;
+  clientSecret?: string;     // stored encrypted
+  username?: string;
+  password?: string;         // stored encrypted
+  tokenUrl?: string;
+  // Query config:
+  entity?: string;           // OData entity / SOQL object / RaaS report name
+  filter?: string;           // OData $filter or SOQL WHERE clause
+  selectFields?: string[];   // OData $select or SOQL SELECT fields
+  responseField?: string;    // JSON path to the target value in response
+}
+
+export interface ConnectorResult {
+  content: string;           // JSON string of the fetched data (for AI consumption)
+  rawBytes: number;
+  recordCount?: number;
+  fetchedAt: Date;
+}
+```
+
+**`src/services/attestation/connectors/index.ts`:**
+
+```typescript
+import { SapConnector } from "./sap.connector";
+import { WorkdayConnector } from "./workday.connector";
+import { SalesforceConnector } from "./salesforce.connector";
+import { NetsuiteConnector } from "./netsuite.connector";
+
+export async function fetchFromConnector(config: ConnectorConfig): Promise<ConnectorResult> {
+  switch (config.system) {
+    case "SAP": return new SapConnector().fetch(config);
+    case "WORKDAY": return new WorkdayConnector().fetch(config);
+    case "SALESFORCE": return new SalesforceConnector().fetch(config);
+    case "NETSUITE": return new NetsuiteConnector().fetch(config);
+  }
+}
+```
+
+---
+
+#### SAP Connector Detail (`sap.connector.ts`)
+
+```typescript
+// SAP S/4HANA OData v4 — fetch via standard API hub
+// Example: GET /sap/opu/odata4/sap/api_financialplandata/srvd_a2x/sap/financialplandata/0001/FinancialPlanData
+//   ?$filter=CompanyCode eq 'DE01' and FiscalYear eq '2026' and FiscalPeriod eq '006'
+//   &$select=CompanyCode,FiscalYear,FiscalPeriod,Amount,Currency
+
+class SapConnector {
+  async fetch(config: ConnectorConfig): Promise<ConnectorResult> {
+    // 1. Get access token (OAuth2 PKCE flow or Basic auth header)
+    // 2. Build OData URL: baseUrl + "/sap/opu/odata4/" + entity + "?" + filter + select
+    // 3. GET with Authorization header
+    // 4. Extract value array from response.value[]
+    // 5. Return as JSON string
+  }
+}
+```
+
+Key SAP entities for ESG/KPI attestation:
+- `api_financialplandata` — Revenue, cost centers, plan vs. actual
+- `api_companycode_srv` — Entity information, fiscal year config
+- `api_ghgemissions` — GHG emissions (if SAP Sustainability Footprint is active)
+
+---
+
+#### Workday Connector Detail (`workday.connector.ts`)
+
+Workday exposes custom reports via its Report-as-a-Service (RaaS) REST endpoint:
+```
+GET https://{tenant}.workday.com/ccx/service/customreport2/{tenant}/{owner}/{reportName}?format=json
+Authorization: Bearer {token}
+```
+
+Config fields: `tenantName`, `reportOwner`, `reportName` → these are stored in `dataSourceConfig.entity`.
+
+Common reports for attestation:
+- `Headcount_by_Country` — employee counts
+- `GenderPayGapReport` — pay equity metrics
+- `DiversityDashboard` — DEI metrics
+- Custom reports can be mapped by name
+
+---
+
+#### DB Changes
+
+```prisma
+// Milestone — extend existing dataSourceConfig Json? to also carry connector config
+// No schema change needed — ConnectorConfig stored as part of existing dataSourceConfig
+// BUT: add connector type tracking field:
+dataSourceConnector  String?  // "SAP" | "WORKDAY" | "SALESFORCE" | "NETSUITE" | null
+```
+
+The encrypted credentials (`clientSecret`, `password`) are stored via `encryptApiKey()` from the existing `src/lib/encrypt.ts`, in `dataSourceApiKeyEnc`. For multi-credential systems (clientId + clientSecret), store as encrypted JSON.
+
+---
+
+#### Modified: `runner.service.ts`
+
+Add `ENTERPRISE_CONNECTOR` branch in step 1:
+
+```typescript
+} else if (sourceType === "ENTERPRISE_CONNECTOR") {
+  if (!milestone.dataSourceConfig) throw new Error("dataSourceConfig not set for ENTERPRISE_CONNECTOR");
+  const config = milestone.dataSourceConfig as ConnectorConfig;
+  if (milestone.dataSourceApiKeyEnc) {
+    const decrypted = JSON.parse(decryptApiKey(milestone.dataSourceApiKeyEnc));
+    config.clientSecret = decrypted.clientSecret;
+    config.password = decrypted.password;
+  }
+  const result = await fetchFromConnector(config);
+  rawContent = result.content;
+}
+```
+
+---
+
+#### New API Route: `POST /api/attestation/test-connector`
+
+Dry-run fetch from an enterprise system — returns a preview of the data without writing anything.
+
+```typescript
+const testConnectorSchema = z.object({
+  system: z.enum(["SAP", "WORKDAY", "SALESFORCE", "NETSUITE"]),
+  baseUrl: z.string().url(),
+  entity: z.string(),
+  filter: z.string().optional(),
+  // credentials passed directly (only for test — not stored)
+  clientId: z.string().optional(),
+  clientSecret: z.string().optional(),
+  username: z.string().optional(),
+  password: z.string().optional(),
+});
+// Response: { success: true, preview: string (first 500 chars), recordCount: number }
+//        or { success: false, error: string }
+```
+
+Rate limit: `test-connector:{userId}` — 10/hour.
+
+---
+
+#### Key Files
+
+| File | Change |
+|------|--------|
+| `src/services/attestation/connectors/types.ts` | New |
+| `src/services/attestation/connectors/index.ts` | New dispatcher |
+| `src/services/attestation/connectors/sap.connector.ts` | New |
+| `src/services/attestation/connectors/workday.connector.ts` | New |
+| `src/services/attestation/connectors/salesforce.connector.ts` | New |
+| `src/services/attestation/connectors/netsuite.connector.ts` | New |
+| `src/services/attestation/runner.service.ts` | Add ENTERPRISE_CONNECTOR branch |
+| `src/app/api/attestation/test-connector/route.ts` | New |
+| `prisma/schema.prisma` | Add `Milestone.dataSourceConnector String?` |
+
+**Estimated effort:** 4 days (2 days connectors, 1 day runner integration, 1 day UI + test endpoint)
+
+---
+
+---
+
+### Feature XI — Multi-Party Consensus Attestation
+
+**What:** Beyond AI + auditor, allow configurable M-of-N human parties (regulators, investors, committee members) to each independently cast a vote. Only when M votes reach the threshold is the final status determined and the certificate generated. Every vote is anchored to the blockchain.
+
+**Why it's unique:** This is what makes cascrow viable as the technical layer beneath Big 4 audit engagements. A KPMG sign-off + AI verification + investor confirmation = a triple-verified ESG claim that is genuinely audit-grade. No other tool enables this workflow.
+
+**Example configuration:** "Require 3-of-4 parties to verify: AI Platform + External Auditor + Board Committee + Investor Representative."
+
+---
+
+#### DB Changes
+
+```prisma
+// Milestone additions
+consensusEnabled    Boolean @default(false)
+consensusThreshold  Int?    // M — how many YES votes required
+consensusStatus     String? // "AWAITING_VOTES" | "REACHED" | "FAILED" | "TIMED_OUT"
+consensusDeadline   DateTime?  // votes must be cast by this date
+
+// New model
+model ConsensusVote {
+  id          String   @id @default(cuid())
+  milestoneId String
+  partyEmail  String
+  partyRole   String   // "AI_PLATFORM" | "AUDITOR" | "REGULATOR" | "INVESTOR" | "COMMITTEE"
+  vote        String   // "YES" | "NO" | "ABSTAIN"
+  reasoning   String?  @db.Text
+  votedAt     DateTime @default(now())
+  xrplTxHash  String?  // each vote is written to XRPL
+  entryId     String?  // for AI_PLATFORM votes: linked AttestationEntry
+  token       String   @unique  // one-time vote token (sent via email)
+  tokenUsed   Boolean  @default(false)
+  tokenExpiry DateTime
+
+  milestone   Milestone @relation(fields: [milestoneId], references: [id])
+  @@index([milestoneId])
+  @@index([token])
+}
+```
+
+---
+
+#### Vote Flow (End-to-End)
+
+**Step 1 — Configure (Owner):**
+`POST /api/contracts/[id]/milestones/[milestoneId]/consensus/configure`
+```json
+{
+  "enabled": true,
+  "threshold": 3,
+  "deadline": "2026-07-01",
+  "parties": [
+    { "role": "AUDITOR", "email": "partner@kpmg.com" },
+    { "role": "INVESTOR", "email": "john@vcfund.com" },
+    { "role": "COMMITTEE", "email": "cfo@company.com" }
+  ]
+}
+```
+Creates `ConsensusVote` records (one per party) with unique tokens, `vote = null` (pending), `tokenUsed = false`.
+Sends invitation emails with vote links.
+
+**Step 2 — AI runs normally:**
+When `runAttestation()` completes, automatically creates the AI_PLATFORM `ConsensusVote` record with the AI verdict and writes to XRPL. If `consensusEnabled = false`, behavior is unchanged (backward compatible).
+
+**Step 3 — Human parties vote:**
+Each party receives: `POST https://cascrow.com/vote/[token]`
+They see:
+- Milestone title + description
+- AI verdict + reasoning
+- Evidence hash + XRPL link
+- Evidence blob download (if they want to inspect raw data)
+- Three buttons: **VERIFY (YES)** / **REJECT (NO)** / **ABSTAIN**
+- Optional reasoning text field (max 500 chars)
+
+On submit: `POST /api/attestation/consensus/vote`
+```json
+{ "token": "...", "vote": "YES", "reasoning": "Reviewed independently — figures match." }
+```
+This updates `ConsensusVote`, writes vote + reasoning to XRPL, checks if threshold is now reached.
+
+**Step 4 — Threshold check:**
+After each vote: count YES votes across all parties (AI + humans).
+- If YES count ≥ threshold → `consensusStatus = "REACHED"`, generate final certificate, update `Milestone.status = "COMPLETED"`
+- If NO count > (total_parties - threshold) → `consensusStatus = "FAILED"`, milestone `REJECTED`
+- If deadline passes with insufficient votes → `consensusStatus = "TIMED_OUT"`, milestone `PENDING_REVIEW`
+
+**Step 5 — Certificate:**
+The final attestation certificate for consensus milestones includes an additional section:
+```
+Consensus Result: 3 of 4 parties verified
+├── AI Platform: YES (cascrow automated verification)
+├── KPMG Audit Partner: YES (independent re-verification)
+├── CFO Committee: YES (board-level confirmation)
+└── Investor Representative: ABSTAIN
+```
+Each vote's XRPL tx hash is listed.
+
+---
+
+#### API Routes
+
+| Route | Method | Auth | What |
+|-------|--------|------|------|
+| `POST /api/contracts/[id]/milestones/[milestoneId]/consensus/configure` | POST | Owner | Enable consensus, add parties |
+| `GET /api/contracts/[id]/milestones/[milestoneId]/consensus/status` | GET | Owner + Auditor | Current vote tally |
+| `POST /api/attestation/consensus/vote` | POST | Token (no session) | Cast a vote |
+| `GET /api/vote/[token]` | GET | Token | Validate token, return milestone info for voting UI |
+| `POST /api/cron/consensus-timeout` | POST | CRON_SECRET | Check and mark timed-out consensus processes |
+
+---
+
+#### New Pages
+
+- `/vote/[token]` — public voting page (no login required, token-gated)
+  - Shows milestone details, AI verdict, evidence
+  - Vote buttons + reasoning textarea
+  - Styled consistently with the dark copper theme
+  - After voting: "Your vote has been recorded on the XRP Ledger. TX: [hash]"
+
+---
+
+#### Modified: `runner.service.ts`
+
+At the end of `runAttestation()`, after creating `AttestationEntry`:
+```typescript
+if (milestone.consensusEnabled) {
+  // Create the AI_PLATFORM ConsensusVote
+  await prisma.consensusVote.upsert({
+    where: { token: `ai-${milestone.id}-${period}` },
+    create: {
+      milestoneId: milestone.id,
+      partyEmail: "ai@cascrow.com",
+      partyRole: "AI_PLATFORM",
+      vote: verdict,
+      reasoning,
+      xrplTxHash,
+      entryId: entry.id,
+      token: `ai-${milestone.id}-${period}`,
+      tokenUsed: true,
+      tokenExpiry: new Date(0),  // AI vote never expires
+    },
+    update: { vote: verdict, reasoning, xrplTxHash, entryId: entry.id, tokenUsed: true },
+  });
+  // Check if threshold is now reached
+  await checkConsensusThreshold(milestone.id);
+}
+```
+
+**`checkConsensusThreshold(milestoneId)`** — shared helper that:
+1. Counts YES/NO votes
+2. Applies threshold logic
+3. Updates `consensusStatus`
+4. If REACHED: calls `generateAttestationCert` with full vote list, updates milestone status
+
+---
+
+#### Security Considerations
+
+- Vote tokens are `cuid()` — not guessable
+- Token expiry enforced on both GET (view) and POST (vote)
+- Token is one-use (`tokenUsed = true` after voting — cannot re-vote)
+- No session required — token is the auth mechanism for external parties
+- Rate limit on `/api/attestation/consensus/vote`: 10/min per IP
+
+---
+
+#### Key Files
+
+| File | Change |
+|------|--------|
+| `prisma/schema.prisma` | Add `ConsensusVote` model + `Milestone.consensus*` fields |
+| `src/services/attestation/runner.service.ts` | Create AI vote + call threshold check |
+| `src/app/api/contracts/[id]/milestones/[milestoneId]/consensus/configure/route.ts` | New |
+| `src/app/api/contracts/[id]/milestones/[milestoneId]/consensus/status/route.ts` | New |
+| `src/app/api/attestation/consensus/vote/route.ts` | New |
+| `src/app/vote/[token]/page.tsx` | New — public voting page |
+| `src/app/api/cron/consensus-timeout/route.ts` | New |
+| `src/app/cert/attestation/[id]/page.tsx` | Add consensus section |
+| `src/lib/email.ts` | Add `sendConsensusVoteInviteEmail` + `sendConsensusReachedEmail` |
+| `vercel.json` | Add consensus-timeout cron + maxDuration for vote route |
+
+**Estimated effort:** 3 days
+
+---
+
+## Phase 3 — Summary & Build Order
+
+| Feature | Effort | Impact | Builds On |
+|---------|--------|--------|-----------|
+| VI — Predictive Miss Detection | 1.5 days | High | Phase 2 Pulse Checks |
+| IX — Cryptographic Evidence Chain | 1.5 days | High | runner.service.ts |
+| VIII — XBRL Filing Export | 2.5 days | Very High | Board Reports + Reg Mapping |
+| VII — Double Materiality Wizard | 3 days | Very High | Wizard + Reg Mapping |
+| XI — Multi-Party Consensus | 3 days | Very High | runner.service.ts + Auditor Portal |
+| X — Enterprise Connectors | 4 days | Extreme | runner.service.ts fetchers |
+
+**Recommended sprint order:**
+1. Feature IX (Evidence Chain) — lowest risk, highest credibility uplift, 1.5 days
+2. Feature VI (Predictive Miss) — extends existing pulse-check infra, 1.5 days
+3. Feature VIII (XBRL) — major enterprise sales trigger, 2.5 days
+4. Feature VII (Materiality Wizard) — CSRD compliance entry point, 3 days
+5. Feature XI (Multi-Party Consensus) — Big 4 partnership enabler, 3 days
+6. Feature X (Enterprise Connectors) — SAP/Workday integrations, 4 days
+
+Total Phase 3 estimated effort: ~15–16 days
 
 ---
 
