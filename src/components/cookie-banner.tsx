@@ -45,6 +45,10 @@ export function CookieBanner() {
     >
       <p style={{ flex: 1, fontSize: 13, color: "#A89B8C", margin: 0, lineHeight: 1.5 }}>
         We use strictly necessary session cookies to keep you logged in. No tracking or advertising.{" "}
+        <Link href="/terms" style={{ color: "#C4704B", textDecoration: "underline" }}>
+          Terms
+        </Link>
+        {" · "}
         <Link href="/datenschutz" style={{ color: "#C4704B", textDecoration: "underline" }}>
           Privacy policy
         </Link>

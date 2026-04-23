@@ -460,6 +460,9 @@ export default function EnterprisePage() {
             © 2026 cascrow. All rights reserved.
           </span>
           <div className="flex items-center gap-6">
+            <Link href="/terms" style={{ fontSize: "0.875rem", color: "var(--ent-muted)" }} className="hover:opacity-80 transition-opacity">
+              Terms
+            </Link>
             <Link href="/datenschutz" style={{ fontSize: "0.875rem", color: "var(--ent-muted)" }} className="hover:opacity-80 transition-opacity">
               Privacy
             </Link>

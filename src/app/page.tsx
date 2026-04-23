@@ -1322,6 +1322,7 @@ export default function LandingPage() {
               <Link href="/login"        className="transition-colors hover:text-[#EDE6DD]">Sign in</Link>
               <Link href="/register"     className="transition-colors hover:text-[#EDE6DD]">Register</Link>
               <Link href="/stats"        className="transition-colors hover:text-[#EDE6DD]">Stats</Link>
+              <Link href="/terms"         className="transition-colors hover:text-[#EDE6DD]">Terms of Use</Link>
               <Link href="/datenschutz"  className="transition-colors hover:text-[#EDE6DD]">Privacy Policy</Link>
             </div>
           </div>
