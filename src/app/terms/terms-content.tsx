@@ -409,8 +409,50 @@ export function TermsContent() {
           </p>
         </Section>
 
-        {/* Section 15 */}
-        <Section title={de ? "15. Kontakt" : "15. Contact"}>
+        {/* Section 15 — Widerrufsrecht */}
+        <Section title={de ? "15. Widerrufsrecht (Verbraucher)" : "15. Right of Withdrawal (Consumers)"}>
+          <p>
+            {de
+              ? "Wenn du als Verbraucher (§ 13 BGB) einen Nutzungsvertrag mit Cascrow abschließt, steht dir grundsätzlich ein gesetzliches Widerrufsrecht von 14 Tagen zu."
+              : "If you enter into a user agreement with Cascrow as a consumer (§ 13 BGB), you generally have a statutory right of withdrawal of 14 days."}
+          </p>
+          <p className="mt-3">
+            {de
+              ? "Durch die Registrierung und aktive Nutzung der Plattform (z.B. Erstellung eines Escrow-Vertrags) stimmst du ausdrücklich zu, dass Cascrow mit der Ausführung des Dienstes sofort beginnt. Du nimmst zur Kenntnis, dass du dein Widerrufsrecht mit Beginn der Ausführung des Dienstes verlierst (§ 356 Abs. 5 BGB)."
+              : "By registering and actively using the platform (e.g. creating an escrow contract), you expressly agree that Cascrow begins performing the service immediately. You acknowledge that you lose your right of withdrawal once performance of the service has begun (§ 356(5) BGB)."}
+          </p>
+          <p className="mt-3">
+            {de
+              ? "Dieses Widerrufsrecht gilt ausschließlich für Verbraucher im Sinne des § 13 BGB. Gewerbliche Nutzer haben kein gesetzliches Widerrufsrecht."
+              : "This right of withdrawal applies exclusively to consumers within the meaning of § 13 BGB. Business users do not have a statutory right of withdrawal."}
+          </p>
+        </Section>
+
+        {/* Section 16 — Vertragssprache + Textspeicherung */}
+        <Section title={de ? "16. Vertragssprache und Textspeicherung" : "16. Contract Language and Text Storage"}>
+          <p>
+            {de
+              ? "Die Vertragssprache ist Deutsch. Diese Nutzungsbedingungen werden zusätzlich auf Englisch bereitgestellt; im Falle von Widersprüchen gilt die deutsche Fassung."
+              : "The contract language is German. These Terms of Use are additionally provided in English; in the event of discrepancies, the German version prevails."}
+          </p>
+          <p className="mt-3">
+            {de
+              ? "Der Vertragstext wird nicht gesondert gespeichert und ist nach Vertragsschluss nicht über dein Konto abrufbar. Die jeweils gültige Fassung dieser Nutzungsbedingungen ist jederzeit unter cascrow.com/terms einsehbar (§ 312i Abs. 1 Nr. 4 BGB)."
+              : "The contract text is not stored separately and is not accessible via your account after conclusion of the contract. The current version of these Terms of Use is available at all times at cascrow.com/terms (§ 312i(1) No. 4 BGB)."}
+          </p>
+        </Section>
+
+        {/* Section 17 — Salvatorische Klausel */}
+        <Section title={de ? "17. Salvatorische Klausel" : "17. Severability"}>
+          <p>
+            {de
+              ? "Sollten einzelne Bestimmungen dieser Nutzungsbedingungen ganz oder teilweise unwirksam oder undurchführbar sein oder werden, berührt dies die Wirksamkeit der übrigen Bestimmungen nicht. An die Stelle der unwirksamen oder undurchführbaren Bestimmung tritt die gesetzliche Regelung. Dies gilt entsprechend bei Regelungslücken."
+              : "Should individual provisions of these Terms of Use be or become wholly or partially invalid or unenforceable, this shall not affect the validity of the remaining provisions. The statutory provision shall replace the invalid or unenforceable provision. The same applies in the event of any gaps."}
+          </p>
+        </Section>
+
+        {/* Section 18 — Kontakt */}
+        <Section title={de ? "18. Kontakt" : "18. Contact"}>
           <p>
             {de
               ? "Bei Fragen zu diesen Nutzungsbedingungen oder Meldung von Verstößen:"

@@ -114,6 +114,12 @@ export function PrivacyContent() {
                 : "Temporarily stored in Upstash Redis for rate limiting and abuse protection (max. 1 hour TTL, then automatically deleted)"}
             </Li>
             <Li>
+              <strong>{de ? "Nutzungsereignisse (Analytics):" : "Usage events (analytics):"}</strong>{" "}
+              {de
+                ? "Anonymisierte Plattformereignisse wie Login, Vertragsanlage oder Proof-Upload – erfasst über PostHog (EU-Region, Frankfurt). Übermittelt wird eine pseudonyme User-ID; keine Klarnamen oder E-Mail-Adressen."
+                : "Anonymised platform events such as login, contract creation, or proof upload – captured via PostHog (EU region, Frankfurt). A pseudonymous user ID is transmitted; no real names or email addresses."}
+            </Li>
+            <Li>
               <strong>{de ? "Technische Fehlerdaten:" : "Technical error data:"}</strong>{" "}
               {de
                 ? "Stack Traces, Fehlermeldungen, betroffene Seiten – über Sentry erfasst, ohne personenbezogene Kontoinformationen"
@@ -140,8 +146,8 @@ export function PrivacyContent() {
             <Li>
               <strong>{de ? "Berechtigtes Interesse (Art. 6 Abs. 1 lit. f DSGVO):" : "Legitimate interests (Art. 6(1)(f) GDPR):"}</strong>{" "}
               {de
-                ? "Sicherheitsmaßnahmen (Rate Limiting, Kontosperre), Betrugserkennung, Fehlerüberwachung (Sentry), Plattformbetrieb"
-                : "Security measures (rate limiting, account lockout), fraud detection, error monitoring (Sentry), platform operation"}
+                ? "Sicherheitsmaßnahmen (Rate Limiting, Kontosperre), Betrugserkennung, Fehlerüberwachung (Sentry), Produktanalyse (PostHog – pseudonym, EU-Region), Plattformbetrieb"
+                : "Security measures (rate limiting, account lockout), fraud detection, error monitoring (Sentry), product analytics (PostHog – pseudonymous, EU region), platform operation"}
             </Li>
             <Li>
               <strong>{de ? "Einwilligung (Art. 6 Abs. 1 lit. a DSGVO):" : "Consent (Art. 6(1)(a) GDPR):"}</strong>{" "}
@@ -279,6 +285,7 @@ export function PrivacyContent() {
                       ["Resend", "E-Mail-Versand", "USA", "SCCs"],
                       ["Cloudflare Turnstile", "Bot-Schutz", "Global (CDN)", "EU-US DPF"],
                       ["Sentry", "Fehlerüberwachung", "EU (Frankfurt)", "–"],
+                      ["PostHog", "Produktanalyse (pseudonym, EU-Region)", "EU (Frankfurt)", "–"],
                       ["Telegram", "Optionale Benachrichtigungen", "Global", "SCCs"],
                       ["XRP Ledger Mainnet", "NFT-Zertifikate, Audit-Trail", "Dezentral, weltweit", "Öffentliche Blockchain"],
                       ["XRPL EVM Sidechain", "Escrow Smart Contract", "Dezentral, weltweit", "Öffentliche Blockchain"],
@@ -290,6 +297,7 @@ export function PrivacyContent() {
                       ["Resend", "Email delivery", "USA", "SCCs"],
                       ["Cloudflare Turnstile", "Bot protection", "Global (CDN)", "EU-US DPF"],
                       ["Sentry", "Error monitoring", "EU (Frankfurt)", "–"],
+                      ["PostHog", "Product analytics (pseudonymous, EU region)", "EU (Frankfurt)", "–"],
                       ["Telegram", "Optional notifications", "Global", "SCCs"],
                       ["XRP Ledger Mainnet", "NFT certificates, audit trail", "Decentralized, worldwide", "Public blockchain"],
                       ["XRPL EVM Sidechain", "Escrow smart contract", "Decentralized, worldwide", "Public blockchain"],
