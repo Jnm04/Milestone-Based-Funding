@@ -30,7 +30,7 @@ export async function GET(
     return NextResponse.json({ error: "Not an attestation contract" }, { status: 400 });
 
   const isOwner = contract.investorId === session.user.id;
-  const isAuditor = contract.auditorEmail === session.user.email;
+  const isAuditor = contract.auditorEmail?.toLowerCase() === session.user.email?.toLowerCase();
   if (!isOwner && !isAuditor) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const milestones = await prisma.milestone.findMany({

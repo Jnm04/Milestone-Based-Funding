@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { runAttestation } from "@/services/attestation/runner.service";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import crypto from "crypto";
 
 function currentPeriod(scheduleType: string | null): string {
   const now = new Date();
@@ -65,9 +66,15 @@ export async function POST(
     return NextResponse.json({ error: "Manual review milestones cannot be re-run automatically." }, { status: 409 });
   }
 
-  // Rate limit: 2 auditor re-runs per milestone per hour (by IP)
+  // Rate limit: by IP (prevents IP-based abuse) AND by email-hash per contract
+  // (prevents a single auditor from spamming across IP rotations)
   const ip = getClientIp(req);
-  if (!(await checkRateLimit(`auditor-run:${milestoneId}:${ip}`, 2, 60 * 60 * 1000))) {
+  const emailHash = crypto.createHash("sha256").update(normalizedEmail).digest("hex").slice(0, 16);
+  const [ipOk, emailOk] = await Promise.all([
+    checkRateLimit(`auditor-run:ip:${milestoneId}:${ip}`, 2, 60 * 60 * 1000),
+    checkRateLimit(`auditor-run:email:${contractId}:${emailHash}`, 5, 60 * 60 * 1000),
+  ]);
+  if (!ipOk || !emailOk) {
     return NextResponse.json(
       { error: "Too many re-run requests. Please wait before trying again." },
       { status: 429 }
@@ -82,7 +89,14 @@ export async function POST(
       skipMilestoneUpdate: true,
       skipAuditorNotify: true,
     });
-    return NextResponse.json({ success: true, ...result });
+    return NextResponse.json({
+      success: true,
+      verdict: result.verdict,
+      reasoning: result.reasoning,
+      certUrl: result.certUrl ?? null,
+      xrplTxHash: result.xrplTxHash ?? null,
+      period,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Attestation re-run failed";
     console.error("[auditor-run]", err);

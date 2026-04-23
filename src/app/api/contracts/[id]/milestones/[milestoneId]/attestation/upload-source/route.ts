@@ -42,6 +42,21 @@ export async function POST(
   const allowed = new Set(["pdf", "doc", "docx", "xls", "xlsx", "csv", "txt", "json", "png", "jpg", "jpeg"]);
   if (!allowed.has(ext)) return NextResponse.json({ error: "File type not allowed" }, { status: 415 });
 
+  // Magic byte validation — extension alone can be spoofed
+  const header = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+  const isPdf  = header[0] === 0x25 && header[1] === 0x50 && header[2] === 0x44 && header[3] === 0x46;
+  const isPng  = header[0] === 0x89 && header[1] === 0x50 && header[2] === 0x4E && header[3] === 0x47;
+  const isJpeg = header[0] === 0xFF && header[1] === 0xD8 && header[2] === 0xFF;
+  const isZip  = header[0] === 0x50 && header[1] === 0x4B && header[2] === 0x03 && header[3] === 0x04;
+  const isCfb  = header[0] === 0xD0 && header[1] === 0xCF && header[2] === 0x11 && header[3] === 0xE0;
+  const magicOk: Record<string, boolean> = {
+    pdf: isPdf, png: isPng, jpg: isJpeg, jpeg: isJpeg,
+    docx: isZip, xlsx: isZip, doc: isCfb, xls: isCfb,
+    // text formats have no magic bytes — accept as-is
+    csv: true, txt: true, json: true,
+  };
+  if (!magicOk[ext]) return NextResponse.json({ error: "File content does not match extension" }, { status: 415 });
+
   const blob = await put(
     `attestation/${milestoneId}/source-${Date.now()}.${ext}`,
     file,

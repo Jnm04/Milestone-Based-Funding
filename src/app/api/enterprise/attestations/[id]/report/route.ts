@@ -10,6 +10,16 @@ function esc(s: string) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+function safeHref(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
+    return url;
+  } catch {
+    return null;
+  }
+}
+
 function verdictBadge(verdict: string) {
   const map: Record<string, { label: string; color: string; bg: string }> = {
     YES:          { label: "VERIFIED",     color: "#065F46", bg: "#D1FAE5" },
@@ -147,7 +157,7 @@ export async function GET(
             ${m.description ? `<p style="margin:4px 0 0;font-size:12px;color:#6B7280">${esc(m.description)}</p>` : ""}
             <p style="margin:4px 0 0;font-size:11px;color:#9CA3AF">
               Source: ${esc(srcLabel[m.dataSourceType ?? ""] ?? "—")}
-              ${m.dataSourceUrl ? ` · <a href="${esc(m.dataSourceUrl)}" style="color:#C4704B;text-decoration:none">${esc(m.dataSourceUrl)}</a>` : ""}
+              ${m.dataSourceUrl && safeHref(m.dataSourceUrl) ? ` · <a href="${esc(safeHref(m.dataSourceUrl)!)}" style="color:#C4704B;text-decoration:none">${esc(m.dataSourceUrl)}</a>` : m.dataSourceUrl ? ` · ${esc(m.dataSourceUrl)}` : ""}
               · Deadline: ${new Date(m.cancelAfter).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
             </p>
             ${tagsHtml}

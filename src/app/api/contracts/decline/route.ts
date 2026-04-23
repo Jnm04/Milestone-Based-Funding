@@ -13,8 +13,12 @@ export async function POST(req: NextRequest) {
   const contract = await prisma.contract.findUnique({ where: { inviteLink: inviteCode } });
   if (!contract) return NextResponse.json({ error: "Contract not found" }, { status: 404 });
   if (contract.status !== "DRAFT") return NextResponse.json({ error: "Contract is no longer pending" }, { status: 409 });
-  // The investor cannot decline their own contract via the startup invite link
+  // Investor cannot decline their own invite link
   if (contract.investorId === session.user.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  // If a startup has already joined, only they can decline (prevents other auth users from hijacking)
+  if (contract.startupId && contract.startupId !== session.user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

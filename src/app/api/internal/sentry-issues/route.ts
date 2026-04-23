@@ -1,24 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import crypto from "crypto";
-
-function isAuthorized(req: NextRequest): boolean {
-  const key = req.headers.get("x-internal-key")?.trim();
-  const secret = process.env.INTERNAL_SECRET?.trim();
-  if (!key || !secret) return false;
-  try {
-    const len = Math.max(key.length, secret.length);
-    const a = Buffer.alloc(len);
-    const b = Buffer.alloc(len);
-    Buffer.from(key).copy(a);
-    Buffer.from(secret).copy(b);
-    return key.length === secret.length && crypto.timingSafeEqual(a, b);
-  } catch {
-    return false;
-  }
-}
+import { isInternalAuthorized } from "@/lib/internal-auth";
 
 export async function GET(req: NextRequest) {
-  if (!isAuthorized(req)) {
+  if (!isInternalAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
