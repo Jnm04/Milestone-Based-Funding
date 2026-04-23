@@ -104,7 +104,30 @@ export default async function AttestationDetailPage({ params }: { params: Promis
             </p>
           </div>
 
-          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <div style={{ display: "flex", gap: 8, flexShrink: 0, flexWrap: "wrap" }}>
+            <a
+              href={`/verify/${id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "8px 16px",
+                background: "white",
+                color: "var(--ent-text)",
+                border: "1px solid var(--ent-border)",
+                borderRadius: 7,
+                fontSize: 13,
+                fontWeight: 500,
+                textDecoration: "none",
+              }}
+            >
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+              </svg>
+              Public Link
+            </a>
             <a
               href={`/api/enterprise/attestations/${id}/report`}
               target="_blank"

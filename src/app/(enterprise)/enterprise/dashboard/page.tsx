@@ -65,6 +65,34 @@ export default async function EnterpriseDashboardPage() {
 
   const onChainCount = contracts.flatMap((c) => c.milestones).filter((m) => m.nftTxHash || m.evmTxHash).length;
 
+  // Trend: attestation entries per month for the last 6 months
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+  sixMonthsAgo.setDate(1);
+  sixMonthsAgo.setHours(0, 0, 0, 0);
+
+  const trendEntries = await prisma.attestationEntry.findMany({
+    where: {
+      milestone: { contract: { investorId: userId } },
+      createdAt: { gte: sixMonthsAgo },
+    },
+    select: { createdAt: true, aiVerdict: true },
+  });
+
+  const trendMonths: { label: string; total: number; yes: number }[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    const y = d.getFullYear();
+    const m = d.getMonth();
+    const label = d.toLocaleDateString("en", { month: "short", year: "2-digit" });
+    const entries = trendEntries.filter((e) => {
+      const ed = new Date(e.createdAt);
+      return ed.getFullYear() === y && ed.getMonth() === m;
+    });
+    trendMonths.push({ label, total: entries.length, yes: entries.filter((e) => e.aiVerdict === "YES").length });
+  }
+
   const summaryCards = [
     {
       label: "Total Attestations",
@@ -206,6 +234,67 @@ export default async function EnterpriseDashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* Trend chart */}
+      {trendEntries.length > 0 && (() => {
+        const chartW = 600;
+        const chartH = 120;
+        const barW = 52;
+        const gap = (chartW - trendMonths.length * barW) / (trendMonths.length + 1);
+        const maxVal = Math.max(1, ...trendMonths.map((m) => m.total));
+        return (
+          <div style={{ ...s.card, marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+              <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "var(--ent-text)" }}>Attestation Trend</h2>
+              <div style={{ display: "flex", gap: 16, fontSize: 12, color: "var(--ent-muted)" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: "#2563EB", display: "inline-block" }} />
+                  All runs
+                </span>
+                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: "#059669", display: "inline-block" }} />
+                  Verified (YES)
+                </span>
+              </div>
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              <svg viewBox={`0 0 ${chartW} ${chartH + 28}`} style={{ width: "100%", display: "block" }}>
+                {trendMonths.map((m, i) => {
+                  const x = gap + i * (barW + gap);
+                  const totalH = Math.round((m.total / maxVal) * chartH);
+                  const yesH = Math.round((m.yes / maxVal) * chartH);
+                  return (
+                    <g key={m.label}>
+                      {/* Total bar (background) */}
+                      <rect
+                        x={x} y={chartH - totalH} width={barW} height={totalH}
+                        rx={4} fill="#DBEAFE"
+                      />
+                      {/* YES bar (foreground) */}
+                      {m.yes > 0 && (
+                        <rect
+                          x={x} y={chartH - yesH} width={barW} height={yesH}
+                          rx={4} fill="#2563EB"
+                        />
+                      )}
+                      {/* Total label above bar */}
+                      {m.total > 0 && (
+                        <text x={x + barW / 2} y={chartH - totalH - 4} textAnchor="middle" fontSize={10} fill="#64748B" fontWeight={600}>
+                          {m.total}
+                        </text>
+                      )}
+                      {/* Month label below */}
+                      <text x={x + barW / 2} y={chartH + 18} textAnchor="middle" fontSize={10.5} fill="#94A3B8">
+                        {m.label}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+            </div>
+          </div>
+        );
+      })()}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 20 }}>
         {/* Recent attestations table */}

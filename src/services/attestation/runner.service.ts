@@ -12,6 +12,7 @@ import { sendAttestationResultEmail } from "@/lib/email";
 import { buildEvidenceChain } from "@/lib/evidence-chain";
 import { fetchFromConnector } from "./connectors";
 import { checkConsensusThreshold } from "@/lib/consensus";
+import { fireWebhook } from "@/services/webhook/webhook.service";
 
 const SYSTEM_PROMPT_VERSION = "v1";
 
@@ -326,6 +327,15 @@ Does the evidence show this milestone is met?`;
       console.warn("[attestation] consensus threshold check failed:", err)
     );
   }
+
+  // ── 11. Fire webhook for attestation.completed ───────────────────────────
+  fireWebhook({
+    investorId: milestone.contract.investorId,
+    event: "attestation.completed",
+    contractId: milestone.contractId,
+    milestoneId,
+    data: { verdict, period, certUrl, xrplTxHash, milestoneTitle: milestone.title },
+  }).catch((err) => console.warn("[attestation] webhook fire failed:", err));
 
   return { entryId: entry.id, verdict, reasoning, fetchedHash, xrplTxHash, certUrl };
 }

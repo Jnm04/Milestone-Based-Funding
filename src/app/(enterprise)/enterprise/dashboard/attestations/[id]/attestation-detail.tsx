@@ -880,10 +880,44 @@ export function AttestationDetail({
   milestones: MilestoneData[];
 }) {
   const [milestones, setMilestones] = useState<MilestoneData[]>(initialMilestones);
+  const [bulkRunning, setBulkRunning] = useState(false);
 
   const handleUpdate = useCallback((id: string, updates: Partial<MilestoneData>) => {
     setMilestones((prev) => prev.map((m) => (m.id === id ? { ...m, ...updates } : m)));
   }, []);
+
+  const runnableCount = milestones.filter(
+    (m) => m.dataSourceLockedAt && m.dataSourceType !== "MANUAL_REVIEW"
+  ).length;
+
+  async function handleBulkRun() {
+    if (!runnableCount || bulkRunning) return;
+    setBulkRunning(true);
+    try {
+      const res = await fetch(`/api/enterprise/attestations/${goalSet.id}/bulk-run`, {
+        method: "POST",
+      });
+      const data = await res.json() as {
+        ran?: number;
+        results?: { milestoneId: string; title: string; verdict?: string; error?: string }[];
+        error?: string;
+      };
+      if (!res.ok) {
+        toast.error(data.error ?? "Bulk run failed");
+        return;
+      }
+      const results = data.results ?? [];
+      const succeeded = results.filter((r) => r.verdict).length;
+      const failed = results.filter((r) => r.error).length;
+      toast.success(`Bulk run complete — ${succeeded} ran${failed ? `, ${failed} skipped` : ""}`);
+      // Refresh page data by reloading (simplest for server component parent)
+      window.location.reload();
+    } catch {
+      toast.error("Network error during bulk run");
+    } finally {
+      setBulkRunning(false);
+    }
+  }
 
   return (
     <>
@@ -893,9 +927,47 @@ export function AttestationDetail({
           50%       { opacity: 0.4; transform: scale(0.85); }
         }
       `}</style>
+
+      {runnableCount > 1 && (
+        <div style={{ marginBottom: 20, display: "flex", justifyContent: "flex-end" }}>
+          <button
+            type="button"
+            disabled={bulkRunning}
+            onClick={() => void handleBulkRun()}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 7,
+              padding: "8px 18px", borderRadius: 7, fontSize: 13, fontWeight: 600,
+              cursor: bulkRunning ? "not-allowed" : "pointer",
+              border: "none",
+              background: bulkRunning ? "#E5E7EB" : "var(--ent-accent)",
+              color: bulkRunning ? "#9CA3AF" : "white",
+            }}
+          >
+            {bulkRunning ? (
+              <>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
+                  style={{ animation: "spin 1s linear infinite" }}>
+                  <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeOpacity="0.25" />
+                  <path d="M21 12c0-4.97-4.03-9-9-9" />
+                </svg>
+                Running all…
+              </>
+            ) : (
+              <>
+                <svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+                Run All ({runnableCount})
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
       {milestones.map((m) => (
         <MilestoneCard key={m.id} milestone={m} goalSetId={goalSet.id} onUpdate={handleUpdate} />
       ))}
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </>
   );
 }

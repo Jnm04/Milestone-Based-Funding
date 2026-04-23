@@ -86,6 +86,7 @@ export const WEBHOOK_EVENTS = [
   "manual_review.resolved",
   "funds.released",
   "contract.rejected",
+  "attestation.completed",
 ] as const;
 
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];

@@ -907,3 +907,43 @@ export async function sendConsensusReachedEmail({
     `,
   });
 }
+
+// ── Enterprise Deadline Reminder ──────────────────────────────────────────────
+
+export async function sendAttestationDeadlineReminderEmail({
+  to,
+  contractId,
+  goalSetTitle,
+  milestoneTitle,
+  deadlineAt,
+  daysLeft,
+}: {
+  to: string;
+  contractId: string;
+  goalSetTitle: string;
+  milestoneTitle: string;
+  deadlineAt: Date;
+  daysLeft: number;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  const deadlineStr = deadlineAt.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const urgentColor = daysLeft <= 3 ? "#DC2626" : "#D97706";
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Attestation deadline in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}: ${milestoneTitle}`,
+    html: `
+      <p style="font-weight:bold;color:${urgentColor}">⏰ Attestation deadline approaching</p>
+      <table style="border-collapse:collapse;width:100%;max-width:560px">
+        <tr><td style="padding:6px 0;color:#666;font-size:13px">Goal Set</td><td style="padding:6px 0;font-weight:bold">${esc(goalSetTitle)}</td></tr>
+        <tr><td style="padding:6px 0;color:#666;font-size:13px">Milestone</td><td style="padding:6px 0;font-weight:bold">${esc(milestoneTitle)}</td></tr>
+        <tr><td style="padding:6px 0;color:#666;font-size:13px">Deadline</td><td style="padding:6px 0;color:${urgentColor};font-weight:bold">${deadlineStr}</td></tr>
+        <tr><td style="padding:6px 0;color:#666;font-size:13px">Days remaining</td><td style="padding:6px 0;font-weight:bold">${daysLeft}</td></tr>
+      </table>
+      <p>Run your attestation now to capture this period's data before the deadline expires.</p>
+      <p><a href="${enterpriseLink(contractId)}" style="background:#C4704B;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block;font-weight:600">Open Goal Set →</a></p>
+      <p style="font-size:12px;color:#999">You are receiving this because you are the owner of this attestation goal set on cascrow.</p>
+    `,
+  });
+}
