@@ -55,6 +55,7 @@ export default async function AttestationDetailPage({ params }: { params: Promis
     scheduleType: m.scheduleType,
     attestationCertUrl: m.attestationCertUrl,
     attestationFetchedAt: m.attestationFetchedAt?.toISOString() ?? null,
+    regulatoryTags: (() => { try { return JSON.parse(m.regulatoryTags ?? "[]") as string[]; } catch { return []; } })(),
     latestEntries: m.attestationEntries.map((e) => ({
       id: e.id,
       period: e.period,

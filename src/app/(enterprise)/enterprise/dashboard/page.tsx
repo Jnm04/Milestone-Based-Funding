@@ -53,6 +53,7 @@ export default async function EnterpriseDashboardPage() {
         title: m.title,
         contractTitle: c.milestone,
         contractId: c.id,
+        contractMode: c.mode,
         status: m.status,
         amountUSD: Number(m.amountUSD),
         deadline: m.cancelAfter,
@@ -238,7 +239,7 @@ export default async function EnterpriseDashboardPage() {
                 Your enterprise dashboard is ready. Create your first goal set to get started.
               </p>
               <a
-                href="/contract/new"
+                href="/enterprise/dashboard/attestations/new"
                 style={{
                   display: "inline-block",
                   padding: "9px 20px",
@@ -269,7 +270,9 @@ export default async function EnterpriseDashboardPage() {
                     <tr key={m.id}>
                       <td style={s.td}>
                         <a
-                          href={`/contract/${m.contractId}`}
+                          href={m.contractMode === "ATTESTATION"
+                            ? `/enterprise/dashboard/attestations/${m.contractId}`
+                            : `/contract/${m.contractId}`}
                           style={{ color: "var(--ent-text)", textDecoration: "none", fontWeight: 500 }}
                         >
                           {m.title}

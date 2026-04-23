@@ -251,6 +251,9 @@ model Milestone {
   scheduleNextRun         DateTime?
   schedulePreviousRun     DateTime?
 
+  // Regulatory mapping — JSON array of tag strings e.g. ["CSRD:E1", "GRI:305-1"]
+  regulatoryTags          String?   @db.Text
+
   attestationEntries AttestationEntry[]
 
   createdAt         DateTime        @default(now())

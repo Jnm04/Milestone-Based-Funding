@@ -41,7 +41,13 @@ export interface AttestationRunResult {
 export async function runAttestation(
   milestoneId: string,
   period: string,
-  triggeredBy: "PLATFORM" | "CRON" | "MANUAL" = "PLATFORM"
+  triggeredBy: "PLATFORM" | "CRON" | "MANUAL" = "PLATFORM",
+  options?: {
+    type?: "PLATFORM" | "AUDITOR_RERUN";
+    auditorEmail?: string;
+    skipMilestoneUpdate?: boolean;
+    skipAuditorNotify?: boolean;
+  }
 ): Promise<AttestationRunResult> {
   const milestone = await prisma.milestone.findUnique({
     where: { id: milestoneId },
@@ -200,6 +206,7 @@ Does the evidence show this milestone is met?`;
   }
 
   // ── 7. Create AttestationEntry ────────────────────────────────────────────
+  const entryType = options?.type ?? "PLATFORM";
   const entry = await prisma.attestationEntry.create({
     data: {
       milestoneId: milestone.id,
@@ -211,26 +218,29 @@ Does the evidence show this milestone is met?`;
       aiReasoning: reasoning,
       xrplTxHash,
       certUrl,
-      type: "PLATFORM",
+      type: entryType,
+      auditorEmail: options?.auditorEmail ?? null,
     },
   });
 
-  // ── 8. Update milestone fields ────────────────────────────────────────────
-  await prisma.milestone.update({
-    where: { id: milestoneId },
-    data: {
-      attestationFetchedAt: fetchedAt,
-      attestationFetchedHash: fetchedHash,
-      attestationFetchedBlob: fetchedBlobUrl,
-      attestationCertUrl: certUrl,
-      status: verdict === "YES" ? "COMPLETED" : verdict === "NO" ? "REJECTED" : "PENDING_REVIEW",
-      schedulePreviousRun: fetchedAt,
-    },
-  });
+  // ── 8. Update milestone fields (skipped for auditor re-runs) ─────────────
+  if (!options?.skipMilestoneUpdate) {
+    await prisma.milestone.update({
+      where: { id: milestoneId },
+      data: {
+        attestationFetchedAt: fetchedAt,
+        attestationFetchedHash: fetchedHash,
+        attestationFetchedBlob: fetchedBlobUrl,
+        attestationCertUrl: certUrl,
+        status: verdict === "YES" ? "COMPLETED" : verdict === "NO" ? "REJECTED" : "PENDING_REVIEW",
+        schedulePreviousRun: fetchedAt,
+      },
+    });
+  }
 
-  // ── 9. Notify auditor ─────────────────────────────────────────────────────
+  // ── 9. Notify auditor (skipped for auditor-triggered runs) ───────────────
   const auditorEmail = milestone.contract.auditorEmail;
-  if (auditorEmail) {
+  if (auditorEmail && !options?.skipAuditorNotify) {
     sendAttestationResultEmail({
       to: auditorEmail,
       milestoneTitle: milestone.title,

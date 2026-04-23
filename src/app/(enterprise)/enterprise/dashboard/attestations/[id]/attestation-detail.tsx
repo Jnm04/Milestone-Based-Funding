@@ -30,6 +30,7 @@ interface MilestoneData {
   scheduleType: string | null;
   attestationCertUrl: string | null;
   attestationFetchedAt: string | null;
+  regulatoryTags: string[];
   latestEntries: EntryData[];
 }
 
@@ -490,10 +491,19 @@ function MilestoneCard({ milestone, goalSetId, onUpdate }: CardProps) {
       </div>
 
       {milestone.description && (
-        <p style={{ margin: "0 0 14px", fontSize: 13.5, color: "var(--ent-muted)", lineHeight: 1.55 }}>
+        <p style={{ margin: "0 0 10px", fontSize: 13.5, color: "var(--ent-muted)", lineHeight: 1.55 }}>
           {milestone.description}
         </p>
       )}
+
+      <RegulatoryTagSelector
+        milestoneId={milestone.id}
+        contractId={goalSetId}
+        initialTags={milestone.regulatoryTags}
+        onSaved={(tags) => onUpdate(milestone.id, { regulatoryTags: tags })}
+      />
+
+      <div style={{ marginBottom: 14 }} />
 
       {/* Source info bar */}
       {isLocked && (
@@ -638,6 +648,224 @@ function MilestoneCard({ milestone, goalSetId, onUpdate }: CardProps) {
 
       {/* History table */}
       {historyOpen && <HistoryPanel entries={entries} />}
+    </div>
+  );
+}
+
+// ── Regulatory tag selector ───────────────────────────────────────────────────
+
+const TAG_GROUPS: { label: string; color: string; bg: string; tags: { id: string; label: string }[] }[] = [
+  {
+    label: "CSRD / ESRS", color: "#059669", bg: "#ECFDF5",
+    tags: [
+      { id: "CSRD:E1", label: "E1 Climate change" },
+      { id: "CSRD:E2", label: "E2 Pollution" },
+      { id: "CSRD:E3", label: "E3 Water" },
+      { id: "CSRD:E4", label: "E4 Biodiversity" },
+      { id: "CSRD:E5", label: "E5 Circular economy" },
+      { id: "CSRD:S1", label: "S1 Own workforce" },
+      { id: "CSRD:S2", label: "S2 Value chain workers" },
+      { id: "CSRD:S3", label: "S3 Affected communities" },
+      { id: "CSRD:S4", label: "S4 Consumers" },
+      { id: "CSRD:G1", label: "G1 Business conduct" },
+    ],
+  },
+  {
+    label: "UN SDGs", color: "#2563EB", bg: "#EFF6FF",
+    tags: [
+      { id: "SDG:7", label: "SDG 7 Clean energy" },
+      { id: "SDG:8", label: "SDG 8 Decent work" },
+      { id: "SDG:9", label: "SDG 9 Industry" },
+      { id: "SDG:10", label: "SDG 10 Inequalities" },
+      { id: "SDG:12", label: "SDG 12 Responsible consumption" },
+      { id: "SDG:13", label: "SDG 13 Climate action" },
+      { id: "SDG:16", label: "SDG 16 Institutions" },
+    ],
+  },
+  {
+    label: "GRI", color: "#7C3AED", bg: "#F5F3FF",
+    tags: [
+      { id: "GRI:302", label: "GRI 302 Energy" },
+      { id: "GRI:305", label: "GRI 305 Emissions" },
+      { id: "GRI:401", label: "GRI 401 Employment" },
+      { id: "GRI:403", label: "GRI 403 OHS" },
+      { id: "GRI:405", label: "GRI 405 Diversity" },
+    ],
+  },
+  {
+    label: "TCFD", color: "#D97706", bg: "#FFFBEB",
+    tags: [
+      { id: "TCFD:GOVERNANCE", label: "Governance" },
+      { id: "TCFD:STRATEGY",   label: "Strategy" },
+      { id: "TCFD:RISK",       label: "Risk management" },
+      { id: "TCFD:METRICS",    label: "Metrics & targets" },
+    ],
+  },
+];
+
+function RegulatoryTagSelector({
+  milestoneId,
+  contractId,
+  initialTags,
+  onSaved,
+}: {
+  milestoneId: string;
+  contractId: string;
+  initialTags: string[];
+  onSaved: (tags: string[]) => void;
+}) {
+  const [selected, setSelected] = useState<Set<string>>(new Set(initialTags));
+  const [saving, setSaving] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const res = await fetch(
+        `/api/contracts/${contractId}/milestones/${milestoneId}/regulatory-tags`,
+        { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tags: [...selected] }) }
+      );
+      const data = await res.json() as { tags?: string[]; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Save failed");
+      onSaved(data.tags ?? [...selected]);
+      toast.success("Regulatory tags saved");
+      setOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const savedTags = initialTags;
+
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          style={{
+            background: "none", border: "1px solid var(--ent-border)",
+            borderRadius: 6, padding: "4px 10px", fontSize: 12,
+            fontWeight: 500, color: "var(--ent-muted)", cursor: "pointer",
+            display: "inline-flex", alignItems: "center", gap: 5,
+          }}
+        >
+          <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+          </svg>
+          Regulatory tags
+          {savedTags.length > 0 && (
+            <span style={{
+              minWidth: 16, height: 16, borderRadius: "50%",
+              background: "var(--ent-accent)", color: "white",
+              fontSize: 10, fontWeight: 700,
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
+            }}>
+              {savedTags.length}
+            </span>
+          )}
+        </button>
+
+        {!open && savedTags.map((t) => {
+          const group = TAG_GROUPS.find((g) => g.tags.some((tag) => tag.id === t));
+          const tag = group?.tags.find((tag) => tag.id === t);
+          return tag ? (
+            <span key={t} style={{
+              fontSize: 11, fontWeight: 600,
+              color: group?.color ?? "#64748B",
+              background: group?.bg ?? "#F8FAFC",
+              padding: "2px 7px", borderRadius: 4,
+            }}>
+              {t}
+            </span>
+          ) : null;
+        })}
+      </div>
+
+      {open && (
+        <div style={{
+          marginTop: 10,
+          border: "1px solid var(--ent-border)",
+          borderRadius: 8,
+          overflow: "hidden",
+          background: "white",
+        }}>
+          <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--ent-border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ent-text)" }}>
+              Map to regulatory frameworks
+            </span>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ent-muted)", padding: 2 }}
+            >
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+            {TAG_GROUPS.map((group) => (
+              <div key={group.label}>
+                <p style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: group.color }}>
+                  {group.label}
+                </p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {group.tags.map((tag) => {
+                    const isOn = selected.has(tag.id);
+                    return (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        onClick={() => toggle(tag.id)}
+                        style={{
+                          padding: "4px 10px", borderRadius: 5, fontSize: 12, fontWeight: 500,
+                          cursor: "pointer", border: `1px solid ${isOn ? group.color : "var(--ent-border)"}`,
+                          background: isOn ? group.bg : "white",
+                          color: isOn ? group.color : "var(--ent-muted)",
+                          transition: "all 0.1s",
+                        }}
+                      >
+                        {tag.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ padding: "12px 16px", borderTop: "1px solid var(--ent-border)", display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              style={{ padding: "7px 14px", borderRadius: 6, fontSize: 12.5, fontWeight: 500, cursor: "pointer", border: "1px solid var(--ent-border)", background: "white", color: "var(--ent-muted)" }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={saving}
+              style={{ padding: "7px 16px", borderRadius: 6, fontSize: 12.5, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", border: "none", background: saving ? "#93C5FD" : "var(--ent-accent)", color: "white" }}
+            >
+              {saving ? "Saving…" : "Save tags"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
