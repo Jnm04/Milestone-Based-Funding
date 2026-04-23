@@ -2,6 +2,10 @@
   "name": "milestonefund",
   "version": "0.1.0",
   "private": true,
+  "overrides": {
+    "uuid": "^14.0.0",
+    "@hono/node-server": "^1.19.14"
+  },
   "scripts": {
     "dev": "NODE_OPTIONS=--dns-result-order=ipv4first next dev",
     "build": "NODE_OPTIONS=--dns-result-order=ipv4first next build",
