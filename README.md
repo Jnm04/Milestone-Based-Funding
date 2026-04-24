@@ -11,6 +11,31 @@ Built at the **XRPL Student Builder Residency 2026** — post-Demo Day, moving t
 
 ---
 
+## Why Cascrow exists
+
+Every year, trillions of dollars change hands based on trust that something happened. Grants get disbursed on milestone reports no one reads. Enterprise sustainability goals are published in annual PDFs that no one verifies. Consulting and dev contracts are paid out when a manager approves a Slack message. The entire system runs on social trust — and social trust fails constantly.
+
+This isn't a niche problem. It sits at the intersection of three massive, underserved markets:
+
+**1. Outcome-based funding** — Grant programs, development aid, impact investment, and B2B contracting are all moving toward pay-for-results models. The bottleneck isn't intent — it's verification. There is no neutral, auditable layer that confirms a milestone was actually hit before money moves. Today, that job is done by account managers, manual sign-offs, and email threads. Cascrow replaces that layer with a cryptographically locked, AI-verified smart contract: the condition is set before money is deposited, and five independent AI models from five different companies must reach a majority before a single token releases. No human can override this unilaterally. No platform can redirect funds. The fulfillment key is emailed to the receiver — if we go offline, they execute on-chain directly with MetaMask.
+
+**2. Enterprise ESG and compliance** — The EU's CSRD regulation now requires 50,000+ companies to publish verified sustainability disclosures. The emerging standard is not self-reporting — it's audited evidence. But today's compliance stack is a collection of Excel exports, PDF uploads, and consultant sign-offs with zero tamper-resistance. Cascrow gives enterprise teams a structured workflow: define a goal, tag it to a regulatory framework (ESRS, GRI), submit evidence, get an AI verdict, and receive an NFT certificate minted on the XRP Ledger. The certificate exists permanently on a public ledger independent of Cascrow's servers — auditors can verify it without touching internal systems. We watch regulatory feeds (EUR-Lex, EFRAG) weekly and push AI-classified change alerts to affected teams. When regulations shift, the right people know immediately.
+
+**3. Trust infrastructure for the AI era** — As AI-generated content saturates every domain, the question "did this actually happen?" becomes harder to answer. Cascrow's 5-model majority vote (Anthropic, Google, OpenAI, Mistral, Alibaba) is designed to be resistant to single-provider bias or manipulation. The prompt hash is locked on-chain so evaluation criteria can't be changed retroactively. Every submitted proof file is SHA-256 hashed and written to the ledger so document swaps are detectable. The audit trail isn't a log we control — it's an immutable record on two independent blockchains.
+
+### Business model
+
+Cascrow operates on two revenue lines:
+
+- **Protocol fee (0.5%)** — taken on every escrow release. The fee is only charged on successful outcomes — if no milestone is met, no fee is owed. This aligns Cascrow's incentives directly with the party paying for results.
+- **Enterprise SaaS** — monthly subscription for attestation contracts, team management, multi-entity structures, audit firm access, API keys, and Slack/Teams integrations. Enterprises pay for compliance infrastructure; they don't need to touch crypto.
+
+The long-term expansion path is **Reviewer-as-a-Service**: for high-stakes milestones, curated domain experts receive an AI-generated brief and cast binding votes — double-blind, majority required — at €50–2,000 per review depending on domain and complexity.
+
+The total addressable market spans every performance-based payment, compliance attestation, and third-party audit in existence. The addressable slice we're starting with — impact grants, B2B dev contracts, and CSRD enterprise compliance — already runs into the billions annually and is actively looking for exactly what Cascrow provides.
+
+---
+
 ## The problem we solve
 
 Grant givers, investors, and enterprise compliance teams all face the same issue: **the people they fund or audit can tell them anything**. Milestones get rubber-stamped. Reports are filed and forgotten. Proof is a PDF that no one verifies.
