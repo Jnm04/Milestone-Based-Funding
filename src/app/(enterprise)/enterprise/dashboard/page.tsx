@@ -252,18 +252,7 @@ export default async function EnterpriseDashboardPage() {
         {summaryCards.map((card) => (
           <div
             key={card.label}
-            style={{
-              ...s.card,
-              transition: "box-shadow 0.15s, transform 0.15s",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
-              (e.currentTarget as HTMLDivElement).style.transform = "translateY(-1px)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
-              (e.currentTarget as HTMLDivElement).style.transform = "none";
-            }}
+            style={s.card}
           >
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 }}>
               <div style={{
@@ -408,9 +397,6 @@ export default async function EnterpriseDashboardPage() {
                   {recentMilestones.map((m) => (
                     <tr
                       key={m.id}
-                      style={{ transition: "background 0.1s" }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = "var(--ent-bg)"; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = "transparent"; }}
                     >
                       <td style={s.td}>
                         <a
