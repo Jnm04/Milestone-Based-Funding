@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json({ ok: true });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[user/wallet]", err);
+    return NextResponse.json({ error: "Failed to save wallet address" }, { status: 500 });
   }
 }

@@ -40,7 +40,7 @@ function StatCard({ label, value, sub }: { label: string; value: string | number
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function CustomTooltip({ active, payload, label }: any) {
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
     <div style={{ background: "#1e1a18", border: "1px solid rgba(196,112,75,0.3)", borderRadius: 8, padding: "10px 14px", fontSize: 12 }}>

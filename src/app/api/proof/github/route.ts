@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
           startupName:
             milestone.contract.startup?.companyName ?? milestone.contract.startup?.name,
           investorId: milestone.contract.investorId,
-        });
+        }).catch((err) => console.error("[email] sendProofSubmittedEmail failed:", err));
       }
 
       await writeAuditLog({
@@ -163,18 +163,16 @@ export async function POST(request: NextRequest) {
         contractId: milestone.contractId,
         milestoneId,
         data: { proofId: proof.id, proofType: "github_url", repoUrl: normalizedUrl, milestoneTitle: milestone.title },
-      });
+      }).catch((err) => console.error("[webhook] proof.submitted failed:", err));
 
-      // Feature V: fire-and-forget proof content summary for investor TL;DR
       if (process.env.ANTHROPIC_API_KEY) {
         void generateAndStoreProofSummary({
           proofId: proof.id,
           milestoneTitle: milestone.title,
           extractedText: ghDoc.text,
-        });
+        }).catch((err) => console.error("[proof-summary] failed:", err));
       }
 
-      // Feature W: fire-and-forget resubmission diff (if a prior rejected proof exists)
       if (process.env.ANTHROPIC_API_KEY) {
         const prevRejected = await prisma.proof.findFirst({
           where: { milestoneId, aiDecision: "NO", aiReasoning: { not: null } },
@@ -187,7 +185,7 @@ export async function POST(request: NextRequest) {
             milestoneTitle: milestone.title,
             previousReasoning: prevRejected.aiReasoning,
             newExtractedText: ghDoc.text,
-          });
+          }).catch((err) => console.error("[resubmission-diff] failed:", err));
         }
       }
 
@@ -255,7 +253,7 @@ export async function POST(request: NextRequest) {
           milestoneTitle: contract.milestone,
           startupName: contract.startup?.companyName ?? contract.startup?.name,
           investorId: contract.investorId,
-        });
+        }).catch((err) => console.error("[email] sendProofSubmittedEmail failed:", err));
       }
 
       await writeAuditLog({
@@ -271,18 +269,16 @@ export async function POST(request: NextRequest) {
         event: "proof.submitted",
         contractId: resolvedContractId,
         data: { proofId: proof.id, proofType: "github_url", repoUrl: normalizedUrl, milestoneTitle: contract.milestone },
-      });
+      }).catch((err) => console.error("[webhook] proof.submitted failed:", err));
 
-      // Feature V: fire-and-forget proof content summary for investor TL;DR
       if (process.env.ANTHROPIC_API_KEY) {
         void generateAndStoreProofSummary({
           proofId: proof.id,
           milestoneTitle: contract.milestone,
           extractedText: ghDoc.text,
-        });
+        }).catch((err) => console.error("[proof-summary] failed:", err));
       }
 
-      // Feature W: fire-and-forget resubmission diff (if a prior rejected proof exists)
       if (process.env.ANTHROPIC_API_KEY) {
         const prevRejected = await prisma.proof.findFirst({
           where: { contractId: resolvedContractId, milestoneId: null, aiDecision: "NO", aiReasoning: { not: null } },
@@ -295,7 +291,7 @@ export async function POST(request: NextRequest) {
             milestoneTitle: contract.milestone,
             previousReasoning: prevRejected.aiReasoning,
             newExtractedText: ghDoc.text,
-          });
+          }).catch((err) => console.error("[resubmission-diff] failed:", err));
         }
       }
 

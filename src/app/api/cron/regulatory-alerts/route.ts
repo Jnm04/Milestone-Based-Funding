@@ -214,7 +214,7 @@ export async function GET(request: NextRequest) {
           "regulatory.alert",
           `${alert.severity === "MAJOR" ? "⚠️ " : ""}${alert.source} update: ${alert.title}\n${classification.aiSummary.slice(0, 200)}`,
           `Regulatory update: ${alert.title}`
-        );
+        ).catch((err) => console.error("[integrations] fireIntegrationNotification failed:", err));
 
         notified++;
       }

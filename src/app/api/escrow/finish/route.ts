@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
         milestoneTitle: completedTitle,
         amountUSD: completedAmount,
         txHash,
-      });
+      }).catch((err) => console.error("[email] sendVerifiedEmail failed:", err));
     }
 
     if (contract.investor.notifyMilestoneCompleted) {
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
         contractId,
         milestoneTitle: completedTitle,
         amountUSD: completedAmount,
-      });
+      }).catch((err) => console.error("[email] sendMilestoneCompletedInvestorEmail failed:", err));
     }
 
     getPostHogClient().capture({
@@ -177,10 +177,10 @@ export async function POST(request: NextRequest) {
         void generateAndStoreReputationForMilestone({
           milestoneId: completedMs.id,
           milestoneTitle: completedMs.title,
-          milestoneDescription: contract.milestone, // project description stored on contract
+          milestoneDescription: contract.milestone,
           amountUSD: completedMs.amountUSD.toString(),
           startupId: contract.startupId,
-        });
+        }).catch((err) => console.error("[reputation] failed:", err));
       }
     }
 
@@ -194,7 +194,7 @@ export async function POST(request: NextRequest) {
           projectDescription: contract.milestone,
           amountUSD: completedMs.amountUSD.toString(),
           completedOnTime: new Date() <= completedMs.cancelAfter,
-        });
+        }).catch((err) => console.error("[completion-narrative] failed:", err));
       }
     }
 

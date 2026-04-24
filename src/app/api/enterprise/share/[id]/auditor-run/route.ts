@@ -98,8 +98,7 @@ export async function POST(
       period,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Attestation re-run failed";
     console.error("[auditor-run]", err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: "Attestation re-run failed" }, { status: 500 });
   }
 }

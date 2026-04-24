@@ -143,6 +143,7 @@ export async function POST(request: NextRequest) {
         },
       },
       orderBy: { createdAt: "asc" },
+      take: 500,
     });
 
     // ── Build structured portfolio data ───────────────────────────────────────

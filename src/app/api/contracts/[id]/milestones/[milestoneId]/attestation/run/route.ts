@@ -63,8 +63,7 @@ export async function POST(
     const result = await runAttestation(milestoneId, period, "MANUAL");
     return NextResponse.json({ success: true, ...result });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Attestation run failed";
     console.error("[attestation/run]", err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: "Attestation run failed" }, { status: 500 });
   }
 }

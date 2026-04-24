@@ -268,16 +268,14 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Feature V: fire-and-forget proof content summary for investor TL;DR
       if (process.env.ANTHROPIC_API_KEY) {
         void generateAndStoreProofSummary({
           proofId: proof.id,
           milestoneTitle: milestone.title,
           extractedText,
-        });
+        }).catch((err) => console.error("[proof-summary] failed:", err));
       }
 
-      // Feature W: fire-and-forget resubmission diff (if a prior rejected proof exists)
       if (process.env.ANTHROPIC_API_KEY) {
         const prevRejected = await prisma.proof.findFirst({
           where: { milestoneId, aiDecision: "NO", aiReasoning: { not: null } },
@@ -290,11 +288,10 @@ export async function POST(request: NextRequest) {
             milestoneTitle: milestone.title,
             previousReasoning: prevRejected.aiReasoning,
             newExtractedText: extractedText,
-          });
+          }).catch((err) => console.error("[resubmission-diff] failed:", err));
         }
       }
 
-      // Auto-trigger AI verification after response is sent
       after(() => triggerVerification(proof.id));
 
       return NextResponse.json({
@@ -368,16 +365,14 @@ export async function POST(request: NextRequest) {
         data: { proofId: proof.id, fileName, milestoneTitle: contract.milestone },
       }).catch((err) => console.error("[webhook] proof.submitted failed:", err));
 
-      // Feature V: fire-and-forget proof content summary for investor TL;DR
       if (process.env.ANTHROPIC_API_KEY) {
         void generateAndStoreProofSummary({
           proofId: proof.id,
           milestoneTitle: contract.milestone,
           extractedText,
-        });
+        }).catch((err) => console.error("[proof-summary] failed:", err));
       }
 
-      // Feature W: fire-and-forget resubmission diff (if a prior rejected proof exists)
       if (process.env.ANTHROPIC_API_KEY) {
         const prevRejected = await prisma.proof.findFirst({
           where: { contractId: resolvedContractId, milestoneId: null, aiDecision: "NO", aiReasoning: { not: null } },
@@ -390,7 +385,7 @@ export async function POST(request: NextRequest) {
             milestoneTitle: contract.milestone,
             previousReasoning: prevRejected.aiReasoning,
             newExtractedText: extractedText,
-          });
+          }).catch((err) => console.error("[resubmission-diff] failed:", err));
         }
       }
 

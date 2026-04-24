@@ -83,7 +83,7 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, width: 320, maxHeight: 400, overflowY: "auto", background: "#1C1917", border: "1px solid rgba(196,112,75,0.2)", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.4)", zIndex: 100 }}>
+        <div style={{ position: "absolute", bottom: "calc(100% + 8px)", right: 0, width: "min(320px, calc(100vw - 16px))", maxHeight: 400, overflowY: "auto", background: "#1C1917", border: "1px solid rgba(196,112,75,0.2)", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.4)", zIndex: 100 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid rgba(196,112,75,0.1)" }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: "#EDE6DD" }}>Notifications</span>
             {unread > 0 && (
