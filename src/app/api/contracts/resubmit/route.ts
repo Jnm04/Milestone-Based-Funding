@@ -22,7 +22,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const { contractId, milestoneId } = await request.json();
+    let contractId: string | undefined;
+    let milestoneId: string | undefined;
+    try {
+      const body = await request.json() as { contractId?: string; milestoneId?: string };
+      contractId = body.contractId;
+      milestoneId = body.milestoneId;
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
 
     if (!contractId) {
       return NextResponse.json({ error: "contractId is required" }, { status: 400 });

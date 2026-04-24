@@ -19,10 +19,10 @@ const TABS = [
 ];
 
 const PROVIDERS = [
-  { value: "okta", label: "Okta" },
-  { value: "azure", label: "Microsoft Entra ID (Azure AD)" },
-  { value: "google", label: "Google Workspace" },
-  { value: "saml", label: "Generic SAML 2.0" },
+  { value: "OKTA", label: "Okta" },
+  { value: "AZURE_AD", label: "Microsoft Entra ID (Azure AD)" },
+  { value: "GOOGLE_WORKSPACE", label: "Google Workspace" },
+  { value: "SAML", label: "Generic SAML 2.0" },
 ];
 
 const card: React.CSSProperties = {
@@ -49,7 +49,7 @@ const input: React.CSSProperties = {
 export default function SsoSettingsPage() {
   const [config, setConfig] = useState<SsoConfig | null>(null);
   const [loading, setLoading] = useState(true);
-  const [provider, setProvider] = useState("okta");
+  const [provider, setProvider] = useState("OKTA");
   const [connectionId, setConnectionId] = useState("");
   const [domain, setDomain] = useState("");
   const [saving, setSaving] = useState(false);

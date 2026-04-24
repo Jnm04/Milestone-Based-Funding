@@ -5,7 +5,12 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
 const answersSchema = z.object({
-  answers: z.array(z.object({ question: z.string(), answer: z.string() })).min(1).max(12),
+  answers: z.array(
+    z.object({
+      question: z.string().min(1).max(500),
+      answer: z.string().min(1).max(2000),
+    })
+  ).min(1).max(12),
 });
 
 export async function GET(

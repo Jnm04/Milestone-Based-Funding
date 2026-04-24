@@ -107,8 +107,14 @@ export async function PUT(request: NextRequest) {
           : null,
       }),
       ...(companyBio !== undefined && { companyBio: typeof companyBio === "string" ? companyBio.slice(0, 500) : null }),
-      ...(companyWebsite !== undefined && { companyWebsite: typeof companyWebsite === "string" ? companyWebsite.slice(0, 200) : null }),
-      ...(linkedinUrl !== undefined && { linkedinUrl: typeof linkedinUrl === "string" ? linkedinUrl.slice(0, 200) : null }),
+      ...(companyWebsite !== undefined && {
+        companyWebsite: typeof companyWebsite === "string" && /^https?:\/\/.+/.test(companyWebsite.trim())
+          ? companyWebsite.trim().slice(0, 200) : null,
+      }),
+      ...(linkedinUrl !== undefined && {
+        linkedinUrl: typeof linkedinUrl === "string" && /^https?:\/\/(www\.)?linkedin\.com\//.test(linkedinUrl.trim())
+          ? linkedinUrl.trim().slice(0, 200) : null,
+      }),
     },
     select: {
       id: true, email: true, name: true, role: true, walletAddress: true,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -12,6 +13,9 @@ const createSchema = z.object({
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const allowed = await checkRateLimit(`materiality-create:${session.user.id}`, 20, 60 * 60 * 1000);
+  if (!allowed) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   let body: unknown;
   try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }

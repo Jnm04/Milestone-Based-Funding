@@ -7,6 +7,7 @@ import { getEnterpriseContext } from "@/lib/enterprise-context";
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session.user.isEnterprise) return NextResponse.json({ error: "Enterprise access required" }, { status: 403 });
 
   const { effectiveUserId } = await getEnterpriseContext(session.user.id);
 

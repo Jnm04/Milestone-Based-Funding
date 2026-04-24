@@ -213,15 +213,9 @@ async function generateMilestoneForDocument(params: {
 export async function POST(req: NextRequest) {
   if (!isInternalAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await req.json();
-  const { mode, domain, outcome, count, source, keyword } = body as {
-    mode: "synthetic" | "public";
-    domain?: string;
-    outcome: string;
-    count: number;
-    source?: "arxiv" | "github";
-    keyword?: string;
-  };
+  let body: { mode?: string; domain?: string; outcome?: string; count?: number; source?: string; keyword?: string };
+  try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
+  const { mode, domain, outcome, count, source, keyword } = body;
 
   const safeCount = Math.min(Math.max(1, count ?? 3), 5);
 
@@ -237,8 +231,8 @@ export async function POST(req: NextRequest) {
   } else {
     if (!keyword) return NextResponse.json({ error: "keyword required for public mode" }, { status: 400 });
     pairs = source === "github"
-      ? await fetchGithubPairs(keyword, safeCount, outcome)
-      : await fetchArxivPairs(keyword, safeCount, outcome);
+      ? await fetchGithubPairs(keyword, safeCount, outcome ?? "mixed")
+      : await fetchArxivPairs(keyword, safeCount, outcome ?? "mixed");
   }
 
   if (pairs.length === 0) {
