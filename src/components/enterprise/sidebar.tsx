@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { NotificationBell } from "@/components/notification-bell";
 
 const NAV = [
   {
@@ -160,13 +161,16 @@ export function EnterpriseSidebar({ user }: Props) {
             </div>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+        <div style={{ display: "flex", gap: 12, marginTop: 12, alignItems: "center" }}>
           <Link href="/security" style={{ fontSize: 12, color: "var(--ent-muted)", textDecoration: "none" }}>
             Security
           </Link>
           <Link href="/login" style={{ fontSize: 12, color: "var(--ent-muted)", textDecoration: "none" }}>
             Sign out
           </Link>
+          <div style={{ marginLeft: "auto" }}>
+            <NotificationBell />
+          </div>
         </div>
       </div>
     </aside>

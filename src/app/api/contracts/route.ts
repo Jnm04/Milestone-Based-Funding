@@ -221,6 +221,7 @@ export async function POST(request: NextRequest) {
               isConfidential: isConfidential ?? false,
               encryptedGoal: encryptedGoalVal,
               goalHash: goalHashVal,
+              verificationCriteria: m.verificationCriteria ?? null,
             },
           });
         }
@@ -245,7 +246,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ── ESCROW MODE path ──────────────────────────────────────────────────────
-    let msData: { title: string; amountUSD: number; cancelAfter: string }[];
+    let msData: { title: string; amountUSD: number; cancelAfter: string; dependsOnIndex?: number }[];
     if (milestonesInput) {
       msData = milestonesInput;
     } else {
@@ -295,18 +296,26 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      await tx.milestone.createMany({
-        data: msData.map(
-          (m: { title: string; amountUSD: number; cancelAfter: string }, i: number) => ({
+      // Create milestones individually so we can set dependsOnMilestoneId by index
+      const createdMilestoneIds: string[] = [];
+      for (let i = 0; i < msData.length; i++) {
+        const m = msData[i];
+        const depId = m.dependsOnIndex !== undefined && m.dependsOnIndex < i
+          ? createdMilestoneIds[m.dependsOnIndex]
+          : null;
+        const ms = await tx.milestone.create({
+          data: {
             contractId: contract.id,
             title: m.title,
             amountUSD: m.amountUSD,
             cancelAfter: new Date(m.cancelAfter),
             order: i,
             status: milestoneStatus,
-          })
-        ),
-      });
+            dependsOnMilestoneId: depId ?? null,
+          },
+        });
+        createdMilestoneIds.push(ms.id);
+      }
 
       return contract;
     });

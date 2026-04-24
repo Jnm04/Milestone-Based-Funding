@@ -14,6 +14,7 @@ interface MilestoneInput {
   title: string;
   amountUSD: string;
   deadlineDays: string;
+  dependsOnIndex: string; // "" = no dependency, "0","1",... = depends on that milestone index
 }
 
 const MILESTONE_TEMPLATES: { label: string; text: string }[] = [
@@ -76,7 +77,7 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
   const [projectTitle, setProjectTitle] = useState("");
   const [receiverWallet, setReceiverWallet] = useState("");
   const [milestones, setMilestones] = useState<MilestoneInput[]>([
-    { title: "", amountUSD: "", deadlineDays: "30" },
+    { title: "", amountUSD: "", deadlineDays: "30", dependsOnIndex: "" },
   ]);
 
   // Attestation mode state
@@ -122,7 +123,7 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
   const debounceTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
 
   function addMilestone() {
-    setMilestones((prev) => [...prev, { title: "", amountUSD: "", deadlineDays: "30" }]);
+    setMilestones((prev) => [...prev, { title: "", amountUSD: "", deadlineDays: "30", dependsOnIndex: "" }]);
   }
 
   function removeMilestone(index: number) {
@@ -206,6 +207,7 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
           title: m.title,
           amountUSD: String(m.amountUSD),
           deadlineDays: String(m.deadlineDays),
+          dependsOnIndex: "",
         }))
       );
       setAiGenerated(true);
@@ -379,12 +381,13 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
 
     setLoading(true);
     try {
-      const milestonesPayload = milestones.map((m) => ({
+      const milestonesPayload = milestones.map((m, i) => ({
         title: m.title,
         amountUSD: Number(m.amountUSD),
         cancelAfter: new Date(
           Date.now() + Number(m.deadlineDays) * 24 * 60 * 60 * 1000
         ).toISOString(),
+        dependsOnIndex: m.dependsOnIndex !== "" && Number(m.dependsOnIndex) < i ? Number(m.dependsOnIndex) : undefined,
       }));
 
       const res = await fetch("/api/contracts", {
@@ -931,6 +934,7 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
                           setMilestones(ms.map((m) => ({
                             title: m.title ?? "",
                             amountUSD: String(m.amountUSD ?? ""),
+                            dependsOnIndex: "",
                             deadlineDays: String(m.deadlineDays ?? "30"),
                           })));
                           setTemplateOpen(false);
@@ -1212,6 +1216,25 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
                   );
                 })()}
               </div>
+              {/* Dependency selector — only shown for milestones after the first */}
+              {idx > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: 8 }}>
+                  <Label htmlFor={`ms-dep-${idx}`} style={{ fontSize: 12, color: "#A89B8C" }}>Depends on (optional)</Label>
+                  <select
+                    id={`ms-dep-${idx}`}
+                    value={ms.dependsOnIndex}
+                    onChange={e => updateMilestone(idx, "dependsOnIndex", e.target.value)}
+                    style={{ fontSize: 13, padding: "6px 10px", borderRadius: 6, border: "1px solid rgba(196,112,75,0.25)", background: "rgba(196,112,75,0.04)", color: "#EDE6DD" }}
+                  >
+                    <option value="">No dependency</option>
+                    {milestones.slice(0, idx).map((prev, prevIdx) => (
+                      <option key={prevIdx} value={String(prevIdx)}>
+                        Must complete Milestone {prevIdx + 1}: {prev.title || "(untitled)"} first
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           </div>
         ))}

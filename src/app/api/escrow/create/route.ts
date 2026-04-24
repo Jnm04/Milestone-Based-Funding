@@ -73,6 +73,18 @@ export async function POST(request: NextRequest) {
           { status: 409 }
         );
       }
+
+      // Dependency check — block funding if prerequisite milestone is not yet COMPLETED
+      if (milestone.dependsOnMilestoneId) {
+        const dep = contract.milestones.find(m => m.id === milestone.dependsOnMilestoneId);
+        if (dep && dep.status !== "COMPLETED") {
+          return NextResponse.json(
+            { error: `This milestone depends on "${dep.title}" which must be completed first.` },
+            { status: 409 }
+          );
+        }
+      }
+
       amountUSD = milestone.amountUSD.toString();
       deadline = milestone.cancelAfter;
       milestoneOrder = milestone.order;

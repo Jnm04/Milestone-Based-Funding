@@ -9,6 +9,7 @@ import path from "path";
 import crypto from "crypto";
 import { writeAuditLog } from "@/services/evm/audit.service";
 import { fireWebhook } from "@/services/webhook/webhook.service";
+import { createNotification } from "@/services/notifications/inapp.service";
 import { generateAndStoreProofSummary } from "@/services/ai/proof-summary.service";
 import { generateAndStoreResubmissionDiff } from "@/services/ai/resubmission-diff.service";
 import { getPostHogClient } from "@/lib/posthog-server";
@@ -247,6 +248,13 @@ export async function POST(request: NextRequest) {
         milestoneId,
         data: { proofId: proof.id, fileName, milestoneTitle: milestone.title },
       }).catch((err) => console.error("[webhook] proof.submitted failed:", err));
+
+      createNotification(
+        milestone.contract.investorId,
+        "Proof submitted",
+        `${milestone.contract.startup?.companyName ?? "Startup"} submitted proof for "${milestone.title}".`,
+        `/contract/${milestone.contractId}`
+      ).catch(() => {});
 
       getPostHogClient().capture({
         distinctId: session.user.id,

@@ -220,6 +220,16 @@ export default function ProfilePage() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  // 2FA / TOTP
+  const [totpEnabled, setTotpEnabled] = useState(false);
+  const [totpSetupQr, setTotpSetupQr] = useState<string | null>(null);
+  const [totpSetupSecret, setTotpSetupSecret] = useState<string | null>(null);
+  const [totpCode, setTotpCode] = useState("");
+  const [totpDisablePw, setTotpDisablePw] = useState("");
+  const [totpDisableCode, setTotpDisableCode] = useState("");
+  const [totpLoading, setTotpLoading] = useState(false);
+  const [showDisable2FA, setShowDisable2FA] = useState(false);
+
   // SSO (Feature 1)
   const [ssoConfig, setSsoConfig] = useState<{ provider: string; domain: string; connectionId: string } | null>(null);
   const [ssoProvider, setSsoProvider] = useState("workos");
@@ -293,6 +303,10 @@ export default function ProfilePage() {
       });
   }
 
+  function fetchTotpStatus() {
+    fetch("/api/auth/totp").then(r => r.json()).then(d => setTotpEnabled(d.totpEnabled ?? false));
+  }
+
   useEffect(() => {
     if (status === "unauthenticated") { router.push("/login"); return; }
     if (status !== "authenticated") return;
@@ -302,6 +316,7 @@ export default function ProfilePage() {
       .then((r) => r.json())
       .then((d) => setTgStatus(d))
       .catch(() => {});
+    fetchTotpStatus();
     // Load SSO config (enterprise only)
     fetch("/api/enterprise/sso")
       .then((r) => r.json())
@@ -887,6 +902,102 @@ export default function ProfilePage() {
                 </button>
               </div>
             </form>
+          </SectionCard>
+
+          {/* Two-Factor Authentication */}
+          <SectionCard title="Two-Factor Authentication" subtitle="Add an extra layer of security to your account.">
+            {totpEnabled ? (
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-3 px-4 py-3 rounded-lg" style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.25)" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#86efac" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <span className="text-sm font-medium" style={{ color: "#86efac" }}>2FA is enabled</span>
+                </div>
+                {!showDisable2FA ? (
+                  <button onClick={() => setShowDisable2FA(true)} className="cs-btn-ghost cs-btn-sm" style={{ alignSelf: "flex-start" }}>Disable 2FA</button>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-sm" style={{ color: "#A89B8C" }}>Enter your password and current 2FA code to disable two-factor authentication.</p>
+                    <input type="password" value={totpDisablePw} onChange={e => setTotpDisablePw(e.target.value)} placeholder="Current password" className="cs-input" />
+                    <input type="text" inputMode="numeric" maxLength={6} value={totpDisableCode} onChange={e => setTotpDisableCode(e.target.value.replace(/\D/g,""))} placeholder="6-digit code" className="cs-input" style={{ letterSpacing: "0.25em" }} />
+                    <div className="flex gap-2">
+                      <button
+                        disabled={totpLoading || totpDisablePw.length < 1 || totpDisableCode.length !== 6}
+                        onClick={async () => {
+                          setTotpLoading(true);
+                          try {
+                            const r = await fetch("/api/auth/totp", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: totpDisablePw, code: totpDisableCode }) });
+                            const d = await r.json() as { ok?: boolean; error?: string };
+                            if (!r.ok) { toast.error(d.error ?? "Failed"); return; }
+                            toast.success("2FA disabled");
+                            setTotpEnabled(false); setShowDisable2FA(false); setTotpDisablePw(""); setTotpDisableCode("");
+                          } finally { setTotpLoading(false); }
+                        }}
+                        className="cs-btn-ghost cs-btn-sm"
+                        style={{ color: "#ef4444" }}
+                      >
+                        {totpLoading ? "Disabling…" : "Confirm disable"}
+                      </button>
+                      <button onClick={() => setShowDisable2FA(false)} className="cs-btn-ghost cs-btn-sm">Cancel</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : totpSetupQr ? (
+              <div className="flex flex-col gap-4">
+                <p className="text-sm" style={{ color: "#A89B8C" }}>Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.), then enter the 6-digit code to activate.</p>
+                <div className="flex justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={totpSetupQr} alt="2FA QR code" style={{ width: 180, height: 180, borderRadius: 8 }} />
+                </div>
+                <p className="text-xs text-center" style={{ color: "#A89B8C" }}>Manual entry key: <code style={{ color: "#EDE6DD" }}>{totpSetupSecret}</code></p>
+                <input
+                  type="text" inputMode="numeric" maxLength={6}
+                  value={totpCode} onChange={e => setTotpCode(e.target.value.replace(/\D/g,""))}
+                  placeholder="000000" className="cs-input"
+                  style={{ letterSpacing: "0.25em", fontSize: 20, textAlign: "center" }}
+                />
+                <div className="flex gap-2">
+                  <button
+                    disabled={totpLoading || totpCode.length !== 6}
+                    onClick={async () => {
+                      setTotpLoading(true);
+                      try {
+                        const r = await fetch("/api/auth/totp", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: totpCode }) });
+                        const d = await r.json() as { ok?: boolean; error?: string };
+                        if (!r.ok) { toast.error(d.error ?? "Invalid code"); setTotpCode(""); return; }
+                        toast.success("2FA enabled!");
+                        setTotpEnabled(true); setTotpSetupQr(null); setTotpSetupSecret(null); setTotpCode("");
+                      } finally { setTotpLoading(false); }
+                    }}
+                    className="cs-btn-primary"
+                  >
+                    {totpLoading ? "Verifying…" : "Activate 2FA"}
+                  </button>
+                  <button onClick={() => { setTotpSetupQr(null); setTotpSetupSecret(null); setTotpCode(""); }} className="cs-btn-ghost cs-btn-sm">Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <p className="text-sm" style={{ color: "#A89B8C" }}>Protect your account with a time-based one-time password (TOTP) from your phone.</p>
+                <button
+                  disabled={totpLoading}
+                  onClick={async () => {
+                    setTotpLoading(true);
+                    try {
+                      const r = await fetch("/api/auth/totp", { method: "POST" });
+                      const d = await r.json() as { qrDataUrl?: string; secret?: string; error?: string };
+                      if (!r.ok) { toast.error(d.error ?? "Failed"); return; }
+                      setTotpSetupQr(d.qrDataUrl ?? null);
+                      setTotpSetupSecret(d.secret ?? null);
+                    } finally { setTotpLoading(false); }
+                  }}
+                  className="cs-btn-ghost cs-btn-sm"
+                  style={{ alignSelf: "flex-start" }}
+                >
+                  {totpLoading ? "Generating…" : "Set up 2FA"}
+                </button>
+              </div>
+            )}
           </SectionCard>
 
           {/* SSO / SAML (enterprise only) */}

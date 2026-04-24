@@ -11,6 +11,7 @@ import { sendPendingReviewEmail, sendRejectedEmail, sendVerifiedEmail, sendMiles
 import { contractIdToBytes32 } from "@/services/evm/escrow.service";
 import { writeAuditLog } from "@/services/evm/audit.service";
 import { fireWebhook } from "@/services/webhook/webhook.service";
+import { createNotification } from "@/services/notifications/inapp.service";
 import { getPostHogClient } from "@/lib/posthog-server";
 import { isValidCronSecret } from "@/lib/cron-auth";
 
@@ -112,6 +113,7 @@ export async function POST(request: NextRequest) {
 
   // ── Phase 2: SSE stream — AI verification with retry logic ──────────────────
   const milestoneTitle = proof.milestone?.title ?? contract.milestone;
+  const verificationCriteria = proof.milestone?.verificationCriteria ?? null;
   const extractedText = proof.extractedText ?? "";
   const hasApiKey = !!process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY !== "sk-ant-...";
   const category = categorizeFile("", proof.fileName);
@@ -195,6 +197,7 @@ export async function POST(request: NextRequest) {
             milestone: milestoneTitle,
             extractedText: extractedText || "(No text could be extracted from this document.)",
             enrichmentContext: enrichmentContext + fraudContext,
+            verificationCriteria,
           });
         };
 
@@ -327,6 +330,16 @@ export async function POST(request: NextRequest) {
               proof_id: proofId,
             },
           });
+        }
+
+        // In-app notifications
+        if (action === "VERIFIED" && contract.startupId) {
+          createNotification(contract.startupId, "Proof approved ✓", `"${milestoneTitle}" was verified by AI — funds are being released.`, `/contract/${contract.id}`).catch(() => {});
+          createNotification(contract.investorId, "Milestone completed", `"${milestoneTitle}" has been AI-verified and funds released.`, `/contract/${contract.id}`).catch(() => {});
+        } else if (action === "REJECTED" && contract.startupId) {
+          createNotification(contract.startupId, "Proof not approved", `"${milestoneTitle}" was rejected — you can resubmit stronger evidence.`, `/contract/${contract.id}`).catch(() => {});
+        } else if (action === "PENDING_REVIEW") {
+          createNotification(contract.investorId, "Manual review needed", `AI was uncertain on "${milestoneTitle}" — your decision is required.`, `/contract/${contract.id}`).catch(() => {});
         }
 
         if (action === "PENDING_REVIEW") {

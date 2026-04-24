@@ -238,9 +238,9 @@ export function MilestoneTimeline({ milestones, activeMilestoneId, viewerRole, c
                   {ms.proofs.length > 0 ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                       <p style={{ fontSize: "12px", fontWeight: 600, color: "#C4704B", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                        Proofs Submitted
+                        {ms.proofs.length > 1 ? `Submission History (${ms.proofs.length})` : "Proof Submitted"}
                       </p>
-                      {ms.proofs.map((proof) => (
+                      {ms.proofs.map((proof, idx) => (
                         <div
                           key={proof.id}
                           style={{
@@ -254,6 +254,11 @@ export function MilestoneTimeline({ milestones, activeMilestoneId, viewerRole, c
                           }}
                         >
                           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            {ms.proofs.length > 1 && (
+                              <span style={{ fontSize: "10px", fontWeight: 700, color: idx === 0 ? "#86efac" : "#A89B8C", background: idx === 0 ? "rgba(34,197,94,0.1)" : "rgba(255,255,255,0.05)", padding: "2px 6px", borderRadius: "4px", flexShrink: 0 }}>
+                                #{ms.proofs.length - idx}
+                              </span>
+                            )}
                             <span style={{ fontSize: "11px", fontFamily: "monospace", background: "rgba(196,112,75,0.15)", padding: "2px 6px", borderRadius: "4px", color: "#C4704B" }}>
                               {proof.fileName.split(".").pop()?.toUpperCase() ?? "FILE"}
                             </span>

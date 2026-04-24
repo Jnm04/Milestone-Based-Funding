@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { getEnterpriseContext } from "@/lib/enterprise-context";
 import Link from "next/link";
+import { CsvImportButton } from "./csv-import-button";
 
 function getGoalSetStatus(milestones: { status: string }[]): { label: string; color: string; bg: string } {
   if (milestones.length === 0) return { label: "Active", color: "#D97706", bg: "#FFFBEB" };
@@ -65,6 +66,8 @@ export default async function AttestationsPage() {
             Manage and track your AI-verified attestation goal sets
           </p>
         </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <CsvImportButton />
         <Link
           href="/enterprise/dashboard/attestations/new"
           style={{
@@ -87,6 +90,7 @@ export default async function AttestationsPage() {
           </svg>
           New Goal Set
         </Link>
+        </div>
       </div>
 
       {goalSets.length === 0 ? (

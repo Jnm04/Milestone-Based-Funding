@@ -97,6 +97,13 @@ model User {
   // Feature 5: Deal Rooms
   dealRoomsAsInvestor DealRoom[] @relation("DealRoomInvestor")
 
+  // 2FA / TOTP
+  totpSecret   String?
+  totpEnabled  Boolean  @default(false)
+
+  // In-app notifications
+  notifications Notification[]
+
   // Feature 11: Audit partner + client access
   auditorPartner      AuditorPartner?
   auditorClientAccesses AuditorClientAccess[] @relation("AuditorAccessClient")
@@ -333,6 +340,12 @@ model Milestone {
   isConfidential  Boolean @default(false)
   encryptedGoal   String? @db.Text // AES-256-GCM encrypted JSON {title, description}
   goalHash        String?           // sha256(title + description + salt) — anchored on-chain
+
+  // Custom AI verification criteria (enterprise: override default prompt rubric)
+  verificationCriteria String? @db.Text
+
+  // Milestone dependency — this milestone cannot be funded until the dependency is COMPLETED
+  dependsOnMilestoneId String?
 
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
@@ -901,6 +914,23 @@ model AuditorClientAccess {
   @@unique([auditorId, clientId])
   @@index([auditorId])
   @@index([clientId])
+}
+
+// ── In-App Notifications ──────────────────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String   @db.Text
+  /// Optional deep-link path, e.g. "/contract/abc123"
+  href      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
 }
 
 // ── Phase 3: Feature XI — Multi-Party Consensus Attestation ──────────────────

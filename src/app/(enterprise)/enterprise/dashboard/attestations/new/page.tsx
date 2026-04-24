@@ -8,18 +8,19 @@ interface MilestoneRow {
   title: string;
   description: string;
   deadline: string;
+  verificationCriteria: string;
 }
 
 export default function NewAttestationPage() {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [milestones, setMilestones] = useState<MilestoneRow[]>([
-    { title: "", description: "", deadline: "" },
+    { title: "", description: "", deadline: "", verificationCriteria: "" },
   ]);
   const [loading, setLoading] = useState(false);
 
   function addMilestone() {
-    setMilestones((prev) => [...prev, { title: "", description: "", deadline: "" }]);
+    setMilestones((prev) => [...prev, { title: "", description: "", deadline: "", verificationCriteria: "" }]);
   }
 
   function removeMilestone(index: number) {
@@ -58,6 +59,7 @@ export default function NewAttestationPage() {
           milestones: milestones.map((m) => ({
             title: m.title.trim(),
             description: m.description.trim() || undefined,
+            verificationCriteria: m.verificationCriteria.trim() || undefined,
             deadline: m.deadline,
           })),
         }),
@@ -224,13 +226,24 @@ export default function NewAttestationPage() {
                     onChange={(e) => updateMilestone(index, "description", e.target.value)}
                     placeholder="Describe what evidence is needed to verify this milestone..."
                     rows={3}
-                    style={{
-                      ...inputStyle,
-                      resize: "vertical",
-                      fontFamily: "inherit",
-                      lineHeight: 1.5,
-                    }}
+                    style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit", lineHeight: 1.5 }}
                   />
+                </div>
+
+                <div>
+                  <label style={labelStyle}>
+                    Custom AI verification criteria <span style={{ fontWeight: 400, color: "var(--ent-muted)" }}>(optional)</span>
+                  </label>
+                  <textarea
+                    value={m.verificationCriteria}
+                    onChange={(e) => updateMilestone(index, "verificationCriteria", e.target.value)}
+                    placeholder="e.g. The evidence must include a signed auditor statement confirming Scope 2 emissions reduced by at least 20% compared to the 2024 baseline."
+                    rows={3}
+                    style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit", lineHeight: 1.5 }}
+                  />
+                  <p style={{ fontSize: 11, color: "var(--ent-muted)", marginTop: 4 }}>
+                    Override the default AI rubric with your own evaluation criteria. The AI panel will apply these in addition to standard verification checks.
+                  </p>
                 </div>
               </div>
             ))}

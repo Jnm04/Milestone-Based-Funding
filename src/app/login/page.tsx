@@ -34,6 +34,8 @@ function LoginForm() {
   const [resendLoading, setResendLoading] = useState(false);
   const [resendDone, setResendDone] = useState(false);
   const [autoSigningIn, setAutoSigningIn] = useState(false);
+  const [totpRequired, setTotpRequired] = useState(false);
+  const [totpCode, setTotpCode] = useState("");
 
   // Poll for email verification every 3s — auto-login when verified on any device
   useEffect(() => {
@@ -96,7 +98,9 @@ function LoginForm() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await signIn("credentials", { email, password, redirect: false });
+      const creds: Record<string, string> = { email, password, redirect: "false" };
+      if (totpRequired) creds.totpCode = totpCode;
+      const res = await signIn("credentials", { ...creds, redirect: false });
 
       if (res?.error === "EmailNotVerified") {
         setUnverifiedEmail(email);
@@ -104,6 +108,16 @@ function LoginForm() {
       }
       if (res?.error === "TooManyAttempts" || res?.error?.startsWith("TooManyAttempts")) {
         toast.error("Too many failed attempts. Please try again later.");
+        return;
+      }
+      if (res?.error === "TotpRequired") {
+        setTotpRequired(true);
+        setLoading(false);
+        return;
+      }
+      if (res?.error === "TotpInvalid") {
+        toast.error("Invalid 2FA code. Please try again.");
+        setTotpCode("");
         return;
       }
       if (res?.error) {
@@ -303,21 +317,44 @@ function LoginForm() {
               </div>
             </div>
 
+            {/* 2FA code (shown after TOTP_REQUIRED error) */}
+            {totpRequired && (
+              <div className="flex flex-col gap-1.5">
+                <label className="cs-label">Authenticator code</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="\d{6}"
+                  maxLength={6}
+                  required
+                  autoFocus
+                  value={totpCode}
+                  onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ""))}
+                  className="cs-input"
+                  placeholder="000000"
+                  style={{ letterSpacing: "0.25em", fontSize: 20, textAlign: "center" }}
+                />
+                <p className="text-xs" style={{ color: "#A89B8C" }}>Enter the 6-digit code from your authenticator app.</p>
+              </div>
+            )}
+
             {/* Forgot password */}
-            <div className="flex justify-end -mt-2">
-              <Link href="/forgot-password" className="text-xs hover:underline" style={{ color: "#A89B8C" }}>
-                Forgot password?
-              </Link>
-            </div>
+            {!totpRequired && (
+              <div className="flex justify-end -mt-2">
+                <Link href="/forgot-password" className="text-xs hover:underline" style={{ color: "#A89B8C" }}>
+                  Forgot password?
+                </Link>
+              </div>
+            )}
 
             {/* Submit */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || (totpRequired && totpCode.length !== 6)}
               className="cs-btn-primary w-full mt-1"
               style={{ width: "100%" }}
             >
-              {loading ? "Signing in…" : "Sign in"}
+              {loading ? "Signing in…" : totpRequired ? "Verify code" : "Sign in"}
             </button>
           </form>
 

@@ -45,6 +45,8 @@ const milestoneItemSchema = z.object({
     .min(1, "cancelAfter cannot be empty")
     .refine((val) => !isNaN(new Date(val).getTime()), { message: "cancelAfter must be a valid date" })
     .refine((val) => new Date(val) > new Date(), { message: "Deadline must be in the future" }),
+
+  dependsOnIndex: z.number().int().min(0).optional(),
 });
 
 // Attestation milestone — amountUSD is optional (repurposed as "tracked value")
@@ -69,6 +71,8 @@ const attestationMilestoneItemSchema = z.object({
     .refine((val) => new Date(val) > new Date(), { message: "Deadline must be in the future" }),
 
   scheduleType: z.enum(["ONE_OFF", "MONTHLY", "QUARTERLY", "ANNUAL"]).optional().default("ONE_OFF"),
+
+  verificationCriteria: z.string().max(5000, "Verification criteria too long").trim().optional(),
 });
 
 export const createContractSchema = z

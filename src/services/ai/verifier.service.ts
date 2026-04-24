@@ -403,15 +403,22 @@ export async function verifyMilestone(params: {
   extractedText: string;
   /** Optional enrichment context from proof-enrichment.service (URL checks, GitHub, duplicates). */
   enrichmentContext?: string;
+  /** Optional custom rubric provided by the enterprise customer to override the default criteria. */
+  verificationCriteria?: string | null;
 }): Promise<AIVerificationResultWithVotes> {
   const { content, truncated } = truncateText(params.extractedText);
   const truncationNote = truncated
     ? `\n\n[NOTE: Document exceeds ${MAX_TEXT_CHARS.toLocaleString()} characters and has been truncated. Evaluate only the visible portion.]`
     : "";
 
+  const customCriteriaBlock = params.verificationCriteria
+    ? `\n\n[CUSTOM VERIFICATION CRITERIA — provided by the contract owner, apply these in addition to the standard assessment]:\n${params.verificationCriteria}\n[END CUSTOM CRITERIA]`
+    : "";
+
   const userMessage =
     `Milestone to verify:\n[MILESTONE START]\n${params.milestone}\n[MILESTONE END]\n\n` +
     `Document content:\n[DOCUMENT START]\n${content}\n[DOCUMENT END]${truncationNote}` +
+    customCriteriaBlock +
     (params.enrichmentContext ?? "");
 
   const raw = await Promise.all([

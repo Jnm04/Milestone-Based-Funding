@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { Logo } from "@/components/logo";
+import { NotificationBell } from "@/components/notification-bell";
 
 interface SidebarProps {
   role: "investor" | "startup";
@@ -129,6 +130,7 @@ export function DashboardSidebar({ role }: SidebarProps) {
                 {role === "investor" ? "Grant Giver" : "Receiver"}
               </p>
             </div>
+            <NotificationBell />
           </div>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}

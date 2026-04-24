@@ -1,6 +1,7 @@
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { verify as verifyTotp } from "otplib";
 import type { NextAuthOptions } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 
@@ -52,6 +53,15 @@ export const authOptions: NextAuthOptions = {
         }
 
         if (!user.emailVerified) throw new Error("EmailNotVerified");
+
+        // 2FA check — if enabled, require a valid TOTP code
+        if (user.totpEnabled && user.totpSecret) {
+          const totpCode = (credentials as Record<string, string>).totpCode;
+          if (!totpCode) throw new Error("TotpRequired");
+          const totpResult = await verifyTotp({ token: totpCode, secret: user.totpSecret });
+          const valid = totpResult.valid;
+          if (!valid) throw new Error("TotpInvalid");
+        }
 
         // Reset on successful login
         if (user.loginAttempts > 0 || user.lockoutUntil) {
