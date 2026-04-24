@@ -1,123 +1,154 @@
 # Cascrow
 
-AI-powered RLUSD escrow agent on the XRPL EVM Sidechain with dual-chain audit trail.  
-Grant givers lock RLUSD in a smart contract escrow; funds release automatically when an AI agent verifies the receiver has met the agreed milestone.
+**AI-powered milestone escrow and enterprise attestation platform.**
 
-Built at the **XRPL Student Builder Residency 2026** 
+Cascrow solves a fundamental trust problem: how do you pay someone for results, not just effort — and prove it happened? We enforce that at two levels:
+
+- **Escrow mode** — lock RLUSD in a smart contract on the XRPL EVM Sidechain; an AI panel of 5 independent models must reach a 3/5 majority before a single cent moves.
+- **Attestation mode** — enterprise teams track and verify ESG, sustainability, and KPI commitments without moving money. Every verdict is written to the XRP Ledger as a permanent, tamper-evident record.
+
+Built at the **XRPL Student Builder Residency 2026** — post-Demo Day, moving toward real market launch.
 
 ---
 
-## How it works
+## The problem we solve
+
+Grant givers, investors, and enterprise compliance teams all face the same issue: **the people they fund or audit can tell them anything**. Milestones get rubber-stamped. Reports are filed and forgotten. Proof is a PDF that no one verifies.
+
+Cascrow replaces handshake trust with verifiable finality:
+
+- **Escrow users** don't release money based on a message — they release it based on a majority AI verdict, locked on-chain before it executes.
+- **Enterprise users** don't just store sustainability goals — they submit evidence, get AI-verified verdicts, and mint an immutable NFT certificate that exists on the XRP Ledger independent of Cascrow.
+- **Audit firms** get read-only access to their clients' attestation history, cryptographically tied to the original evidence, without touching the underlying systems.
+- **Startups** build an on-chain track record of completed, verified milestones — a public portfolio that no one can fake.
+
+---
+
+## How Escrow mode works
 
 ```
-Grant Giver creates contract  →  Receiver accepts invite link
+Investor creates contract with milestone(s), amounts, deadlines
               ↓
-Grant Giver approves RLUSD + signs fundMilestone via MetaMask
+Startup accepts via invite link
               ↓
-Receiver uploads PDF/image proof of milestone completion
+Investor approves RLUSD + signs fundMilestone via MetaMask
+  → RLUSD locked in smart contract; platform cannot redirect it
               ↓
-5 independent AI models verify the proof — 3/5 majority required (Claude, Gemini, GPT-4o-mini, Mistral Small, Qwen3-235B via Cerebras)
+Startup uploads PDF, image, or links a GitHub repo as proof
               ↓
-  YES       → funds automatically released to receiver
-            → non-transferable NFT minted on XRPL Ledger as permanent completion certificate
-  UNCERTAIN → Grant Giver manually reviews and decides
-            → Receiver can also resubmit improved proof (bypasses manual review if AI becomes confident)
-            → After 14 days without investor action → funds auto-released + NFT minted
-            → If rejected: deadline extended by the exact review duration (receiver doesn't lose waiting time)
-  NO        → Receiver can resubmit (until deadline)
+5 AI models evaluate in parallel (Claude, Gemini, GPT-4o-mini, Mistral, Qwen3 via Cerebras)
+3/5 majority required
               ↓
-  Deadline passed → cron job cancels escrow, RLUSD returned
+  YES        → funds released automatically to startup
+             → non-transferable completion NFT minted on native XRP Ledger
+  UNCERTAIN  → investor reviews manually
+             → startup can resubmit stronger proof at any time (bypasses manual review)
+             → 14 days no investor action → auto-release + NFT
+             → if rejected: deadline extended by exact review duration (startup doesn't lose waiting time)
+  NO         → startup can resubmit until deadline
+              ↓
+  Deadline passed → cron cancels escrow, RLUSD returned to investor
 ```
 
-Every completed milestone triggers a **non-transferable NFT mint on the native XRPL Ledger** — an immutable completion certificate that exists permanently on-chain, independent of Cascrow. See the [XRPL NFT Certificates](#xrpl-nft-completion-certificates) section below.
+Multi-milestone contracts are fully supported — each milestone has its own escrow, proof cycle, and NFT.
 
-Every key event is written to **both chains** as an immutable audit entry:
-- **XRPL EVM Sidechain** — hex-encoded JSON in an EVM transaction's `data` field
-- **Native XRP Ledger** — JSON memo in an `AccountSet` transaction, publicly verifiable on [xrpscan.com](https://xrpscan.com)
+---
+
+## How Attestation mode works
+
+For enterprise teams that need compliance evidence but aren't moving crypto:
+
+```
+Enterprise user creates an attestation contract (ESG / KPI / CSRD goal)
+              ↓
+Startup or internal team submits evidence (PDF, GitHub, API endpoint)
+              ↓
+Same 5-model AI panel evaluates — verdict written to XRP Ledger
+              ↓
+  VERIFIED   → NFT completion certificate minted on XRP Ledger
+             → Slack / Teams notification sent to configured channels
+  REJECTED   → Team can resubmit with improved evidence
+              ↓
+Audit firm partner reviews full attestation history (read-only, access granted/revoked by client)
+```
+
+Attestation contracts support:
+- **Confidential goals** — goal text encrypted with AES-256-GCM; hash stored on-chain so the commitment is provable without revealing content
+- **Data connector health monitoring** — REST API or URL-based data sources are probed daily; unhealthy connectors trigger email escalation
+- **Regulatory change alerts** — CSRD/ESRS updates from EUR-Lex and EFRAG are classified weekly by AI and pushed to affected users via email and Slack/Teams
+- **ESRS/GRI tagging** — milestones tagged with regulatory standards for materiality mapping and audit traceability
 
 ---
 
 ## Trustless by design
 
-Cascrow is built so that neither party needs to trust the platform. Every critical guarantee is enforced on-chain — the platform cannot block payments, redirect funds, swap proof files, or falsify the agreed milestone criteria.
+Neither party needs to trust the platform. Every critical guarantee is enforced on-chain.
 
 ### What the smart contract enforces
 
-- **Funds go to one address only.** The receiver's wallet address is written into the escrow at funding time and cannot be changed. The platform has no ability to redirect RLUSD to itself.
-- **Anyone with the fulfillment key can release.** `releaseMilestone(contractId, order, fulfillment)` is callable by any address — not just the platform. When AI approves, the platform emails the fulfillment key directly to the receiver. If the platform disappears, the receiver can self-execute on-chain using any EVM wallet (MetaMask, etc.) without involving us.
-- **The investor can cancel without us.** After the deadline, `cancelMilestone` can be called directly by the investor — no platform action required.
-- **The condition is locked on-chain.** The smart contract stores `keccak256(fulfillment)` at funding time. The platform cannot generate a different fulfillment key later and claim it works — the hash must match exactly.
+- **Funds go to one address only.** The receiver's wallet is written into the escrow at funding time and cannot be changed. The platform cannot redirect RLUSD to itself.
+- **Anyone with the fulfillment key can release.** `releaseMilestone` is callable by any address. When AI approves, the platform emails the fulfillment key to the receiver. If Cascrow goes offline, the receiver can execute on-chain directly with MetaMask.
+- **The investor can cancel without us.** After deadline, `cancelMilestone` is callable directly by the investor.
+- **The condition is locked on-chain.** `keccak256(fulfillment)` is stored at funding time. The platform cannot produce a different key later.
 
 ### What the audit trail proves
 
-Every event is written to two independent chains (XRPL EVM Sidechain + native XRP Ledger) before the platform responds. The metadata in each on-chain record includes:
+Every event is written to two independent chains before the platform responds:
 
 | Event | What's locked on-chain |
 |---|---|
-| `ESCROW_FUNDED` | `keccak256(milestoneTitle)` — the agreed criteria at the moment money was locked |
-| `PROOF_SUBMITTED` | `sha256(file)` — the exact file the AI evaluated; receiver can verify their file wasn't swapped |
-| `AI_DECISION` | 5-model majority verdict (Claude, Gemini, GPT-4o-mini, Mistral, Qwen), per-model votes, confidence score, and `sha256(system_prompt)` — proves the evaluation criteria wasn't changed |
-| `FUNDS_RELEASED` | Transaction hash of the on-chain RLUSD transfer |
+| `ESCROW_FUNDED` | `keccak256(milestoneTitle)` — agreed criteria at the moment money was locked |
+| `PROOF_SUBMITTED` | `sha256(file)` — the exact file the AI evaluated; receiver can verify theirs wasn't swapped |
+| `AI_DECISION` | 5-model verdict, per-model votes, confidence score, `sha256(system_prompt)` — proves the evaluation criteria wasn't changed |
+| `FUNDS_RELEASED` | On-chain RLUSD transaction hash |
 
-To verify a proof wasn't tampered with: compute `sha256sum` of the original file locally and compare it against the `PROOF_SUBMITTED` record on either chain.
+To verify a proof wasn't tampered with: run `sha256sum` on the original file and compare against the `PROOF_SUBMITTED` record on either chain.
 
-### What the platform still controls
+### Remaining trust assumptions (transparent)
 
-Being transparent about the remaining trust assumptions:
+- **AI verdict** — the platform selects models and constructs the prompt. 5 models from 5 different companies (Anthropic, Google, OpenAI, Mistral, Alibaba/Cerebras) must reach a 3/5 majority. The prompt hash is locked on-chain so changes are detectable.
+- **PENDING_REVIEW** — when confidence is borderline, the grant giver decides. Auto-release after 14 days prevents indefinite blocking.
+- **Proof storage** — files are in Vercel Blob. The SHA-256 hash is on-chain so tampering is detectable, but access to the file depends on the platform staying operational.
 
-- **AI verdict.** The platform chooses the AI models and constructs the prompt. 5 independent models from 5 different companies (Anthropic, Google, OpenAI, Mistral, Alibaba/Cerebras) must reach a 3/5 majority — no single provider can unilaterally determine the outcome. The prompt hash is locked on-chain so prompt changes are detectable.
-- **PENDING_REVIEW escalation.** When AI confidence is between 60–85%, the grant giver decides manually. The receiver can resubmit a stronger proof at any time to bypass manual review. If the grant giver takes no action for 14 days, funds are automatically released. If the grant giver rejects, the deadline is automatically extended by the exact duration of the review — so the receiver never loses time they spent waiting.
-- **Proof storage.** Files are stored in Vercel Blob (private). The SHA-256 hash is locked on-chain, so tampering is detectable — but access to the file itself depends on the platform remaining operational.
+---
+
+## Enterprise features
+
+Cascrow includes a full enterprise tier built for institutional users:
+
+- **Team management** — invite team members with roles (Owner, Admin, Member); assign members to entities
+- **Multi-entity / group structure** — model subsidiaries and business units; consolidated roll-up dashboard across all entities
+- **SSO / SAML** — WorkOS-compatible single sign-on configuration per organisation
+- **Slack & Teams integration** — OAuth-based Slack and webhook-based Teams; receive real-time notifications on verification outcomes, deadline warnings, and connector errors
+- **Audit firm access** — grant named auditors read-only access to your attestation history with revocable access control
+- **API keys** — programmatic access for automated submissions
+- **Deal Rooms** — invite a startup into a due-diligence workspace; they upload documents, you get an AI-generated brief, then convert to a contract or decline with one click
 
 ---
 
 ## XRPL NFT Completion Certificates
 
-When a milestone is completed and RLUSD is released, Cascrow automatically mints a **non-transferable `NFTokenMint`** on the native XRPL Ledger as an immutable on-chain completion certificate.
+When a milestone is verified and funds are released (or an attestation is completed), Cascrow mints a **non-transferable `NFTokenMint`** on the native XRP Ledger.
 
-### Two purposes
+The NFT serves two purposes:
 
-**1. Proof of completion**
+**Proof of completion** — a permanent, tamper-proof record that a specific milestone was AI-verified. Even if Cascrow goes offline, the certificate remains on the XRP Ledger and is publicly verifiable. Useful for grant programs, NGOs, and development aid organisations that require documented accountability on a public ledger.
 
-The NFT is a permanent, tamper-proof record that a specific milestone was AI-verified and funds were released. It contains all relevant metadata in its URI:
+**On-chain track record** — over time, a startup builds a collection of completion NFTs across different contracts and investors. This becomes a verifiable portfolio of AI-verified, real-money-backed work — no self-reported credentials, no references.
 
-```json
-{
-  "p": "cascrow",
-  "c": "<contractId>",
-  "m": "Delivered market research report",
-  "a": "500",
-  "t": "2026-04-07",
-  "tx": "0xabc123ab"
-}
-```
+Non-transferable means the certificate is a credential, not an asset. It cannot be sold or transferred.
 
-*(Compact keys are required to stay within the XRPL 256-byte URI field limit.)*
+---
 
-Even if Cascrow goes offline, the NFT remains on the XRPL Ledger and is publicly verifiable at `https://xrpl.org/nft/<tokenId>`. Useful for grant programs (KfW, NGOs, development aid) that require documented accountability — the proof is on a public ledger, not in a private database.
+## Cascrow Brain — training a custom verification model
 
-**2. On-chain reputation and track record**
+Every verification run contributes to a labeled dataset:
 
-Over time, a startup, freelancer, or project team builds a collection of completion NFTs across different contracts and grant givers. This becomes a verifiable on-chain portfolio:
+- **Automatic labeling** — 5/0 and 4/1 consensus results are written directly to training data.
+- **Human review queue** — 3/2 disagreements are routed to internal review before entering the dataset.
+- **Fraud tagging** — reviewers can flag entries as `FAKED` with type (`AI_GENERATED`, `MANIPULATED`, `RECYCLED`) to train the model to detect fabricated proofs.
 
-> *"Here are 12 milestones I completed, each verified by AI and backed by real RLUSD payouts — all on the XRPL Ledger."*
-
-No resume, no references, no self-reported credentials. The ledger speaks for itself. Grant givers can look up a receiver's XRPL wallet address and see their full history of completed, AI-verified work before funding a new contract.
-
-### Technical details
-
-```
-Transaction type:   NFTokenMint
-Flags:              0  (tfTransferable NOT set — non-transferable)
-NFTokenTaxon:       1  (cascrow milestone certificates)
-URI:                hex-encoded JSON metadata
-Minted by:          platform wallet (XRPL_PLATFORM_SEED)
-Explorer:           https://xrpl.org/nft/<tokenId>
-```
-
-Non-transferable means the certificate cannot be sold, traded, or transferred to another wallet. It is a credential, not an asset — tied permanently to the platform wallet as proof that the work was done.
-
-The `tokenId` and `txHash` are stored in the database and displayed as a certificate card on the contract detail page, with direct links to the XRPL Explorer.
+The goal: a fine-tuned verification model trained on real milestone-proof pairs, not generic LLMs prompted at inference time. Exportable as JSONL (OpenAI / Anthropic / Hugging Face fine-tuning format) at any time.
 
 ---
 
@@ -125,45 +156,44 @@ The `tokenId` and `txHash` are stored in the database and displayed as a certifi
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 16 (App Router), Tailwind CSS, shadcn/ui |
+| Framework | Next.js (App Router), TypeScript |
+| UI | Tailwind CSS — dark copper/amber design system |
 | Auth | NextAuth.js — email/password with email verification |
-| Wallet | MetaMask (ethers.js) |
-| Escrow (smart contract) | XRPL EVM Sidechain (Testnet), Solidity — `MilestoneFundEscrow` |
-| NFT + Audit (native ledger) | Native XRP Ledger — `NFTokenMint` + `AccountSet` memos via xrpl.js |
+| Wallet | MetaMask (ethers.js, EIP-1193) |
+| Escrow | XRPL EVM Sidechain (Chain ID 1449000), Solidity `MilestoneFundEscrow` |
+| NFT + Audit | Native XRP Ledger — `NFTokenMint` + `AccountSet` memos via xrpl.js |
 | Stablecoin | RLUSD (ERC-20 on XRPL EVM) |
-| AI | Claude `claude-haiku-4-5-20251001` + Gemini `gemini-2.5-flash` + GPT-4o-mini + Mistral Small + Qwen3-235B via Cerebras (5-model majority vote, 3/5 required) |
-| Database | PostgreSQL + Prisma |
+| AI verification | 5-model majority vote: Claude Haiku, Gemini Flash, GPT-4o-mini, Mistral Small, Qwen3 via Cerebras |
+| AI features | Claude Haiku (deal room briefs, regulatory alert classification) |
+| Database | PostgreSQL + Prisma ORM |
 | File storage | Vercel Blob |
+| Rate limiting | Upstash Redis (INCR+PEXPIRE, cross-instance safe for serverless) |
 | Email | Resend (via SMTP) |
-| Cron | Vercel Cron (auto-cancel expired milestones) |
+| Notifications | Slack (OAuth + chat.postMessage), Microsoft Teams (incoming webhook) |
+| Cron | Vercel Cron — expired escrow cancellation, connector health probes, regulatory alert ingestion |
 | Error monitoring | Sentry (EU region, Frankfurt) |
 | Bot protection | Cloudflare Turnstile (register + forgot-password) |
-| Charts | Recharts (internal dashboard) |
-| 3D graph | React Three Fiber + D3 Force 3D (internal contract graph) |
 
 ---
 
 ## Local development
 
-### 1. Prerequisites
+### Prerequisites
 
 - Node.js 20+
-- PostgreSQL (local or hosted)
-- Anthropic API key
-- Google Gemini API key
+- PostgreSQL
+- API keys: Anthropic, Google Gemini, OpenAI, Mistral, Cerebras
 - Vercel Blob token
+- Upstash Redis (REST URL + token)
 - Resend API key (optional — email features disabled without it)
 
-### 2. Install
+### Install
 
 ```bash
-cd milestonefund
 npm install
 ```
 
-### 3. Environment variables
-
-Create `.env.local` with the following:
+### Environment variables
 
 ```env
 # Database
@@ -173,7 +203,10 @@ DATABASE_URL=postgresql://...
 NEXTAUTH_SECRET=        # openssl rand -base64 32
 NEXTAUTH_URL=http://localhost:3000
 
-# AI (5-model majority vote)
+# Encryption (Slack token storage, confidential goals, Slack OAuth state HMAC)
+ENCRYPTION_KEY=         # openssl rand -base64 32
+
+# AI — 5-model verification
 ANTHROPIC_API_KEY=sk-ant-...
 GEMINI_API_KEY=AIza...
 OPENAI_API_KEY=sk-...
@@ -181,52 +214,58 @@ MISTRAL_API_KEY=...
 CEREBRAS_API_KEY=csk_...
 
 # File storage
-BLOB_READ_WRITE_TOKEN=  # Vercel Blob token
+BLOB_READ_WRITE_TOKEN=  # Vercel Blob
 
-# EVM / Blockchain
+# Rate limiting
+UPSTASH_REDIS_REST_URL=https://...
+UPSTASH_REDIS_REST_TOKEN=...
+
+# EVM escrow
 NEXT_PUBLIC_EVM_RPC_URL=https://rpc.testnet.xrplevm.org
 NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS=0x...
 NEXT_PUBLIC_RLUSD_CONTRACT_ADDRESS=0x...
-EVM_PLATFORM_PRIVATE_KEY=0x...      # Platform wallet — releases/cancels escrow server-side
+EVM_PLATFORM_PRIVATE_KEY=0x...
 
-# Native XRPL audit trail (AccountSet memo transactions)
-XRPL_PLATFORM_SEED=s...             # XRPL wallet seed (fund at xrpl.org/xrp-testnet-faucet.html)
-# XRPL_NETWORK=testnet              # Omit for mainnet (default)
+# Native XRPL (NFT + audit memos) — mainnet by default
+XRPL_PLATFORM_SEED=s...
+# XRPL_NETWORK=testnet   # set to force testnet
 
-# Email (Resend — required for verification/reset; optional notifications work without it)
+# Email
 EMAIL_HOST=smtp.resend.com
 EMAIL_PORT=465
 EMAIL_USER=resend
 EMAIL_PASS=re_...
-EMAIL_FROM=Cascrow <noreply@yourdomain.com>
+EMAIL_FROM=Cascrow <noreply@cascrow.com>
+
+# Slack integration (optional)
+SLACK_CLIENT_ID=...
+SLACK_CLIENT_SECRET=...
 
 # Bot protection
 NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY=...
 CLOUDFLARE_TURNSTILE_SECRET_KEY=...
 
-# Error monitoring (Sentry — optional, errors silently skipped if missing)
-NEXT_PUBLIC_SENTRY_DSN=https://...@....ingest.de.sentry.io/...
-SENTRY_ORG=your-org
-SENTRY_PROJECT=your-project
-SENTRY_AUTH_TOKEN=...   # Personal Token (Project: Read + Issue & Event: Read scopes)
+# Sentry (optional)
+NEXT_PUBLIC_SENTRY_DSN=https://...
+SENTRY_ORG=...
+SENTRY_PROJECT=...
+SENTRY_AUTH_TOKEN=...
 
-# Internal admin API (set to any long random string)
+# Internal / cron
 INTERNAL_API_SECRET=...
-
-# Cron (set to any secret string, must match Vercel Cron config)
 CRON_SECRET=...
 ```
 
-> **XRPL audit wallet setup:** Create a testnet wallet at [xrpl.org/xrp-testnet-faucet.html](https://xrpl.org/xrp-testnet-faucet.html), copy the seed into `XRPL_PLATFORM_SEED`. The wallet needs ~10 XRP reserve + small amount for fees.
+> **XRPL wallet setup:** create a testnet wallet at [xrpl.org/xrp-testnet-faucet.html](https://xrpl.org/xrp-testnet-faucet.html), copy the seed to `XRPL_PLATFORM_SEED`. Wallet needs ~10 XRP reserve + fees.
 
-### 4. Database setup
+### Database setup
 
 ```bash
 npx prisma db push
 npx prisma generate
 ```
 
-### 5. Run
+### Run
 
 ```bash
 npm run dev
@@ -235,113 +274,26 @@ npm run dev
 
 ---
 
-## Vercel deployment
-
-### Deploy
+## Deployment
 
 ```bash
 npm i -g vercel
 vercel --prod
 ```
 
-### Environment variables
-
-Set all variables from the section above in the Vercel dashboard under **Settings → Environment Variables**.
-
-After deploying, sync the database:
+Set all env vars in the Vercel dashboard, then sync the database:
 
 ```bash
 DATABASE_URL=<prod-url> npx prisma db push
 ```
 
-### Cron job
+Cron jobs are configured in `vercel.json` and run automatically on Vercel:
 
-The cron job at `/api/cron/cancel-expired` runs daily and cancels any milestone whose deadline has passed. Configure it in `vercel.json`:
-
-```json
-{
-  "crons": [
-    {
-      "path": "/api/cron/cancel-expired",
-      "schedule": "0 2 * * *"
-    }
-  ]
-}
-```
-
----
-
-## Project structure
-
-```
-src/
-├── app/
-│   ├── api/
-│   │   ├── auth/              # NextAuth + register, verify-email, reset-password
-│   │   ├── contracts/[id]/    # CRUD, join/decline, review, resubmit, calendar, preview
-│   │   ├── escrow/            # Create, confirm, finish, cancel, sync, webhook
-│   │   ├── proof/             # PDF/image upload → Vercel Blob; DELETE proof
-│   │   ├── verify/            # AI milestone verification (5-model vote)
-│   │   ├── nft/               # Mint NFT cert, cert image, cert metadata
-│   │   ├── user/              # Wallet save, GDPR export, GDPR delete, recheck-kyc
-│   │   ├── webhooks/          # Outbound webhook delivery
-│   │   ├── telegram/          # Bot connect + webhook handler
-│   │   ├── internal/          # Admin APIs (stats, export, queue, graph, generate, dataset, sentry-issues, users)
-│   │   ├── cron/              # Auto-cancel expired milestones + refresh sanctions
-│   │   └── health/            # Health check
-│   ├── contract/[id]/         # Contract detail + audit trail + milestone timeline
-│   ├── dashboard/             # Investor + startup dashboards
-│   ├── internal/              # Admin panel (stats, review queue, errors, usage, graph, generate, dataset, users)
-│   ├── datenschutz/           # Bilingual Privacy Policy (DE/EN toggle)
-│   ├── login/ register/ forgot-password/ reset-password/ profile/
-│   └── page.tsx               # Landing page
-├── services/
-│   ├── ai/                    # 5-model verifier — PDF + image
-│   ├── brain/                 # Proof enrichment, embeddings, training data collection
-│   ├── evm/                   # EVM client, escrow calldata, release/cancel, audit
-│   ├── xrpl/                  # Native XRPL: audit memos + NFT cert minter
-│   ├── github/                # GitHub proof validation
-│   ├── sanctions/             # OFAC/EU sanctions screening
-│   ├── telegram/              # Bot notifications
-│   └── webhook/               # Outbound webhook delivery
-├── components/
-│   ├── audit-trail.tsx        # On-chain audit trail UI with xrpscan.com links
-│   ├── cookie-banner.tsx      # Cookie info banner (strictly necessary only)
-│   ├── proof-upload.tsx       # PDF/image proof upload with XHR progress
-│   └── ...
-├── lib/
-│   ├── prisma.ts
-│   ├── auth-options.ts
-│   ├── rate-limit.ts          # In-memory rate limiter
-│   ├── env-validation.ts      # Startup env var check (throws on missing required vars)
-│   └── email.ts               # Nodemailer/Resend email templates
-└── sentry.*.config.ts         # Sentry client/server/edge config (production only)
-```
-
----
-
-## On-chain audit trail
-
-Every contract lifecycle event is written to both chains simultaneously and stored in the database:
-
-| Event | Trigger |
-|---|---|
-| `CONTRACT_CREATED` | Investor creates a new contract |
-| `ESCROW_FUNDED` | Grant giver funds milestone via MetaMask |
-| `PROOF_SUBMITTED` | Receiver uploads proof document |
-| `AI_DECISION` | Claude + Gemini return a combined verdict |
-| `MANUAL_REVIEW_APPROVED` | Grant giver manually approves — or auto-approved after 14 days inactivity |
-| `MANUAL_REVIEW_REJECTED` | Grant giver manually rejects — deadline extended by review duration (logged in metadata) |
-| `FUNDS_RELEASED` | RLUSD released to receiver |
-| `NFT_MINTED` | Completion certificate minted on XRPL Ledger — `tokenId` + explorer URL in metadata |
-| `ESCROW_CANCELLED` | Deadline passed, RLUSD returned |
-| `PROOF_RESUBMITTED` | Receiver resubmits after rejection |
-
-Each entry stores:
-- `evmTxHash` — EVM sidechain transaction hash
-- `xrplTxHash` — Native XRP Ledger transaction hash (clickable link to xrpscan.com)
-
-The audit trail is displayed on every contract detail page as a timestamped timeline.
+| Job | Schedule | Purpose |
+|---|---|---|
+| `/api/cron/cancel-expired` | Daily 02:00 UTC | Cancel milestones past deadline |
+| `/api/cron/connector-health` | Daily 07:00 UTC | Probe enterprise data source URLs |
+| `/api/cron/regulatory-alerts` | Monday 08:00 UTC | Fetch CSRD/ESRS updates, classify with AI, notify affected users |
 
 ---
 
@@ -349,101 +301,73 @@ The audit trail is displayed on every contract detail page as a timestamped time
 
 ```
 DRAFT
-  └─ receiver joins ──→ AWAITING_ESCROW
-                               └─ grant giver funds ──→ FUNDED
-                                                            └─ receiver uploads proof ──→ PROOF_SUBMITTED
-                                                                                                └─ AI YES       ──→ VERIFIED ──→ COMPLETED
-                                                                                                └─ AI UNCERTAIN ──→ PENDING_REVIEW
-                                                                                                │                       └─ investor APPROVE ──→ VERIFIED ──→ COMPLETED
-                                                                                                │                       └─ investor REJECT  ──→ REJECTED (deadline extended by review duration)
-                                                                                                │                       └─ receiver resubmits better proof ──→ PROOF_SUBMITTED (loop)
-                                                                                                │                       └─ 14 days no action (cron) ──→ VERIFIED ──→ COMPLETED
-                                                                                                └─ AI NO        ──→ REJECTED
-                                                                                                                        └─ resubmit ──→ FUNDED (loop)
-                                                            └─ deadline passed (cron) ──→ EXPIRED
+  └─ startup joins ──→ AWAITING_ESCROW
+                              └─ investor funds ──→ FUNDED
+                                                       └─ startup uploads proof ──→ PROOF_SUBMITTED
+                                                                                          ├─ AI YES       ──→ VERIFIED ──→ COMPLETED (NFT minted)
+                                                                                          ├─ AI UNCERTAIN ──→ PENDING_REVIEW
+                                                                                          │                      ├─ investor approves ──→ VERIFIED ──→ COMPLETED
+                                                                                          │                      ├─ investor rejects  ──→ REJECTED (deadline extended)
+                                                                                          │                      ├─ startup resubmits ──→ PROOF_SUBMITTED (loop)
+                                                                                          │                      └─ 14 days no action ──→ VERIFIED ──→ COMPLETED
+                                                                                          └─ AI NO        ──→ REJECTED
+                                                                                                                 └─ resubmit ──→ FUNDED (loop)
+                                                       └─ deadline passed (cron) ──→ EXPIRED
 ```
 
 ---
 
 ## Roadmap
 
-Post-Demo Day (April 2026) — moving toward real market launch. Here's what's next.
+### EVM Mainnet
 
-### Compliance — Risk-based KYC
+Deploy to XRPL EVM Mainnet when available. Same flow, real RLUSD, real stakes.
 
-No unnecessary friction for small grants. Verification scales with the amount at stake.
+### Risk-based KYC
 
-| Tier | Verification | Limit | Status |
-|------|-------------|-------|--------|
-| Tier 0 | Email verified | up to $1K | **live now** |
-| Tier 1 | Name + Sanctions screening | up to $10K | planned |
-| Tier 2 | ID + Liveness check | up to $100K | planned |
-| Tier 3 | KYB + Source of funds | unlimited | planned |
+No unnecessary friction for small contracts. Verification scales with amount.
 
-### Expert Review — Human-in-the-loop
+| Tier | Verification | Limit |
+|---|---|---|
+| Tier 0 | Email verified | up to $1K |
+| Tier 1 | Name + sanctions screening | up to $10K |
+| Tier 2 | ID + liveness check | up to $100K |
+| Tier 3 | KYB + source of funds | unlimited |
 
-For high-stakes decisions, AI generates a detailed report reviewed by a curated panel of domain experts. Double-blind, majority vote. This is the **Reviewer-as-a-Service** model: AI matched experts evaluate the milestone proof and cast binding votes — no single party has unilateral control.
+### Expert Review Panel
 
-### Multi-chain Settlement
+For high-stakes milestones: curated domain experts receive an AI-generated report and cast binding votes — double-blind, majority required. The **Reviewer-as-a-Service** model: €50–2,000 per review depending on domain and complexity.
 
-Before creating a contract, choose where the escrow settles:
-- **Native XRPL Ledger** via XLS-85 amendment (Xumm / Crossmark) — RLUSD in native escrow, no smart contracts
-- **XRPL EVM Sidechain** (MetaMask) — Solidity escrow, currently live on testnet
+### Native XRPL Escrow
 
-Same trustless flow, your chain.
+Parallel escrow path via native XRPL XLS-85 (Xumm / Crossmark) — RLUSD in native escrow, no EVM smart contracts required.
 
-### Mainnet
+### Fiat On-ramp
 
-Mainnet launch with fiat on-ramp — fund escrows directly by card or bank transfer. Payouts go straight to a bank account, no crypto wallet required on the receiver side.
+Fund escrows by card or bank transfer. Payouts settle to a bank account — no crypto wallet needed on the receiver side.
 
 ### Structured Dispute Resolution
 
-A formal dispute workflow with escalation paths, arbitration timelines, and binding decisions — so every edge case has a clear, fair outcome.
-
-### Active Intelligence
-
-AI that goes beyond uploaded documents — querying GitHub to analyze code, checking public APIs, and cross-referencing live data. Weighted confidence scores replace binary YES/NO decisions as models improve.
-
----
-
-## Cascrow Brain — Training a Custom Verification Model
-
-The long-term AI goal is a **fine-tuned verification model trained entirely on real milestone-proof pairs** — not generic LLMs prompted at inference time, but a model that has internalized what "proof of milestone completion" actually looks like across domains.
-
-### How training data is collected
-
-Every verification run contributes to a labeled dataset:
-
-- **5-model majority vote** — Claude, Gemini, GPT-4o-mini, Mistral Small, and Cerebras/Qwen3 each independently evaluate the proof. The majority verdict becomes the label.
-- **Automatic labeling** — 5/0 and 4/1 consensus results are written directly to the training dataset (`AUTO_5_0` / `AUTO_4_1` label sources).
-- **Human review queue** — 3/2 splits (genuine disagreement) are routed to an internal review interface where a human labels the case as `APPROVED`, `REJECTED`, or `FAKED` before it enters the dataset.
-- **Fraud detection** — Human reviewers can flag entries as `FAKED` with a fraud type (`AI_GENERATED`, `MANIPULATED`, `RECYCLED`, `IMPLAUSIBLE`) to train the model to detect fabricated proofs.
-
-### Export
-
-The dataset can be exported as **JSONL** (ready for fine-tuning via OpenAI, Anthropic, or Hugging Face) or **CSV** at any time from the internal dashboard.
+Formal escalation paths, arbitration timelines, and binding decisions for every edge case.
 
 ---
 
 ## Key design decisions
 
-**Why dual-chain audit?**  
-The EVM sidechain stores business logic and escrow state. The native XRP Ledger stores an independent, immutable audit record via `AccountSet` memo transactions — publicly verifiable without trusting our backend. Two independent chains means two independent proofs.
+**Why dual-chain audit?**
+The EVM sidechain stores escrow state and business logic. The native XRP Ledger stores an independent immutable audit record via `AccountSet` memo transactions — verifiable without trusting our backend. Two independent chains, two independent proofs.
 
-**Why AccountSet for XRPL memos?**  
-`AccountSet` transactions don't require a destination address and support arbitrary Memos. Payment-to-self is rejected by XRPL as `temREDUNDANT`; `AccountSet` has no such restriction.
+**Why AccountSet for XRPL memos?**
+`AccountSet` doesn't require a destination and supports arbitrary Memos. Payment-to-self is rejected by XRPL as `temREDUNDANT`. `AccountSet` carries the same memo payload without that constraint.
 
-**Why HTTP JSON-RPC for XRPL?**  
-Vercel serverless functions kill background work after the HTTP response is sent. WebSocket-based `xrpl.Client` with `submitAndWait` doesn't complete in time. HTTP JSON-RPC calls complete synchronously within the request lifecycle.
+**Why HTTP JSON-RPC for XRPL?**
+Vercel serverless functions stop background work after the HTTP response. WebSocket-based `xrpl.Client` with `submitAndWait` doesn't complete in time. HTTP JSON-RPC calls complete synchronously within the request lifecycle.
 
-**Why EVM smart contracts?**  
-XRPL EVM Sidechain gives us Solidity smart contracts with full programmability, while staying in the XRPL ecosystem and using RLUSD as the native stablecoin.
+**Why MetaMask?**
+The platform never holds user private keys. MetaMask signs `approve` + `fundMilestone` on the user's device. The platform wallet only calls `releaseMilestone` / `cancelMilestone` server-side after AI verification.
 
-**Why MetaMask?**  
-The platform never holds user private keys. MetaMask signs the `approve` + `fundMilestone` transactions on the user's device. The platform wallet only calls `releaseMilestone` / `cancelMilestone` server-side after AI verification.
+**Why 5 models?**
+No single AI company controls the verdict. Anthropic, Google, OpenAI, Mistral, and Alibaba (via Cerebras) must reach a 3/5 majority. If any single provider's model is biased, manipulated, or unavailable, the other four still produce a valid result.
 
-**Why PENDING_REVIEW?**  
-When AI confidence is below a threshold, instead of making a wrong call, the system escalates to the grant giver for a manual decision. This is the Tier 2 governance model.
-
-**Email verification**  
-All new accounts require email verification before sign-in. Tokens expire in 24 hours; resend is rate-limited to once per 60 seconds server-side.
+**Why Upstash Redis for rate limiting?**
+Vercel deploys multiple serverless instances. In-memory counters don't share state across instances. Upstash Redis with INCR+PEXPIRE is atomic across all instances without requiring a persistent connection.
