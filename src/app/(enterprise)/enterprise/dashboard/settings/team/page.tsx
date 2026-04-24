@@ -14,34 +14,37 @@ interface Member {
   member: { name: string | null } | null;
 }
 
-const tabStyle = (active: boolean): React.CSSProperties => ({
-  padding: "8px 14px",
-  fontSize: 13.5,
-  fontWeight: active ? 600 : 500,
-  color: active ? "var(--ent-accent)" : "var(--ent-muted)",
-  borderBottom: active ? "2px solid var(--ent-accent)" : "2px solid transparent",
-  textDecoration: "none",
-  marginBottom: -1,
-});
+const TABS = [
+  { href: "/enterprise/dashboard/settings", label: "Profile" },
+  { href: "/enterprise/dashboard/settings/team", label: "Team Members" },
+  { href: "/enterprise/dashboard/settings/api-keys", label: "API Keys" },
+  { href: "/enterprise/dashboard/settings/webhooks", label: "Webhooks" },
+];
 
-const cardStyle: React.CSSProperties = {
+const ROLE_INFO: Record<string, { label: string; desc: string }> = {
+  VIEWER: { label: "Viewer", desc: "Can view all attestations and reports, cannot make changes" },
+  EDITOR: { label: "Editor", desc: "Can create and edit goal sets, submit evidence, and run attestations" },
+};
+
+const card: React.CSSProperties = {
   background: "white",
   border: "1px solid var(--ent-border)",
   borderRadius: 12,
   padding: "24px",
-  marginBottom: 20,
+  marginBottom: 16,
 };
 
-const inputStyle: React.CSSProperties = {
+const input: React.CSSProperties = {
   width: "100%",
   padding: "9px 12px",
   fontSize: 13.5,
   border: "1px solid var(--ent-border)",
-  borderRadius: 7,
-  background: "white",
+  borderRadius: 8,
+  background: "var(--ent-bg)",
   color: "var(--ent-text)",
   outline: "none",
   boxSizing: "border-box",
+  transition: "border-color 0.15s",
 };
 
 export default function TeamSettingsPage() {
@@ -103,49 +106,108 @@ export default function TeamSettingsPage() {
     }
   }
 
+  const pendingCount = members.filter((m) => !m.acceptedAt).length;
+  const activeCount = members.filter((m) => m.acceptedAt).length;
+
   return (
-    <div style={{ padding: "32px 36px", maxWidth: 680 }}>
+    <div style={{ padding: "32px 36px", maxWidth: 700 }}>
+      {/* Header */}
       <div style={{ marginBottom: 28 }}>
-        <h1 style={{ margin: "0 0 20px", fontSize: 24, fontWeight: 700, color: "var(--ent-text)", letterSpacing: "-0.02em" }}>
+        <h1 style={{ margin: "0 0 20px", fontSize: 22, fontWeight: 700, color: "var(--ent-text)", letterSpacing: "-0.02em" }}>
           Settings
         </h1>
-        <div style={{ display: "flex", gap: 4, borderBottom: "1px solid var(--ent-border)", marginBottom: 28 }}>
-          {[
-            { href: "/enterprise/dashboard/settings", label: "Profile" },
-            { href: "/enterprise/dashboard/settings/team", label: "Team Members" },
-            { href: "/enterprise/dashboard/settings/api-keys", label: "API Keys" },
-            { href: "/enterprise/dashboard/settings/webhooks", label: "Webhooks" },
-          ].map((tab) => (
-            <a key={tab.href} href={tab.href} style={tabStyle(tab.href === "/enterprise/dashboard/settings/team")}>
-              {tab.label}
-            </a>
-          ))}
+        <div style={{ display: "flex", gap: 2, borderBottom: "1px solid var(--ent-border)", marginBottom: 4 }}>
+          {TABS.map((tab) => {
+            const active = tab.href === "/enterprise/dashboard/settings/team";
+            return (
+              <a
+                key={tab.href}
+                href={tab.href}
+                style={{
+                  padding: "8px 16px",
+                  fontSize: 13.5,
+                  fontWeight: active ? 600 : 500,
+                  color: active ? "var(--ent-accent)" : "var(--ent-muted)",
+                  borderBottom: active ? "2px solid var(--ent-accent)" : "2px solid transparent",
+                  textDecoration: "none",
+                  marginBottom: -1,
+                  transition: "color 0.15s",
+                }}
+              >
+                {tab.label}
+              </a>
+            );
+          })}
         </div>
       </div>
 
+      {/* Team stats row */}
+      {members.length > 0 && (
+        <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+          {[
+            { label: "Total members", value: members.length },
+            { label: "Active", value: activeCount, color: "#059669", bg: "#ECFDF5" },
+            { label: "Pending invite", value: pendingCount, color: "#D97706", bg: "#FFFBEB" },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              style={{
+                flex: 1,
+                padding: "12px 16px",
+                borderRadius: 10,
+                background: stat.bg ?? "white",
+                border: "1px solid var(--ent-border)",
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+              }}
+            >
+              <span style={{ fontSize: 22, fontWeight: 800, color: stat.color ?? "var(--ent-text)", letterSpacing: "-0.03em" }}>
+                {stat.value}
+              </span>
+              <span style={{ fontSize: 12, color: stat.color ?? "var(--ent-muted)", fontWeight: 500 }}>{stat.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Invite form */}
-      <div style={cardStyle}>
-        <h2 style={{ margin: "0 0 6px", fontSize: 15, fontWeight: 700, color: "var(--ent-text)" }}>Invite a team member</h2>
+      <div style={card}>
+        <h2 style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 700, color: "var(--ent-text)" }}>
+          Invite a team member
+        </h2>
         <p style={{ margin: "0 0 20px", fontSize: 13, color: "var(--ent-muted)" }}>
-          Team members receive read-only access to your attestation workspace. An invitation email will be sent.
+          An invitation email will be sent with a link to join your workspace.
         </p>
-        <form onSubmit={handleInvite} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="colleague@company.com"
-            required
-            style={{ ...inputStyle, flex: "1 1 220px" }}
-          />
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            style={{ ...inputStyle, width: "auto", flex: "0 0 auto" }}
-          >
-            <option value="VIEWER">Viewer</option>
-            <option value="EDITOR">Editor</option>
-          </select>
+        <form onSubmit={handleInvite} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
+          <div style={{ flex: "1 1 220px" }}>
+            <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "var(--ent-text)", marginBottom: 5 }}>
+              Email address
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="colleague@company.com"
+              required
+              style={input}
+              onFocus={(e) => (e.currentTarget.style.borderColor = "var(--ent-accent)")}
+              onBlur={(e) => (e.currentTarget.style.borderColor = "var(--ent-border)")}
+            />
+          </div>
+          <div style={{ flex: "0 0 auto" }}>
+            <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "var(--ent-text)", marginBottom: 5 }}>
+              Role
+            </label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              style={{ ...input, width: "auto", minWidth: 120, cursor: "pointer" }}
+            >
+              <option value="VIEWER">Viewer</option>
+              <option value="EDITOR">Editor</option>
+            </select>
+          </div>
           <button
             type="submit"
             disabled={inviting}
@@ -153,30 +215,69 @@ export default function TeamSettingsPage() {
               background: inviting ? "#93C5FD" : "var(--ent-accent)",
               color: "white",
               border: "none",
-              borderRadius: 7,
-              padding: "9px 18px",
-              fontSize: 13,
+              borderRadius: 8,
+              padding: "9px 20px",
+              fontSize: 13.5,
               fontWeight: 600,
               cursor: inviting ? "not-allowed" : "pointer",
               whiteSpace: "nowrap",
+              height: 40,
+              boxShadow: inviting ? "none" : "0 1px 3px rgba(29,78,216,0.2)",
             }}
           >
-            {inviting ? "Sending…" : "Send Invite"}
+            {inviting ? "Sending…" : "Send invite"}
           </button>
         </form>
+
+        {/* Role descriptions */}
+        <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+          {Object.entries(ROLE_INFO).map(([key, info]) => (
+            <div
+              key={key}
+              style={{
+                flex: 1,
+                padding: "10px 12px",
+                borderRadius: 8,
+                background: "var(--ent-bg)",
+                border: "1px solid var(--ent-border)",
+              }}
+            >
+              <p style={{ margin: "0 0 2px", fontSize: 12.5, fontWeight: 700, color: "var(--ent-text)" }}>{info.label}</p>
+              <p style={{ margin: 0, fontSize: 12, color: "var(--ent-muted)" }}>{info.desc}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Member list */}
-      <div style={cardStyle}>
-        <h2 style={{ margin: "0 0 20px", fontSize: 15, fontWeight: 700, color: "var(--ent-text)" }}>
+      <div style={card}>
+        <h2 style={{ margin: "0 0 20px", fontSize: 14, fontWeight: 700, color: "var(--ent-text)" }}>
           Team ({members.length})
         </h2>
         {loading ? (
-          <p style={{ color: "var(--ent-muted)", fontSize: 14 }}>Loading…</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {[1, 2].map((i) => (
+              <div key={i} style={{ height: 52, borderRadius: 8, background: "var(--ent-bg)", opacity: 0.6 }} />
+            ))}
+          </div>
         ) : members.length === 0 ? (
-          <p style={{ color: "var(--ent-muted)", fontSize: 14 }}>No team members yet. Invite a colleague above.</p>
+          <div style={{ textAlign: "center", padding: "32px 0" }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: "50%",
+              background: "#EFF6FF",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              margin: "0 auto 12px",
+              color: "var(--ent-accent)",
+            }}>
+              <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM3 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 019.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
+              </svg>
+            </div>
+            <p style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 600, color: "var(--ent-text)" }}>No team members yet</p>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ent-muted)" }}>Invite a colleague using the form above.</p>
+          </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+          <div>
             {members.map((m, i) => (
               <div
                 key={m.id}
@@ -184,22 +285,33 @@ export default function TeamSettingsPage() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  padding: "12px 0",
+                  padding: "13px 0",
                   borderTop: i === 0 ? "none" : "1px solid var(--ent-border)",
+                  gap: 12,
                 }}
               >
-                <div>
-                  <p style={{ margin: "0 0 2px", fontSize: 13.5, fontWeight: 600, color: "var(--ent-text)" }}>
-                    {m.member?.name ?? m.name ?? m.email}
-                  </p>
-                  <p style={{ margin: 0, fontSize: 12.5, color: "var(--ent-muted)" }}>{m.email}</p>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: "50%",
+                    background: m.acceptedAt ? "#EFF6FF" : "#F8FAFC",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 13, fontWeight: 700,
+                    color: m.acceptedAt ? "var(--ent-accent)" : "var(--ent-muted)",
+                    flexShrink: 0,
+                  }}>
+                    {(m.member?.name ?? m.name ?? m.email)[0].toUpperCase()}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ margin: "0 0 2px", fontSize: 13.5, fontWeight: 600, color: "var(--ent-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {m.member?.name ?? m.name ?? m.email}
+                    </p>
+                    <p style={{ margin: 0, fontSize: 12.5, color: "var(--ent-muted)" }}>{m.email}</p>
+                  </div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
                   <span style={{
-                    fontSize: 11.5,
-                    fontWeight: 600,
-                    padding: "2px 8px",
-                    borderRadius: 99,
+                    fontSize: 11.5, fontWeight: 600,
+                    padding: "3px 9px", borderRadius: 99,
                     background: m.acceptedAt ? "#DCFCE7" : "#FEF9C3",
                     color: m.acceptedAt ? "#15803D" : "#92400E",
                   }}>
@@ -210,16 +322,17 @@ export default function TeamSettingsPage() {
                     disabled={removing === m.id}
                     style={{
                       background: "none",
-                      border: "1px solid #FCA5A5",
-                      color: "#DC2626",
-                      borderRadius: 6,
-                      padding: "4px 10px",
-                      fontSize: 12,
-                      cursor: "pointer",
+                      border: "1px solid #FECACA",
+                      color: removing === m.id ? "#FCA5A5" : "#DC2626",
+                      borderRadius: 7,
+                      padding: "5px 12px",
+                      fontSize: 12.5,
+                      cursor: removing === m.id ? "not-allowed" : "pointer",
                       fontWeight: 600,
+                      transition: "all 0.15s",
                     }}
                   >
-                    Remove
+                    {removing === m.id ? "Removing…" : "Remove"}
                   </button>
                 </div>
               </div>
@@ -229,9 +342,15 @@ export default function TeamSettingsPage() {
       </div>
 
       <p style={{ fontSize: 12.5, color: "var(--ent-muted)" }}>
-        Team members can view all attestation data in your workspace.{" "}
-        <Link href="/security" style={{ color: "var(--ent-accent)" }}>Learn about access controls →</Link>
+        Team members can view attestation data in your workspace.{" "}
+        <Link href="/security" style={{ color: "var(--ent-accent)", textDecoration: "none" }}>
+          Learn about access controls →
+        </Link>
       </p>
+
+      <style>{`
+        input:focus, select:focus { border-color: var(--ent-accent) !important; box-shadow: 0 0 0 3px rgba(29,78,216,0.08); }
+      `}</style>
     </div>
   );
 }

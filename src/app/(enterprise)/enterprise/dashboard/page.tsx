@@ -3,48 +3,43 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { getEnterpriseContext } from "@/lib/enterprise-context";
 import { EnterpriseOnboardingChecklist } from "@/components/enterprise-onboarding-checklist";
+import Link from "next/link";
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  VERIFIED:        { label: "Verified",        color: "#059669", bg: "#ECFDF5" },
-  COMPLETED:       { label: "Completed",        color: "#059669", bg: "#ECFDF5" },
-  PENDING:         { label: "Pending",          color: "#D97706", bg: "#FFFBEB" },
-  FUNDED:          { label: "Active",           color: "#2563EB", bg: "#EFF6FF" },
-  PROOF_SUBMITTED: { label: "Under Review",     color: "#7C3AED", bg: "#F5F3FF" },
-  REJECTED:        { label: "Not Met",          color: "#DC2626", bg: "#FEF2F2" },
-  AWAITING_ESCROW: { label: "Setup Required",   color: "#D97706", bg: "#FFFBEB" },
-  DRAFT:           { label: "Draft",            color: "#64748B", bg: "#F8FAFC" },
-  EXPIRED:         { label: "Expired",          color: "#94A3B8", bg: "#F8FAFC" },
+const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; dot: string }> = {
+  VERIFIED:        { label: "Verified",        color: "#059669", bg: "#ECFDF5", dot: "#059669" },
+  COMPLETED:       { label: "Completed",        color: "#059669", bg: "#ECFDF5", dot: "#059669" },
+  PENDING:         { label: "Pending",          color: "#D97706", bg: "#FFFBEB", dot: "#F59E0B" },
+  FUNDED:          { label: "Active",           color: "#2563EB", bg: "#EFF6FF", dot: "#3B82F6" },
+  PROOF_SUBMITTED: { label: "Under Review",     color: "#7C3AED", bg: "#F5F3FF", dot: "#8B5CF6" },
+  REJECTED:        { label: "Not Met",          color: "#DC2626", bg: "#FEF2F2", dot: "#EF4444" },
+  AWAITING_ESCROW: { label: "Setup Required",   color: "#D97706", bg: "#FFFBEB", dot: "#F59E0B" },
+  DRAFT:           { label: "Draft",            color: "#64748B", bg: "#F8FAFC", dot: "#94A3B8" },
+  EXPIRED:         { label: "Expired",          color: "#94A3B8", bg: "#F8FAFC", dot: "#CBD5E1" },
 };
 
 export default async function EnterpriseDashboardPage() {
   const session = await getServerSession(authOptions);
   const { effectiveUserId: userId } = await getEnterpriseContext(session!.user.id);
 
-  // Onboarding checklist data
   const [teamMemberCount, attestationRunCount, auditorCount] = await Promise.all([
     prisma.orgMember.count({ where: { ownerId: userId, acceptedAt: { not: null } } }),
     prisma.attestationEntry.count({ where: { milestone: { contract: { investorId: userId } } } }),
     prisma.auditorClientAccess.count({ where: { clientId: userId } }),
   ]);
 
-  // Load all contracts + their milestones for this user
   const contracts = await prisma.contract.findMany({
     where: { investorId: userId },
-    include: {
-      milestones: { orderBy: { order: "asc" } },
-    },
+    include: { milestones: { orderBy: { order: "asc" } } },
     orderBy: { createdAt: "desc" },
   });
 
   const totalContracts = contracts.length;
   const totalMilestones = contracts.reduce((s, c) => s + c.milestones.length, 0);
   const verifiedMilestones = contracts.reduce(
-    (s, c) => s + c.milestones.filter((m) => ["VERIFIED", "COMPLETED"].includes(m.status)).length,
-    0
+    (s, c) => s + c.milestones.filter((m) => ["VERIFIED", "COMPLETED"].includes(m.status)).length, 0
   );
   const activeMilestones = contracts.reduce(
-    (s, c) => s + c.milestones.filter((m) => ["FUNDED", "PROOF_SUBMITTED"].includes(m.status)).length,
-    0
+    (s, c) => s + c.milestones.filter((m) => ["FUNDED", "PROOF_SUBMITTED"].includes(m.status)).length, 0
   );
   const upcomingDeadlines = contracts
     .flatMap((c) =>
@@ -74,7 +69,6 @@ export default async function EnterpriseDashboardPage() {
 
   const onChainCount = contracts.flatMap((c) => c.milestones).filter((m) => m.nftTxHash || m.evmTxHash).length;
 
-  // Trend: attestation entries per month for the last 6 months
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
   sixMonthsAgo.setDate(1);
@@ -110,7 +104,7 @@ export default async function EnterpriseDashboardPage() {
       accent: "#2563EB",
       bg: "#EFF6FF",
       icon: (
-        <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+        <svg width="19" height="19" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
         </svg>
       ),
@@ -122,8 +116,8 @@ export default async function EnterpriseDashboardPage() {
       accent: "#059669",
       bg: "#ECFDF5",
       icon: (
-        <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+        <svg width="19" height="19" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75l2.25 2.25L15 9m-3-6.75A9 9 0 1121 12a9 9 0 01-18 0z" />
         </svg>
       ),
     },
@@ -134,7 +128,7 @@ export default async function EnterpriseDashboardPage() {
       accent: "#7C3AED",
       bg: "#F5F3FF",
       icon: (
-        <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+        <svg width="19" height="19" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
         </svg>
       ),
@@ -146,7 +140,7 @@ export default async function EnterpriseDashboardPage() {
       accent: "#D97706",
       bg: "#FFFBEB",
       icon: (
-        <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+        <svg width="19" height="19" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
         </svg>
       ),
@@ -158,18 +152,19 @@ export default async function EnterpriseDashboardPage() {
       background: "white",
       border: "1px solid var(--ent-border)",
       borderRadius: 12,
-      padding: "24px",
+      padding: "20px 24px",
     } as React.CSSProperties,
     th: {
       padding: "10px 16px",
       fontSize: 11,
-      fontWeight: 600,
+      fontWeight: 700,
       textTransform: "uppercase" as const,
       letterSpacing: "0.07em",
       color: "var(--ent-muted)",
       borderBottom: "1px solid var(--ent-border)",
       textAlign: "left" as const,
       background: "var(--ent-bg)",
+      whiteSpace: "nowrap" as const,
     } as React.CSSProperties,
     td: {
       padding: "13px 16px",
@@ -180,11 +175,12 @@ export default async function EnterpriseDashboardPage() {
   };
 
   function StatusBadge({ status }: { status: string }) {
-    const cfg = STATUS_CONFIG[status] ?? { label: status, color: "#64748B", bg: "#F8FAFC" };
+    const cfg = STATUS_CONFIG[status] ?? { label: status, color: "#64748B", bg: "#F8FAFC", dot: "#94A3B8" };
     return (
       <span style={{
         display: "inline-flex",
         alignItems: "center",
+        gap: 5,
         padding: "3px 9px",
         borderRadius: 20,
         fontSize: 12,
@@ -192,6 +188,7 @@ export default async function EnterpriseDashboardPage() {
         color: cfg.color,
         background: cfg.bg,
       }}>
+        <span style={{ width: 5, height: 5, borderRadius: "50%", background: cfg.dot, flexShrink: 0 }} />
         {cfg.label}
       </span>
     );
@@ -199,22 +196,47 @@ export default async function EnterpriseDashboardPage() {
 
   function daysUntil(date: Date | string) {
     const diff = Math.ceil((new Date(date).getTime() - Date.now()) / 86400000);
-    if (diff < 0) return <span style={{ color: "#DC2626", fontWeight: 600 }}>Overdue</span>;
-    if (diff === 0) return <span style={{ color: "#D97706", fontWeight: 600 }}>Today</span>;
-    if (diff <= 7) return <span style={{ color: "#D97706", fontWeight: 600 }}>In {diff}d</span>;
-    return <span style={{ color: "var(--ent-muted)" }}>In {diff}d</span>;
+    if (diff < 0) return <span style={{ color: "#DC2626", fontWeight: 600, fontSize: 12 }}>Overdue</span>;
+    if (diff === 0) return <span style={{ color: "#D97706", fontWeight: 600, fontSize: 12 }}>Today</span>;
+    if (diff <= 7) return <span style={{ color: "#D97706", fontWeight: 600, fontSize: 12 }}>In {diff}d</span>;
+    return <span style={{ color: "var(--ent-muted)", fontSize: 12 }}>In {diff}d</span>;
   }
 
   return (
-    <div style={{ padding: "32px 36px", maxWidth: 1200 }}>
+    <div style={{ padding: "28px 36px", maxWidth: 1200 }}>
       {/* Header */}
-      <div style={{ marginBottom: 32 }}>
-        <h1 style={{ margin: "0 0 4px", fontSize: 24, fontWeight: 700, color: "var(--ent-text)", letterSpacing: "-0.02em" }}>
-          Overview
-        </h1>
-        <p style={{ margin: 0, fontSize: 14, color: "var(--ent-muted)" }}>
-          {new Date().toLocaleDateString("en-GB", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
-        </p>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28 }}>
+        <div>
+          <h1 style={{ margin: "0 0 3px", fontSize: 22, fontWeight: 700, color: "var(--ent-text)", letterSpacing: "-0.02em" }}>
+            Overview
+          </h1>
+          <p style={{ margin: 0, fontSize: 13.5, color: "var(--ent-muted)" }}>
+            {new Date().toLocaleDateString("en-GB", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+          </p>
+        </div>
+        <Link
+          href="/enterprise/dashboard/attestations/new"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "9px 18px",
+            background: "var(--ent-accent)",
+            color: "white",
+            borderRadius: 8,
+            fontSize: 13.5,
+            fontWeight: 600,
+            textDecoration: "none",
+            boxShadow: "0 1px 4px rgba(29,78,216,0.25)",
+            transition: "background 0.15s",
+            flexShrink: 0,
+          }}
+        >
+          <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          New Attestation
+        </Link>
       </div>
 
       {/* Onboarding checklist */}
@@ -226,14 +248,28 @@ export default async function EnterpriseDashboardPage() {
       />
 
       {/* Summary cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 24 }}>
         {summaryCards.map((card) => (
-          <div key={card.label} style={s.card}>
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}>
+          <div
+            key={card.label}
+            style={{
+              ...s.card,
+              transition: "box-shadow 0.15s, transform 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
+              (e.currentTarget as HTMLDivElement).style.transform = "translateY(-1px)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
+              (e.currentTarget as HTMLDivElement).style.transform = "none";
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 }}>
               <div style={{
-                width: 40,
-                height: 40,
-                borderRadius: 10,
+                width: 38,
+                height: 38,
+                borderRadius: 9,
                 background: card.bg,
                 color: card.accent,
                 display: "flex",
@@ -243,10 +279,10 @@ export default async function EnterpriseDashboardPage() {
                 {card.icon}
               </div>
             </div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: "var(--ent-text)", letterSpacing: "-0.03em", lineHeight: 1 }}>
+            <div style={{ fontSize: 30, fontWeight: 800, color: "var(--ent-text)", letterSpacing: "-0.04em", lineHeight: 1 }}>
               {card.value}
             </div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ent-text)", marginTop: 6 }}>{card.label}</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ent-text)", marginTop: 5 }}>{card.label}</div>
             <div style={{ fontSize: 12, color: "var(--ent-muted)", marginTop: 2 }}>{card.sub}</div>
           </div>
         ))}
@@ -255,22 +291,25 @@ export default async function EnterpriseDashboardPage() {
       {/* Trend chart */}
       {trendEntries.length > 0 && (() => {
         const chartW = 600;
-        const chartH = 120;
-        const barW = 52;
+        const chartH = 110;
+        const barW = 48;
         const gap = (chartW - trendMonths.length * barW) / (trendMonths.length + 1);
         const maxVal = Math.max(1, ...trendMonths.map((m) => m.total));
         return (
           <div style={{ ...s.card, marginBottom: 20 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-              <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "var(--ent-text)" }}>Attestation Trend</h2>
+              <div>
+                <h2 style={{ margin: "0 0 2px", fontSize: 14, fontWeight: 700, color: "var(--ent-text)" }}>Attestation Trend</h2>
+                <p style={{ margin: 0, fontSize: 12.5, color: "var(--ent-muted)" }}>Last 6 months</p>
+              </div>
               <div style={{ display: "flex", gap: 16, fontSize: 12, color: "var(--ent-muted)" }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <span style={{ width: 10, height: 10, borderRadius: 2, background: "#2563EB", display: "inline-block" }} />
+                  <span style={{ width: 10, height: 10, borderRadius: 3, background: "#DBEAFE", display: "inline-block" }} />
                   All runs
                 </span>
                 <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <span style={{ width: 10, height: 10, borderRadius: 2, background: "#059669", display: "inline-block" }} />
-                  Verified (YES)
+                  <span style={{ width: 10, height: 10, borderRadius: 3, background: "#2563EB", display: "inline-block" }} />
+                  Verified
                 </span>
               </div>
             </div>
@@ -282,25 +321,15 @@ export default async function EnterpriseDashboardPage() {
                   const yesH = Math.round((m.yes / maxVal) * chartH);
                   return (
                     <g key={m.label}>
-                      {/* Total bar (background) */}
-                      <rect
-                        x={x} y={chartH - totalH} width={barW} height={totalH}
-                        rx={4} fill="#DBEAFE"
-                      />
-                      {/* YES bar (foreground) */}
+                      <rect x={x} y={chartH - totalH} width={barW} height={totalH} rx={5} fill="#DBEAFE" />
                       {m.yes > 0 && (
-                        <rect
-                          x={x} y={chartH - yesH} width={barW} height={yesH}
-                          rx={4} fill="#2563EB"
-                        />
+                        <rect x={x} y={chartH - yesH} width={barW} height={yesH} rx={5} fill="#2563EB" />
                       )}
-                      {/* Total label above bar */}
                       {m.total > 0 && (
-                        <text x={x + barW / 2} y={chartH - totalH - 4} textAnchor="middle" fontSize={10} fill="#64748B" fontWeight={600}>
+                        <text x={x + barW / 2} y={chartH - totalH - 5} textAnchor="middle" fontSize={10} fill="#64748B" fontWeight={600}>
                           {m.total}
                         </text>
                       )}
-                      {/* Month label below */}
                       <text x={x + barW / 2} y={chartH + 18} textAnchor="middle" fontSize={10.5} fill="#94A3B8">
                         {m.label}
                       </text>
@@ -313,36 +342,40 @@ export default async function EnterpriseDashboardPage() {
         );
       })()}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 18 }}>
         {/* Recent attestations table */}
-        <div style={s.card}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "var(--ent-text)" }}>Recent Attestations</h2>
-            <a href="/enterprise/dashboard/attestations" style={{ fontSize: 13, color: "var(--ent-accent)", textDecoration: "none", fontWeight: 500 }}>
-              View all →
+        <div style={{ ...s.card, padding: 0, overflow: "hidden" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px 16px" }}>
+            <div>
+              <h2 style={{ margin: "0 0 2px", fontSize: 14, fontWeight: 700, color: "var(--ent-text)" }}>Recent Attestations</h2>
+              {recentMilestones.length > 0 && (
+                <p style={{ margin: 0, fontSize: 12.5, color: "var(--ent-muted)" }}>{recentMilestones.length} most recent</p>
+              )}
+            </div>
+            <a href="/enterprise/dashboard/attestations" style={{ fontSize: 13, color: "var(--ent-accent)", textDecoration: "none", fontWeight: 600, display: "flex", alignItems: "center", gap: 3 }}>
+              View all
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+              </svg>
             </a>
           </div>
 
           {recentMilestones.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "48px 0" }}>
+            <div style={{ textAlign: "center", padding: "48px 24px" }}>
               <div style={{
-                width: 56,
-                height: 56,
-                borderRadius: "50%",
+                width: 52, height: 52, borderRadius: "50%",
                 background: "#EFF6FF",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                margin: "0 auto 16px",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                margin: "0 auto 14px",
                 color: "var(--ent-accent)",
               }}>
-                <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
               </div>
               <p style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 600, color: "var(--ent-text)" }}>No attestations yet</p>
               <p style={{ margin: "0 0 20px", fontSize: 13, color: "var(--ent-muted)" }}>
-                Your enterprise dashboard is ready. Create your first goal set to get started.
+                Create your first goal set to get started.
               </p>
               <a
                 href="/enterprise/dashboard/attestations/new"
@@ -351,8 +384,8 @@ export default async function EnterpriseDashboardPage() {
                   padding: "9px 20px",
                   background: "var(--ent-accent)",
                   color: "white",
-                  borderRadius: 7,
-                  fontSize: 13,
+                  borderRadius: 8,
+                  fontSize: 13.5,
                   fontWeight: 600,
                   textDecoration: "none",
                 }}
@@ -373,7 +406,12 @@ export default async function EnterpriseDashboardPage() {
                 </thead>
                 <tbody>
                   {recentMilestones.map((m) => (
-                    <tr key={m.id}>
+                    <tr
+                      key={m.id}
+                      style={{ transition: "background 0.1s" }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = "var(--ent-bg)"; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = "transparent"; }}
+                    >
                       <td style={s.td}>
                         <a
                           href={m.contractMode === "ATTESTATION"
@@ -397,11 +435,23 @@ export default async function EnterpriseDashboardPage() {
 
         {/* Upcoming deadlines */}
         <div style={s.card}>
-          <h2 style={{ margin: "0 0 20px", fontSize: 15, fontWeight: 700, color: "var(--ent-text)" }}>Upcoming Deadlines</h2>
+          <h2 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700, color: "var(--ent-text)" }}>Upcoming Deadlines</h2>
           {upcomingDeadlines.length === 0 ? (
-            <p style={{ color: "var(--ent-muted)", fontSize: 13 }}>No upcoming deadlines.</p>
+            <div style={{ textAlign: "center", padding: "24px 0" }}>
+              <div style={{
+                width: 40, height: 40, borderRadius: "50%",
+                background: "#ECFDF5",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                margin: "0 auto 10px",
+              }}>
+                <svg width="18" height="18" fill="none" stroke="#059669" strokeWidth={1.75} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p style={{ margin: 0, color: "var(--ent-muted)", fontSize: 13 }}>No upcoming deadlines.</p>
+            </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {upcomingDeadlines.map((d, i) => {
                 const daysLeft = Math.ceil((new Date(d.deadline).getTime() - Date.now()) / 86400000);
                 const urgent = daysLeft <= 7;
@@ -409,15 +459,15 @@ export default async function EnterpriseDashboardPage() {
                   <div key={i} style={{
                     display: "flex",
                     alignItems: "flex-start",
-                    gap: 12,
-                    padding: "12px",
+                    gap: 10,
+                    padding: "10px 12px",
                     borderRadius: 8,
                     background: urgent ? "#FFFBEB" : "var(--ent-bg)",
                     border: `1px solid ${urgent ? "#FDE68A" : "var(--ent-border)"}`,
                   }}>
                     <div style={{
-                      minWidth: 40,
-                      height: 40,
+                      minWidth: 38,
+                      height: 38,
                       borderRadius: 8,
                       background: urgent ? "#FEF3C7" : "#EFF6FF",
                       display: "flex",
@@ -432,11 +482,11 @@ export default async function EnterpriseDashboardPage() {
                         {new Date(d.deadline).toLocaleDateString("en", { month: "short" })}
                       </span>
                     </div>
-                    <div style={{ minWidth: 0 }}>
-                      <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 600, color: "var(--ent-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <p style={{ margin: "0 0 1px", fontSize: 12.5, fontWeight: 600, color: "var(--ent-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {d.title}
                       </p>
-                      <p style={{ margin: 0, fontSize: 11.5, color: "var(--ent-muted)" }}>
+                      <p style={{ margin: 0, fontSize: 11.5, color: urgent ? "#D97706" : "var(--ent-muted)", fontWeight: urgent ? 600 : 400 }}>
                         {daysLeft === 0 ? "Due today" : daysLeft < 0 ? "Overdue" : `${daysLeft} day${daysLeft !== 1 ? "s" : ""} left`}
                       </p>
                     </div>
