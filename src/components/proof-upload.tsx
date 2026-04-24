@@ -27,6 +27,9 @@ const ACCEPTED_TYPES = [
   "text/plain",
 ].join(",");
 
+// On mobile, accepts image capture as well so the camera roll opens directly
+const MOBILE_ACCEPT = ACCEPTED_TYPES + ",image/*";
+
 const MAX_SIZE = 20 * 1024 * 1024; // 20 MB
 
 function fileTypeLabel(file: File): string {
@@ -53,6 +56,15 @@ export function ProofUpload({ contractId, milestoneId, onUploaded, replaceMode }
   const [showGitHub, setShowGitHub] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+
+  // Detect mobile via pointer type — used to show camera shortcut
+  const [isMobile, setIsMobile] = useState(false);
+  useState(() => {
+    if (typeof window !== "undefined") {
+      setIsMobile(window.matchMedia("(pointer: coarse)").matches);
+    }
+  });
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(e.target.files ?? []);
@@ -193,11 +205,21 @@ export function ProofUpload({ contractId, milestoneId, onUploaded, replaceMode }
           </p>
         </div>
 
+        {/* Primary file input */}
         <input
           ref={inputRef}
           type="file"
-          accept={ACCEPTED_TYPES}
+          accept={MOBILE_ACCEPT}
           multiple
+          className="hidden"
+          onChange={handleFileChange}
+        />
+        {/* Camera capture shortcut — mobile only, opens rear camera directly */}
+        <input
+          ref={cameraRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
           className="hidden"
           onChange={handleFileChange}
         />
@@ -231,19 +253,38 @@ export function ProofUpload({ contractId, milestoneId, onUploaded, replaceMode }
         )}
 
         {!uploaded && (
-          <button
-            type="button"
-            disabled={loading}
-            onClick={() => inputRef.current?.click()}
-            className="w-full rounded-lg py-2 text-sm font-medium transition-colors disabled:opacity-50"
-            style={{
-              background: "rgba(196,112,75,0.1)",
-              border: "1px solid rgba(196,112,75,0.35)",
-              color: "#C4704B",
-            }}
-          >
-            {files.length > 0 ? "Add Another File" : "Select File"}
-          </button>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => inputRef.current?.click()}
+              className="w-full rounded-lg py-3 text-sm font-medium transition-colors disabled:opacity-50 active:opacity-70"
+              style={{
+                background: "rgba(196,112,75,0.1)",
+                border: "1px solid rgba(196,112,75,0.35)",
+                color: "#C4704B",
+                minHeight: 44,
+              }}
+            >
+              {files.length > 0 ? "Add Another File" : "Select File"}
+            </button>
+            {isMobile && (
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => cameraRef.current?.click()}
+                className="w-full rounded-lg py-3 text-sm font-medium transition-colors disabled:opacity-50 active:opacity-70"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(196,112,75,0.2)",
+                  color: "#A89B8C",
+                  minHeight: 44,
+                }}
+              >
+                📷 Take Photo of Document
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -277,14 +318,44 @@ export function ProofUpload({ contractId, milestoneId, onUploaded, replaceMode }
                   Remove
                 </button>
               </div>
-              <input
-                type="url"
-                value={repoUrl}
-                onChange={(e) => setRepoUrl(e.target.value)}
-                placeholder="https://github.com/your-org/your-repo"
-                className="cs-input"
-                disabled={loading}
-              />
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={repoUrl}
+                  onChange={(e) => setRepoUrl(e.target.value)}
+                  placeholder="https://github.com/your-org/your-repo"
+                  className="cs-input flex-1"
+                  disabled={loading}
+                  style={{ minHeight: 44 }}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const text = await navigator.clipboard.readText();
+                      if (text.startsWith("https://github.com/")) setRepoUrl(text);
+                      else toast.error("Clipboard doesn't contain a GitHub URL");
+                    } catch {
+                      toast.error("Clipboard access denied");
+                    }
+                  }}
+                  className="rounded-lg px-3 text-xs font-medium transition-colors active:opacity-70"
+                  style={{
+                    background: "rgba(196,112,75,0.1)",
+                    border: "1px solid rgba(196,112,75,0.25)",
+                    color: "#C4704B",
+                    minHeight: 44,
+                    whiteSpace: "nowrap",
+                  }}
+                  title="Paste from clipboard"
+                >
+                  Paste
+                </button>
+              </div>
               <p className="text-xs" style={{ color: "#A89B8C" }}>
                 Must be a <strong style={{ color: "#D4B896" }}>public</strong> repository. The AI will analyze commits, README, file structure and activity since the contract start.
               </p>
@@ -331,15 +402,24 @@ export function ProofUpload({ contractId, milestoneId, onUploaded, replaceMode }
       )}
 
       {uploaded && (
-        <div className="px-6 pb-6 pt-2" style={{ background: "rgba(255,255,255,0.03)" }}>
+        <div className="px-6 pb-6 pt-4 flex flex-col items-center gap-3" style={{ background: "rgba(255,255,255,0.03)" }}>
+          <div
+            className="w-full rounded-lg py-4 flex flex-col items-center gap-1 text-center"
+            style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.3)" }}
+          >
+            <span className="text-lg">✅</span>
+            <p className="text-sm font-semibold" style={{ color: "#86efac" }}>Submitted — AI is reviewing</p>
+            <p className="text-xs" style={{ color: "#A89B8C" }}>You'll be notified when the result is ready.</p>
+          </div>
           <button
             type="button"
             onClick={() => { setFiles([]); setUploaded(false); setRepoUrl(""); setShowGitHub(false); }}
-            className="w-full rounded-lg py-2 text-sm font-medium transition-colors"
+            className="w-full rounded-lg py-3 text-sm font-medium transition-colors active:opacity-70"
             style={{
               background: "rgba(196,112,75,0.1)",
               border: "1px solid rgba(196,112,75,0.35)",
               color: "#C4704B",
+              minHeight: 44,
             }}
           >
             Upload Other Documents

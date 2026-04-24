@@ -13,6 +13,7 @@ import { buildEvidenceChain } from "@/lib/evidence-chain";
 import { fetchFromConnector } from "./connectors";
 import { checkConsensusThreshold } from "@/lib/consensus";
 import { fireWebhook } from "@/services/webhook/webhook.service";
+import { fireIntegrationNotification } from "@/services/notifications/integrations.service";
 
 const SYSTEM_PROMPT_VERSION = "v1";
 
@@ -303,6 +304,17 @@ Does the evidence show this milestone is met?`;
       contractId: milestone.contractId,
     }).catch((err) => console.warn("[attestation] auditor email failed:", err));
   }
+
+  // ── 9b. Fire Slack/Teams integration notifications ───────────────────────
+  const ownerId = milestone.contract.investorId;
+  const verdictEmoji = verdict === "YES" ? "✅" : verdict === "NO" ? "❌" : "⚠️";
+  const eventKey = verdict === "YES" ? "attestation.completed" : verdict === "NO" ? "attestation.failed" : "attestation.completed";
+  fireIntegrationNotification(
+    ownerId,
+    eventKey,
+    `${verdictEmoji} Attestation run complete for *${milestone.title}* (${period}): ${verdict}. ${reasoning.slice(0, 200)}${reasoning.length > 200 ? "…" : ""}`,
+    `${verdictEmoji} Attestation result: ${milestone.title}`
+  ).catch(() => {});
 
   // ── 10. Consensus: record AI_PLATFORM vote ────────────────────────────────
   if (milestone.consensusEnabled) {

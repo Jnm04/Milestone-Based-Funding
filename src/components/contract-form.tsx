@@ -88,11 +88,27 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
   const [wizardDescription, setWizardDescription] = useState("");
   const [wizardLoading, setWizardLoading] = useState(false);
 
+  // Confidential attestation
+  const [isConfidential, setIsConfidential] = useState(false);
+  const [confidentialPassphrase, setConfidentialPassphrase] = useState("");
+  const [passphraseConfirm, setPassphraseConfirm] = useState("");
+
   // AI Drafting state
   const [aiDraftOpen, setAiDraftOpen] = useState(false);
   const [aiDescription, setAiDescription] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiGenerated, setAiGenerated] = useState(false);
+
+  // Contract Templates state
+  const [templateOpen, setTemplateOpen] = useState(false);
+  const [myTemplates, setMyTemplates] = useState<Array<{ id: string; name: string; description: string | null; industry: string | null; milestones: unknown; useCount: number }>>([]);
+  const [communityTemplates, setCommunityTemplates] = useState<typeof myTemplates>([]);
+  const [templateTab, setTemplateTab] = useState<"mine" | "community">("mine");
+  const [templateLoading, setTemplateLoading] = useState(false);
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
+  const [saveTemplateName, setSaveTemplateName] = useState("");
+  const [saveTemplatePublic, setSaveTemplatePublic] = useState(false);
+  const [saveTemplateLoading, setSaveTemplateLoading] = useState(false);
 
   // AI Risk Preview state
   const [riskFlags, setRiskFlags] = useState<RiskFlag[] | null>(null);
@@ -272,11 +288,23 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
       toast.error("Please fill in all milestone fields.");
       return;
     }
+    if (isConfidential) {
+      if (!confidentialPassphrase || confidentialPassphrase.length < 8) {
+        toast.error("Passphrase must be at least 8 characters.");
+        return;
+      }
+      if (confidentialPassphrase !== passphraseConfirm) {
+        toast.error("Passphrases do not match.");
+        return;
+      }
+    }
     setLoading(true);
     try {
-      const payload = {
+      const payload: Record<string, unknown> = {
         mode: "ATTESTATION",
         auditorEmail: auditorEmail.trim() || undefined,
+        isConfidential,
+        ...(isConfidential && { confidentialPassphrase }),
         attestationMilestones: attestationMilestones.map((m) => ({
           title: m.title.trim(),
           cancelAfter: new Date(
@@ -295,7 +323,7 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
         throw new Error(err.error ?? "Failed to create attestation contract");
       }
       const { contractId } = (await res.json()) as { contractId: string };
-      toast.success("Attestation contract created.");
+      toast.success(isConfidential ? "Confidential attestation contract created. Store your passphrase safely — it cannot be recovered." : "Attestation contract created.");
       router.push(`/contract/${contractId}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong.");
@@ -555,6 +583,56 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
             <p style={{ fontSize: "12px", color: "#71717a" }}>The auditor will be CC&apos;d on all attestation results and have read-only access.</p>
           </div>
 
+          {/* Confidential Mode */}
+          <div
+            style={{
+              borderRadius: "10px",
+              border: isConfidential ? "1px solid rgba(196,112,75,0.5)" : "1px solid #e4e4e7",
+              overflow: "hidden",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => { setIsConfidential((v) => !v); setConfidentialPassphrase(""); setPassphraseConfirm(""); }}
+              style={{
+                width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "12px 16px", background: isConfidential ? "rgba(196,112,75,0.06)" : "#fafafa",
+                border: "none", cursor: "pointer", textAlign: "left",
+              }}
+            >
+              <span style={{ fontSize: "14px", fontWeight: 500, color: "#18181b" }}>
+                🔒 Confidential mode
+              </span>
+              <span style={{ fontSize: "12px", color: isConfidential ? "#C4704B" : "#a1a1aa" }}>
+                {isConfidential ? "ON" : "OFF"}
+              </span>
+            </button>
+            {isConfidential && (
+              <div style={{ padding: "12px 16px", borderTop: "1px solid rgba(196,112,75,0.2)", display: "flex", flexDirection: "column", gap: "10px" }}>
+                <p style={{ fontSize: "12px", color: "#71717a", margin: 0 }}>
+                  Goal text is encrypted before storage. Only the SHA-256 hash is written on-chain. Authorised auditors can decrypt by providing this passphrase.
+                </p>
+                <Input
+                  type="password"
+                  placeholder="Passphrase (min 8 characters)"
+                  value={confidentialPassphrase}
+                  onChange={(e) => setConfidentialPassphrase(e.target.value)}
+                  autoComplete="new-password"
+                />
+                <Input
+                  type="password"
+                  placeholder="Confirm passphrase"
+                  value={passphraseConfirm}
+                  onChange={(e) => setPassphraseConfirm(e.target.value)}
+                  autoComplete="new-password"
+                />
+                <p style={{ fontSize: "11px", color: "#ef4444", margin: 0 }}>
+                  ⚠️ Store this passphrase safely. It cannot be recovered if lost.
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* Attestation submit */}
           <div style={{ display: "flex", gap: "10px" }}>
             <Button type="submit" disabled={loading} size="lg" style={{ flex: 1 }}>
@@ -747,7 +825,44 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
       {/* Milestones */}
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", color: "#18181b" }}>
-          <span style={{ fontSize: "14px", fontWeight: 600, color: "#18181b" }}>Milestones</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ fontSize: "14px", fontWeight: 600, color: "#18181b" }}>Milestones</span>
+            <button
+              type="button"
+              onClick={async () => {
+                setTemplateOpen(true);
+                setTemplateLoading(true);
+                try {
+                  const [myRes, comRes] = await Promise.all([
+                    fetch("/api/templates"),
+                    fetch("/api/templates/community"),
+                  ]);
+                  if (myRes.ok) {
+                    const d = await myRes.json() as { templates: typeof myTemplates };
+                    setMyTemplates(d.templates);
+                  }
+                  if (comRes.ok) {
+                    const d = await comRes.json() as { templates: typeof communityTemplates };
+                    setCommunityTemplates(d.templates);
+                  }
+                } finally {
+                  setTemplateLoading(false);
+                }
+              }}
+              style={{
+                fontSize: "11px",
+                fontWeight: 600,
+                padding: "2px 10px",
+                borderRadius: "999px",
+                border: "1px solid rgba(196,112,75,0.35)",
+                background: "rgba(196,112,75,0.07)",
+                color: "#C4704B",
+                cursor: "pointer",
+              }}
+            >
+              Load Template
+            </button>
+          </div>
           {totalAmount > 0 && (
             <span style={{ fontSize: "13px", color: "#71717a" }}>
               Total:{" "}
@@ -755,6 +870,165 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
             </span>
           )}
         </div>
+
+        {/* Template picker modal */}
+        {templateOpen && (
+          <div
+            style={{
+              position: "fixed", inset: 0, zIndex: 9999,
+              background: "rgba(0,0,0,0.5)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: "16px",
+            }}
+            onClick={(e) => { if (e.target === e.currentTarget) setTemplateOpen(false); }}
+          >
+            <div
+              style={{
+                background: "#fff", borderRadius: "16px", width: "100%", maxWidth: "520px",
+                maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden",
+                boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+              }}
+            >
+              <div style={{ padding: "20px 24px 12px", borderBottom: "1px solid #e4e4e7" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "16px", fontWeight: 700, color: "#18181b" }}>Load Template</span>
+                  <button type="button" onClick={() => setTemplateOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "18px", color: "#71717a" }}>×</button>
+                </div>
+                <div style={{ display: "flex", gap: "4px", marginTop: "12px" }}>
+                  {(["mine", "community"] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setTemplateTab(tab)}
+                      style={{
+                        padding: "6px 14px", borderRadius: "6px", border: "none",
+                        fontWeight: templateTab === tab ? 600 : 400,
+                        background: templateTab === tab ? "#18181b" : "transparent",
+                        color: templateTab === tab ? "#fff" : "#71717a",
+                        cursor: "pointer", fontSize: "13px",
+                      }}
+                    >
+                      {tab === "mine" ? "My Templates" : "Community"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ overflowY: "auto", flex: 1, padding: "12px 24px 20px" }}>
+                {templateLoading ? (
+                  <p style={{ color: "#71717a", fontSize: "13px", textAlign: "center", marginTop: "24px" }}>Loading…</p>
+                ) : (templateTab === "mine" ? myTemplates : communityTemplates).length === 0 ? (
+                  <p style={{ color: "#71717a", fontSize: "13px", textAlign: "center", marginTop: "24px" }}>
+                    {templateTab === "mine" ? "No saved templates yet. Create a contract and save it as a template." : "No community templates yet."}
+                  </p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {(templateTab === "mine" ? myTemplates : communityTemplates).map((tmpl) => (
+                      <button
+                        key={tmpl.id}
+                        type="button"
+                        onClick={async () => {
+                          const ms = tmpl.milestones as Array<{ title: string; amountUSD?: string | number; deadlineDays?: string | number; description?: string }>;
+                          setMilestones(ms.map((m) => ({
+                            title: m.title ?? "",
+                            amountUSD: String(m.amountUSD ?? ""),
+                            deadlineDays: String(m.deadlineDays ?? "30"),
+                          })));
+                          setTemplateOpen(false);
+                          if (templateTab === "community") {
+                            await fetch(`/api/templates/${tmpl.id}/use`, { method: "POST" }).catch(() => {});
+                          }
+                          toast.success(`Template "${tmpl.name}" loaded`);
+                        }}
+                        style={{
+                          textAlign: "left", padding: "12px 14px", borderRadius: "8px",
+                          border: "1px solid #e4e4e7", background: "#fafafa",
+                          cursor: "pointer", width: "100%",
+                        }}
+                      >
+                        <div style={{ fontWeight: 600, fontSize: "14px", color: "#18181b" }}>{tmpl.name}</div>
+                        {tmpl.description && <div style={{ fontSize: "12px", color: "#71717a", marginTop: "2px" }}>{tmpl.description}</div>}
+                        <div style={{ fontSize: "11px", color: "#a1a1aa", marginTop: "4px" }}>
+                          {(tmpl.milestones as unknown[]).length} milestone{(tmpl.milestones as unknown[]).length !== 1 ? "s" : ""}
+                          {tmpl.industry ? ` · ${tmpl.industry}` : ""}
+                          {templateTab === "community" ? ` · ${tmpl.useCount} uses` : ""}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Save as Template modal */}
+        {saveTemplateOpen && (
+          <div
+            style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}
+            onClick={(e) => { if (e.target === e.currentTarget) setSaveTemplateOpen(false); }}
+          >
+            <div style={{ background: "#fff", borderRadius: "16px", width: "100%", maxWidth: "400px", padding: "24px", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                <span style={{ fontSize: "16px", fontWeight: 700, color: "#18181b" }}>Save as Template</span>
+                <button type="button" onClick={() => setSaveTemplateOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "18px", color: "#71717a" }}>×</button>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div>
+                  <label style={{ fontSize: "12px", fontWeight: 600, color: "#52525b", display: "block", marginBottom: "4px" }}>Template name</label>
+                  <input
+                    type="text"
+                    value={saveTemplateName}
+                    onChange={(e) => setSaveTemplateName(e.target.value)}
+                    placeholder="e.g. Standard SaaS Seed Deal"
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #e4e4e7", fontSize: "14px", boxSizing: "border-box" }}
+                  />
+                </div>
+                <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "13px", color: "#52525b" }}>
+                  <input type="checkbox" checked={saveTemplatePublic} onChange={(e) => setSaveTemplatePublic(e.target.checked)} />
+                  Share with community (anonymised)
+                </label>
+                <button
+                  type="button"
+                  disabled={!saveTemplateName.trim() || saveTemplateLoading}
+                  onClick={async () => {
+                    setSaveTemplateLoading(true);
+                    try {
+                      const res = await fetch("/api/templates", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          name: saveTemplateName.trim(),
+                          milestones: milestones.map((m) => ({
+                            title: m.title,
+                            amountUSD: parseFloat(m.amountUSD) || 0,
+                            deadlineDays: parseInt(m.deadlineDays) || 30,
+                          })),
+                          isPublic: saveTemplatePublic,
+                        }),
+                      });
+                      if (!res.ok) throw new Error("Failed to save");
+                      toast.success("Template saved!");
+                      setSaveTemplateOpen(false);
+                      setSaveTemplateName("");
+                    } catch {
+                      toast.error("Could not save template");
+                    } finally {
+                      setSaveTemplateLoading(false);
+                    }
+                  }}
+                  style={{
+                    padding: "10px", borderRadius: "8px", border: "none",
+                    background: saveTemplateName.trim() ? "#18181b" : "#e4e4e7",
+                    color: saveTemplateName.trim() ? "#fff" : "#a1a1aa",
+                    fontWeight: 600, fontSize: "14px", cursor: saveTemplateName.trim() ? "pointer" : "not-allowed",
+                  }}
+                >
+                  {saveTemplateLoading ? "Saving…" : "Save Template"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {milestones.map((ms, idx) => (
           <div
@@ -1056,6 +1330,19 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
 
       {/* Actions */}
       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        {milestones.some((m) => m.title.trim()) && (
+          <button
+            type="button"
+            onClick={() => setSaveTemplateOpen(true)}
+            style={{
+              fontSize: "12px", color: "#71717a", background: "none", border: "none",
+              cursor: "pointer", textAlign: "right", padding: "0 2px",
+              textDecoration: "underline",
+            }}
+          >
+            Save current milestones as template
+          </button>
+        )}
         <div style={{ display: "flex", gap: "10px" }}>
           <Button type="submit" disabled={loading} size="lg" style={{ flex: 1 }}>
             {loading ? "Creating…" : riskFlags !== null && riskFlags.length > 0 ? "Create Contract anyway" : "Create Contract"}

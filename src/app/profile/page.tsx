@@ -49,6 +49,15 @@ interface ProfileData {
   sanctionsStatus: string | null;
   sanctionsCheckedAt: string | null;
   dateOfBirth: string | null;
+  // Feature 7
+  publicProfile: boolean;
+  publicUsername: string | null;
+  companyBio: string | null;
+  companyWebsite: string | null;
+  linkedinUrl: string | null;
+  verifiedBadgeNftId: string | null;
+  // Enterprise
+  isEnterprise: boolean;
 }
 
 /* ── Password eye icon ────────────────────────────────────── */
@@ -211,10 +220,37 @@ export default function ProfilePage() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  // SSO (Feature 1)
+  const [ssoConfig, setSsoConfig] = useState<{ provider: string; domain: string; connectionId: string } | null>(null);
+  const [ssoProvider, setSsoProvider] = useState("workos");
+  const [ssoDomain, setSsoDomain] = useState("");
+  const [ssoConnectionId, setSsoConnectionId] = useState("");
+  const [savingSso, setSavingSso] = useState(false);
+
+  // Auditor access (Feature 11)
+  const [auditorAccesses, setAuditorAccesses] = useState<Array<{ auditorId: string; auditor: { firmName: string; user: { email: string; name: string | null } } }>>([]);
+  const [newAuditorEmail, setNewAuditorEmail] = useState("");
+  const [addingAuditor, setAddingAuditor] = useState(false);
+
+  // Public profile (Feature 7)
+  const [publicProfile, setPublicProfile] = useState(false);
+  const [publicUsername, setPublicUsername] = useState("");
+  const [companyBio, setCompanyBio] = useState("");
+  const [companyWebsite, setCompanyWebsite] = useState("");
+  const [linkedinUrl, setLinkedinUrl] = useState("");
+  const [savingPublicProfile, setSavingPublicProfile] = useState(false);
+
   // Telegram
   const [tgStatus, setTgStatus] = useState<TelegramStatus | null>(null);
   const [tgLoading, setTgLoading] = useState(false);
   const [tgDeepLink, setTgDeepLink] = useState<string | null>(null);
+
+  // Slack / Teams integrations
+  const [slackIntegration, setSlackIntegration] = useState<{ channelName: string | null; events: string[] } | null>(null);
+  const [teamsWebhookUrl, setTeamsWebhookUrl] = useState("");
+  const [teamsIntegration, setTeamsIntegration] = useState<{ channelName: string | null; events: string[] } | null>(null);
+  const [teamsSaving, setTeamsSaving] = useState(false);
+  const [integrationTesting, setIntegrationTesting] = useState<"slack" | "teams" | null>(null);
 
   // Webhooks
   const [webhooks, setWebhooks] = useState<WebhookEndpoint[]>([]);
@@ -249,6 +285,11 @@ export default function ProfilePage() {
         setNotifyVerified(user.notifyVerified);
         setNotifyRejected(user.notifyRejected);
         setDateOfBirth(user.dateOfBirth ? user.dateOfBirth.split("T")[0] : "");
+        setPublicProfile(user.publicProfile ?? false);
+        setPublicUsername(user.publicUsername ?? "");
+        setCompanyBio(user.companyBio ?? "");
+        setCompanyWebsite(user.companyWebsite ?? "");
+        setLinkedinUrl(user.linkedinUrl ?? "");
       });
   }
 
@@ -260,6 +301,32 @@ export default function ProfilePage() {
     fetch("/api/telegram/connect")
       .then((r) => r.json())
       .then((d) => setTgStatus(d))
+      .catch(() => {});
+    // Load SSO config (enterprise only)
+    fetch("/api/enterprise/sso")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.config) {
+          setSsoConfig(d.config);
+          setSsoProvider(d.config.provider);
+          setSsoDomain(d.config.domain);
+          setSsoConnectionId(d.config.connectionId);
+        }
+      })
+      .catch(() => {});
+    // Load auditor accesses (enterprise only)
+    fetch("/api/enterprise/auditor-access")
+      .then((r) => r.json())
+      .then((d) => setAuditorAccesses(d.accesses ?? []))
+      .catch(() => {});
+    // Load Slack/Teams integrations
+    fetch("/api/enterprise/integrations/slack")
+      .then((r) => r.json())
+      .then((d) => { if (d.integration) setSlackIntegration(d.integration); })
+      .catch(() => {});
+    fetch("/api/enterprise/integrations/teams")
+      .then((r) => r.json())
+      .then((d) => { if (d.integration) setTeamsIntegration(d.integration); })
       .catch(() => {});
     // Load webhooks
     fetch("/api/webhooks")
@@ -822,6 +889,242 @@ export default function ProfilePage() {
             </form>
           </SectionCard>
 
+          {/* SSO / SAML (enterprise only) */}
+          {profile?.isEnterprise && (
+            <SectionCard title="Single Sign-On" subtitle="Allow team members to log in with their company credentials (Okta, Azure AD, Google Workspace).">
+              {ssoConfig ? (
+                <div className="flex flex-col gap-3">
+                  <div
+                    className="rounded-lg px-4 py-3 flex items-center justify-between"
+                    style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.25)" }}
+                  >
+                    <div>
+                      <span className="text-sm font-semibold" style={{ color: "#86efac" }}>SSO Enabled</span>
+                      <span className="text-xs ml-2" style={{ color: "#A89B8C" }}>@{ssoConfig.domain} · {ssoConfig.provider}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await fetch("/api/enterprise/sso", { method: "DELETE" });
+                        setSsoConfig(null);
+                        setSsoConnectionId("");
+                        setSsoDomain("");
+                        toast.success("SSO disabled");
+                      }}
+                      className="text-xs"
+                      style={{ color: "#ef4444" }}
+                    >
+                      Disable
+                    </button>
+                  </div>
+                  <p className="text-xs" style={{ color: "#A89B8C" }}>
+                    Team members with @{ssoConfig.domain} email addresses will be redirected to your identity provider on login.
+                  </p>
+                </div>
+              ) : (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setSavingSso(true);
+                    try {
+                      const res = await fetch("/api/enterprise/sso", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ provider: ssoProvider, connectionId: ssoConnectionId.trim(), domain: ssoDomain.trim() }),
+                      });
+                      const d = await res.json() as { error?: string; config?: typeof ssoConfig };
+                      if (!res.ok) throw new Error(d.error ?? "Failed");
+                      setSsoConfig(d.config!);
+                      toast.success("SSO configured");
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : "Failed to save SSO config");
+                    } finally {
+                      setSavingSso(false);
+                    }
+                  }}
+                  className="flex flex-col gap-3"
+                >
+                  <div>
+                    <label className="text-xs font-semibold block mb-1" style={{ color: "#A89B8C" }}>Provider</label>
+                    <select
+                      value={ssoProvider}
+                      onChange={(e) => setSsoProvider(e.target.value)}
+                      className="cs-input w-full"
+                    >
+                      <option value="workos">WorkOS (recommended)</option>
+                      <option value="saml">Generic SAML 2.0</option>
+                      <option value="oidc">Generic OIDC</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold block mb-1" style={{ color: "#A89B8C" }}>Company email domain</label>
+                    <input type="text" value={ssoDomain} onChange={(e) => setSsoDomain(e.target.value)} placeholder="bmw.de" className="cs-input w-full" required />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold block mb-1" style={{ color: "#A89B8C" }}>
+                      {ssoProvider === "workos" ? "WorkOS Connection ID" : "SAML Metadata URL / OIDC Issuer"}
+                    </label>
+                    <input type="text" value={ssoConnectionId} onChange={(e) => setSsoConnectionId(e.target.value)} placeholder={ssoProvider === "workos" ? "conn_..." : "https://..."} className="cs-input w-full" required />
+                  </div>
+                  <p className="text-xs" style={{ color: "#A89B8C" }}>
+                    Configure your identity provider first, then paste the connection ID here. Contact cascrow support if you need help setting up WorkOS.
+                  </p>
+                  <button type="submit" disabled={savingSso || !ssoDomain || !ssoConnectionId} className="cs-btn cs-btn-sm" style={{ alignSelf: "flex-start" }}>
+                    {savingSso ? "Saving…" : "Enable SSO"}
+                  </button>
+                </form>
+              )}
+            </SectionCard>
+          )}
+
+          {/* Auditor Access (enterprise only) */}
+          {profile?.isEnterprise && (
+            <SectionCard title="Auditor Access" subtitle="Grant read-only access to registered audit firm partners (KPMG, Deloitte, PwC, EY).">
+              <div className="flex flex-col gap-3">
+                {auditorAccesses.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    {auditorAccesses.map((access) => (
+                      <div
+                        key={access.auditorId}
+                        className="flex items-center justify-between rounded-lg px-4 py-3"
+                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                      >
+                        <div>
+                          <span className="text-sm font-medium" style={{ color: "#EDE6DD" }}>{access.auditor.firmName}</span>
+                          <span className="text-xs ml-2" style={{ color: "#A89B8C" }}>{access.auditor.user.email}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await fetch(`/api/enterprise/auditor-access/${access.auditorId}`, { method: "DELETE" });
+                            setAuditorAccesses((prev) => prev.filter((a) => a.auditorId !== access.auditorId));
+                            toast.success("Auditor access revoked");
+                          }}
+                          className="text-xs"
+                          style={{ color: "#ef4444" }}
+                        >
+                          Revoke
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!newAuditorEmail.trim()) return;
+                    setAddingAuditor(true);
+                    try {
+                      const res = await fetch("/api/enterprise/auditor-access", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ auditorEmail: newAuditorEmail.trim() }),
+                      });
+                      const d = await res.json() as { error?: string; access?: typeof auditorAccesses[0] };
+                      if (!res.ok) throw new Error(d.error ?? "Failed");
+                      if (d.access) setAuditorAccesses((prev) => [...prev, d.access!]);
+                      setNewAuditorEmail("");
+                      toast.success("Auditor access granted");
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : "Failed to grant access");
+                    } finally {
+                      setAddingAuditor(false);
+                    }
+                  }}
+                  className="flex gap-2"
+                >
+                  <input
+                    type="email"
+                    value={newAuditorEmail}
+                    onChange={(e) => setNewAuditorEmail(e.target.value)}
+                    placeholder="auditor@kpmg.com"
+                    className="cs-input flex-1"
+                    required
+                  />
+                  <button type="submit" disabled={addingAuditor || !newAuditorEmail.trim()} className="cs-btn cs-btn-sm">
+                    {addingAuditor ? "Adding…" : "Grant Access"}
+                  </button>
+                </form>
+                <p className="text-xs" style={{ color: "#A89B8C" }}>The auditor must have a registered cascrow auditor partner account. Contact cascrow support to register your audit firm.</p>
+              </div>
+            </SectionCard>
+          )}
+
+          {/* Public Profile (startup only) */}
+          {profile?.role === "STARTUP" && (
+            <SectionCard title="Public Profile" subtitle="Show your verified track record to investors. Opt in to make your profile discoverable.">
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setSavingPublicProfile(true);
+                  try {
+                    const res = await fetch("/api/profile", {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ publicProfile, publicUsername: publicUsername.trim() || null, companyBio: companyBio.trim() || null, companyWebsite: companyWebsite.trim() || null, linkedinUrl: linkedinUrl.trim() || null }),
+                    });
+                    if (!res.ok) {
+                      const d = await res.json() as { error?: string };
+                      throw new Error(d.error ?? "Save failed");
+                    }
+                    toast.success("Public profile saved");
+                    if (publicProfile && publicUsername) {
+                      window.open(`/startup/${publicUsername.toLowerCase()}`, "_blank");
+                    }
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : "Error saving profile");
+                  } finally {
+                    setSavingPublicProfile(false);
+                  }
+                }}
+                className="flex flex-col gap-4"
+              >
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <div
+                    onClick={() => setPublicProfile((v) => !v)}
+                    className="relative"
+                    style={{ width: 44, height: 24, borderRadius: 12, background: publicProfile ? "#C4704B" : "rgba(255,255,255,0.15)", transition: "background 0.2s", cursor: "pointer", flexShrink: 0 }}
+                  >
+                    <div style={{ position: "absolute", top: 3, left: publicProfile ? 23 : 3, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "left 0.2s" }} />
+                  </div>
+                  <span className="text-sm font-medium" style={{ color: "#EDE6DD" }}>Make profile public</span>
+                </label>
+
+                {publicProfile && (
+                  <>
+                    <div>
+                      <label className="text-xs font-semibold block mb-1" style={{ color: "#A89B8C" }}>Username (cascrow.com/startup/your-username)</label>
+                      <input type="text" value={publicUsername} onChange={(e) => setPublicUsername(e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, ""))} placeholder="your-startup" maxLength={30} className="cs-input w-full" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold block mb-1" style={{ color: "#A89B8C" }}>Company bio</label>
+                      <textarea value={companyBio} onChange={(e) => setCompanyBio(e.target.value)} placeholder="What does your startup do?" maxLength={500} rows={3} className="cs-input w-full resize-none" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-semibold block mb-1" style={{ color: "#A89B8C" }}>Website</label>
+                        <input type="url" value={companyWebsite} onChange={(e) => setCompanyWebsite(e.target.value)} placeholder="https://yoursite.com" className="cs-input w-full" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold block mb-1" style={{ color: "#A89B8C" }}>LinkedIn</label>
+                        <input type="url" value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} placeholder="https://linkedin.com/company/..." className="cs-input w-full" />
+                      </div>
+                    </div>
+                    {publicUsername && (
+                      <p className="text-xs" style={{ color: "#A89B8C" }}>
+                        Public URL: <a href={`/startup/${publicUsername}`} target="_blank" rel="noreferrer" style={{ color: "#C4704B", textDecoration: "underline" }}>/startup/{publicUsername}</a>
+                      </p>
+                    )}
+                  </>
+                )}
+
+                <button type="submit" disabled={savingPublicProfile} className="cs-btn cs-btn-sm" style={{ alignSelf: "flex-start" }}>
+                  {savingPublicProfile ? "Saving…" : "Save"}
+                </button>
+              </form>
+            </SectionCard>
+          )}
+
           {/* Telegram Notifications */}
           <SectionCard title="Telegram Notifications" subtitle="Get instant push notifications directly in Telegram — no inbox required.">
             {tgStatus && !tgStatus.configured ? (
@@ -911,6 +1214,141 @@ export default function ProfilePage() {
                 )}
               </div>
             )}
+          </SectionCard>
+
+          {/* Slack / Teams */}
+          <SectionCard title="Slack & Teams" subtitle="Get instant notifications where your team works.">
+            <div className="flex flex-col gap-4">
+              {/* Slack */}
+              <div className="p-4 rounded-xl flex flex-col gap-3" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold" style={{ color: "#EDE6DD" }}>Slack</span>
+                    {slackIntegration && <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(34,197,94,0.15)", color: "#86efac" }}>Connected — #{slackIntegration.channelName ?? "channel"}</span>}
+                  </div>
+                  <div className="flex gap-2">
+                    {slackIntegration ? (
+                      <>
+                        <button
+                          type="button"
+                          disabled={integrationTesting === "slack"}
+                          onClick={async () => {
+                            setIntegrationTesting("slack");
+                            try {
+                              const r = await fetch("/api/enterprise/integrations/slack/test", { method: "POST" });
+                              if (r.ok) toast.success("Test message sent to Slack!");
+                              else toast.error("Test failed — check your connection");
+                            } finally { setIntegrationTesting(null); }
+                          }}
+                          className="cs-btn-ghost cs-btn-sm text-xs"
+                        >
+                          {integrationTesting === "slack" ? "Sending…" : "Test"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await fetch("/api/enterprise/integrations/slack", { method: "DELETE" });
+                            setSlackIntegration(null);
+                            toast.success("Slack disconnected");
+                          }}
+                          className="cs-btn-ghost cs-btn-sm text-xs"
+                          style={{ color: "#ef4444" }}
+                        >
+                          Disconnect
+                        </button>
+                      </>
+                    ) : (
+                      <a
+                        href="/api/enterprise/integrations/slack/connect"
+                        className="cs-btn cs-btn-sm text-xs"
+                        style={{ background: "#4A154B", color: "#fff", padding: "6px 14px", borderRadius: "6px", textDecoration: "none", fontWeight: 600 }}
+                      >
+                        Connect Slack
+                      </a>
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs" style={{ color: "#A89B8C" }}>Receive attestation results, deadline alerts, and connector errors directly in a Slack channel.</p>
+              </div>
+
+              {/* Microsoft Teams */}
+              <div className="p-4 rounded-xl flex flex-col gap-3" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold" style={{ color: "#EDE6DD" }}>Microsoft Teams</span>
+                    {teamsIntegration && <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(34,197,94,0.15)", color: "#86efac" }}>Connected</span>}
+                  </div>
+                  {teamsIntegration && (
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={integrationTesting === "teams"}
+                        onClick={async () => {
+                          setIntegrationTesting("teams");
+                          try {
+                            const r = await fetch("/api/enterprise/integrations/teams/test", { method: "POST" });
+                            if (r.ok) toast.success("Test message sent to Teams!");
+                            else toast.error("Test failed — check your webhook URL");
+                          } finally { setIntegrationTesting(null); }
+                        }}
+                        className="cs-btn-ghost cs-btn-sm text-xs"
+                      >
+                        {integrationTesting === "teams" ? "Sending…" : "Test"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await fetch("/api/enterprise/integrations/teams", { method: "DELETE" });
+                          setTeamsIntegration(null);
+                          setTeamsWebhookUrl("");
+                          toast.success("Teams disconnected");
+                        }}
+                        className="cs-btn-ghost cs-btn-sm text-xs"
+                        style={{ color: "#ef4444" }}
+                      >
+                        Disconnect
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {!teamsIntegration && (
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      if (!teamsWebhookUrl.startsWith("https://")) return;
+                      setTeamsSaving(true);
+                      try {
+                        const r = await fetch("/api/enterprise/integrations/teams", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ webhookUrl: teamsWebhookUrl }),
+                        });
+                        if (!r.ok) throw new Error();
+                        const d = await r.json() as { integration: typeof teamsIntegration };
+                        setTeamsIntegration(d.integration);
+                        toast.success("Teams webhook saved");
+                      } catch {
+                        toast.error("Could not save Teams webhook");
+                      } finally { setTeamsSaving(false); }
+                    }}
+                    className="flex gap-2"
+                  >
+                    <input
+                      type="url"
+                      value={teamsWebhookUrl}
+                      onChange={(e) => setTeamsWebhookUrl(e.target.value)}
+                      placeholder="https://your-org.webhook.office.com/..."
+                      className="cs-input flex-1 text-xs"
+                      required
+                    />
+                    <button type="submit" disabled={teamsSaving || !teamsWebhookUrl} className="cs-btn cs-btn-sm text-xs">
+                      {teamsSaving ? "Saving…" : "Save"}
+                    </button>
+                  </form>
+                )}
+                <p className="text-xs" style={{ color: "#A89B8C" }}>Paste an Incoming Webhook URL from your Teams channel settings.</p>
+              </div>
+            </div>
           </SectionCard>
 
           {/* Webhooks */}

@@ -31,6 +31,14 @@
     {
       "path": "/api/cron/attestation-reminders",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/connector-health",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/regulatory-alerts",
+      "schedule": "0 8 * * 1"
     }
   ],
   "functions": {
@@ -72,6 +80,12 @@
     },
     "src/app/api/cron/consensus-timeout/route.ts": {
       "maxDuration": 30
+    },
+    "src/app/api/cron/connector-health/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/cron/regulatory-alerts/route.ts": {
+      "maxDuration": 60
     }
   },
   "headers": [

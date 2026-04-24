@@ -9,6 +9,7 @@ import { createContractSchema } from "@/lib/zod-schemas";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getPostHogClient } from "@/lib/posthog-server";
 import Anthropic from "@anthropic-ai/sdk";
+import { encryptGoal, hashGoal } from "@/lib/confidential";
 
 // ─── Lazy Anthropic client ────────────────────────────────────────────────────
 let _anthropic: Anthropic | null = null;
@@ -119,6 +120,8 @@ export async function POST(request: NextRequest) {
       mode = "ESCROW",
       auditorEmail,
       attestationMilestones,
+      isConfidential,
+      confidentialPassphrase,
     } = parsed.data;
 
     const isAttestation = mode === "ATTESTATION";
@@ -195,17 +198,32 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        await tx.milestone.createMany({
-          data: atMs.map((m, i) => ({
-            contractId: contract.id,
-            title: m.title,
-            amountUSD: m.amountUSD ?? 0,
-            cancelAfter: new Date(m.cancelAfter),
-            order: i,
-            status: "PENDING",
-            scheduleType: m.scheduleType ?? "ONE_OFF",
-          })),
-        });
+        for (let i = 0; i < atMs.length; i++) {
+          const m = atMs[i];
+          let encryptedGoalVal: string | null = null;
+          let goalHashVal: string | null = null;
+
+          if (isConfidential && confidentialPassphrase) {
+            const salt = contract.id + "-" + i;
+            encryptedGoalVal = encryptGoal(m.title, null, confidentialPassphrase);
+            goalHashVal = hashGoal(m.title, null, salt);
+          }
+
+          await tx.milestone.create({
+            data: {
+              contractId: contract.id,
+              title: isConfidential ? "Confidential Goal" : m.title,
+              amountUSD: m.amountUSD ?? 0,
+              cancelAfter: new Date(m.cancelAfter),
+              order: i,
+              status: "PENDING",
+              scheduleType: m.scheduleType ?? "ONE_OFF",
+              isConfidential: isConfidential ?? false,
+              encryptedGoal: encryptedGoalVal,
+              goalHash: goalHashVal,
+            },
+          });
+        }
 
         return contract;
       });

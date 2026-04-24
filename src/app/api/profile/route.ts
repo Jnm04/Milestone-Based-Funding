@@ -19,6 +19,13 @@ export async function GET() {
       notifyFunded: true, notifyVerified: true, notifyRejected: true,
       kycTier: true,
       dateOfBirth: true,
+      // Feature 7: public profile
+      publicProfile: true,
+      publicUsername: true,
+      companyBio: true,
+      companyWebsite: true,
+      linkedinUrl: true,
+      verifiedBadgeNftId: true,
     },
   });
 
@@ -40,6 +47,8 @@ export async function PUT(request: NextRequest) {
     notifyProofSubmitted, notifyPendingReview, notifyMilestoneCompleted,
     notifyFunded, notifyVerified, notifyRejected,
     dateOfBirth,
+    // Feature 7: public profile
+    publicProfile, publicUsername, companyBio, companyWebsite, linkedinUrl,
   } = body;
 
   // Input validation — max lengths and strip HTML tags
@@ -90,6 +99,16 @@ export async function PUT(request: NextRequest) {
       ...(notifyVerified !== undefined && { notifyVerified: Boolean(notifyVerified) }),
       ...(notifyRejected !== undefined && { notifyRejected: Boolean(notifyRejected) }),
       ...(validatedDOB !== undefined && { dateOfBirth: validatedDOB }),
+      // Feature 7: public profile
+      ...(publicProfile !== undefined && { publicProfile: Boolean(publicProfile) }),
+      ...(publicUsername !== undefined && {
+        publicUsername: typeof publicUsername === "string" && publicUsername.trim()
+          ? publicUsername.trim().toLowerCase().replace(/[^a-z0-9-_]/g, "").slice(0, 30)
+          : null,
+      }),
+      ...(companyBio !== undefined && { companyBio: typeof companyBio === "string" ? companyBio.slice(0, 500) : null }),
+      ...(companyWebsite !== undefined && { companyWebsite: typeof companyWebsite === "string" ? companyWebsite.slice(0, 200) : null }),
+      ...(linkedinUrl !== undefined && { linkedinUrl: typeof linkedinUrl === "string" ? linkedinUrl.slice(0, 200) : null }),
     },
     select: {
       id: true, email: true, name: true, role: true, walletAddress: true,
@@ -97,6 +116,7 @@ export async function PUT(request: NextRequest) {
       notifyProofSubmitted: true, notifyPendingReview: true, notifyMilestoneCompleted: true,
       notifyFunded: true, notifyVerified: true, notifyRejected: true,
       dateOfBirth: true,
+      publicProfile: true, publicUsername: true, companyBio: true, companyWebsite: true, linkedinUrl: true, verifiedBadgeNftId: true,
     },
   });
 

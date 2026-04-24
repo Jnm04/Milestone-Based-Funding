@@ -76,6 +76,30 @@ model User {
 
   // Phase 3 — Feature VII: Double Materiality Wizard
   materialityAssessments MaterialityAssessment[]
+
+  // Feature 7: Startup public profile
+  publicProfile      Boolean @default(false)
+  publicUsername     String? @unique
+  companyBio         String?
+  companyWebsite     String?
+  linkedinUrl        String?
+  verifiedBadgeNftId String?
+
+  // Feature 3: Slack/Teams integrations
+  notificationIntegrations NotificationIntegration[]
+
+  // Feature 6: Contract templates
+  contractTemplates  ContractTemplate[]
+
+  // Feature 2: Multi-entity organisation
+  organisation       Organisation?
+
+  // Feature 5: Deal Rooms
+  dealRoomsAsInvestor DealRoom[] @relation("DealRoomInvestor")
+
+  // Feature 11: Audit partner + client access
+  auditorPartner      AuditorPartner?
+  auditorClientAccesses AuditorClientAccess[] @relation("AuditorAccessClient")
 }
 
 enum Role {
@@ -300,6 +324,15 @@ model Milestone {
   attestationEntries AttestationEntry[]
   pulseSnapshots     PulseCheckSnapshot[]
   consensusVotes     ConsensusVote[]
+
+  // Feature 4: Connector Health Monitoring
+  connectorLastHealthy DateTime?
+  connectorStatus      String?   @default("UNKNOWN") // "OK" | "ERROR" | "UNKNOWN"
+
+  // Feature 10: Confidential Attestation Mode
+  isConfidential  Boolean @default(false)
+  encryptedGoal   String? @db.Text // AES-256-GCM encrypted JSON {title, description}
+  goalHash        String?           // sha256(title + description + salt) — anchored on-chain
 
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
@@ -692,11 +725,182 @@ model OrgMember {
   memberId     String?
   member       User?     @relation("OrgMember", fields: [memberId], references: [id], onDelete: SetNull)
   acceptedAt   DateTime?
+  // Feature 2: scoped to a specific entity (null = group-wide access)
+  entityId     String?
   createdAt    DateTime  @default(now())
 
   @@unique([ownerId, email])
   @@index([ownerId])
   @@index([memberId])
+}
+
+// ── SSO / SAML ────────────────────────────────────────────────────────────────
+
+/// SSO configuration for an enterprise account (Feature 1).
+model SsoConfig {
+  id           String   @id @default(cuid())
+  orgId        String   @unique
+  provider     String            // "workos" | "saml" | "oidc"
+  connectionId String            // WorkOS connection ID or SAML metadata URL
+  domain       String            // e.g. "bmw.de"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ── Multi-Entity / Group Structure ────────────────────────────────────────────
+
+/// Parent organisation that groups multiple entities/subsidiaries (Feature 2).
+model Organisation {
+  id        String   @id @default(cuid())
+  name      String
+  ownerId   String   @unique
+  plan      String   @default("free")
+  createdAt DateTime @default(now())
+  entities  Entity[]
+  owner     User     @relation(fields: [ownerId], references: [id])
+}
+
+/// A subsidiary / business unit belonging to an Organisation (Feature 2).
+model Entity {
+  id             String       @id @default(cuid())
+  name           String
+  orgId          String
+  parentEntityId String?
+  createdAt      DateTime     @default(now())
+  organisation   Organisation @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
+}
+
+// ── Slack / Teams Integration ─────────────────────────────────────────────────
+
+/// Slack or Microsoft Teams notification integration per user (Feature 3).
+model NotificationIntegration {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String            // "slack" | "teams"
+  accessToken String?  @db.Text // encrypted, Slack only
+  webhookUrl  String?  @db.Text // Teams incoming webhook URL
+  channelId   String?
+  channelName String?
+  events      Json              // string[] of subscribed event names
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+  @@index([userId])
+}
+
+// ── Connector Health Monitoring ───────────────────────────────────────────────
+
+/// Result of a daily health probe for a REST_API or URL_SCRAPE data source (Feature 4).
+model ConnectorHealthCheck {
+  id           String   @id @default(cuid())
+  milestoneId  String
+  connectorUrl String
+  status       String            // "OK" | "ERROR" | "TIMEOUT"
+  httpStatus   Int?
+  errorMessage String?  @db.Text
+  checkedAt    DateTime @default(now())
+
+  @@index([milestoneId])
+  @@index([checkedAt])
+}
+
+// ── Deal Room ─────────────────────────────────────────────────────────────────
+
+/// Pre-commitment due-diligence space shared between an investor and a startup (Feature 5).
+model DealRoom {
+  id                    String        @id @default(cuid())
+  investorId            String
+  startupId             String?
+  inviteToken           String        @unique @default(cuid())
+  status                String        @default("OPEN") // "OPEN"|"SUBMITTED"|"CONVERTED"|"DECLINED"
+  aiBrief               String?       @db.Text
+  briefAt               DateTime?
+  convertedToContractId String?
+  createdAt             DateTime      @default(now())
+  documents             DealDocument[]
+  investor              User          @relation("DealRoomInvestor", fields: [investorId], references: [id])
+
+  @@index([investorId])
+}
+
+/// A document uploaded into a Deal Room (Feature 5).
+model DealDocument {
+  id         String   @id @default(cuid())
+  dealRoomId String
+  name       String
+  url        String
+  sha256     String
+  uploadedAt DateTime @default(now())
+  dealRoom   DealRoom @relation(fields: [dealRoomId], references: [id], onDelete: Cascade)
+
+  @@index([dealRoomId])
+}
+
+// ── Contract Templates ────────────────────────────────────────────────────────
+
+/// Reusable milestone structure saved by an investor (Feature 6).
+model ContractTemplate {
+  id          String   @id @default(cuid())
+  creatorId   String
+  name        String
+  description String?
+  industry    String?
+  milestones  Json     // [{title, amountUSD, deadlineDays, description}]
+  isPublic    Boolean  @default(false)
+  useCount    Int      @default(0)
+  createdAt   DateTime @default(now())
+  creator     User     @relation(fields: [creatorId], references: [id])
+
+  @@index([isPublic])
+  @@index([industry])
+  @@index([creatorId])
+}
+
+// ── Regulatory Change Alerts ──────────────────────────────────────────────────
+
+/// CSRD/ESRS/GRI regulatory update fetched by the weekly cron (Feature 9).
+model RegulatoryAlert {
+  id           String   @id @default(cuid())
+  source       String            // "EUR-LEX" | "EFRAG" | "GRI"
+  title        String
+  url          String
+  affectedTags Json              // string[] e.g. ["CSRD:E1", "GRI:305-1"]
+  severity     String            // "MINOR" | "MAJOR"
+  aiSummary    String   @db.Text
+  publishedAt  DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([publishedAt])
+}
+
+// ── Audit Firm Partner Portal ─────────────────────────────────────────────────
+
+/// An auditor partner account (Big 4 / audit firm) (Feature 11).
+model AuditorPartner {
+  id        String               @id @default(cuid())
+  userId    String               @unique
+  firmName  String
+  createdAt DateTime             @default(now())
+  user      User                 @relation(fields: [userId], references: [id])
+  clients   AuditorClientAccess[]
+}
+
+/// Access grant: an enterprise user allows an auditor to view their attestations (Feature 11).
+model AuditorClientAccess {
+  id        String         @id @default(cuid())
+  auditorId String
+  clientId  String
+  grantedAt DateTime       @default(now())
+  revokedAt DateTime?
+  auditor   AuditorPartner @relation(fields: [auditorId], references: [id])
+  client    User           @relation("AuditorAccessClient", fields: [clientId], references: [id])
+
+  @@unique([auditorId, clientId])
+  @@index([auditorId])
+  @@index([clientId])
 }
 
 // ── Phase 3: Feature XI — Multi-Party Consensus Attestation ──────────────────
