@@ -3,21 +3,23 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { resolveAuth } from "@/lib/api-key-auth";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const auth = await resolveAuth(request.headers.get("authorization"), session?.user);
+  if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!session.user.isEnterprise) {
+  if (!auth.isEnterprise) {
     return NextResponse.json({ error: "Enterprise access required" }, { status: 403 });
   }
 
   // Polled every 3s by the client; 300/10 min = 5 req/s ceiling — well above normal usage
-  if (!(await checkRateLimit(`enterprise-poll:${session.user.id}`, 300, 10 * 60 * 1000))) {
+  if (!(await checkRateLimit(`enterprise-poll:${auth.userId}`, 300, 10 * 60 * 1000))) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429, headers: { "Retry-After": "60" } });
   }
 
@@ -50,7 +52,7 @@ export async function GET(
   if (!contract) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  if (contract.investorId !== session.user.id) {
+  if (contract.investorId !== auth.userId) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   if (contract.mode !== "ATTESTATION") {
@@ -75,7 +77,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await resolveAuth(req.headers.get("authorization"), session?.user);
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
   const body = await req.json().catch(() => null) as { requiresApproval?: boolean } | null;
@@ -88,7 +91,7 @@ export async function PATCH(
     select: { investorId: true, mode: true },
   });
   if (!contract) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (contract.investorId !== session.user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (contract.investorId !== auth.userId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if (contract.mode !== "ATTESTATION") return NextResponse.json({ error: "Not an attestation contract" }, { status: 400 });
 
   await prisma.contract.update({

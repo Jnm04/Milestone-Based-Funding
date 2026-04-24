@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { resolveAuth } from "@/lib/api-key-auth";
 
 const MAX_MILESTONES = 50;
 const MAX_TITLE_LEN = 200;
@@ -10,14 +11,15 @@ const MAX_DESC_LEN = 2000;
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const auth = await resolveAuth(request.headers.get("authorization"), session?.user);
+  if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!session.user.isEnterprise) {
+  if (!auth.isEnterprise) {
     return NextResponse.json({ error: "Enterprise access required" }, { status: 403 });
   }
 
-  if (!(await checkRateLimit(`enterprise-create:${session.user.id}`, 20, 60 * 60 * 1000))) {
+  if (!(await checkRateLimit(`enterprise-create:${auth.userId}`, 20, 60 * 60 * 1000))) {
     return NextResponse.json(
       { error: "Too many requests. Please wait before creating another goal set." },
       { status: 429, headers: { "Retry-After": "3600" } }
@@ -32,6 +34,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { title, milestones } = body;
+  const userId = auth.userId;
 
   if (!title || typeof title !== "string" || !title.trim()) {
     return NextResponse.json({ error: "Title is required" }, { status: 400 });
@@ -67,8 +70,8 @@ export async function POST(request: NextRequest) {
 
   const contract = await prisma.contract.create({
     data: {
-      investorId: session.user.id,
-      startupId: session.user.id,
+      investorId: userId,
+      startupId: userId,
       milestone: title.trim(),
       amountUSD: 0,
       status: "FUNDED",

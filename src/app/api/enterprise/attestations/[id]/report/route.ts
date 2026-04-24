@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { resolveAuth } from "@/lib/api-key-auth";
 
 const IS_TESTNET = process.env.XRPL_NETWORK === "testnet";
 const XRPL_EXPLORER = IS_TESTNET ? "https://testnet.xrpscan.com" : "https://xrpscan.com";
@@ -53,11 +54,12 @@ function statusLabel(status: string) {
 }
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await resolveAuth(req.headers.get("authorization"), session?.user);
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
 
@@ -72,9 +74,8 @@ export async function GET(
   if (contract.mode !== "ATTESTATION")
     return NextResponse.json({ error: "Not an attestation contract" }, { status: 400 });
 
-  const isOwner = contract.investorId === session.user.id;
-  const isAuditor = contract.auditorEmail?.toLowerCase() === session.user.email?.toLowerCase();
-  if (!isOwner && !isAuditor) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const isOwner = contract.investorId === auth.userId;
+  if (!isOwner) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const milestones = await prisma.milestone.findMany({
     where: { contractId: id },

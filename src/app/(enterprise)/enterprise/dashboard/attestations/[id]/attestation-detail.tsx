@@ -1007,6 +1007,9 @@ export function AttestationDetail({
   const [bulkRunning, setBulkRunning] = useState(false);
   const [requiresApproval, setRequiresApproval] = useState(goalSet.requiresApproval);
   const [togglingApproval, setTogglingApproval] = useState(false);
+  const [boardPackPeriod, setBoardPackPeriod] = useState("");
+  const [boardPackOpen, setBoardPackOpen] = useState(false);
+  const [boardPackLoading, setBoardPackLoading] = useState(false);
 
   async function handleToggleApproval() {
     setTogglingApproval(true);
@@ -1038,6 +1041,29 @@ export function AttestationDetail({
   const pendingApprovalCount = requiresApproval
     ? milestones.filter((m) => m.dataSourceLockedAt && m.dataSourceType !== "MANUAL_REVIEW" && !m.internalApprovalStatus).length
     : 0;
+
+  async function handleBoardPack() {
+    const period = boardPackPeriod.trim();
+    if (!period) { toast.error("Please enter a period (e.g. 2026-Q1)"); return; }
+    setBoardPackLoading(true);
+    try {
+      const res = await fetch("/api/reports/board-pack", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contractId: goalSet.id, period }),
+      });
+      const data = await res.json() as { blobUrl?: string; error?: string };
+      if (!res.ok) { toast.error(data.error ?? "Failed to generate report"); return; }
+      toast.success("Board pack generated");
+      window.open(data.blobUrl, "_blank");
+      setBoardPackOpen(false);
+      setBoardPackPeriod("");
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setBoardPackLoading(false);
+    }
+  }
 
   async function handleBulkRun() {
     if (!runnableCount || bulkRunning) return;
@@ -1077,6 +1103,84 @@ export function AttestationDetail({
         }
       `}</style>
 
+      {/* Board Pack modal */}
+      {boardPackOpen && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 50,
+            background: "rgba(0,0,0,0.45)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+          onClick={() => setBoardPackOpen(false)}
+        >
+          <div
+            style={{
+              background: "white", borderRadius: 12, padding: 28,
+              width: 400, boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: "0 0 6px", fontSize: 16, fontWeight: 700, color: "#111827" }}>
+              Generate Board Pack
+            </h3>
+            <p style={{ margin: "0 0 18px", fontSize: 13, color: "#6B7280", lineHeight: 1.5 }}>
+              Enter a period to include in the report. Examples: <code style={{ background: "#F3F4F6", padding: "1px 5px", borderRadius: 3 }}>2026-Q1</code>, <code style={{ background: "#F3F4F6", padding: "1px 5px", borderRadius: 3 }}>2026</code>, <code style={{ background: "#F3F4F6", padding: "1px 5px", borderRadius: 3 }}>2026-04</code>
+            </p>
+            <input
+              type="text"
+              placeholder="e.g. 2026-Q1"
+              value={boardPackPeriod}
+              onChange={(e) => setBoardPackPeriod(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") void handleBoardPack(); }}
+              autoFocus
+              style={{
+                width: "100%", padding: "9px 12px", borderRadius: 7,
+                border: "1px solid #D1D5DB", fontSize: 14,
+                outline: "none", marginBottom: 16,
+                boxSizing: "border-box",
+              }}
+            />
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => setBoardPackOpen(false)}
+                style={{
+                  padding: "8px 16px", borderRadius: 7, fontSize: 13, fontWeight: 600,
+                  border: "1px solid #D1D5DB", background: "white", color: "#374151",
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleBoardPack()}
+                disabled={boardPackLoading || !boardPackPeriod.trim()}
+                style={{
+                  padding: "8px 16px", borderRadius: 7, fontSize: 13, fontWeight: 600,
+                  border: "none",
+                  background: boardPackLoading || !boardPackPeriod.trim() ? "#E5E7EB" : "#C4704B",
+                  color: boardPackLoading || !boardPackPeriod.trim() ? "#9CA3AF" : "white",
+                  cursor: boardPackLoading || !boardPackPeriod.trim() ? "not-allowed" : "pointer",
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                }}
+              >
+                {boardPackLoading ? (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
+                      style={{ animation: "spin 1s linear infinite" }}>
+                      <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeOpacity="0.25" />
+                      <path d="M21 12c0-4.97-4.03-9-9-9" />
+                    </svg>
+                    Generating…
+                  </>
+                ) : "Generate Report"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Approval workflow toggle + pending notice */}
       <div style={{ marginBottom: 20, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         {userRole !== "VIEWER" && (
@@ -1105,6 +1209,24 @@ export function AttestationDetail({
             {pendingApprovalCount} milestone{pendingApprovalCount !== 1 ? "s" : ""} awaiting approval
           </span>
         )}
+        <button
+          type="button"
+          onClick={() => setBoardPackOpen(true)}
+          style={{
+            marginLeft: "auto",
+            display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "6px 14px", borderRadius: 6, fontSize: 12.5, fontWeight: 600,
+            border: "1px solid var(--ent-border)",
+            background: "white", color: "var(--ent-muted)",
+            cursor: "pointer",
+          }}
+          title="Generate a board-ready HTML report with AI executive summary"
+        >
+          <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+          </svg>
+          Board Pack
+        </button>
       </div>
 
       {runnableCount > 1 && (

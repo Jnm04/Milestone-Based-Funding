@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { runAttestation } from "@/services/attestation/runner.service";
+import { resolveAuth } from "@/lib/api-key-auth";
 
 function currentPeriod(scheduleType: string | null): string {
   const now = new Date();
@@ -18,11 +19,12 @@ function currentPeriod(scheduleType: string | null): string {
 }
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await resolveAuth(req.headers.get("authorization"), session?.user);
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
 
@@ -40,7 +42,7 @@ export async function POST(
   });
 
   if (!contract) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (contract.investorId !== session.user.id)
+  if (contract.investorId !== auth.userId)
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if (contract.mode !== "ATTESTATION")
     return NextResponse.json({ error: "Not an attestation contract" }, { status: 400 });
