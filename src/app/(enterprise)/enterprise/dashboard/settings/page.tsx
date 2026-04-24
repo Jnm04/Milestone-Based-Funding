@@ -93,6 +93,7 @@ const TABS = [
   { href: "/enterprise/dashboard/settings/team", label: "Team Members" },
   { href: "/enterprise/dashboard/settings/api-keys", label: "API Keys" },
   { href: "/enterprise/dashboard/settings/webhooks", label: "Webhooks" },
+  { href: "/enterprise/dashboard/settings/integrations", label: "Integrations" },
 ];
 
 export default function SettingsPage() {
