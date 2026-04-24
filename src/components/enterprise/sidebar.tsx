@@ -46,7 +46,7 @@ const NAV = [
     ),
   },
   {
-    href: "/enterprise/materiality",
+    href: "/enterprise/dashboard/materiality",
     label: "Materiality",
     icon: (
       <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
@@ -55,7 +55,7 @@ const NAV = [
     ),
   },
   {
-    href: "/enterprise/group",
+    href: "/enterprise/dashboard/group",
     label: "Group Structure",
     icon: (
       <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">

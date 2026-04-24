@@ -94,6 +94,7 @@ const TABS = [
   { href: "/enterprise/dashboard/settings/api-keys", label: "API Keys" },
   { href: "/enterprise/dashboard/settings/webhooks", label: "Webhooks" },
   { href: "/enterprise/dashboard/settings/integrations", label: "Integrations" },
+  { href: "/enterprise/dashboard/settings/sso", label: "SSO" },
 ];
 
 export default function SettingsPage() {
