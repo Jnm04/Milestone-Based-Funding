@@ -6,10 +6,13 @@ import { parseSlackState } from "../connect/route";
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
 const SLACK_CLIENT_SECRET = process.env.SLACK_CLIENT_SECRET;
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ?? "";
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 
 function encryptToken(token: string): string {
-  if (!ENCRYPTION_KEY) return token;
+  if (!ENCRYPTION_KEY) {
+    console.error("[slack/callback] ENCRYPTION_KEY is not set — token will be stored unencrypted");
+    return token;
+  }
   const key = crypto.scryptSync(ENCRYPTION_KEY, "slack-token-salt", 32);
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);

@@ -153,9 +153,7 @@ export async function POST(request: NextRequest) {
           (milestonesInput ?? [{ amountUSD }]).map((m: { amountUSD: unknown }) => ({ amountUSD: Number(m.amountUSD) }));
         const totalUSD = msData_pre.reduce((sum, m) => sum + m.amountUSD, 0);
         if (totalUSD > tierLimit) {
-          const tierLabel = investor.kycTier === 0
-            ? "Email-verified accounts (Tier 0) are limited to $1,000 per contract. Complete name & sanctions screening to increase your limit to $10,000."
-            : `Your current verification level (Tier ${investor.kycTier}) allows up to $${tierLimit.toLocaleString()} per contract.`;
+          const tierLabel = `Your account is limited to $${tierLimit.toLocaleString()} per contract. Complete identity verification to increase your limit.`;
           return NextResponse.json({ error: tierLabel, kycTier: investor.kycTier, limit: tierLimit }, { status: 403 });
         }
       }

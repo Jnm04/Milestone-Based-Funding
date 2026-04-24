@@ -41,8 +41,6 @@ export async function GET() {
   const checks = {
     database: db,
     xrpl: xrpl,
-    blob: { ok: !!process.env.BLOB_READ_WRITE_TOKEN },
-    resend: { ok: !!process.env.RESEND_API_KEY },
   };
 
   const healthy = checks.database.ok && checks.xrpl.ok;

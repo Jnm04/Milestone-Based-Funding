@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { isValidTeamsWebhookUrl } from "@/lib/safe-url";
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ?? "";
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 
 function decryptToken(encrypted: string): string {
   if (!encrypted.startsWith("enc:") || !ENCRYPTION_KEY) return encrypted;
@@ -79,9 +79,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ ty
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Test failed" },
-      { status: 500 }
-    );
+    console.error(`[integrations/test] ${type} test failed:`, err);
+    return NextResponse.json({ error: "Test notification failed" }, { status: 500 });
   }
 }

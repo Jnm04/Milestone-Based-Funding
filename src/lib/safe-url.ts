@@ -7,8 +7,10 @@ const PRIVATE_RANGES = [
   /^172\.(1[6-9]|2\d|3[01])\./,
   /^169\.254\./,
   /^0\./,
-  /^fc[0-9a-f]{2}:/i,
-  /^fe80:/i,
+  // IPv6 ULA (fc00::/7 covers fc and fd), link-local, loopback
+  /^f[cd][0-9a-f]{0,2}[:%]/i,
+  /^fe80[:%]/i,
+  /^::1$/,
 ];
 
 const LOOPBACK_HOSTNAMES = new Set(["localhost", "::1", "0.0.0.0"]);

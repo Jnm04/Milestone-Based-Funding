@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
         } catch (err) {
           console.error("[register] Failed to resend verification email:", err);
         }
-        return NextResponse.json({ id: existing.id, email: existing.email, role: existing.role, resent: true });
+        return NextResponse.json({ ok: true, resent: true });
       }
       return NextResponse.json({ error: "Email already registered" }, { status: 409 });
     }

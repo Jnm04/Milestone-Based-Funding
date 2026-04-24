@@ -6,10 +6,11 @@ import crypto from "crypto";
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
 const SLACK_SCOPES = "chat:write,channels:read,groups:read";
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ?? "";
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 
 function signState(payload: string): string {
-  return crypto.createHmac("sha256", ENCRYPTION_KEY || "insecure-fallback").update(payload).digest("hex");
+  if (!ENCRYPTION_KEY) throw new Error("ENCRYPTION_KEY is not configured");
+  return crypto.createHmac("sha256", ENCRYPTION_KEY).update(payload).digest("hex");
 }
 
 export function buildSlackState(userId: string): string {
