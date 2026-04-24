@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { getEnterpriseContext } from "@/lib/enterprise-context";
+import { EnterpriseOnboardingChecklist } from "@/components/enterprise-onboarding-checklist";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   VERIFIED:        { label: "Verified",        color: "#059669", bg: "#ECFDF5" },
@@ -18,6 +19,13 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 export default async function EnterpriseDashboardPage() {
   const session = await getServerSession(authOptions);
   const { effectiveUserId: userId } = await getEnterpriseContext(session!.user.id);
+
+  // Onboarding checklist data
+  const [teamMemberCount, attestationRunCount, auditorCount] = await Promise.all([
+    prisma.orgMember.count({ where: { ownerId: userId, acceptedAt: { not: null } } }),
+    prisma.attestationEntry.count({ where: { milestone: { contract: { investorId: userId } } } }),
+    prisma.auditorClientAccess.count({ where: { clientId: userId } }),
+  ]);
 
   // Load all contracts + their milestones for this user
   const contracts = await prisma.contract.findMany({
@@ -208,6 +216,14 @@ export default async function EnterpriseDashboardPage() {
           {new Date().toLocaleDateString("en-GB", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
         </p>
       </div>
+
+      {/* Onboarding checklist */}
+      <EnterpriseOnboardingChecklist
+        hasGoalSet={totalContracts > 0}
+        hasTeamMember={teamMemberCount > 0}
+        hasAttestationRun={attestationRunCount > 0}
+        hasAuditor={auditorCount > 0}
+      />
 
       {/* Summary cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>

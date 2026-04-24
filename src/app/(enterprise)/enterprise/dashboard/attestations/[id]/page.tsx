@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { AttestationDetail } from "./attestation-detail";
+import { getEnterpriseContext } from "@/lib/enterprise-context";
 import Link from "next/link";
 
 export default async function AttestationDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -10,6 +11,7 @@ export default async function AttestationDetailPage({ params }: { params: Promis
   if (!session?.user?.id) redirect("/login");
 
   const { id } = await params;
+  const { effectiveUserId, role: userRole } = await getEnterpriseContext(session.user.id);
 
   const contract = await prisma.contract.findUnique({
     where: { id },
@@ -36,11 +38,11 @@ export default async function AttestationDetailPage({ params }: { params: Promis
     },
   });
 
-  if (!contract || contract.investorId !== session.user.id || contract.mode !== "ATTESTATION") {
+  if (!contract || contract.investorId !== effectiveUserId || contract.mode !== "ATTESTATION") {
     redirect("/enterprise/dashboard/attestations");
   }
 
-  const goalSet = { id: contract.id, title: contract.milestone };
+  const goalSet = { id: contract.id, title: contract.milestone, requiresApproval: contract.requiresApproval };
   const milestones = contract.milestones.map((m) => ({
     id: m.id,
     title: m.title,
@@ -66,6 +68,10 @@ export default async function AttestationDetailPage({ params }: { params: Promis
       type: e.type,
       createdAt: e.createdAt.toISOString(),
     })),
+    internalApprovalStatus: m.internalApprovalStatus,
+    internalApprovedBy: m.internalApprovedBy,
+    internalApprovedAt: m.internalApprovedAt?.toISOString() ?? null,
+    internalApprovalNote: m.internalApprovalNote,
   }));
 
   const verifiedCount = milestones.filter((m) =>
@@ -176,7 +182,7 @@ export default async function AttestationDetailPage({ params }: { params: Promis
         </div>
       </div>
 
-      <AttestationDetail goalSet={goalSet} milestones={milestones} />
+      <AttestationDetail goalSet={goalSet} milestones={milestones} userRole={userRole} />
     </div>
   );
 }

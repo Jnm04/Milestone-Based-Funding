@@ -68,3 +68,33 @@ export async function GET(
 
   return NextResponse.json({ contract: contractWithLatestProof });
 }
+
+// PATCH /api/enterprise/attestations/[id] — toggle requiresApproval
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id } = await params;
+  const body = await req.json().catch(() => null) as { requiresApproval?: boolean } | null;
+  if (typeof body?.requiresApproval !== "boolean") {
+    return NextResponse.json({ error: "requiresApproval (boolean) is required" }, { status: 400 });
+  }
+
+  const contract = await prisma.contract.findUnique({
+    where: { id },
+    select: { investorId: true, mode: true },
+  });
+  if (!contract) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (contract.investorId !== session.user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (contract.mode !== "ATTESTATION") return NextResponse.json({ error: "Not an attestation contract" }, { status: 400 });
+
+  await prisma.contract.update({
+    where: { id },
+    data: { requiresApproval: body.requiresApproval },
+  });
+
+  return NextResponse.json({ ok: true, requiresApproval: body.requiresApproval });
+}

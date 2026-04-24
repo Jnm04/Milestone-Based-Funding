@@ -142,6 +142,8 @@ model Contract {
   mode                String         @default("ESCROW")
   /// Optional auditor email — CC'd on attestation results, read-only access
   auditorEmail        String?
+  /// Enterprise approval workflow — when true, milestones must be approved before AI verification runs
+  requiresApproval    Boolean  @default(false)
   proofs              Proof[]
   milestones          Milestone[]
   auditLogs           AuditLog[]
@@ -346,6 +348,12 @@ model Milestone {
 
   // Milestone dependency — this milestone cannot be funded until the dependency is COMPLETED
   dependsOnMilestoneId String?
+
+  // Enterprise internal approval workflow
+  internalApprovalStatus  String?    // null | "APPROVED" | "REJECTED"
+  internalApprovedBy      String?    // name of approver (denormalised for display)
+  internalApprovedAt      DateTime?
+  internalApprovalNote    String?    @db.Text
 
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt

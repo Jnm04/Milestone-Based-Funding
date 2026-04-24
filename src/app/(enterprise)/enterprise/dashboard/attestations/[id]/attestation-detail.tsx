@@ -32,11 +32,16 @@ interface MilestoneData {
   attestationFetchedAt: string | null;
   regulatoryTags: string[];
   latestEntries: EntryData[];
+  internalApprovalStatus: string | null;
+  internalApprovedBy: string | null;
+  internalApprovedAt: string | null;
+  internalApprovalNote: string | null;
 }
 
 interface GoalSet {
   id: string;
   title: string;
+  requiresApproval: boolean;
 }
 
 // ── Config maps ───────────────────────────────────────────────────────────────
@@ -407,14 +412,19 @@ function HistoryPanel({ entries }: { entries: EntryData[] }) {
 interface CardProps {
   milestone: MilestoneData;
   goalSetId: string;
+  requiresApproval: boolean;
+  userRole: string;
   onUpdate: (id: string, updates: Partial<MilestoneData>) => void;
 }
 
-function MilestoneCard({ milestone, goalSetId, onUpdate }: CardProps) {
+function MilestoneCard({ milestone, goalSetId, requiresApproval, userRole, onUpdate }: CardProps) {
   const [configuring,   setConfiguring]   = useState(false);
   const [running,       setRunning]       = useState(false);
   const [historyOpen,   setHistoryOpen]   = useState(false);
   const [fileReady,     setFileReady]     = useState(!!milestone.attestationFetchedAt);
+  const [approving,     setApproving]     = useState(false);
+  const [rejectNote,    setRejectNote]    = useState("");
+  const [showReject,    setShowReject]    = useState(false);
 
   const isLocked     = !!milestone.dataSourceLockedAt;
   const entries      = milestone.latestEntries;
@@ -462,14 +472,43 @@ function MilestoneCard({ milestone, goalSetId, onUpdate }: CardProps) {
     }
   }
 
+  async function handleApprovalAction(action: "APPROVED" | "REJECTED") {
+    setApproving(true);
+    try {
+      const res = await fetch(
+        `/api/enterprise/attestations/${goalSetId}/milestones/${milestone.id}/approve`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action, note: action === "REJECTED" ? rejectNote : undefined }),
+        }
+      );
+      const data = await res.json() as { ok?: boolean; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Action failed");
+      onUpdate(milestone.id, {
+        internalApprovalStatus: action,
+        internalApprovalNote: action === "REJECTED" ? rejectNote : null,
+      });
+      setShowReject(false);
+      setRejectNote("");
+      toast.success(action === "APPROVED" ? "Milestone approved for verification" : "Milestone rejected");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Action failed");
+    } finally {
+      setApproving(false);
+    }
+  }
+
   const verdictCfg = latestEntry
     ? VERDICT_CFG[latestEntry.aiVerdict as keyof typeof VERDICT_CFG] ?? null
     : null;
 
   const canRunFileUpload = milestone.dataSourceType === "FILE_UPLOAD" && fileReady;
+  const isApproved = !requiresApproval || milestone.internalApprovalStatus === "APPROVED";
   const canRun = isLocked &&
     milestone.dataSourceType !== "MANUAL_REVIEW" &&
     !running &&
+    isApproved &&
     (milestone.dataSourceType !== "FILE_UPLOAD" || canRunFileUpload);
 
   return (
@@ -577,6 +616,83 @@ function MilestoneCard({ milestone, goalSetId, onUpdate }: CardProps) {
         </div>
       )}
 
+      {/* Approval workflow banner */}
+      {requiresApproval && isLocked && milestone.dataSourceType !== "MANUAL_REVIEW" && (
+        <div style={{ marginBottom: 14 }}>
+          {milestone.internalApprovalStatus === "APPROVED" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: "#ECFDF5", border: "1px solid #A7F3D0", borderRadius: 8, fontSize: 13 }}>
+              <svg width="14" height="14" fill="none" stroke="#059669" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+              <span style={{ color: "#059669", fontWeight: 600 }}>Approved</span>
+              <span style={{ color: "#6B7280" }}>by {milestone.internalApprovedBy}</span>
+            </div>
+          )}
+          {milestone.internalApprovalStatus === "REJECTED" && (
+            <div style={{ padding: "10px 14px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, fontSize: 13 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: milestone.internalApprovalNote ? 4 : 0 }}>
+                <svg width="14" height="14" fill="none" stroke="#DC2626" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                <span style={{ color: "#DC2626", fontWeight: 600 }}>Rejected</span>
+                <span style={{ color: "#6B7280" }}>by {milestone.internalApprovedBy}</span>
+                {userRole !== "VIEWER" && (
+                  <button type="button" onClick={() => void handleApprovalAction("APPROVED")} disabled={approving}
+                    style={{ marginLeft: "auto", padding: "3px 10px", borderRadius: 5, fontSize: 12, fontWeight: 600, cursor: approving ? "not-allowed" : "pointer", border: "none", background: "#059669", color: "white" }}>
+                    Override & Approve
+                  </button>
+                )}
+              </div>
+              {milestone.internalApprovalNote && (
+                <p style={{ margin: 0, fontSize: 12, color: "#DC2626", opacity: 0.8 }}>{milestone.internalApprovalNote}</p>
+              )}
+            </div>
+          )}
+          {!milestone.internalApprovalStatus && userRole !== "VIEWER" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "12px 14px", background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <svg width="14" height="14" fill="none" stroke="#D97706" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "#92400E" }}>Awaiting internal approval before verification can run</span>
+              </div>
+              {!showReject ? (
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button type="button" onClick={() => void handleApprovalAction("APPROVED")} disabled={approving}
+                    style={{ padding: "6px 14px", borderRadius: 6, fontSize: 12.5, fontWeight: 600, cursor: approving ? "not-allowed" : "pointer", border: "none", background: "#059669", color: "white" }}>
+                    {approving ? "Approving…" : "Approve"}
+                  </button>
+                  <button type="button" onClick={() => setShowReject(true)} disabled={approving}
+                    style={{ padding: "6px 14px", borderRadius: 6, fontSize: 12.5, fontWeight: 600, cursor: approving ? "not-allowed" : "pointer", border: "1px solid #FECACA", background: "white", color: "#DC2626" }}>
+                    Reject
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <textarea
+                    value={rejectNote}
+                    onChange={(e) => setRejectNote(e.target.value)}
+                    placeholder="Reason for rejection (optional)"
+                    rows={2}
+                    style={{ width: "100%", padding: "7px 10px", border: "1px solid #FECACA", borderRadius: 6, fontSize: 12.5, resize: "vertical", fontFamily: "inherit", boxSizing: "border-box" }}
+                  />
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button type="button" onClick={() => void handleApprovalAction("REJECTED")} disabled={approving}
+                      style={{ padding: "6px 14px", borderRadius: 6, fontSize: 12.5, fontWeight: 600, cursor: approving ? "not-allowed" : "pointer", border: "none", background: "#DC2626", color: "white" }}>
+                      {approving ? "Rejecting…" : "Confirm Reject"}
+                    </button>
+                    <button type="button" onClick={() => { setShowReject(false); setRejectNote(""); }}
+                      style={{ padding: "6px 12px", borderRadius: 6, fontSize: 12.5, cursor: "pointer", border: "1px solid var(--ent-border)", background: "white", color: "var(--ent-muted)" }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          {!milestone.internalApprovalStatus && userRole === "VIEWER" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 8, fontSize: 13, color: "#92400E" }}>
+              <svg width="14" height="14" fill="none" stroke="#D97706" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              Awaiting approval from an admin or editor
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Action row */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         {/* Configure button (only when not locked) */}
@@ -602,7 +718,13 @@ function MilestoneCard({ milestone, goalSetId, onUpdate }: CardProps) {
         {isLocked && milestone.dataSourceType !== "MANUAL_REVIEW" && !running && (
           <button
             type="button" disabled={!canRun} onClick={handleRun}
-            title={!canRun && milestone.dataSourceType === "FILE_UPLOAD" ? "Upload a source file first" : undefined}
+            title={
+              !canRun && requiresApproval && milestone.internalApprovalStatus !== "APPROVED"
+                ? "Approve this milestone before running verification"
+                : !canRun && milestone.dataSourceType === "FILE_UPLOAD"
+                  ? "Upload a source file first"
+                  : undefined
+            }
             style={{ padding: "7px 16px", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: canRun ? "pointer" : "not-allowed", border: "none", background: canRun ? "var(--ent-accent)" : "#E5E7EB", color: canRun ? "white" : "#9CA3AF", display: "inline-flex", alignItems: "center", gap: 6 }}
           >
             <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24">
@@ -875,20 +997,47 @@ function RegulatoryTagSelector({
 export function AttestationDetail({
   goalSet,
   milestones: initialMilestones,
+  userRole = "OWNER",
 }: {
   goalSet: GoalSet;
   milestones: MilestoneData[];
+  userRole?: string;
 }) {
   const [milestones, setMilestones] = useState<MilestoneData[]>(initialMilestones);
   const [bulkRunning, setBulkRunning] = useState(false);
+  const [requiresApproval, setRequiresApproval] = useState(goalSet.requiresApproval);
+  const [togglingApproval, setTogglingApproval] = useState(false);
+
+  async function handleToggleApproval() {
+    setTogglingApproval(true);
+    const next = !requiresApproval;
+    try {
+      const res = await fetch(`/api/enterprise/attestations/${goalSet.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requiresApproval: next }),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      setRequiresApproval(next);
+      toast.success(next ? "Approval workflow enabled" : "Approval workflow disabled");
+    } catch {
+      toast.error("Failed to update approval setting");
+    } finally {
+      setTogglingApproval(false);
+    }
+  }
 
   const handleUpdate = useCallback((id: string, updates: Partial<MilestoneData>) => {
     setMilestones((prev) => prev.map((m) => (m.id === id ? { ...m, ...updates } : m)));
   }, []);
 
   const runnableCount = milestones.filter(
-    (m) => m.dataSourceLockedAt && m.dataSourceType !== "MANUAL_REVIEW"
+    (m) => m.dataSourceLockedAt && m.dataSourceType !== "MANUAL_REVIEW" &&
+      (!requiresApproval || m.internalApprovalStatus === "APPROVED")
   ).length;
+  const pendingApprovalCount = requiresApproval
+    ? milestones.filter((m) => m.dataSourceLockedAt && m.dataSourceType !== "MANUAL_REVIEW" && !m.internalApprovalStatus).length
+    : 0;
 
   async function handleBulkRun() {
     if (!runnableCount || bulkRunning) return;
@@ -928,6 +1077,36 @@ export function AttestationDetail({
         }
       `}</style>
 
+      {/* Approval workflow toggle + pending notice */}
+      <div style={{ marginBottom: 20, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        {userRole !== "VIEWER" && (
+          <button
+            type="button"
+            onClick={() => void handleToggleApproval()}
+            disabled={togglingApproval}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 7,
+              padding: "6px 14px", borderRadius: 6, fontSize: 12.5, fontWeight: 600,
+              cursor: togglingApproval ? "not-allowed" : "pointer",
+              border: `1px solid ${requiresApproval ? "#A7F3D0" : "var(--ent-border)"}`,
+              background: requiresApproval ? "#ECFDF5" : "white",
+              color: requiresApproval ? "#059669" : "var(--ent-muted)",
+            }}
+            title={requiresApproval ? "Disable approval workflow" : "Enable approval workflow — milestones must be approved before AI verification runs"}
+          >
+            <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+            </svg>
+            {requiresApproval ? "Approval required" : "Approval workflow off"}
+          </button>
+        )}
+        {pendingApprovalCount > 0 && (
+          <span style={{ fontSize: 12.5, color: "#92400E", background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 6, padding: "5px 12px", fontWeight: 500 }}>
+            {pendingApprovalCount} milestone{pendingApprovalCount !== 1 ? "s" : ""} awaiting approval
+          </span>
+        )}
+      </div>
+
       {runnableCount > 1 && (
         <div style={{ marginBottom: 20, display: "flex", justifyContent: "flex-end" }}>
           <button
@@ -965,7 +1144,14 @@ export function AttestationDetail({
       )}
 
       {milestones.map((m) => (
-        <MilestoneCard key={m.id} milestone={m} goalSetId={goalSet.id} onUpdate={handleUpdate} />
+        <MilestoneCard
+          key={m.id}
+          milestone={m}
+          goalSetId={goalSet.id}
+          requiresApproval={requiresApproval}
+          userRole={userRole}
+          onUpdate={handleUpdate}
+        />
       ))}
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </>

@@ -44,6 +44,14 @@ export async function POST(
     return NextResponse.json({ error: "Lock the data source before running attestation" }, { status: 409 });
   }
 
+  // Approval gate: if the goal set requires internal approval, the milestone must be approved first
+  if (contract.requiresApproval && milestone.internalApprovalStatus !== "APPROVED") {
+    return NextResponse.json(
+      { error: "This milestone requires internal approval before verification can run" },
+      { status: 403 }
+    );
+  }
+
   // Rate limit: max 3 manual runs per milestone per hour
   const ip = getClientIp(req);
   if (!(await checkRateLimit(`attestation-run:${milestoneId}:${session.user.id ?? ip}`, 3, 60 * 60 * 1000))) {

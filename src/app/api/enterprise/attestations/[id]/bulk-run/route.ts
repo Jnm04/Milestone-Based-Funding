@@ -55,6 +55,10 @@ export async function POST(
       results.push({ milestoneId: m.id, title: m.title, error: "No source file uploaded yet" });
       continue;
     }
+    if (contract.requiresApproval && m.internalApprovalStatus !== "APPROVED") {
+      results.push({ milestoneId: m.id, title: m.title, error: "Awaiting internal approval" });
+      continue;
+    }
     try {
       const period = currentPeriod(m.scheduleType);
       const result = await runAttestation(m.id, period, "PLATFORM");
