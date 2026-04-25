@@ -203,7 +203,7 @@ export async function POST(req: NextRequest) {
   try {
     const response = await anthropic.messages.create({
       model: "claude-haiku-4-5",
-      max_tokens: 400,
+      max_tokens: 750,
       system: systemPrompt,
       messages: sanitized.map((m) => ({ role: m.role, content: m.content })),
     });
@@ -214,8 +214,7 @@ export async function POST(req: NextRequest) {
         : "Sorry, I couldn't generate a response.";
 
     const cantHelp =
-      /can't help|cannot help|don't know|escalate|create a ticket|support team|get back to you/i.test(text) ||
-      sanitized.filter((m) => m.role === "user").length >= 4;
+      /can't help|cannot help|don't know|escalate|create a ticket|support team|get back to you/i.test(text);
 
     return NextResponse.json({ reply: text, cantHelp, systemChecked });
   } catch (err) {

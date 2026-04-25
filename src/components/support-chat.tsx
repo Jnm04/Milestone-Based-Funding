@@ -2,6 +2,35 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import type { ReactNode } from "react";
+import { useSession } from "next-auth/react";
+
+interface Message {
+  role: "user" | "assistant" | "admin" | "system";
+  content: string;
+}
+
+const PROBLEM_KEYWORDS =
+  /can't|cannot|not working|error|broken|stuck|issue|problem|fail|bug|crash|fund|escrow|payment|metamask|wallet|proof|rejected|expired|won't|doesn't|didn't|help/i;
+
+const LS_MESSAGES = "cascrow-support-messages";
+const LS_TICKET = "cascrow-support-ticket";
+
+const QUICK_REPLIES = [
+  "MetaMask not working",
+  "Proof was rejected",
+  "How to fund escrow?",
+  "Contract is stuck",
+];
+
+function loadLS<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 function renderMarkdown(text: string): ReactNode[] {
   const nodes: ReactNode[] = [];
@@ -11,13 +40,8 @@ function renderMarkdown(text: string): ReactNode[] {
   while (i < lines.length) {
     const line = lines[i];
 
-    // Blank line → skip (paragraph spacing handled by gap)
-    if (line.trim() === "") {
-      i++;
-      continue;
-    }
+    if (line.trim() === "") { i++; continue; }
 
-    // Numbered list: collect consecutive "N. " lines
     if (/^\d+\.\s/.test(line)) {
       const items: string[] = [];
       while (i < lines.length && /^\d+\.\s/.test(lines[i])) {
@@ -25,14 +49,13 @@ function renderMarkdown(text: string): ReactNode[] {
         i++;
       }
       nodes.push(
-        <ol key={nodes.length} style={{ margin: "4px 0 4px 0", paddingLeft: 18, display: "flex", flexDirection: "column", gap: 2 }}>
+        <ol key={nodes.length} style={{ margin: "4px 0", paddingLeft: 18, display: "flex", flexDirection: "column", gap: 2 }}>
           {items.map((item, j) => <li key={j}>{inlineMarkdown(item)}</li>)}
         </ol>
       );
       continue;
     }
 
-    // Bullet list: collect consecutive "- " lines
     if (/^[-*]\s/.test(line)) {
       const items: string[] = [];
       while (i < lines.length && /^[-*]\s/.test(lines[i])) {
@@ -40,14 +63,13 @@ function renderMarkdown(text: string): ReactNode[] {
         i++;
       }
       nodes.push(
-        <ul key={nodes.length} style={{ margin: "4px 0 4px 0", paddingLeft: 18, display: "flex", flexDirection: "column", gap: 2 }}>
+        <ul key={nodes.length} style={{ margin: "4px 0", paddingLeft: 18, display: "flex", flexDirection: "column", gap: 2 }}>
           {items.map((item, j) => <li key={j}>{inlineMarkdown(item)}</li>)}
         </ul>
       );
       continue;
     }
 
-    // Regular paragraph line
     nodes.push(<p key={nodes.length} style={{ margin: 0 }}>{inlineMarkdown(line)}</p>);
     i++;
   }
@@ -65,24 +87,15 @@ function inlineMarkdown(text: string): ReactNode[] {
     return part;
   });
 }
-import { useSession } from "next-auth/react";
-
-interface Message {
-  role: "user" | "assistant" | "admin" | "system";
-  content: string;
-}
-
-const PROBLEM_KEYWORDS =
-  /can't|cannot|not working|error|broken|stuck|issue|problem|fail|bug|crash|fund|escrow|payment|metamask|wallet|proof|rejected|expired|won't|doesn't|didn't|help/i;
 
 export function SupportChat() {
   const { data: session } = useSession();
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => loadLS<Message[]>(LS_MESSAGES, []));
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [cantHelp, setCantHelp] = useState(false);
-  const [ticketId, setTicketId] = useState<string | null>(null);
+  const [ticketId, setTicketId] = useState<string | null>(() => loadLS<string | null>(LS_TICKET, null));
   const [ticketSubject, setTicketSubject] = useState("");
   const [showTicketForm, setShowTicketForm] = useState(false);
   const [unread, setUnread] = useState(false);
@@ -90,7 +103,19 @@ export function SupportChat() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Listen for open-support-chat event (e.g. from profile page Support section)
+  // Persist messages and ticketId to localStorage
+  useEffect(() => {
+    try { localStorage.setItem(LS_MESSAGES, JSON.stringify(messages)); } catch {}
+  }, [messages]);
+
+  useEffect(() => {
+    try {
+      if (ticketId) localStorage.setItem(LS_TICKET, ticketId);
+      else localStorage.removeItem(LS_TICKET);
+    } catch {}
+  }, [ticketId]);
+
+  // Listen for open-support-chat event
   useEffect(() => {
     const handler = () => setOpen(true);
     window.addEventListener("open-support-chat", handler);
@@ -101,22 +126,34 @@ export function SupportChat() {
     if (open) {
       setUnread(false);
       if (messages.length === 0) {
-        setMessages([
-          {
-            role: "assistant",
-            content: "Hi! I'm the cascrow support bot. What can I help you with?",
-          },
-        ]);
+        const firstName = session?.user?.name?.split(" ")[0];
+        setMessages([{
+          role: "assistant",
+          content: `Hi${firstName ? ` ${firstName}` : ""}! I'm the cascrow support bot. What can I help you with?`,
+        }]);
       }
       setTimeout(() => inputRef.current?.focus(), 50);
     }
-  }, [open, messages.length]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Poll for admin replies once a ticket is open
+  function clearChat() {
+    setMessages([]);
+    setTicketId(null);
+    setCantHelp(false);
+    setShowTicketForm(false);
+    setLastAdminMsgCount(0);
+    try {
+      localStorage.removeItem(LS_MESSAGES);
+      localStorage.removeItem(LS_TICKET);
+    } catch {}
+  }
+
+  // Poll for admin replies
   const pollAdminReplies = useCallback(async () => {
     if (!ticketId || !session?.user?.id) return;
     try {
@@ -145,17 +182,16 @@ export function SupportChat() {
     return () => clearInterval(interval);
   }, [ticketId, pollAdminReplies]);
 
-  async function send() {
-    const text = input.trim();
+  async function send(overrideText?: string) {
+    const text = (overrideText !== undefined ? overrideText : input).trim();
     if (!text || loading) return;
 
     const newMessages: Message[] = [...messages, { role: "user", content: text }];
     setMessages(newMessages);
-    setInput("");
+    if (overrideText === undefined) setInput("");
     setLoading(true);
     setCantHelp(false);
 
-    // If message looks like a problem report, show a "checking..." system bubble immediately
     const looksLikeProblem = PROBLEM_KEYWORDS.test(text);
     if (looksLikeProblem) {
       setMessages((prev) => [
@@ -173,7 +209,6 @@ export function SupportChat() {
       const data = await res.json();
       const reply = data.reply ?? "Sorry, something went wrong.";
 
-      // Remove the "checking" bubble, add the real reply
       setMessages((prev) => {
         const filtered = prev.filter((m) => m.role !== "system");
         return [...filtered, { role: "assistant", content: reply }];
@@ -230,6 +265,8 @@ export function SupportChat() {
       setCantHelp(false);
     }
   }
+
+  const showQuickReplies = messages.length === 1 && messages[0].role === "assistant" && !ticketId && !loading;
 
   return (
     <>
@@ -308,6 +345,7 @@ export function SupportChat() {
               width: 32, height: 32, borderRadius: "50%",
               background: "rgba(196,112,75,0.2)",
               display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0,
             }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C4704B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -319,6 +357,27 @@ export function SupportChat() {
                 {ticketId ? `Ticket #${ticketId.slice(-8)} · waiting for reply` : "AI + human support"}
               </div>
             </div>
+            {messages.length > 1 && (
+              <button
+                onClick={clearChat}
+                title="Clear chat"
+                style={{
+                  background: "none", border: "none", cursor: "pointer",
+                  color: "#A89B8C", padding: 4, borderRadius: 4,
+                  display: "flex", alignItems: "center",
+                  transition: "color 0.15s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#EDE6DD")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#A89B8C")}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                  <path d="M10 11v6M14 11v6" />
+                  <path d="M9 6V4h6v2" />
+                </svg>
+              </button>
+            )}
           </div>
 
           {/* Messages */}
@@ -327,7 +386,7 @@ export function SupportChat() {
               const isAdmin = msg.role === "admin";
               const isSystem = msg.role === "system";
               return (
-                <div key={i}>
+                <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: msg.role === "user" ? "flex-end" : "flex-start" }}>
                   {isAdmin && (
                     <div style={{ fontSize: 10, color: "#C4704B", fontWeight: 700, marginBottom: 3, textTransform: "uppercase" }}>
                       cascrow team
@@ -336,7 +395,6 @@ export function SupportChat() {
                   <div
                     style={{
                       maxWidth: "85%",
-                      alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
                       padding: isSystem ? "6px 12px" : "9px 13px",
                       borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
                       background: msg.role === "user"
@@ -348,7 +406,7 @@ export function SupportChat() {
                         : "rgba(255,255,255,0.06)",
                       border: isAdmin ? "1px solid rgba(196,112,75,0.25)" : isSystem ? "none" : undefined,
                       fontSize: isSystem ? 11 : 13,
-                      lineHeight: 1.5,
+                      lineHeight: 1.55,
                       color: msg.role === "user" ? "#fff" : isSystem ? "#A89B8C" : "#EDE6DD",
                       fontStyle: isSystem ? "italic" : "normal",
                       display: isSystem ? "flex" : undefined,
@@ -370,6 +428,32 @@ export function SupportChat() {
                 </div>
               );
             })}
+
+            {/* Quick-reply chips — only on the initial greeting */}
+            {showQuickReplies && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, paddingLeft: 2 }}>
+                {QUICK_REPLIES.map((chip) => (
+                  <button
+                    key={chip}
+                    onClick={() => send(chip)}
+                    style={{
+                      padding: "5px 11px",
+                      borderRadius: 12,
+                      border: "1px solid rgba(196,112,75,0.35)",
+                      background: "rgba(196,112,75,0.08)",
+                      color: "#C4704B",
+                      fontSize: 11,
+                      cursor: "pointer",
+                      transition: "background 0.15s",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(196,112,75,0.18)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(196,112,75,0.08)")}
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {loading && (
               <div style={{
@@ -471,7 +555,7 @@ export function SupportChat() {
             <div ref={bottomRef} />
           </div>
 
-          {/* Input — always visible; hint when ticket open */}
+          {/* Input */}
           <div style={{
             padding: "10px 12px",
             borderTop: "1px solid rgba(196,112,75,0.12)",
@@ -495,7 +579,7 @@ export function SupportChat() {
               }}
             />
             <button
-              onClick={send}
+              onClick={() => send()}
               disabled={!input.trim() || loading}
               style={{
                 width: 34, height: 34,
