@@ -12,12 +12,22 @@ interface MatrixItem {
   rationale: string;
 }
 
-interface Props {
-  matrix: MatrixItem[];
+interface TopicDetail {
+  disclosureRequirements: { code: string; title: string; what: string }[];
+  dataNeeds: string[];
+  typicalGaps: string[];
+  reportingTip: string;
 }
 
-export function MaterialityMatrix({ matrix }: Props) {
+interface Props {
+  matrix: MatrixItem[];
+  sector?: string;
+}
+
+export function MaterialityMatrix({ matrix, sector }: Props) {
   const [hovered, setHovered] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [detailCache, setDetailCache] = useState<Record<string, TopicDetail | "loading" | "error">>({});
 
   const W = 580, H = 460, PAD = 60;
   const plotW = W - PAD * 2;
@@ -28,8 +38,27 @@ export function MaterialityMatrix({ matrix }: Props) {
 
   const material = matrix.filter((m) => m.material);
   const nonMaterial = matrix.filter((m) => !m.material);
-
   const hoveredItem = hovered ? matrix.find((m) => m.topic === hovered) : null;
+
+  async function toggleExpand(item: MatrixItem) {
+    const next = expanded === item.topic ? null : item.topic;
+    setExpanded(next);
+    if (next && !detailCache[next]) {
+      setDetailCache((c) => ({ ...c, [next]: "loading" }));
+      try {
+        const res = await fetch("/api/attestation/materiality/topic-detail", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ topic: item.topic, esrsArticles: item.esrsArticles, griStandards: item.griStandards, sector }),
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json() as TopicDetail;
+        setDetailCache((c) => ({ ...c, [next]: data }));
+      } catch {
+        setDetailCache((c) => ({ ...c, [next]: "error" }));
+      }
+    }
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
@@ -149,34 +178,135 @@ export function MaterialityMatrix({ matrix }: Props) {
         <div>
           <p style={{ margin: "0 0 10px", fontWeight: 700, fontSize: 14, color: "var(--ent-text)" }}>
             Material Topics <span style={{ fontWeight: 400, color: "var(--ent-muted)" }}>({material.length})</span>
+            <span style={{ fontSize: 12, fontWeight: 400, color: "var(--ent-muted)", marginLeft: 8 }}>— click a topic for reporting guidance</span>
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {[...material]
               .sort((a, b) => (b.financialScore + b.impactScore) - (a.financialScore + a.impactScore))
-              .map((item, i) => (
-                <div key={i} style={{ padding: "14px 16px", borderRadius: 10, background: "white", border: "1px solid var(--ent-border)" }}>
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ margin: "0 0 3px", fontWeight: 600, fontSize: 13.5, color: "var(--ent-text)" }}>{item.topic}</p>
-                      <p style={{ margin: 0, fontSize: 12.5, color: "var(--ent-muted)", lineHeight: 1.5 }}>{item.rationale}</p>
-                    </div>
-                    <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                      <span style={{ padding: "3px 9px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: "#EFF6FF", color: "#1D4ED8" }}>F {item.financialScore}</span>
-                      <span style={{ padding: "3px 9px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: "#F0FDF4", color: "#15803D" }}>I {item.impactScore}</span>
-                    </div>
+              .map((item, i) => {
+                const isOpen = expanded === item.topic;
+                const detail = detailCache[item.topic];
+                return (
+                  <div key={i} style={{ borderRadius: 10, background: "white", border: `1px solid ${isOpen ? "#BFDBFE" : "var(--ent-border)"}`, overflow: "hidden", transition: "border-color 0.15s" }}>
+                    {/* Header row — always visible */}
+                    <button
+                      onClick={() => toggleExpand(item)}
+                      style={{
+                        width: "100%", padding: "14px 16px", background: "none", border: "none",
+                        cursor: "pointer", textAlign: "left", display: "flex",
+                        alignItems: "flex-start", justifyContent: "space-between", gap: 12,
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ margin: "0 0 3px", fontWeight: 600, fontSize: 13.5, color: "var(--ent-text)" }}>{item.topic}</p>
+                        <p style={{ margin: 0, fontSize: 12.5, color: "var(--ent-muted)", lineHeight: 1.5, textAlign: "left" }}>{item.rationale}</p>
+                      </div>
+                      <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+                        <span style={{ padding: "3px 9px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: "#EFF6FF", color: "#1D4ED8" }}>F {item.financialScore}</span>
+                        <span style={{ padding: "3px 9px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: "#F0FDF4", color: "#15803D" }}>I {item.impactScore}</span>
+                        <span style={{ fontSize: 14, color: "var(--ent-muted)", marginLeft: 4, transition: "transform 0.2s", display: "inline-block", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}>
+                          ↓
+                        </span>
+                      </div>
+                    </button>
+
+                    {/* ESRS / GRI tags */}
+                    {(item.esrsArticles.length > 0 || item.griStandards.length > 0) && (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 5, padding: "0 16px 10px" }}>
+                        {item.esrsArticles.map((a) => (
+                          <span key={a} style={{ padding: "2px 8px", borderRadius: 5, fontSize: 11, fontWeight: 500, background: "#DCFCE7", color: "#14532D" }}>{a}</span>
+                        ))}
+                        {item.griStandards.map((g) => (
+                          <span key={g} style={{ padding: "2px 8px", borderRadius: 5, fontSize: 11, fontWeight: 500, background: "#EDE9FE", color: "#3B0764" }}>{g}</span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Expanded detail panel */}
+                    {isOpen && (
+                      <div style={{ borderTop: "1px solid #EFF6FF", background: "#F8FAFF", padding: "16px 16px 20px" }}>
+                        {detail === "loading" && (
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--ent-muted)", fontSize: 13 }}>
+                            <span style={{ display: "inline-block", width: 14, height: 14, border: "2px solid #BFDBFE", borderTopColor: "#1D4ED8", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+                            Generating reporting guidance…
+                            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                          </div>
+                        )}
+                        {detail === "error" && (
+                          <p style={{ margin: 0, fontSize: 13, color: "#DC2626" }}>Failed to load guidance. Please try again.</p>
+                        )}
+                        {detail && detail !== "loading" && detail !== "error" && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                            {/* Disclosure Requirements */}
+                            {detail.disclosureRequirements.length > 0 && (
+                              <div>
+                                <p style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "#1D4ED8" }}>
+                                  What you must report
+                                </p>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                  {detail.disclosureRequirements.map((dr, j) => (
+                                    <div key={j} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                                      <span style={{ flexShrink: 0, padding: "2px 7px", borderRadius: 5, fontSize: 10.5, fontWeight: 700, background: "#DCFCE7", color: "#14532D", marginTop: 1 }}>{dr.code}</span>
+                                      <div>
+                                        <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ent-text)" }}>{dr.title}</span>
+                                        <span style={{ fontSize: 12, color: "var(--ent-muted)" }}> — {dr.what}</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                              {/* Data you'll need */}
+                              {detail.dataNeeds.length > 0 && (
+                                <div>
+                                  <p style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "#15803D" }}>
+                                    Data you&apos;ll need
+                                  </p>
+                                  <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 5 }}>
+                                    {detail.dataNeeds.map((d, j) => (
+                                      <li key={j} style={{ display: "flex", gap: 6, alignItems: "flex-start", fontSize: 12.5, color: "var(--ent-muted)" }}>
+                                        <span style={{ flexShrink: 0, marginTop: 3, width: 6, height: 6, borderRadius: "50%", background: "#86EFAC", display: "inline-block" }} />
+                                        {d}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+
+                              {/* Typical gaps */}
+                              {detail.typicalGaps.length > 0 && (
+                                <div>
+                                  <p style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "#B45309" }}>
+                                    Typical gaps
+                                  </p>
+                                  <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 5 }}>
+                                    {detail.typicalGaps.map((g, j) => (
+                                      <li key={j} style={{ display: "flex", gap: 6, alignItems: "flex-start", fontSize: 12.5, color: "var(--ent-muted)" }}>
+                                        <span style={{ flexShrink: 0, marginTop: 3, width: 6, height: 6, borderRadius: "50%", background: "#FCD34D", display: "inline-block" }} />
+                                        {g}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Reporting tip */}
+                            {detail.reportingTip && (
+                              <div style={{ display: "flex", gap: 10, padding: "10px 14px", background: "#FFFBEB", borderRadius: 8, border: "1px solid #FDE68A" }}>
+                                <span style={{ fontSize: 14, flexShrink: 0 }}>💡</span>
+                                <p style={{ margin: 0, fontSize: 12.5, color: "#92400E", lineHeight: 1.6 }}>{detail.reportingTip}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  {(item.esrsArticles.length > 0 || item.griStandards.length > 0) && (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 10 }}>
-                      {item.esrsArticles.map((a) => (
-                        <span key={a} style={{ padding: "2px 8px", borderRadius: 5, fontSize: 11, fontWeight: 500, background: "#DCFCE7", color: "#14532D" }}>{a}</span>
-                      ))}
-                      {item.griStandards.map((g) => (
-                        <span key={g} style={{ padding: "2px 8px", borderRadius: 5, fontSize: 11, fontWeight: 500, background: "#EDE9FE", color: "#3B0764" }}>{g}</span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
           </div>
         </div>
       )}

@@ -243,7 +243,7 @@ export default function MaterialityWizardPage() {
             </div>
           </div>
         )}
-        <MaterialityMatrix matrix={assessment.matrix} />
+        <MaterialityMatrix matrix={assessment.matrix} sector={assessment.sector} />
       </div>
     );
   }
