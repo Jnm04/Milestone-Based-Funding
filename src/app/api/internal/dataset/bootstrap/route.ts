@@ -3,14 +3,9 @@ import Anthropic from "@anthropic-ai/sdk";
 import { verifyMilestone } from "@/services/ai/verifier.service";
 import { prisma } from "@/lib/prisma";
 import { generateEmbedding, storeProofEmbedding } from "@/services/brain/embedding.service";
+import { isInternalAuthorized } from "@/lib/internal-auth";
 
 export const maxDuration = 60;
-
-function isAuthorized(req: NextRequest) {
-  const key = req.headers.get("x-internal-key")?.trim();
-  const secret = process.env.INTERNAL_SECRET?.trim();
-  return key && secret && key === secret;
-}
 
 const DOMAINS = ["legal", "technical", "business", "research"] as const;
 const OUTCOMES = ["approved", "rejected"] as const;
@@ -73,7 +68,7 @@ Return ONLY this JSON (proofText max 300 words):
  * Returns a summary of what was saved.
  */
 export async function POST(req: NextRequest) {
-  if (!isAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isInternalAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: "ANTHROPIC_API_KEY not configured" }, { status: 422 });
   }
