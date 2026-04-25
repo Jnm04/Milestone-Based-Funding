@@ -5,12 +5,14 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MaterialityMatrix } from "@/components/materiality-matrix";
 
+// Indices: 0=region, 1=employees, 2=supplyChain, 3=revenue, 4=frameworks, 5-9=step2, 10-12=step3
 const WIZARD_QUESTIONS = [
   // Step 1 — Company Profile
   { step: 1, q: "In which regions does your company primarily operate?", options: ["EU only", "EU + North America", "Global", "Asia-Pacific", "Other"] },
   { step: 1, q: "How many employees does your company have?", options: ["<50", "50–250", "250–1,000", "1,000–5,000", ">5,000"] },
   { step: 1, q: "Does your company have a supply chain with significant environmental or labor impacts?", options: ["Yes, significantly", "Partially", "No"] },
-  { step: 1, q: "Which regulatory reporting frameworks apply to your company?", multi: true, options: ["CSRD", "TCFD", "GRI", "SEC ESG", "None"] },
+  { step: 1, q: "What is your company's annual revenue?", options: ["<€10M", "€10M–€40M", "€40M–€150M", ">€150M"] },
+  { step: 1, q: "Which regulatory reporting frameworks apply to your company?", multi: true, autoHint: true, options: ["CSRD", "TCFD", "GRI", "SEC ESG", "None"] },
   // Step 2 — ESG Exposure
   { step: 2, q: "Which environmental topics are most relevant to your business?", multi: true, options: ["Climate / GHG", "Pollution", "Water", "Biodiversity", "Circular Economy"] },
   { step: 2, q: "Does your business significantly affect communities or workers (directly or through supply chain)? (1=minimal, 5=significant)", options: ["1", "2", "3", "4", "5"] },
@@ -113,6 +115,30 @@ export default function MaterialityWizardPage() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Auto-suggest regulatory frameworks (index 4) based on region (0), employees (1), revenue (3)
+  useEffect(() => {
+    const region = answers[0] as string | undefined;
+    const employees = answers[1] as string | undefined;
+    const revenue = answers[3] as string | undefined;
+    if (!region && !employees && !revenue) return;
+
+    const suggested: string[] = [];
+    const isEU = region?.includes("EU");
+    const largeCo = ["250–1,000", "1,000–5,000", ">5,000"].includes(employees ?? "");
+    const largeRev = ["€40M–€150M", ">€150M"].includes(revenue ?? "");
+    if (isEU && (largeCo || largeRev)) suggested.push("CSRD");
+
+    const isGlobal = region === "Global" || region === "EU + North America";
+    if (isGlobal) suggested.push("TCFD");
+
+    const isNorthAmerica = region === "EU + North America" || region === "Global";
+    if (isNorthAmerica && revenue === ">€150M") suggested.push("SEC ESG");
+
+    if (suggested.length === 0) suggested.push("None");
+    setAnswers((prev) => ({ ...prev, [4]: suggested }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answers[0], answers[1], answers[3]]);
 
   useEffect(() => {
     fetch(`/api/attestation/materiality/${id}`)
@@ -261,6 +287,11 @@ export default function MaterialityWizardPage() {
           return (
             <div key={globalIndex} style={{ padding: 20, borderRadius: 10, background: "white", border: "1px solid var(--ent-border)" }}>
               <p style={{ margin: "0 0 14px", fontWeight: 600, fontSize: 14, color: "var(--ent-text)" }}>{q.q}</p>
+              {"autoHint" in q && q.autoHint && (
+                <p style={{ margin: "-8px 0 12px", fontSize: 12, color: "var(--ent-accent)" }}>
+                  Pre-selected based on your profile — adjust if needed.
+                </p>
+              )}
               {q.freeText ? (
                 <textarea
                   rows={3}
