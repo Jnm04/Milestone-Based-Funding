@@ -65,7 +65,7 @@ Generate the materiality matrix and executive summary.`;
     const anthropic = getAnthropic();
     const response = await anthropic.messages.create({
       model: CLAUDE_MODEL,
-      max_tokens: 2000,
+      max_tokens: 4096,
       system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }],
     });
