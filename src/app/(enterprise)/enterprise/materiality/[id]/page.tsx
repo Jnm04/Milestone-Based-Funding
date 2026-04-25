@@ -133,8 +133,40 @@ export default function MaterialityWizardPage() {
         <main className="max-w-6xl mx-auto px-6 py-12">
           <h1 className="text-3xl font-bold mb-2" style={{ color: "var(--ent-text)" }}>Materiality Matrix</h1>
           {assessment.summary && (
-            <div className="mb-8 p-6 rounded-xl" style={{ background: "white", border: "1px solid var(--ent-border)" }}>
-              <p className="text-sm" style={{ color: "var(--ent-muted)", lineHeight: 1.7 }}>{assessment.summary}</p>
+            <div className="mb-8 rounded-xl overflow-hidden" style={{ border: "1px solid var(--ent-border)" }}>
+              <div className="px-6 py-3 flex items-center gap-2" style={{ background: "var(--ent-accent)", borderBottom: "1px solid var(--ent-border)" }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+                <span className="text-xs font-semibold tracking-widest uppercase" style={{ color: "white" }}>Executive Summary</span>
+              </div>
+              <div className="p-6" style={{ background: "white" }}>
+                {assessment.summary.split(/\n\n+/).map((para, i) => {
+                  const trimmed = para.trim();
+                  // Detect paragraphs with inline numbered items like "(1) Foo, (2) Bar"
+                  const hasNumbered = /\(\d+\)/.test(trimmed);
+                  if (hasNumbered) {
+                    // Split into: text before (1), then each numbered item
+                    const parts = trimmed.split(/\s*\(\d+\)\s*/);
+                    const intro = parts[0]?.trim();
+                    const items = parts.slice(1).map((s) => s.replace(/[,.]?\s*$/, "").trim()).filter(Boolean);
+                    return (
+                      <div key={i} className={i > 0 ? "mt-4" : ""}>
+                        {intro && <p className="text-sm leading-relaxed mb-2" style={{ color: "var(--ent-muted)" }}>{intro}</p>}
+                        <ol className="space-y-1 pl-1">
+                          {items.map((item, j) => (
+                            <li key={j} className="flex gap-2 text-sm" style={{ color: "var(--ent-muted)" }}>
+                              <span className="font-semibold shrink-0" style={{ color: "var(--ent-accent)", minWidth: "1.5rem" }}>({j + 1})</span>
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    );
+                  }
+                  return (
+                    <p key={i} className={`text-sm leading-relaxed${i > 0 ? " mt-4" : ""}`} style={{ color: "var(--ent-muted)" }}>{trimmed}</p>
+                  );
+                })}
+              </div>
             </div>
           )}
           <MaterialityMatrix matrix={assessment.matrix} />
