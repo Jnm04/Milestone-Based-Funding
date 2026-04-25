@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { del } from "@vercel/blob";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 /**
  * DELETE /api/proof/:proofId
@@ -22,6 +23,10 @@ export async function DELETE(
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ error: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
+  }
+
+  if (!(await checkRateLimit(`proof-delete:${session.user.id}`, 10, 60 * 60 * 1000))) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
   const { proofId } = await params;
@@ -82,12 +87,13 @@ export async function DELETE(
     }
   }
 
-  // Delete the proof record and reset milestone status in a transaction
+  // Delete the proof record and reset milestone + contract status in a transaction
   await prisma.$transaction([
     prisma.proof.delete({ where: { id: proofId } }),
     ...(proof.milestoneId
       ? [prisma.milestone.update({ where: { id: proof.milestoneId }, data: { status: "FUNDED" } })]
       : []),
+    prisma.contract.update({ where: { id: proof.contractId }, data: { status: "FUNDED" } }),
   ]);
 
   return NextResponse.json({ ok: true });

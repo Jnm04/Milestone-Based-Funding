@@ -32,6 +32,8 @@ export async function POST(req: NextRequest) {
   let precomputedDecision: "YES" | "NO" | null = null;
   let notes: string | null = null;
 
+  const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
+
   if (contentType.includes("multipart/form-data")) {
     const formData = await req.formData();
     milestoneText = (formData.get("milestoneText") as string) ?? "";
@@ -39,6 +41,9 @@ export async function POST(req: NextRequest) {
     saveToDataset = formData.get("saveToDataset") === "true";
     const file = formData.get("file") as File | null;
     if (file && file.size > 0) {
+      if (file.size > MAX_FILE_SIZE) {
+        return NextResponse.json({ error: "File exceeds 20 MB limit" }, { status: 400 });
+      }
       const arrayBuffer = await file.arrayBuffer();
       fileBuffer = Buffer.from(arrayBuffer);
       fileName = file.name;
