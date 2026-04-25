@@ -62,7 +62,7 @@ export function SiteFooter() {
       >
         <span>© 2026 Cascrow</span>
         <div className="flex gap-5">
-          <Link href="/impressum"   className="transition-colors hover:text-[#A89B8C]">Impressum</Link>
+          <Link href="/impressum"   className="transition-colors hover:text-[#A89B8C]">Legal Notice</Link>
           <Link href="/terms"       className="transition-colors hover:text-[#A89B8C]">Terms</Link>
           <Link href="/datenschutz" className="transition-colors hover:text-[#A89B8C]">Privacy</Link>
           <Link href="/risiken"     className="transition-colors hover:text-[#A89B8C]">Risk Disclosure</Link>
