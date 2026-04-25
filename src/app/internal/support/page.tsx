@@ -42,6 +42,8 @@ function TicketRow({
   const [expanded, setExpanded] = useState(false);
   const [note, setNote] = useState(ticket.adminNote ?? "");
   const [saving, setSaving] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
 
   async function update(patch: { status?: string; adminNote?: string }) {
     setSaving(true);
@@ -57,6 +59,25 @@ function TicketRow({
       }
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function sendReply() {
+    if (!replyText.trim() || sendingReply) return;
+    setSendingReply(true);
+    try {
+      const res = await internalFetch(`/api/support/tickets/${ticket.id}/reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: replyText.trim() }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        onUpdate(ticket.id, updated);
+        setReplyText("");
+      }
+    } finally {
+      setSendingReply(false);
     }
   }
 
@@ -137,24 +158,81 @@ function TicketRow({
         <div style={{ borderTop: "1px solid rgba(196,112,75,0.1)", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
           {/* Messages */}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {ticket.messages.map((msg, i) => (
-              <div key={i} style={{ display: "flex", flexDirection: "column", gap: 2, alignItems: msg.role === "user" ? "flex-end" : "flex-start" }}>
-                <div style={{ fontSize: 10, color: "#A89B8C", textTransform: "uppercase" }}>{msg.role}</div>
-                <div
-                  style={{
-                    maxWidth: "85%",
-                    padding: "8px 12px",
-                    borderRadius: msg.role === "user" ? "10px 10px 2px 10px" : "10px 10px 10px 2px",
-                    background: msg.role === "user" ? "rgba(196,112,75,0.15)" : "rgba(255,255,255,0.05)",
-                    fontSize: 12,
-                    color: "#EDE6DD",
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {msg.content}
+            {ticket.messages.map((msg, i) => {
+              const isUser = msg.role === "user";
+              const isAdmin = msg.role === "admin";
+              return (
+                <div key={i} style={{ display: "flex", flexDirection: "column", gap: 2, alignItems: isUser ? "flex-end" : "flex-start" }}>
+                  <div style={{ fontSize: 10, color: isAdmin ? "#C4704B" : "#A89B8C", textTransform: "uppercase", fontWeight: isAdmin ? 700 : 400 }}>
+                    {isAdmin ? "you (admin)" : msg.role}
+                  </div>
+                  <div
+                    style={{
+                      maxWidth: "85%",
+                      padding: "8px 12px",
+                      borderRadius: isUser ? "10px 10px 2px 10px" : "10px 10px 10px 2px",
+                      background: isUser
+                        ? "rgba(196,112,75,0.15)"
+                        : isAdmin
+                        ? "rgba(196,112,75,0.08)"
+                        : "rgba(255,255,255,0.05)",
+                      border: isAdmin ? "1px solid rgba(196,112,75,0.2)" : "none",
+                      fontSize: 12,
+                      color: "#EDE6DD",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {msg.content}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
+          </div>
+
+          {/* Reply to user */}
+          <div style={{ marginTop: 4 }}>
+            <div style={{ fontSize: 11, color: "#A89B8C", marginBottom: 6 }}>REPLY TO USER</div>
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+              <textarea
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) sendReply();
+                }}
+                rows={2}
+                placeholder="Type a reply visible to the user… (⌘Enter to send)"
+                style={{
+                  flex: 1,
+                  padding: "8px 10px",
+                  borderRadius: 8,
+                  border: "1px solid rgba(196,112,75,0.3)",
+                  background: "rgba(196,112,75,0.05)",
+                  color: "#EDE6DD",
+                  fontSize: 12,
+                  resize: "vertical",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+              <button
+                onClick={sendReply}
+                disabled={!replyText.trim() || sendingReply}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 6,
+                  background: replyText.trim() && !sendingReply ? "#C4704B" : "rgba(196,112,75,0.2)",
+                  border: "none",
+                  cursor: replyText.trim() && !sendingReply ? "pointer" : "default",
+                  fontSize: 12,
+                  color: "#fff",
+                  fontWeight: 600,
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                }}
+              >
+                {sendingReply ? "Sending…" : "Send reply"}
+              </button>
+            </div>
           </div>
 
           {/* Admin note */}

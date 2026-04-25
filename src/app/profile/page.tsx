@@ -280,6 +280,12 @@ export default function ProfilePage() {
   const [loadingDeliveries, setLoadingDeliveries] = useState<string | null>(null);
   const [expandedDeliveries, setExpandedDeliveries] = useState<string | null>(null);
 
+  // Support tickets
+  const [myTickets, setMyTickets] = useState<Array<{
+    id: string; subject: string; status: string; priority: string;
+    createdAt: string; messages: { role: string; content: string; timestamp?: string }[];
+  }>>([]);
+
   // GDPR
   const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -362,6 +368,11 @@ export default function ProfilePage() {
     fetch("/api/webhooks")
       .then((r) => r.json())
       .then((d) => setWebhooks(d.endpoints ?? []))
+      .catch(() => {});
+    // Load support tickets
+    fetch("/api/support/tickets/mine")
+      .then((r) => r.json())
+      .then((d) => setMyTickets(d.tickets ?? []))
       .catch(() => {});
   }, [status, router]);
 
@@ -1744,6 +1755,104 @@ export default function ProfilePage() {
                   </div>
                 )}
               </div>
+            </div>
+          </SectionCard>
+
+          {/* Support & Help */}
+          <SectionCard title="Support & Help" subtitle="Chat with our support bot or view your open tickets">
+            <div className="flex flex-col gap-4">
+              {/* Open chat button */}
+              <div
+                className="flex items-center justify-between gap-4 p-4 rounded-xl"
+                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.1)" }}
+              >
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-medium" style={{ color: "#EDE6DD" }}>Live Support Chat</span>
+                  <p className="text-xs" style={{ color: "#A89B8C" }}>
+                    Ask the AI support bot a question or get escalated to our team — replies appear directly in chat.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new Event("open-support-chat"))}
+                  className="cs-btn cs-btn-sm shrink-0"
+                  style={{ background: "#C4704B", color: "#fff", padding: "6px 16px", borderRadius: "8px", fontWeight: 600, fontSize: 12, border: "none", cursor: "pointer" }}
+                >
+                  Open chat
+                </button>
+              </div>
+
+              {/* System status link */}
+              <div
+                className="flex items-center justify-between gap-4 p-4 rounded-xl"
+                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.1)" }}
+              >
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-medium" style={{ color: "#EDE6DD" }}>System Status</span>
+                  <p className="text-xs" style={{ color: "#A89B8C" }}>
+                    Check live status of the database, XRPL, EVM RPC, and AI verification services.
+                  </p>
+                </div>
+                <a
+                  href="/status"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="cs-btn-ghost cs-btn-sm shrink-0"
+                >
+                  View status
+                </a>
+              </div>
+
+              {/* My tickets */}
+              {myTickets.length > 0 && (
+                <div className="flex flex-col gap-3">
+                  <div className="text-xs font-semibold" style={{ color: "#A89B8C", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    My Tickets
+                  </div>
+                  {myTickets.map((ticket) => {
+                    const adminReplies = ticket.messages.filter((m) => m.role === "admin");
+                    const lastAdminReply = adminReplies[adminReplies.length - 1];
+                    const statusColor: Record<string, string> = {
+                      OPEN: "#ef4444", IN_PROGRESS: "#f59e0b", RESOLVED: "#22c55e", CLOSED: "#6b7280",
+                    };
+                    return (
+                      <div
+                        key={ticket.id}
+                        className="flex flex-col gap-2 p-4 rounded-xl"
+                        style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.1)" }}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm" style={{ color: "#EDE6DD", fontWeight: 500 }}>{ticket.subject}</span>
+                          <span className="text-xs font-bold shrink-0" style={{ color: statusColor[ticket.status] ?? "#A89B8C" }}>
+                            {ticket.status.replace("_", " ")}
+                          </span>
+                        </div>
+                        {lastAdminReply ? (
+                          <div
+                            className="rounded-lg p-3 text-xs"
+                            style={{ background: "rgba(196,112,75,0.08)", border: "1px solid rgba(196,112,75,0.15)", color: "#EDE6DD", lineHeight: 1.5 }}
+                          >
+                            <span style={{ color: "#C4704B", fontWeight: 700, fontSize: 10, textTransform: "uppercase", display: "block", marginBottom: 4 }}>
+                              cascrow team replied
+                            </span>
+                            {lastAdminReply.content}
+                          </div>
+                        ) : (
+                          <p className="text-xs" style={{ color: "#A89B8C" }}>Waiting for team response…</p>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => window.dispatchEvent(new Event("open-support-chat"))}
+                          className="text-xs self-start"
+                          style={{ color: "#C4704B", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+                        >
+                          Continue in chat
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </SectionCard>
 
