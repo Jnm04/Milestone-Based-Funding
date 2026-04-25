@@ -91,6 +91,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "2FA is not enabled" }, { status: 400 });
   }
 
+  if (!user.passwordHash) return NextResponse.json({ error: "Google accounts cannot use 2FA password verification" }, { status: 400 });
   const passwordValid = await bcrypt.compare(body.password, user.passwordHash);
   if (!passwordValid) return NextResponse.json({ error: "Incorrect password" }, { status: 400 });
 

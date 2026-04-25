@@ -10,7 +10,8 @@ datasource db {
 model User {
   id               String     @id @default(cuid())
   email            String     @unique
-  passwordHash     String
+  passwordHash     String?
+  googleId         String?    @unique
   name             String?
   role             Role
   walletAddress    String?    @unique
@@ -30,49 +31,49 @@ model User {
   emailVerificationTokenExpiry DateTime?
 
   // Email notification preferences
-  notifyProofSubmitted  Boolean @default(true)  // Investor: startup submitted proof
-  notifyPendingReview   Boolean @default(true)  // Investor: AI needs manual review
+  notifyProofSubmitted     Boolean @default(true) // Investor: startup submitted proof
+  notifyPendingReview      Boolean @default(true) // Investor: AI needs manual review
   notifyMilestoneCompleted Boolean @default(true) // Investor: milestone fully completed
-  notifyFunded          Boolean @default(true)  // Startup: milestone was funded
-  notifyVerified        Boolean @default(true)  // Startup: proof approved, funds released
-  notifyRejected        Boolean @default(true)  // Startup: proof rejected by AI
+  notifyFunded             Boolean @default(true) // Startup: milestone was funded
+  notifyVerified           Boolean @default(true) // Startup: proof approved, funds released
+  notifyRejected           Boolean @default(true) // Startup: proof rejected by AI
 
   // Brute-force protection
-  loginAttempts   Int       @default(0)
-  lockoutUntil    DateTime?
+  loginAttempts Int       @default(0)
+  lockoutUntil  DateTime?
 
   // Password reset
   passwordResetToken       String?   @unique
   passwordResetTokenExpiry DateTime?
 
   // Enterprise Attestation Mode access
-  isEnterprise       Boolean   @default(false)
+  isEnterprise          Boolean   @default(false)
   enterpriseActivatedAt DateTime?
 
   // KYC tiers: 0=email only ($1k limit), 1=sanctions CLEAR ($10k), 2=manual KYC ($100k), 3=KYB (unlimited)
-  kycTier            Int       @default(0)
+  kycTier Int @default(0)
 
   // Sanctions screening (KYC Tier 1)
   dateOfBirth        DateTime? // Optional — used to reduce false positives in sanctions screening
   sanctionsCheckedAt DateTime?
-  sanctionsStatus    String?   // "CLEAR" | "HIT" | "PENDING"
+  sanctionsStatus    String? // "CLEAR" | "HIT" | "PENDING"
 
   // Telegram notifications
-  telegramChat     TelegramChat?
+  telegramChat TelegramChat?
 
   // Outbound webhooks
   webhookEndpoints WebhookEndpoint[]
 
   // API keys for programmatic access
-  apiKeys          ApiKey[]
+  apiKeys ApiKey[]
 
   // Organization / team members
-  ownedOrgMembers  OrgMember[] @relation("OrgOwner")
-  orgMemberships   OrgMember[] @relation("OrgMember")
+  ownedOrgMembers OrgMember[] @relation("OrgOwner")
+  orgMemberships  OrgMember[] @relation("OrgMember")
 
   // Feature Y: Stakeholder Transparency Report — cached per quarter
   lastTransparencyReportUrl    String?
-  lastTransparencyReportPeriod String?   // e.g. "Q1-2026"
+  lastTransparencyReportPeriod String? // e.g. "Q1-2026"
 
   // Phase 3 — Feature VII: Double Materiality Wizard
   materialityAssessments MaterialityAssessment[]
@@ -89,23 +90,23 @@ model User {
   notificationIntegrations NotificationIntegration[]
 
   // Feature 6: Contract templates
-  contractTemplates  ContractTemplate[]
+  contractTemplates ContractTemplate[]
 
   // Feature 2: Multi-entity organisation
-  organisation       Organisation?
+  organisation Organisation?
 
   // Feature 5: Deal Rooms
   dealRoomsAsInvestor DealRoom[] @relation("DealRoomInvestor")
 
   // 2FA / TOTP
-  totpSecret   String?
-  totpEnabled  Boolean  @default(false)
+  totpSecret  String?
+  totpEnabled Boolean @default(false)
 
   // In-app notifications
   notifications Notification[]
 
   // Feature 11: Audit partner + client access
-  auditorPartner      AuditorPartner?
+  auditorPartner        AuditorPartner?
   auditorClientAccesses AuditorClientAccess[] @relation("AuditorAccessClient")
 }
 
@@ -127,10 +128,10 @@ model Contract {
   escrowSequence      Int?
   escrowCondition     String?
   escrowFulfillment   String?
-  evmTxHash           String?   // EVM: tx hash of the fundMilestone transaction
-  nftTokenId          String?   // XRPL: NFT token ID minted on completion
-  nftTxHash           String?   // XRPL: tx hash of the NFTokenMint transaction
-  nftImageUrl         String?   // XRPL: public URL of the certificate SVG image
+  evmTxHash           String? // EVM: tx hash of the fundMilestone transaction
+  nftTokenId          String? // XRPL: NFT token ID minted on completion
+  nftTxHash           String? // XRPL: tx hash of the NFTokenMint transaction
+  nftImageUrl         String? // XRPL: public URL of the certificate SVG image
   cancelAfter         DateTime
   inviteLink          String?        @unique
   /// [{severity: "WARNING"|"INFO", text: string}] — structural risk flags generated at contract creation
@@ -143,7 +144,7 @@ model Contract {
   /// Optional auditor email — CC'd on attestation results, read-only access
   auditorEmail        String?
   /// Enterprise approval workflow — when true, milestones must be approved before AI verification runs
-  requiresApproval    Boolean  @default(false)
+  requiresApproval    Boolean        @default(false)
   proofs              Proof[]
   milestones          Milestone[]
   auditLogs           AuditLog[]
@@ -169,41 +170,41 @@ enum ContractStatus {
 }
 
 model Proof {
-  id            String     @id @default(cuid())
-  contractId    String
-  contract      Contract   @relation(fields: [contractId], references: [id])
-  milestoneId   String?
-  milestone     Milestone? @relation(fields: [milestoneId], references: [id])
-  fileUrl       String
-  fileName      String
-  fileHash      String?    // SHA-256 of the uploaded file — written on-chain via audit log
-  extractedText String?    @db.Text
-  aiDecision    String?
-  aiReasoning   String?    @db.Text
-  aiConfidence  Int?
+  id                 String     @id @default(cuid())
+  contractId         String
+  contract           Contract   @relation(fields: [contractId], references: [id])
+  milestoneId        String?
+  milestone          Milestone? @relation(fields: [milestoneId], references: [id])
+  fileUrl            String
+  fileName           String
+  fileHash           String? // SHA-256 of the uploaded file — written on-chain via audit log
+  extractedText      String?    @db.Text
+  aiDecision         String?
+  aiReasoning        String?    @db.Text
+  aiConfidence       Int?
   /// [{model, decision, confidence, reasoning}] — individual votes from each AI model
-  aiModelVotes  Json?
+  aiModelVotes       Json?
   /// "file" | "github_url" — how the proof was submitted
-  proofType     String     @default("file")
+  proofType          String     @default("file")
   /// For github_url proofs: the submitted GitHub repo URL
-  proofUrl      String?
+  proofUrl           String?
   /// [{code, description}] — structured rejection reasons generated at rejection time
-  aiObjections  Json?
+  aiObjections       Json?
   /// Appeal filed by the startup after AI rejection
-  appealStatus    String?    // null = no appeal | "APPROVED" = overturned → PENDING_REVIEW | "REJECTED" = upheld
-  appealText      String?    @db.Text
-  appealResult    String?    // "OVERTURNED" | "UPHELD"
-  appealReasoning String?    @db.Text
-  appealedAt      DateTime?
+  appealStatus       String? // null = no appeal | "APPROVED" = overturned → PENDING_REVIEW | "REJECTED" = upheld
+  appealText         String?    @db.Text
+  appealResult       String? // "OVERTURNED" | "UPHELD"
+  appealReasoning    String?    @db.Text
+  appealedAt         DateTime?
   /// [{type: string, severity: "WARNING"|"RED_FLAG", detail: string}] — fraud pre-screen flags (run before 5-model vote)
-  authenticityFlags Json?
+  authenticityFlags  Json?
   /// 0–100 authenticity score: 100 = no flags, -30 per RED_FLAG, -15 per WARNING
-  authenticityScore Int?
+  authenticityScore  Int?
   /// Feature V: AI-generated bullet summary of proof contents (JSON-encoded string[])
-  aiContentSummary  String?  @db.Text
+  aiContentSummary   String?    @db.Text
   /// Feature W: AI-generated resubmission diff (JSON: {addressed: string[], stillOpen: string[]})
-  aiResubmissionDiff  String?  @db.Text
-  createdAt     DateTime   @default(now())
+  aiResubmissionDiff String?    @db.Text
+  createdAt          DateTime   @default(now())
 
   @@index([contractId])
   @@index([milestoneId])
@@ -214,7 +215,7 @@ model Milestone {
   contractId        String
   contract          Contract        @relation(fields: [contractId], references: [id])
   title             String
-  description       String?        @db.Text
+  description       String?         @db.Text
   amountUSD         Decimal
   amountRLUSD       String?
   cancelAfter       DateTime
@@ -223,14 +224,14 @@ model Milestone {
   escrowSequence    Int?
   escrowCondition   String?
   escrowFulfillment String?
-  evmTxHash         String?   // EVM: tx hash of the fundMilestone transaction
-  nftTokenId        String?   // XRPL: NFT token ID minted on completion
-  nftTxHash         String?   // XRPL: tx hash of the NFTokenMint transaction
-  nftImageUrl       String?   // XRPL: public URL of the certificate SVG image
+  evmTxHash         String? // EVM: tx hash of the fundMilestone transaction
+  nftTokenId        String? // XRPL: NFT token ID minted on completion
+  nftTxHash         String? // XRPL: tx hash of the NFTokenMint transaction
+  nftImageUrl       String? // XRPL: public URL of the certificate SVG image
   proofs            Proof[]
 
   // Feature D: AI Proof Guidance — generated once, cached permanently
-  proofGuidance         Json?      // { tone: string, checklist: [{ item, why }] }
+  proofGuidance         Json? // { tone: string, checklist: [{ item, why }] }
   proofGuidanceCachedAt DateTime?
 
   // Feature F: AI Milestone Renegotiation
@@ -238,11 +239,11 @@ model Milestone {
   renegotiationStatus   String?
   /// When the 48-hour renegotiation window closes
   renegotiationDeadline DateTime?
-  interimUpdateText     String?    @db.Text
+  interimUpdateText     String?   @db.Text
   interimUpdateFileUrl  String?
   interimUpdateFileName String?
   /// Haiku plausibility assessment (2-sentence summary)
-  interimAiAssessment   String?    @db.Text
+  interimAiAssessment   String?   @db.Text
   /// true = plausible completion, false = unlikely
   interimAiPositive     Boolean?
   /// How many extra days the startup requested (7 | 14 | 30)
@@ -250,13 +251,13 @@ model Milestone {
   extensionApprovedAt   DateTime?
 
   // Feature G: AI Progress Check-ins
-  progressUpdates   ProgressUpdate[]
+  progressUpdates ProgressUpdate[]
 
   // Feature H: AI Reputation System
   /// AI-generated privacy-safe summary of this milestone's achievement (no names, URLs, revenue figures)
-  reputationSummary  String?   @db.Text
+  reputationSummary  String? @db.Text
   /// Startup opted in to show this card on their public profile (default: private)
-  reputationPublic   Boolean   @default(false)
+  reputationPublic   Boolean @default(false)
   /// "MVP" | "REVENUE" | "PARTNERSHIP" | "GITHUB" | "BETA" | "OTHER"
   reputationCategory String?
 
@@ -267,68 +268,68 @@ model Milestone {
 
   // Enterprise Attestation Mode — data source (defined before verification date, locked)
   /// "URL_SCRAPE" | "REST_API" | "FILE_UPLOAD" | "MANUAL_REVIEW"
-  dataSourceType          String?
+  dataSourceType       String?
   /// URL to scrape or REST API endpoint
-  dataSourceUrl           String?
+  dataSourceUrl        String?
   /// AES-256-GCM encrypted API key (enc:<iv>:<ct>:<tag>), stored only if REST_API
-  dataSourceApiKeyEnc     String?   @db.Text
+  dataSourceApiKeyEnc  String?   @db.Text
   /// Last 4 chars of API key — shown in UI for confirmation, never the full key
-  dataSourceApiKeyHint    String?
+  dataSourceApiKeyHint String?
   /// Additional config: { method, headers, responsePath } for REST_API
-  dataSourceConfig        Json?
+  dataSourceConfig     Json?
   /// When the source was locked — no edits allowed after this point
-  dataSourceLockedAt      DateTime?
+  dataSourceLockedAt   DateTime?
 
   // Enterprise Attestation Mode — results (written after platform fetch)
-  attestationFetchedAt    DateTime?
+  attestationFetchedAt   DateTime?
   /// SHA-256 of the raw fetched response
-  attestationFetchedHash  String?
+  attestationFetchedHash String?
   /// Vercel Blob URL of the raw fetched content (for audit, never shown to owner)
-  attestationFetchedBlob  String?
+  attestationFetchedBlob String?
   /// URL of the generated attestation certificate PDF
-  attestationCertUrl      String?
+  attestationCertUrl     String?
 
   // Recurring schedule
   /// "ONE_OFF" | "MONTHLY" | "QUARTERLY" | "ANNUAL"
-  scheduleType            String?
-  scheduleNextRun         DateTime?
-  schedulePreviousRun     DateTime?
+  scheduleType        String?
+  scheduleNextRun     DateTime?
+  schedulePreviousRun DateTime?
 
   // Regulatory mapping — JSON array of tag strings e.g. ["CSRD:E1", "GRI:305-1"]
-  regulatoryTags          String?   @db.Text
+  regulatoryTags String? @db.Text
 
   // Feature II: Early Warning / Pulse Checks — lightweight trend monitoring between official runs
   /// Whether pulse checks are active for this milestone (recurring schedules only)
-  pulseCheckEnabled       Boolean   @default(false)
+  pulseCheckEnabled  Boolean   @default(false)
   /// "MID_PERIOD" | "WEEKLY" | "BIWEEKLY"
-  pulseCheckInterval      String?
-  lastPulseCheckAt        DateTime?
+  pulseCheckInterval String?
+  lastPulseCheckAt   DateTime?
   /// "ON_TRACK" | "AT_RISK" | "LIKELY_MISS"
-  lastPulseCheckRisk      String?
+  lastPulseCheckRisk String?
 
   // Feature V: Peer Benchmarking — opt-in anonymized percentile comparison
-  benchmarkOptIn          Boolean   @default(false)
+  benchmarkOptIn  Boolean @default(false)
   /// "MANUFACTURING" | "TECH" | "FINANCE" | "ENERGY" | "HEALTHCARE" | "RETAIL" | "OTHER"
-  benchmarkSector         String?
+  benchmarkSector String?
 
   // Phase 3 — Feature VI: Predictive Miss Detection
   /// "YES" | "NO" | "INCONCLUSIVE" — current AI prediction based on pulse-check trend
-  predictedOutcome        String?
+  predictedOutcome    String?
   /// 0.0–1.0 confidence from linear regression R² × avg snapshot confidence
-  predictedConfidence     Float?
-  predictedUpdatedAt      DateTime?
+  predictedConfidence Float?
+  predictedUpdatedAt  DateTime?
 
   // Phase 3 — Feature X: Enterprise System Connectors
   /// "SAP" | "WORKDAY" | "SALESFORCE" | "NETSUITE" — set when dataSourceType=ENTERPRISE_CONNECTOR
-  dataSourceConnector     String?
+  dataSourceConnector String?
 
   // Phase 3 — Feature XI: Multi-Party Consensus
-  consensusEnabled        Boolean   @default(false)
+  consensusEnabled   Boolean   @default(false)
   /// M — minimum YES votes required (AI + humans combined)
-  consensusThreshold      Int?
+  consensusThreshold Int?
   /// "AWAITING_VOTES" | "REACHED" | "FAILED" | "TIMED_OUT"
-  consensusStatus         String?
-  consensusDeadline       DateTime?
+  consensusStatus    String?
+  consensusDeadline  DateTime?
 
   attestationEntries AttestationEntry[]
   pulseSnapshots     PulseCheckSnapshot[]
@@ -339,9 +340,9 @@ model Milestone {
   connectorStatus      String?   @default("UNKNOWN") // "OK" | "ERROR" | "UNKNOWN"
 
   // Feature 10: Confidential Attestation Mode
-  isConfidential  Boolean @default(false)
-  encryptedGoal   String? @db.Text // AES-256-GCM encrypted JSON {title, description}
-  goalHash        String?           // sha256(title + description + salt) — anchored on-chain
+  isConfidential Boolean @default(false)
+  encryptedGoal  String? @db.Text // AES-256-GCM encrypted JSON {title, description}
+  goalHash       String? // sha256(title + description + salt) — anchored on-chain
 
   // Custom AI verification criteria (enterprise: override default prompt rubric)
   verificationCriteria String? @db.Text
@@ -350,13 +351,13 @@ model Milestone {
   dependsOnMilestoneId String?
 
   // Enterprise internal approval workflow
-  internalApprovalStatus  String?    // null | "APPROVED" | "REJECTED"
-  internalApprovedBy      String?    // name of approver (denormalised for display)
-  internalApprovedAt      DateTime?
-  internalApprovalNote    String?    @db.Text
+  internalApprovalStatus String? // null | "APPROVED" | "REJECTED"
+  internalApprovedBy     String? // name of approver (denormalised for display)
+  internalApprovedAt     DateTime?
+  internalApprovalNote   String?   @db.Text
 
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([contractId])
 }
@@ -364,30 +365,30 @@ model Milestone {
 /// One attestation run result for a milestone.
 /// Created by the platform runner on each scheduled or manual run.
 model AttestationEntry {
-  id            String    @id @default(cuid())
-  milestoneId   String
-  milestone     Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  id                String    @id @default(cuid())
+  milestoneId       String
+  milestone         Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
   /// e.g. "2026-Q1", "2026-04", "2026" — identifies the period being attested
-  period        String
-  fetchedAt     DateTime
-  fetchedHash   String
-  fetchedBlobUrl String?
+  period            String
+  fetchedAt         DateTime
+  fetchedHash       String
+  fetchedBlobUrl    String?
   /// "YES" | "NO" | "INCONCLUSIVE"
-  aiVerdict     String
-  aiReasoning   String    @db.Text
-  xrplTxHash    String?
-  certUrl       String?
+  aiVerdict         String
+  aiReasoning       String    @db.Text
+  xrplTxHash        String?
+  certUrl           String?
   /// "PLATFORM" | "AUDITOR_RERUN"
-  type          String    @default("PLATFORM")
+  type              String    @default("PLATFORM")
   /// For AUDITOR_RERUN: points to the original PLATFORM entry
-  linkedEntryId String?
-  auditorEmail  String?
+  linkedEntryId     String?
+  auditorEmail      String?
   /// Feature I: AI-generated regulatory mapping [{framework, article, clause, confidence}]
   regulatoryMapping Json?
   /// Phase 3 — Feature IX: Cryptographic Evidence Chain
   /// {step0, step1, step2, step3, promptHash, systemPromptVersion, chainRoot}
-  evidenceChain Json?
-  createdAt     DateTime  @default(now())
+  evidenceChain     Json?
+  createdAt         DateTime  @default(now())
 
   @@index([milestoneId])
 }
@@ -533,15 +534,15 @@ model WebhookEndpoint {
 /// One-to-one: a user's connected Telegram chat.
 /// Linked via a short-lived deep-link token at /api/telegram/connect.
 model TelegramChat {
-  id          String    @id @default(cuid())
-  userId      String    @unique
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  chatId      String    // Telegram numeric chat ID (stored as string)
-  active      Boolean   @default(true)
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatId             String // Telegram numeric chat ID (stored as string)
+  active             Boolean   @default(true)
   /// Pending connection token (hex, 32 bytes). Cleared after /start is confirmed.
   connectToken       String?   @unique
   connectTokenExpiry DateTime?
-  createdAt   DateTime  @default(now())
+  createdAt          DateTime  @default(now())
 }
 
 // ── Reputation ────────────────────────────────────────────────────────────────
@@ -573,11 +574,11 @@ model CredibilityScore {
   id         String   @id @default(cuid())
   startupId  String
   contractId String
-  score      Int                // 0-100
-  tier       String             // "HIGH" | "MEDIUM" | "LOW"
-  signals    Json               // [{label, value, positive}]
+  score      Int // 0-100
+  tier       String // "HIGH" | "MEDIUM" | "LOW"
+  signals    Json // [{label, value, positive}]
   summary    String   @db.Text
-  rawSignals Json               // raw data for audit/debugging
+  rawSignals Json // raw data for audit/debugging
   cachedAt   DateTime @default(now())
   createdAt  DateTime @default(now())
 
@@ -632,14 +633,14 @@ model Report {
 
 /// Interest registrations from companies wanting early access to Attestation Mode.
 model EnterpriseWaitlist {
-  id             String   @id @default(cuid())
-  name           String
-  email          String
-  company        String
-  useCase        String   // "CSRD" | "KPI" | "COMPLIANCE" | "OTHER"
-  message        String?  @db.Text
-  preActivated   Boolean  @default(false) // true = admin approved before account exists
-  createdAt      DateTime @default(now())
+  id           String   @id @default(cuid())
+  name         String
+  email        String
+  company      String
+  useCase      String // "CSRD" | "KPI" | "COMPLIANCE" | "OTHER"
+  message      String?  @db.Text
+  preActivated Boolean  @default(false) // true = admin approved before account exists
+  createdAt    DateTime @default(now())
 
   @@index([email])
 }
@@ -665,7 +666,7 @@ model SanctionsCache {
 /// Stores every pulse-check snapshot for trend analysis.
 /// Used by predictor.service.ts to compute regression-based predictions.
 model PulseCheckSnapshot {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   milestoneId String
   milestone   Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
   capturedAt  DateTime  @default(now())
@@ -713,17 +714,17 @@ model MaterialityAssessment {
 /// API key for programmatic access to the enterprise API.
 /// The full key is shown once at creation and never stored — only its SHA-256 hash is kept.
 model ApiKey {
-  id          String    @id @default(cuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name        String
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
   /// SHA-256(fullKey) — used to authenticate incoming requests
-  keyHash     String    @unique
+  keyHash    String    @unique
   /// First 8 chars of the key — shown in UI as identifier, never the full key
-  keyPrefix   String
-  lastUsedAt  DateTime?
-  active      Boolean   @default(true)
-  createdAt   DateTime  @default(now())
+  keyPrefix  String
+  lastUsedAt DateTime?
+  active     Boolean   @default(true)
+  createdAt  DateTime  @default(now())
 
   @@index([userId])
   @@index([keyHash])
@@ -761,9 +762,9 @@ model OrgMember {
 model SsoConfig {
   id           String   @id @default(cuid())
   orgId        String   @unique
-  provider     String            // "workos" | "saml" | "oidc"
-  connectionId String            // WorkOS connection ID or SAML metadata URL
-  domain       String            // e.g. "bmw.de"
+  provider     String // "workos" | "saml" | "oidc"
+  connectionId String // WorkOS connection ID or SAML metadata URL
+  domain       String // e.g. "bmw.de"
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -799,12 +800,12 @@ model Entity {
 model NotificationIntegration {
   id          String   @id @default(cuid())
   userId      String
-  type        String            // "slack" | "teams"
+  type        String // "slack" | "teams"
   accessToken String?  @db.Text // encrypted, Slack only
   webhookUrl  String?  @db.Text // Teams incoming webhook URL
   channelId   String?
   channelName String?
-  events      Json              // string[] of subscribed event names
+  events      Json // string[] of subscribed event names
   createdAt   DateTime @default(now())
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -819,7 +820,7 @@ model ConnectorHealthCheck {
   id           String   @id @default(cuid())
   milestoneId  String
   connectorUrl String
-  status       String            // "OK" | "ERROR" | "TIMEOUT"
+  status       String // "OK" | "ERROR" | "TIMEOUT"
   httpStatus   Int?
   errorMessage String?  @db.Text
   checkedAt    DateTime @default(now())
@@ -832,17 +833,17 @@ model ConnectorHealthCheck {
 
 /// Pre-commitment due-diligence space shared between an investor and a startup (Feature 5).
 model DealRoom {
-  id                    String        @id @default(cuid())
+  id                    String         @id @default(cuid())
   investorId            String
   startupId             String?
-  inviteToken           String        @unique @default(cuid())
-  status                String        @default("OPEN") // "OPEN"|"SUBMITTED"|"CONVERTED"|"DECLINED"
-  aiBrief               String?       @db.Text
+  inviteToken           String         @unique @default(cuid())
+  status                String         @default("OPEN") // "OPEN"|"SUBMITTED"|"CONVERTED"|"DECLINED"
+  aiBrief               String?        @db.Text
   briefAt               DateTime?
   convertedToContractId String?
-  createdAt             DateTime      @default(now())
+  createdAt             DateTime       @default(now())
   documents             DealDocument[]
-  investor              User          @relation("DealRoomInvestor", fields: [investorId], references: [id])
+  investor              User           @relation("DealRoomInvestor", fields: [investorId], references: [id])
 
   @@index([investorId])
 }
@@ -869,7 +870,7 @@ model ContractTemplate {
   name        String
   description String?
   industry    String?
-  milestones  Json     // [{title, amountUSD, deadlineDays, description}]
+  milestones  Json // [{title, amountUSD, deadlineDays, description}]
   isPublic    Boolean  @default(false)
   useCount    Int      @default(0)
   createdAt   DateTime @default(now())
@@ -885,11 +886,11 @@ model ContractTemplate {
 /// CSRD/ESRS/GRI regulatory update fetched by the weekly cron (Feature 9).
 model RegulatoryAlert {
   id           String   @id @default(cuid())
-  source       String            // "EUR-LEX" | "EFRAG" | "GRI"
+  source       String // "EUR-LEX" | "EFRAG" | "GRI"
   title        String
   url          String
-  affectedTags Json              // string[] e.g. ["CSRD:E1", "GRI:305-1"]
-  severity     String            // "MINOR" | "MAJOR"
+  affectedTags Json // string[] e.g. ["CSRD:E1", "GRI:305-1"]
+  severity     String // "MINOR" | "MAJOR"
   aiSummary    String   @db.Text
   publishedAt  DateTime
   createdAt    DateTime @default(now())
@@ -901,11 +902,11 @@ model RegulatoryAlert {
 
 /// An auditor partner account (Big 4 / audit firm) (Feature 11).
 model AuditorPartner {
-  id        String               @id @default(cuid())
-  userId    String               @unique
+  id        String                @id @default(cuid())
+  userId    String                @unique
   firmName  String
-  createdAt DateTime             @default(now())
-  user      User                 @relation(fields: [userId], references: [id])
+  createdAt DateTime              @default(now())
+  user      User                  @relation(fields: [userId], references: [id])
   clients   AuditorClientAccess[]
 }
 
@@ -945,7 +946,7 @@ model Notification {
 
 /// Individual vote cast by a party (AI or human) in a consensus attestation.
 model ConsensusVote {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   milestoneId String
   milestone   Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
   partyEmail  String
@@ -953,15 +954,15 @@ model ConsensusVote {
   partyRole   String
   /// "YES" | "NO" | "ABSTAIN" — null while pending
   vote        String?
-  reasoning   String?  @db.Text
+  reasoning   String?   @db.Text
   votedAt     DateTime?
   /// XRPL tx hash — each vote is anchored on-chain
   xrplTxHash  String?
   /// For AI_PLATFORM votes: linked AttestationEntry id
   entryId     String?
   /// One-time token sent via email to human voters
-  token       String   @unique
-  tokenUsed   Boolean  @default(false)
+  token       String    @unique
+  tokenUsed   Boolean   @default(false)
   tokenExpiry DateTime
 
   @@index([milestoneId])

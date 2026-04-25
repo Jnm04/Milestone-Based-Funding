@@ -1,4 +1,5 @@
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { verify as verifyTotp } from "otplib";
@@ -13,6 +14,10 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -36,6 +41,8 @@ export const authOptions: NextAuthOptions = {
         if (user.lockoutUntil && user.lockoutUntil > new Date()) {
           throw new Error("TooManyAttempts");
         }
+
+        if (!user.passwordHash) return null; // Google-only account
 
         const valid = await bcrypt.compare(credentials.password, user.passwordHash);
 
@@ -83,7 +90,42 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user, trigger, session }) {
+    async signIn({ user, account }) {
+      if (account?.provider !== "google") return true;
+      if (!user.email) return false;
+
+      const existing = await prisma.user.findUnique({ where: { email: user.email } });
+      if (existing) {
+        if (!existing.googleId) {
+          await prisma.user.update({ where: { id: existing.id }, data: { googleId: account.providerAccountId } });
+        }
+        return true;
+      }
+
+      await prisma.user.create({
+        data: {
+          email: user.email,
+          name: user.name ?? null,
+          passwordHash: null,
+          googleId: account.providerAccountId,
+          role: "INVESTOR",
+          emailVerified: true,
+        },
+      });
+      return true;
+    },
+
+    async jwt({ token, user, account, trigger, session }) {
+      if (user && account?.provider === "google") {
+        const dbUser = await prisma.user.findUnique({ where: { email: user.email! } });
+        if (dbUser) {
+          token.id = dbUser.id;
+          token.role = dbUser.role;
+          token.walletAddress = dbUser.walletAddress ?? null;
+          token.isEnterprise = dbUser.isEnterprise;
+        }
+        return token;
+      }
       if (user) {
         token.id = user.id;
         token.role = (user as unknown as { role: string }).role;
