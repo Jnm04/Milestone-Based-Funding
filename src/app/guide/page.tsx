@@ -132,6 +132,90 @@ export default function GuidePage() {
         </ScrollReveal>
       </section>
 
+      {/* Architecture diagram */}
+      <section className="px-6 pb-16" style={{ position: "relative", zIndex: 1 }}>
+        <div className="max-w-3xl mx-auto">
+          <ScrollReveal>
+            <p className="text-xs font-semibold uppercase tracking-widest mb-8 text-center" style={{ color: "#C4704B" }}>How it works</p>
+
+            {/* Flow diagram */}
+            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.14)", borderRadius: 16, padding: "32px 24px", marginBottom: 24 }}>
+              <p className="text-sm font-semibold mb-6 text-center" style={{ color: "#A89B8C", letterSpacing: "0.04em", textTransform: "uppercase", fontSize: 11 }}>Escrow Flow</p>
+              <svg viewBox="0 0 700 120" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "auto" }}>
+                {/* Nodes */}
+                {[
+                  { x: 30, label: "Investor", sub: "Creates contract" },
+                  { x: 175, label: "Startup", sub: "Accepts invite" },
+                  { x: 320, label: "Escrow", sub: "RLUSD locked" },
+                  { x: 465, label: "AI Vote", sub: "5-model consensus" },
+                  { x: 610, label: "Settlement", sub: "Funds released" },
+                ].map(({ x, label, sub }, i) => (
+                  <g key={i}>
+                    <rect x={x} y={20} width={90} height={56} rx={10} fill="rgba(196,112,75,0.08)" stroke="rgba(196,112,75,0.3)" strokeWidth={1} />
+                    <text x={x + 45} y={46} textAnchor="middle" fontSize={12} fontWeight={600} fill="#EDE6DD" fontFamily="sans-serif">{label}</text>
+                    <text x={x + 45} y={62} textAnchor="middle" fontSize={9} fill="#A89B8C" fontFamily="sans-serif">{sub}</text>
+                  </g>
+                ))}
+                {/* Arrows */}
+                {[120, 265, 410, 555].map((x, i) => (
+                  <g key={i}>
+                    <line x1={x} y1={48} x2={x + 55} y2={48} stroke="rgba(196,112,75,0.4)" strokeWidth={1.5} />
+                    <polygon points={`${x + 55},44 ${x + 63},48 ${x + 55},52`} fill="rgba(196,112,75,0.4)" />
+                  </g>
+                ))}
+                {/* Step labels below arrows */}
+                {[
+                  { x: 120, text: "Invite" },
+                  { x: 265, text: "Fund" },
+                  { x: 410, text: "Proof" },
+                  { x: 555, text: "Verify" },
+                ].map(({ x, text }, i) => (
+                  <text key={i} x={x + 32} y={92} textAnchor="middle" fontSize={9} fill="#6B5E52" fontFamily="sans-serif">{text}</text>
+                ))}
+              </svg>
+            </div>
+
+            {/* Dual-chain architecture */}
+            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.14)", borderRadius: 16, padding: "32px 24px" }}>
+              <p className="text-sm font-semibold mb-6 text-center" style={{ color: "#A89B8C", letterSpacing: "0.04em", textTransform: "uppercase", fontSize: 11 }}>Dual-Chain Architecture</p>
+              <svg viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "auto" }}>
+                {/* Center: Cascrow platform */}
+                <rect x={270} y={72} width={160} height={56} rx={12} fill="rgba(196,112,75,0.12)" stroke="rgba(196,112,75,0.45)" strokeWidth={1.5} />
+                <text x={350} y={98} textAnchor="middle" fontSize={13} fontWeight={700} fill="#EDE6DD" fontFamily="sans-serif">Cascrow</text>
+                <text x={350} y={115} textAnchor="middle" fontSize={9.5} fill="#A89B8C" fontFamily="sans-serif">AI · Escrow logic · Database</text>
+
+                {/* Left: XRPL EVM Sidechain */}
+                <rect x={28} y={60} width={170} height={80} rx={12} fill="rgba(59,130,246,0.07)" stroke="rgba(59,130,246,0.3)" strokeWidth={1} />
+                <text x={113} y={90} textAnchor="middle" fontSize={11} fontWeight={700} fill="#93C5FD" fontFamily="sans-serif">XRPL EVM Sidechain</text>
+                <text x={113} y={106} textAnchor="middle" fontSize={9} fill="#6B7280" fontFamily="sans-serif">MilestoneFundEscrow.sol</text>
+                <text x={113} y={120} textAnchor="middle" fontSize={9} fill="#6B7280" fontFamily="sans-serif">RLUSD (ERC-20) · MetaMask</text>
+
+                {/* Right: XRPL Mainnet */}
+                <rect x={502} y={60} width={170} height={80} rx={12} fill="rgba(52,211,153,0.07)" stroke="rgba(52,211,153,0.3)" strokeWidth={1} />
+                <text x={587} y={90} textAnchor="middle" fontSize={11} fontWeight={700} fill="#6EE7B7" fontFamily="sans-serif">XRPL Mainnet</text>
+                <text x={587} y={106} textAnchor="middle" fontSize={9} fill="#6B7280" fontFamily="sans-serif">NFTokenMint (non-transferable)</text>
+                <text x={587} y={120} textAnchor="middle" fontSize={9} fill="#6B7280" fontFamily="sans-serif">AccountSet audit memos</text>
+
+                {/* Arrows left */}
+                <line x1={198} y1={100} x2={268} y2={100} stroke="rgba(59,130,246,0.4)" strokeWidth={1.5} strokeDasharray="4 3" />
+                <polygon points="268,96 276,100 268,104" fill="rgba(59,130,246,0.5)" />
+                <text x={233} y={92} textAnchor="middle" fontSize={8.5} fill="#6B7280" fontFamily="sans-serif">fund / release</text>
+
+                {/* Arrows right */}
+                <line x1={430} y1={100} x2={500} y2={100} stroke="rgba(52,211,153,0.4)" strokeWidth={1.5} strokeDasharray="4 3" />
+                <polygon points="500,96 508,100 500,104" fill="rgba(52,211,153,0.5)" />
+                <text x={465} y={92} textAnchor="middle" fontSize={8.5} fill="#6B7280" fontFamily="sans-serif">mint NFT / audit</text>
+
+                {/* Labels bottom */}
+                <text x={113} y={163} textAnchor="middle" fontSize={9} fill="#4B5563" fontFamily="sans-serif">Chain ID 1449000 (testnet)</text>
+                <text x={350} y={163} textAnchor="middle" fontSize={9} fill="#4B5563" fontFamily="sans-serif">Vercel · PostgreSQL · Upstash</text>
+                <text x={587} y={163} textAnchor="middle" fontSize={9} fill="#4B5563" fontFamily="sans-serif">s1.ripple.com · mainnet</text>
+              </svg>
+            </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
       {/* Steps */}
       <section className="px-6 pb-32" style={{ position: "relative", zIndex: 1 }}>
         <div className="max-w-2xl mx-auto">

@@ -1331,11 +1331,13 @@ export default function LandingPage() {
         >
           <span>© 2026 Cascrow</span>
           <div className="flex gap-5">
+            <Link href="/impressum"   className="transition-colors hover:text-[#A89B8C]">Impressum</Link>
             <Link href="/terms"       className="transition-colors hover:text-[#A89B8C]">Terms</Link>
             <Link href="/datenschutz" className="transition-colors hover:text-[#A89B8C]">Privacy</Link>
             <Link href="/risiken"     className="transition-colors hover:text-[#A89B8C]">Risk Disclosure</Link>
             <Link href="/widerruf"    className="transition-colors hover:text-[#A89B8C]">Withdrawal</Link>
             <Link href="/avv"         className="transition-colors hover:text-[#A89B8C]">DPA</Link>
+            <Link href="/security"    className="transition-colors hover:text-[#A89B8C]">Security</Link>
           </div>
         </div>
       </footer>

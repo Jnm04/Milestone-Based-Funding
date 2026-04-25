@@ -292,6 +292,7 @@ export function ContractActions({
   attestationFetchedHash,
   attestationCertUrl,
 }: ContractActionsProps) {
+  const [isMobileNoWallet, setIsMobileNoWallet] = useState(false);
   const [fundingStep, setFundingStep] = useState<
     "idle" | "approving" | "funding" | "confirming" | "done"
   >("idle");
@@ -320,6 +321,12 @@ export function ContractActions({
     feedback: string;
     suggestions: string[];
   } | null>(null);
+
+  useEffect(() => {
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    const hasWallet = typeof window !== "undefined" && !!window.ethereum;
+    setIsMobileNoWallet(isMobile && !hasWallet);
+  }, []);
 
   // Auto-reset confirm states after 5 seconds to prevent accidental clicks
   useEffect(() => {
@@ -1024,9 +1031,22 @@ export function ContractActions({
           Amount: <strong style={{ color: "#D4B896" }}>{amountRLUSD} RLUSD</strong> — MetaMask will ask you to
           approve the token transfer, then sign the escrow transaction.
         </p>
+        {isMobileNoWallet && (
+          <div
+            className="flex items-start gap-2 p-3 rounded-lg text-xs leading-relaxed"
+            style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.3)", color: "#ca8a04" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+              <path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            <span>
+              <strong>Desktop required for funding.</strong> MetaMask is a browser extension that only works on desktop (Chrome, Firefox, Brave). Please open this contract on your computer to fund the escrow.
+            </span>
+          </div>
+        )}
         <button
           onClick={handleFundEscrow}
-          disabled={fundingStep !== "idle" || faucetLoading}
+          disabled={fundingStep !== "idle" || faucetLoading || isMobileNoWallet}
           className="w-full rounded-lg py-2.5 text-sm font-semibold transition-colors disabled:opacity-50"
           style={{ background: "#C4704B", color: "#171311" }}
         >

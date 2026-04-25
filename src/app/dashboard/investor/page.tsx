@@ -576,6 +576,105 @@ export default function InvestorDashboard() {
         </div>
 
         <div className="px-6 md:px-10 py-8 flex flex-col gap-8">
+
+          {/* First-run onboarding checklist — shown when wallet connected but no contracts yet */}
+          {walletAddress && !loadingContracts && totalContracts === 0 && (
+            <div
+              className="flex flex-col gap-5 p-6 rounded-2xl"
+              style={{ background: "rgba(196,112,75,0.05)", border: "1px solid rgba(196,112,75,0.25)", borderTop: "3px solid #C4704B" }}
+            >
+              <div className="flex items-start gap-4">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: "rgba(196,112,75,0.15)" }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C4704B" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-base font-semibold" style={{ color: "#EDE6DD" }}>Welcome to cascrow — here&apos;s how to get started</p>
+                  <p className="text-xs mt-1" style={{ color: "#A89B8C" }}>
+                    Create your first escrow contract in minutes. Funds are locked on-chain and released automatically when AI verifies the milestone.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {/* Step 1 — done */}
+                <div
+                  className="flex items-center gap-4 p-4 rounded-xl"
+                  style={{ background: "rgba(52,211,153,0.06)", border: "1px solid rgba(52,211,153,0.2)" }}
+                >
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+                    style={{ background: "rgba(52,211,153,0.15)" }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold" style={{ color: "#34d399" }}>Wallet connected</p>
+                    <p className="text-xs" style={{ color: "#A89B8C" }}>Your MetaMask address is linked to your account.</p>
+                  </div>
+                </div>
+
+                {/* Step 2 — action required */}
+                <div
+                  className="flex items-center gap-4 p-4 rounded-xl"
+                  style={{ background: "rgba(196,112,75,0.06)", border: "1px solid rgba(196,112,75,0.25)" }}
+                >
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-sm font-bold"
+                    style={{ background: "rgba(196,112,75,0.15)", color: "#C4704B" }}
+                  >
+                    2
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold" style={{ color: "#EDE6DD" }}>Create your first contract</p>
+                    <p className="text-xs mt-0.5" style={{ color: "#A89B8C" }}>
+                      Define a milestone, set the RLUSD amount, and choose a deadline. Takes under 2 minutes.
+                    </p>
+                  </div>
+                  <Link
+                    href={`/contract/new?investor=${walletAddress}`}
+                    className="cs-btn-primary cs-btn-sm shrink-0"
+                  >
+                    Create →
+                  </Link>
+                </div>
+
+                {/* Step 3 — locked */}
+                <div
+                  className="flex items-center gap-4 p-4 rounded-xl"
+                  style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", opacity: 0.6 }}
+                >
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-sm font-bold"
+                    style={{ background: "rgba(255,255,255,0.06)", color: "#6B5E52" }}
+                  >
+                    3
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold" style={{ color: "#A89B8C" }}>Invite your startup & fund escrow</p>
+                    <p className="text-xs mt-0.5" style={{ color: "#6B5E52" }}>
+                      Share the invite link. Once they accept, lock RLUSD on-chain via MetaMask.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 text-xs" style={{ color: "#6B5E52", borderTop: "1px solid rgba(196,112,75,0.1)", paddingTop: 16 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                Funds stay locked until AI verifies proof (3/5 model majority vote) — or you manually approve. No third-party custody.
+              </div>
+            </div>
+          )}
+
           {/* Wallet missing */}
           {!walletAddress ? (
             <div

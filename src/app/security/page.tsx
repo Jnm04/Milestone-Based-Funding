@@ -196,7 +196,7 @@ export default function SecurityPage() {
             For security disclosures or enterprise compliance questions, please contact us directly.
           </p>
           <a
-            href="mailto:security@cascrow.xyz"
+            href="mailto:security@cascrow.com"
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -210,7 +210,7 @@ export default function SecurityPage() {
               fontWeight: 600,
             }}
           >
-            security@cascrow.xyz
+            security@cascrow.com
           </a>
         </div>
       </div>
