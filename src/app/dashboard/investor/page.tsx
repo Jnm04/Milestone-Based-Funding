@@ -249,12 +249,12 @@ function TransparencyReportModal({ onClose }: { onClose: () => void }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ quarter, year }),
       });
-      const data = await res.json() as { reportUrl?: string; cached?: boolean; error?: string };
-      if (!res.ok || !data.reportUrl) {
+      const data = await res.json() as { period?: string; cached?: boolean; error?: string };
+      if (!res.ok || !data.period) {
         toast.error(data.error ?? "Failed to generate report.");
         return;
       }
-      setReportUrl(data.reportUrl);
+      setReportUrl(`/api/dashboard/investor/transparency-report?period=${encodeURIComponent(data.period)}`);
       setCached(data.cached ?? false);
       toast.success(data.cached ? "Report loaded from cache." : "Report generated successfully.");
     } catch {

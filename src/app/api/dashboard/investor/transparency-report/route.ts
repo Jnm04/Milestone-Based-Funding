@@ -49,6 +49,42 @@ function quarterLabel(q: string, year: number): string {
   return names[q] ?? q;
 }
 
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) return new Response("Unauthorized", { status: 401 });
+    if (session.user.role !== "INVESTOR") return new Response("Forbidden", { status: 403 });
+
+    const period = request.nextUrl.searchParams.get("period");
+    if (!period) return new Response("Missing period", { status: 400 });
+
+    const investor = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { lastTransparencyReportUrl: true, lastTransparencyReportPeriod: true },
+    });
+
+    if (!investor?.lastTransparencyReportUrl || investor.lastTransparencyReportPeriod !== period) {
+      return new Response("Report not found", { status: 404 });
+    }
+
+    const blobRes = await fetch(investor.lastTransparencyReportUrl, {
+      headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` },
+    });
+    if (!blobRes.ok) return new Response("Failed to fetch report", { status: 502 });
+
+    const html = await blobRes.text();
+    return new Response(html, {
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "private, no-store",
+      },
+    });
+  } catch (err) {
+    console.error("[transparency-report GET] Error:", err);
+    return new Response("Internal Server Error", { status: 500 });
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -104,11 +140,7 @@ export async function POST(request: NextRequest) {
       investor.lastTransparencyReportPeriod === periodKey &&
       investor.lastTransparencyReportUrl
     ) {
-      return NextResponse.json({
-        reportUrl: investor.lastTransparencyReportUrl,
-        cached: true,
-        period: periodKey,
-      });
+      return NextResponse.json({ period: periodKey, cached: true });
     }
 
     // ── Fetch contracts for this quarter ─────────────────────────────────────
@@ -304,7 +336,7 @@ Respond with ONLY the narrative paragraph as plain text.`,
       },
     });
 
-    return NextResponse.json({ reportUrl, cached: false, period: periodKey });
+    return NextResponse.json({ period: periodKey, cached: false });
   } catch (err) {
     console.error("[transparency-report] Error:", err);
     return NextResponse.json({ error: "Failed to generate report" }, { status: 500 });
