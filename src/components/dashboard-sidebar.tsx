@@ -14,11 +14,13 @@ const INVESTOR_NAV = [
   { href: "/dashboard/investor", label: "Dashboard", icon: IconDashboard },
   { href: "/contract/new", label: "New Contract", icon: IconPlus, dynamic: true },
   { href: "/profile", label: "Profile", icon: IconUser },
+  { href: "/support", label: "Support", icon: IconSupport },
 ];
 
 const STARTUP_NAV = [
   { href: "/dashboard/startup", label: "Dashboard", icon: IconDashboard },
   { href: "/profile", label: "Profile", icon: IconUser },
+  { href: "/support", label: "Support", icon: IconSupport },
 ];
 
 function IconDashboard() {
@@ -43,6 +45,15 @@ function IconPlus() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+function IconSupport() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
     </svg>
   );
 }
