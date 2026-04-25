@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { sendTelegramMessage } from "@/services/telegram/telegram.service";
 
@@ -20,8 +21,16 @@ export async function POST(request: NextRequest) {
     console.error("[telegram/webhook] TELEGRAM_WEBHOOK_SECRET is not set — rejecting request");
     return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
   }
-  const incoming = request.headers.get("x-telegram-bot-api-secret-token");
-  if (incoming !== secretToken) {
+  const incoming = request.headers.get("x-telegram-bot-api-secret-token") ?? "";
+  let tokenValid = false;
+  try {
+    const a = Buffer.from(incoming);
+    const b = Buffer.from(secretToken);
+    tokenValid = a.length === b.length && crypto.timingSafeEqual(a, b);
+  } catch {
+    tokenValid = false;
+  }
+  if (!tokenValid) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

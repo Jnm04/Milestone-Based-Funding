@@ -14,6 +14,7 @@ import { fireWebhook } from "@/services/webhook/webhook.service";
 import { createNotification } from "@/services/notifications/inapp.service";
 import { getPostHogClient } from "@/lib/posthog-server";
 import { isValidCronSecret } from "@/lib/cron-auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 // 150s: up to 3 AI attempts (10s + 60s waits) + XRPL/NFT overhead
 export const maxDuration = 150;
@@ -58,7 +59,17 @@ export async function POST(request: NextRequest) {
   // ── Phase 1: Auth + validation (sync, returns JSON errors before streaming) ──
   const isInternalCall = isValidCronSecret(request.headers.get("authorization"));
   let sessionUserId: string | null = null;
-  if (!isInternalCall) {
+  if (isInternalCall) {
+    // Cron calls skip per-user rate limiting but have their own global cap to
+    // prevent AI cost exhaustion if CRON_SECRET is ever compromised.
+    const withinCronLimit = await checkRateLimit("verify-cron:global", 200, RATE_LIMIT_WINDOW_MS);
+    if (!withinCronLimit) {
+      return NextResponse.json(
+        { error: "Cron verification rate limit exceeded.", code: "RATE_LIMITED" },
+        { status: 429, headers: { "Retry-After": "600" } }
+      );
+    }
+  } else {
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

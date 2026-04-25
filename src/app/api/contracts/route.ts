@@ -262,9 +262,6 @@ export async function POST(request: NextRequest) {
       if (!Number.isFinite(amt) || amt <= 0 || amt > 999_999_999) {
         return NextResponse.json({ error: "Invalid amount: must be between 0 and 999,999,999" }, { status: 400 });
       }
-      if (Math.round(amt * 100) !== amt * 100) {
-        return NextResponse.json({ error: "Invalid amount: max 2 decimal places allowed" }, { status: 400 });
-      }
     }
 
     const result = await prisma.$transaction(async (tx) => {

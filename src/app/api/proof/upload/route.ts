@@ -161,9 +161,9 @@ export async function POST(request: NextRequest) {
     let extractedText: string | null = null;
     try {
       if (category === "pdf") {
-        extractedText = await extractPdfText(buffer);
+        extractedText = (await extractPdfText(buffer)).slice(0, 50000);
       } else if (category === "office") {
-        extractedText = await extractOfficeText(buffer, fileName);
+        extractedText = (await extractOfficeText(buffer, fileName)).slice(0, 50000);
       } else if (category === "text") {
         extractedText = buffer.toString("utf-8").slice(0, 50000);
       }

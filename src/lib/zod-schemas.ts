@@ -34,11 +34,11 @@ const milestoneItemSchema = z.object({
     .max(1000, "Milestone title must be at most 1000 characters")
     .trim(),
 
-  // Accept number or numeric string — the route already does Number(m.amountUSD)
   amountUSD: z.coerce
     .number({ invalid_type_error: "amountUSD must be a number" })
     .positive("amountUSD must be positive")
-    .max(999_999_999, "amountUSD exceeds maximum"),
+    .max(999_999_999, "amountUSD exceeds maximum")
+    .refine((v) => Math.round(v * 100) === v * 100, { message: "amountUSD must have at most 2 decimal places" }),
 
   cancelAfter: z
     .string({ required_error: "cancelAfter is required" })
@@ -61,6 +61,7 @@ const attestationMilestoneItemSchema = z.object({
     .number()
     .nonnegative("amountUSD must be non-negative")
     .max(999_999_999)
+    .refine((v) => Math.round(v * 100) === v * 100, { message: "amountUSD must have at most 2 decimal places" })
     .optional()
     .default(0),
 

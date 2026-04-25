@@ -5,14 +5,39 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 const COOKIE_NAME = "cascrow_admin";
 const COOKIE_MAX_AGE = 8 * 60 * 60; // 8 hours
+const COOKIE_MAX_AGE_MS = COOKIE_MAX_AGE * 1000;
 const MIN_SECRET_LENGTH = 32;
 
-/** Derives a deterministic session token from the INTERNAL_SECRET. */
-function makeSessionToken(secret: string): string {
+/**
+ * Cookie format: "<issuedAt>.<hmac>"
+ * The HMAC covers both the secret and the issuedAt timestamp so the server can
+ * enforce expiry independently of the browser's cookie maxAge.
+ */
+function makeSessionToken(secret: string, issuedAt: number): string {
   return crypto
     .createHmac("sha256", secret)
-    .update("admin-session-v1")
+    .update(`admin-session-v2:${issuedAt}`)
     .digest("hex");
+}
+
+function makeSessionCookieValue(secret: string): string {
+  const issuedAt = Date.now();
+  return `${issuedAt}.${makeSessionToken(secret, issuedAt)}`;
+}
+
+function verifySessionCookieValue(secret: string, cookieValue: string): boolean {
+  const dot = cookieValue.indexOf(".");
+  if (dot === -1) return false;
+  const issuedAt = parseInt(cookieValue.slice(0, dot), 10);
+  if (isNaN(issuedAt) || Date.now() - issuedAt > COOKIE_MAX_AGE_MS) return false;
+  const actual = cookieValue.slice(dot + 1);
+  const expected = makeSessionToken(secret, issuedAt);
+  if (actual.length !== expected.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(actual), Buffer.from(expected));
+  } catch {
+    return false;
+  }
 }
 
 function getSecret(): string {
@@ -26,27 +51,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
   }
 
-  const cookieToken = req.cookies.get(COOKIE_NAME)?.value ?? "";
-  if (!cookieToken) {
+  const cookieValue = req.cookies.get(COOKIE_NAME)?.value ?? "";
+  if (!cookieValue) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 
-  const expected = makeSessionToken(secret);
-  if (cookieToken.length !== expected.length) {
-    return NextResponse.json({ ok: false }, { status: 401 });
-  }
-
-  try {
-    const valid = crypto.timingSafeEqual(
-      Buffer.from(cookieToken),
-      Buffer.from(expected)
-    );
-    return valid
-      ? NextResponse.json({ ok: true })
-      : NextResponse.json({ ok: false }, { status: 401 });
-  } catch {
-    return NextResponse.json({ ok: false }, { status: 401 });
-  }
+  return verifySessionCookieValue(secret, cookieValue)
+    ? NextResponse.json({ ok: true })
+    : NextResponse.json({ ok: false }, { status: 401 });
 }
 
 /** POST — verify raw key, set HTTP-only session cookie. */
@@ -91,7 +103,7 @@ export async function POST(req: NextRequest) {
   }
 
   const cookieStore = await cookies();
-  cookieStore.set(COOKIE_NAME, makeSessionToken(secret), {
+  cookieStore.set(COOKIE_NAME, makeSessionCookieValue(secret), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",

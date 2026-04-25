@@ -10,8 +10,7 @@ const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 
 function encryptToken(token: string): string {
   if (!ENCRYPTION_KEY) {
-    console.error("[slack/callback] ENCRYPTION_KEY is not set — token will be stored unencrypted");
-    return token;
+    throw new Error("ENCRYPTION_KEY is not set — refusing to store Slack token unencrypted");
   }
   const key = crypto.scryptSync(ENCRYPTION_KEY, "slack-token-salt", 32);
   const iv = crypto.randomBytes(12);
@@ -69,7 +68,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${BASE_URL}/profile?slackError=1`);
   }
 
-  const encryptedToken = encryptToken(tokenData.access_token);
+  let encryptedToken: string;
+  try {
+    encryptedToken = encryptToken(tokenData.access_token);
+  } catch (encryptErr) {
+    console.error("[slack/callback] Token encryption failed:", encryptErr);
+    return NextResponse.redirect(`${BASE_URL}/profile?slackError=1`);
+  }
   const channelId = tokenData.incoming_webhook?.channel_id ?? null;
   const channelName = tokenData.incoming_webhook?.channel ?? null;
 

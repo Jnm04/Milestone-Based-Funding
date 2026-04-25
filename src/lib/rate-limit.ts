@@ -78,8 +78,9 @@ export async function checkRateLimit(key: string, limit: number, windowMs: numbe
     }
     return count <= limit;
   } catch {
-    // Redis unavailable — fail open (allow request) to preserve availability
-    return true;
+    // Redis unavailable — fall back to in-memory per-instance limiting rather than
+    // failing open, which would silently disable all rate limits during an outage.
+    return checkRateLimitMemory(key, limit, windowMs);
   }
 }
 
