@@ -54,3 +54,20 @@ export async function PUT(
 
   return NextResponse.json(updated);
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id } = await params;
+  const assessment = await prisma.materialityAssessment.findUnique({ where: { id } });
+  if (!assessment || assessment.userId !== session.user.id) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  await prisma.materialityAssessment.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
+}

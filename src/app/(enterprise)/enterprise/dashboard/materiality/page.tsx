@@ -28,6 +28,7 @@ export default function MaterialityLandingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [assessments, setAssessments] = useState<AssessmentSummary[]>([]);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/attestation/materiality")
@@ -52,6 +53,19 @@ export default function MaterialityLandingPage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
       setLoading(false);
+    }
+  }
+
+  async function handleDelete(e: React.MouseEvent, id: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm("Delete this assessment? This cannot be undone.")) return;
+    setDeleting(id);
+    try {
+      await fetch(`/api/attestation/materiality/${id}`, { method: "DELETE" });
+      setAssessments((prev) => prev.filter((a) => a.id !== id));
+    } finally {
+      setDeleting(null);
     }
   }
 
@@ -118,6 +132,20 @@ export default function MaterialityLandingPage() {
                   <span style={{ fontSize: 12, color: "var(--ent-muted)" }}>
                     {new Date(a.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                   </span>
+                  <button
+                    onClick={(e) => handleDelete(e, a.id)}
+                    disabled={deleting === a.id}
+                    title="Delete assessment"
+                    style={{
+                      background: "none", border: "none", cursor: "pointer",
+                      padding: "2px 4px", color: "var(--ent-muted)", lineHeight: 1,
+                      opacity: deleting === a.id ? 0.4 : 1,
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                    </svg>
+                  </button>
                   <span style={{ color: "var(--ent-accent)", fontSize: 14 }}>→</span>
                 </div>
               </Link>
