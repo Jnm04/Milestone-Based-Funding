@@ -1,5 +1,7 @@
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
+import GitHubProvider from "next-auth/providers/github";
+import LinkedInProvider from "next-auth/providers/linkedin";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { verify as verifyTotp } from "otplib";
@@ -17,6 +19,14 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
+    GitHubProvider({
+      clientId: process.env.GITHUB_CLIENT_ID!,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+    }),
+    LinkedInProvider({
+      clientId: process.env.LINKEDIN_CLIENT_ID!,
+      clientSecret: process.env.LINKEDIN_CLIENT_SECRET!,
     }),
     CredentialsProvider({
       name: "credentials",
@@ -91,13 +101,19 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async signIn({ user, account }) {
-      if (account?.provider !== "google") return true;
-      if (!user.email) return false;
+      const idFields: Record<string, "googleId" | "githubId" | "linkedinId"> = {
+        google: "googleId",
+        github: "githubId",
+        linkedin: "linkedinId",
+      };
+      const idField = account?.provider ? idFields[account.provider] : undefined;
+      if (!idField) return true; // credentials — allow through
+      if (!user.email) return false; // OAuth without email — block
 
       const existing = await prisma.user.findUnique({ where: { email: user.email } });
       if (existing) {
-        if (!existing.googleId) {
-          await prisma.user.update({ where: { id: existing.id }, data: { googleId: account.providerAccountId } });
+        if (!existing[idField]) {
+          await prisma.user.update({ where: { id: existing.id }, data: { [idField]: account!.providerAccountId } });
         }
         return true;
       }
@@ -107,7 +123,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name ?? null,
           passwordHash: null,
-          googleId: account.providerAccountId,
+          [idField]: account!.providerAccountId,
           role: "INVESTOR",
           emailVerified: true,
         },
@@ -116,7 +132,7 @@ export const authOptions: NextAuthOptions = {
     },
 
     async jwt({ token, user, account, trigger, session }) {
-      if (user && account?.provider === "google") {
+      if (user && account?.provider && ["google", "github", "linkedin"].includes(account.provider)) {
         const dbUser = await prisma.user.findUnique({ where: { email: user.email! } });
         if (dbUser) {
           token.id = dbUser.id;

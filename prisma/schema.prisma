@@ -12,6 +12,8 @@ model User {
   email            String     @unique
   passwordHash     String?
   googleId         String?    @unique
+  githubId         String?    @unique
+  linkedinId       String?    @unique
   name             String?
   role             Role
   walletAddress    String?    @unique
