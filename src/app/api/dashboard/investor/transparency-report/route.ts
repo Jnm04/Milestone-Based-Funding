@@ -322,7 +322,7 @@ Respond with ONLY the narrative paragraph as plain text.`,
     // ── Upload to Vercel Blob ─────────────────────────────────────────────────
     const blobPath = `reports/${session.user.id}/${periodKey}-${Date.now()}.html`;
     const blob = await put(blobPath, html, {
-      access: "public",
+      access: "private",
       contentType: "text/html; charset=utf-8",
     });
     const reportUrl = blob.url;
