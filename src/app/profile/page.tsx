@@ -605,7 +605,7 @@ export default function ProfilePage() {
       <DashboardSidebar role={role === "INVESTOR" ? "investor" : "startup"} />
 
       {/* Main */}
-      <main className="flex-1 min-w-0 md:ml-64">
+      <main className="flex-1 min-w-0">
 
         {/* Top bar */}
         <div

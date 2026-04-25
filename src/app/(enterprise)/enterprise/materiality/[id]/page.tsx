@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MaterialityMatrix } from "@/components/materiality-matrix";
@@ -41,6 +41,59 @@ type MatrixItem = {
   griStandards: string[];
   rationale: string;
 };
+
+function renderSummary(summary: string) {
+  // Split numbered inline items like "(1) Foo, (2) Bar, (3) Baz" out of paragraphs
+  const paragraphs = summary.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+  const elements: React.ReactNode[] = [];
+
+  for (const para of paragraphs) {
+    const numberedMatch = para.match(/^(.*?)\(1\)/s);
+    if (numberedMatch) {
+      const intro = numberedMatch[1].trim();
+      const itemsPart = para.slice(para.indexOf("(1)"));
+      const items = itemsPart
+        .split(/\s*\(\d+\)\s*/)
+        .map((s) => s.replace(/[,.]\s*$/, "").trim())
+        .filter(Boolean);
+
+      elements.push(
+        <div key={elements.length} className={elements.length > 0 ? "mt-5" : ""}>
+          {intro && (
+            <p className="text-sm leading-relaxed mb-3" style={{ color: "var(--ent-muted)" }}>{intro}</p>
+          )}
+          <div className="rounded-lg overflow-hidden" style={{ border: "1px solid var(--ent-border)" }}>
+            {items.map((item, j) => (
+              <div
+                key={j}
+                className="flex items-start gap-3 px-4 py-2.5"
+                style={{
+                  borderBottom: j < items.length - 1 ? "1px solid var(--ent-border)" : undefined,
+                  background: j % 2 === 0 ? "white" : "var(--ent-bg)",
+                }}
+              >
+                <span
+                  className="text-xs font-bold shrink-0 w-6 h-6 rounded-full flex items-center justify-center mt-0.5"
+                  style={{ background: "#EFF6FF", color: "var(--ent-accent)" }}
+                >
+                  {j + 1}
+                </span>
+                <span className="text-sm leading-relaxed" style={{ color: "var(--ent-text)" }}>{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    } else {
+      elements.push(
+        <p key={elements.length} className={`text-sm leading-relaxed${elements.length > 0 ? " mt-4" : ""}`} style={{ color: "var(--ent-muted)" }}>
+          {para}
+        </p>
+      );
+    }
+  }
+  return <>{elements}</>;
+}
 
 export default function MaterialityWizardPage() {
   const { id } = useParams<{ id: string }>();
@@ -139,33 +192,7 @@ export default function MaterialityWizardPage() {
                 <span className="text-xs font-semibold tracking-widest uppercase" style={{ color: "white" }}>Executive Summary</span>
               </div>
               <div className="p-6" style={{ background: "white" }}>
-                {assessment.summary.split(/\n\n+/).map((para, i) => {
-                  const trimmed = para.trim();
-                  // Detect paragraphs with inline numbered items like "(1) Foo, (2) Bar"
-                  const hasNumbered = /\(\d+\)/.test(trimmed);
-                  if (hasNumbered) {
-                    // Split into: text before (1), then each numbered item
-                    const parts = trimmed.split(/\s*\(\d+\)\s*/);
-                    const intro = parts[0]?.trim();
-                    const items = parts.slice(1).map((s) => s.replace(/[,.]?\s*$/, "").trim()).filter(Boolean);
-                    return (
-                      <div key={i} className={i > 0 ? "mt-4" : ""}>
-                        {intro && <p className="text-sm leading-relaxed mb-2" style={{ color: "var(--ent-muted)" }}>{intro}</p>}
-                        <ol className="space-y-1 pl-1">
-                          {items.map((item, j) => (
-                            <li key={j} className="flex gap-2 text-sm" style={{ color: "var(--ent-muted)" }}>
-                              <span className="font-semibold shrink-0" style={{ color: "var(--ent-accent)", minWidth: "1.5rem" }}>({j + 1})</span>
-                              <span>{item}</span>
-                            </li>
-                          ))}
-                        </ol>
-                      </div>
-                    );
-                  }
-                  return (
-                    <p key={i} className={`text-sm leading-relaxed${i > 0 ? " mt-4" : ""}`} style={{ color: "var(--ent-muted)" }}>{trimmed}</p>
-                  );
-                })}
+                {renderSummary(assessment.summary)}
               </div>
             </div>
           )}

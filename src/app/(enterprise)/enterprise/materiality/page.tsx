@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -14,11 +14,27 @@ const SECTORS = [
   { value: "OTHER",         label: "Other" },
 ];
 
+type AssessmentSummary = {
+  id: string;
+  sector: string;
+  status: string;
+  createdAt: string;
+  summary?: string | null;
+};
+
 export default function MaterialityLandingPage() {
   const router = useRouter();
   const [sector, setSector] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [assessments, setAssessments] = useState<AssessmentSummary[]>([]);
+
+  useEffect(() => {
+    fetch("/api/attestation/materiality")
+      .then((r) => r.json())
+      .then((data: AssessmentSummary[]) => Array.isArray(data) && setAssessments(data))
+      .catch(() => {});
+  }, []);
 
   async function handleStart() {
     if (!sector) { setError("Please select a sector."); return; }
@@ -39,6 +55,8 @@ export default function MaterialityLandingPage() {
     }
   }
 
+  const sectorLabel = (v: string) => SECTORS.find((s) => s.value === v)?.label ?? v;
+
   return (
     <div style={{ background: "var(--ent-bg)", minHeight: "100vh" }}>
       <nav style={{ borderBottom: "1px solid var(--ent-border)", background: "white" }}>
@@ -52,7 +70,7 @@ export default function MaterialityLandingPage() {
         </div>
       </nav>
 
-      <main className="max-w-4xl mx-auto px-6 py-20">
+      <main className="max-w-4xl mx-auto px-6 py-16">
         <div className="max-w-2xl mx-auto text-center mb-12">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest mb-6"
             style={{ background: "#EFF6FF", color: "var(--ent-accent)", border: "1px solid #BFDBFE" }}>
@@ -67,6 +85,54 @@ export default function MaterialityLandingPage() {
           </p>
         </div>
 
+        {/* Previous assessments */}
+        {assessments.length > 0 && (
+          <div className="mb-10">
+            <h2 className="text-sm font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--ent-muted)" }}>
+              Your Assessments
+            </h2>
+            <div className="space-y-2">
+              {assessments.map((a) => (
+                <Link
+                  key={a.id}
+                  href={`/enterprise/materiality/${a.id}`}
+                  className="flex items-center justify-between px-5 py-4 rounded-xl transition-colors"
+                  style={{ background: "white", border: "1px solid var(--ent-border)" }}
+                >
+                  <div className="flex items-center gap-4">
+                    <span
+                      className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                      style={{
+                        background: a.status === "COMPLETE" ? "#DCFCE7" : "#FEF9C3",
+                        color: a.status === "COMPLETE" ? "#16a34a" : "#ca8a04",
+                      }}
+                    >
+                      {a.status === "COMPLETE" ? "Complete" : "In Progress"}
+                    </span>
+                    <div>
+                      <span className="text-sm font-medium" style={{ color: "var(--ent-text)" }}>
+                        {sectorLabel(a.sector)}
+                      </span>
+                      {a.summary && (
+                        <p className="text-xs mt-0.5 line-clamp-1" style={{ color: "var(--ent-muted)" }}>
+                          {a.summary.slice(0, 120)}…
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="text-xs" style={{ color: "var(--ent-muted)" }}>
+                      {new Date(a.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                    </span>
+                    <span style={{ color: "var(--ent-muted)" }}>→</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Start new */}
         <div className="max-w-md mx-auto p-8 rounded-2xl" style={{ background: "white", border: "1px solid var(--ent-border)" }}>
           <h2 className="font-semibold mb-6" style={{ color: "var(--ent-text)" }}>Start New Assessment</h2>
 

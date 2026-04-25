@@ -49,7 +49,7 @@ For each of 15-20 ESG topics, output a JSON array item:
 { "topic": "string", "financialScore": 0-5, "impactScore": 0-5, "material": bool, "esrsArticles": ["ESRS E1-4"], "griStandards": ["GRI 305-1"], "rationale": "1 sentence" }
 
 material = true if financialScore >= 3 OR impactScore >= 3 (CSRD "or" threshold).
-Also include a "summary" field (2 paragraphs, executive overview of the materiality profile).
+Also include a "summary" field: 2 paragraphs separated by \n\n. First paragraph: overall materiality profile. Second paragraph: top priority topics and recommended next steps.
 
 Respond ONLY with valid JSON:
 { "matrix": [...], "summary": "..." }`;
