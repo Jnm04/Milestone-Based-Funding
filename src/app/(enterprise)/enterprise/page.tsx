@@ -45,7 +45,7 @@ const FEATURES = [
       </svg>
     ),
     title: "5-model AI majority vote",
-    desc: "Claude, GPT-4o, Gemini, Mistral, and Cerebras evaluate the evidence independently. 3 of 5 must agree. No single model decides your compliance status.",
+    desc: "Claude, GPT-4o-mini, Gemini, Mistral, and Cerebras evaluate the evidence independently. 3 of 5 must agree. No single model decides your compliance status.",
   },
   {
     icon: (

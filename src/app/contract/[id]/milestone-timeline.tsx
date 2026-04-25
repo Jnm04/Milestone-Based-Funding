@@ -28,7 +28,7 @@ interface MilestoneProof {
 const MODEL_SHORT: Record<string, string> = {
   "Claude": "Claude", "Claude Haiku": "Claude",
   "Gemini": "Gemini", "Gemini Flash": "Gemini",
-  "OpenAI": "GPT-4o", "GPT-4o-mini": "GPT-4o",
+  "OpenAI": "GPT-4o-mini", "GPT-4o-mini": "GPT-4o-mini",
   "Mistral": "Mistral", "Mistral Small": "Mistral",
   "Cerebras/Qwen3": "Cerebras",
 };
