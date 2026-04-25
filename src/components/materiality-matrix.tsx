@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 interface MatrixItem {
   topic: string;
   financialScore: number;
@@ -14,15 +16,10 @@ interface Props {
   matrix: MatrixItem[];
 }
 
-const QUADRANT_LABELS = [
-  { x: 0, y: 0, label: "Monitor", color: "#94a3b8" },
-  { x: 5, y: 0, label: "Manage", color: "#f59e0b" },
-  { x: 0, y: 5, label: "Manage", color: "#f59e0b" },
-  { x: 5, y: 5, label: "Prioritize", color: "#ef4444" },
-];
-
 export function MaterialityMatrix({ matrix }: Props) {
-  const W = 480, H = 380, PAD = 48;
+  const [hovered, setHovered] = useState<string | null>(null);
+
+  const W = 580, H = 460, PAD = 60;
   const plotW = W - PAD * 2;
   const plotH = H - PAD * 2;
 
@@ -32,96 +29,154 @@ export function MaterialityMatrix({ matrix }: Props) {
   const material = matrix.filter((m) => m.material);
   const nonMaterial = matrix.filter((m) => !m.material);
 
+  const hoveredItem = hovered ? matrix.find((m) => m.topic === hovered) : null;
+
   return (
-    <div className="space-y-8">
-      {/* SVG Scatter Plot */}
-      <div className="rounded-xl overflow-hidden" style={{ background: "white", border: "1px solid var(--ent-border)" }}>
-        <div className="p-4 pb-0">
-          <p className="text-sm font-semibold" style={{ color: "var(--ent-text)" }}>Materiality Scatter Plot</p>
-          <p className="text-xs mt-0.5" style={{ color: "var(--ent-muted)" }}>X = Financial Impact · Y = Environmental/Social Impact</p>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      {/* Scatter plot */}
+      <div style={{ background: "white", border: "1px solid var(--ent-border)", borderRadius: 14, overflow: "hidden" }}>
+        <div style={{ padding: "18px 22px 0", display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+          <div>
+            <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: "var(--ent-text)" }}>Double Materiality Matrix</p>
+            <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--ent-muted)" }}>CSRD double materiality — financial & impact dimensions. Hover dots for details.</p>
+          </div>
+          <div style={{ display: "flex", gap: 12, alignItems: "center", flexShrink: 0, marginTop: 2 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <svg width={10} height={10}><circle cx={5} cy={5} r={4} fill="#1D4ED8" /></svg>
+              <span style={{ fontSize: 11, color: "var(--ent-muted)" }}>Material</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <svg width={10} height={10}><circle cx={5} cy={5} r={4} fill="#CBD5E1" /></svg>
+              <span style={{ fontSize: 11, color: "var(--ent-muted)" }}>Non-material</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <svg width={20} height={10}><line x1={0} y1={5} x2={20} y2={5} stroke="#F59E0B" strokeWidth={1.5} strokeDasharray="4,2" /></svg>
+              <span style={{ fontSize: 11, color: "var(--ent-muted)" }}>Threshold (≥3)</span>
+            </div>
+          </div>
         </div>
-        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="w-full h-auto">
+
+        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}>
+          <defs>
+            <filter id="mm-shadow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx={0} dy={2} stdDeviation={3} floodColor="#0F172A" floodOpacity={0.12} />
+            </filter>
+          </defs>
+
           {/* Quadrant backgrounds */}
-          <rect x={PAD} y={PAD} width={plotW / 2} height={plotH / 2} fill="#f8fafc" />
-          <rect x={PAD + plotW / 2} y={PAD} width={plotW / 2} height={plotH / 2} fill="#fff7ed" />
-          <rect x={PAD} y={PAD + plotH / 2} width={plotW / 2} height={plotH / 2} fill="#fff7ed" />
-          <rect x={PAD + plotW / 2} y={PAD + plotH / 2} width={plotW / 2} height={plotH / 2} fill="#fef2f2" />
+          <rect x={PAD} y={PAD} width={plotW / 2} height={plotH / 2} fill="#EFF6FF" />
+          <rect x={PAD + plotW / 2} y={PAD} width={plotW / 2} height={plotH / 2} fill="#F0FDF4" />
+          <rect x={PAD} y={PAD + plotH / 2} width={plotW / 2} height={plotH / 2} fill="#F8FAFC" />
+          <rect x={PAD + plotW / 2} y={PAD + plotH / 2} width={plotW / 2} height={plotH / 2} fill="#FFFBEB" />
+
+          {/* Quadrant labels */}
+          <text x={PAD + 8} y={PAD + 16} fontSize={9} fontWeight={700} fill="#3B82F6" opacity={0.7} letterSpacing={0.8}>IMPACT</text>
+          <text x={PAD + plotW - 8} y={PAD + 16} fontSize={9} fontWeight={700} fill="#16A34A" opacity={0.8} textAnchor="end" letterSpacing={0.8}>MATERIAL</text>
+          <text x={PAD + 8} y={PAD + plotH - 8} fontSize={9} fontWeight={700} fill="#94A3B8" opacity={0.7} letterSpacing={0.8}>MONITOR</text>
+          <text x={PAD + plotW - 8} y={PAD + plotH - 8} fontSize={9} fontWeight={700} fill="#D97706" opacity={0.7} textAnchor="end" letterSpacing={0.8}>FINANCIAL</text>
 
           {/* Grid lines */}
           {[1, 2, 3, 4].map((i) => (
             <g key={i}>
-              <line x1={toX(i)} y1={PAD} x2={toX(i)} y2={PAD + plotH} stroke="#e2e8f0" strokeWidth={1} />
-              <line x1={PAD} y1={toY(i)} x2={PAD + plotW} y2={toY(i)} stroke="#e2e8f0" strokeWidth={1} />
-              <text x={toX(i)} y={PAD + plotH + 14} textAnchor="middle" fontSize={10} fill="#94a3b8">{i}</text>
-              <text x={PAD - 8} y={toY(i) + 4} textAnchor="end" fontSize={10} fill="#94a3b8">{i}</text>
+              <line x1={toX(i)} y1={PAD} x2={toX(i)} y2={PAD + plotH} stroke="#E2E8F0" strokeWidth={1} />
+              <line x1={PAD} y1={toY(i)} x2={PAD + plotW} y2={toY(i)} stroke="#E2E8F0" strokeWidth={1} />
+              <text x={toX(i)} y={PAD + plotH + 18} textAnchor="middle" fontSize={10} fill="#94A3B8">{i}</text>
+              <text x={PAD - 10} y={toY(i) + 4} textAnchor="end" fontSize={10} fill="#94A3B8">{i}</text>
             </g>
           ))}
+          <text x={toX(0)} y={PAD + plotH + 18} textAnchor="middle" fontSize={10} fill="#94A3B8">0</text>
+          <text x={toX(5)} y={PAD + plotH + 18} textAnchor="middle" fontSize={10} fill="#94A3B8">5</text>
+          <text x={PAD - 10} y={toY(0) + 4} textAnchor="end" fontSize={10} fill="#94A3B8">0</text>
+          <text x={PAD - 10} y={toY(5) + 4} textAnchor="end" fontSize={10} fill="#94A3B8">5</text>
 
-          {/* Threshold line */}
-          <line x1={toX(3)} y1={PAD} x2={toX(3)} y2={PAD + plotH} stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="4,3" />
-          <line x1={PAD} y1={toY(3)} x2={PAD + plotW} y2={toY(3)} stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="4,3" />
+          {/* Threshold lines */}
+          <line x1={toX(3)} y1={PAD - 6} x2={toX(3)} y2={PAD + plotH} stroke="#F59E0B" strokeWidth={1.5} strokeDasharray="5,3" opacity={0.9} />
+          <line x1={PAD} y1={toY(3)} x2={PAD + plotW + 6} y2={toY(3)} stroke="#F59E0B" strokeWidth={1.5} strokeDasharray="5,3" opacity={0.9} />
 
           {/* Axis labels */}
-          <text x={PAD + plotW / 2} y={H - 4} textAnchor="middle" fontSize={11} fill="#64748b">Financial Impact →</text>
-          <text x={10} y={PAD + plotH / 2} textAnchor="middle" fontSize={11} fill="#64748b" transform={`rotate(-90, 10, ${PAD + plotH / 2})`}>↑ Environmental/Social Impact</text>
+          <text x={PAD + plotW / 2} y={H - 8} textAnchor="middle" fontSize={11.5} fontWeight={500} fill="#64748B">Financial Impact →</text>
+          <text x={14} y={PAD + plotH / 2} textAnchor="middle" fontSize={11.5} fontWeight={500} fill="#64748B" transform={`rotate(-90, 14, ${PAD + plotH / 2})`}>↑ Environmental/Social Impact</text>
 
-          {/* Non-material points */}
+          {/* Non-material dots */}
           {nonMaterial.map((item, i) => (
             <circle key={`nm-${i}`} cx={toX(item.financialScore)} cy={toY(item.impactScore)}
-              r={5} fill="#cbd5e1" fillOpacity={0.8} stroke="white" strokeWidth={1}>
-              <title>{item.topic}: F={item.financialScore} I={item.impactScore}</title>
+              r={5} fill="#CBD5E1" stroke="white" strokeWidth={1.5}>
+              <title>{item.topic} — Financial: {item.financialScore}, Impact: {item.impactScore}</title>
             </circle>
           ))}
 
-          {/* Material points */}
-          {material.map((item, i) => (
-            <circle key={`m-${i}`} cx={toX(item.financialScore)} cy={toY(item.impactScore)}
-              r={7} fill="#1D4ED8" fillOpacity={0.85} stroke="white" strokeWidth={1.5}>
-              <title>{item.topic}\n{item.rationale}</title>
-            </circle>
-          ))}
+          {/* Material dots */}
+          {material.map((item, i) => {
+            const cx = toX(item.financialScore);
+            const cy = toY(item.impactScore);
+            const isH = hovered === item.topic;
+            return (
+              <g key={`m-${i}`} style={{ cursor: "pointer" }}
+                onMouseEnter={() => setHovered(item.topic)}
+                onMouseLeave={() => setHovered(null)}>
+                <circle cx={cx} cy={cy} r={isH ? 16 : 12} fill="#1D4ED8" fillOpacity={0.1} />
+                <circle cx={cx} cy={cy} r={isH ? 9 : 7} fill="#1D4ED8" stroke="white" strokeWidth={2} filter={isH ? "url(#mm-shadow)" : undefined} />
+              </g>
+            );
+          })}
 
-          {/* Axis ticks extremes */}
-          <text x={toX(0)} y={PAD + plotH + 14} textAnchor="middle" fontSize={10} fill="#94a3b8">0</text>
-          <text x={toX(5)} y={PAD + plotH + 14} textAnchor="middle" fontSize={10} fill="#94a3b8">5</text>
-          <text x={PAD - 8} y={toY(0) + 4} textAnchor="end" fontSize={10} fill="#94a3b8">0</text>
-          <text x={PAD - 8} y={toY(5) + 4} textAnchor="end" fontSize={10} fill="#94a3b8">5</text>
+          {/* Hover tooltip */}
+          {hoveredItem && (() => {
+            const cx = toX(hoveredItem.financialScore);
+            const cy = toY(hoveredItem.impactScore);
+            const label = hoveredItem.topic;
+            const tw = Math.min(Math.max(label.length * 6.5 + 24, 120), 200);
+            const th = 48;
+            const tx = cx + 14 + tw > W ? cx - tw - 14 : cx + 14;
+            const ty = cy - th / 2 < PAD ? PAD : cy + th / 2 > PAD + plotH ? PAD + plotH - th : cy - th / 2;
+            return (
+              <g style={{ pointerEvents: "none" }}>
+                <rect x={tx} y={ty} width={tw} height={th} rx={7} fill="white" stroke="#E2E8F0" strokeWidth={1} filter="url(#mm-shadow)" />
+                <text x={tx + 10} y={ty + 17} fontSize={11} fontWeight={700} fill="#1E293B">
+                  {label.length > 24 ? label.slice(0, 23) + "…" : label}
+                </text>
+                <text x={tx + 10} y={ty + 34} fontSize={10} fill="#64748B">
+                  Financial: {hoveredItem.financialScore} · Impact: {hoveredItem.impactScore}
+                </text>
+              </g>
+            );
+          })()}
         </svg>
       </div>
 
-      {/* Material Topics */}
+      {/* Material topics table */}
       {material.length > 0 && (
         <div>
-          <h3 className="font-semibold mb-4" style={{ color: "var(--ent-text)" }}>Material Topics ({material.length})</h3>
-          <div className="space-y-3">
-            {material.sort((a, b) => (b.financialScore + b.impactScore) - (a.financialScore + a.impactScore)).map((item, i) => (
-              <div key={i} className="p-4 rounded-xl" style={{ background: "white", border: "1px solid var(--ent-border)" }}>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <p className="font-semibold text-sm" style={{ color: "var(--ent-text)" }}>{item.topic}</p>
-                    <p className="text-xs mt-1" style={{ color: "var(--ent-muted)" }}>{item.rationale}</p>
+          <p style={{ margin: "0 0 10px", fontWeight: 700, fontSize: 14, color: "var(--ent-text)" }}>
+            Material Topics <span style={{ fontWeight: 400, color: "var(--ent-muted)" }}>({material.length})</span>
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {[...material]
+              .sort((a, b) => (b.financialScore + b.impactScore) - (a.financialScore + a.impactScore))
+              .map((item, i) => (
+                <div key={i} style={{ padding: "14px 16px", borderRadius: 10, background: "white", border: "1px solid var(--ent-border)" }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: "0 0 3px", fontWeight: 600, fontSize: 13.5, color: "var(--ent-text)" }}>{item.topic}</p>
+                      <p style={{ margin: 0, fontSize: 12.5, color: "var(--ent-muted)", lineHeight: 1.5 }}>{item.rationale}</p>
+                    </div>
+                    <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                      <span style={{ padding: "3px 9px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: "#EFF6FF", color: "#1D4ED8" }}>F {item.financialScore}</span>
+                      <span style={{ padding: "3px 9px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: "#F0FDF4", color: "#15803D" }}>I {item.impactScore}</span>
+                    </div>
                   </div>
-                  <div className="flex gap-2 text-xs shrink-0">
-                    <span className="px-2 py-0.5 rounded" style={{ background: "#EFF6FF", color: "#1D4ED8" }}>
-                      F: {item.financialScore}
-                    </span>
-                    <span className="px-2 py-0.5 rounded" style={{ background: "#F0FDF4", color: "#15803d" }}>
-                      I: {item.impactScore}
-                    </span>
-                  </div>
+                  {(item.esrsArticles.length > 0 || item.griStandards.length > 0) && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 10 }}>
+                      {item.esrsArticles.map((a) => (
+                        <span key={a} style={{ padding: "2px 8px", borderRadius: 5, fontSize: 11, fontWeight: 500, background: "#DCFCE7", color: "#14532D" }}>{a}</span>
+                      ))}
+                      {item.griStandards.map((g) => (
+                        <span key={g} style={{ padding: "2px 8px", borderRadius: 5, fontSize: 11, fontWeight: 500, background: "#EDE9FE", color: "#3B0764" }}>{g}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {item.esrsArticles.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-3">
-                    {item.esrsArticles.map((a) => (
-                      <span key={a} className="px-2 py-0.5 rounded text-xs font-medium" style={{ background: "#DCFCE7", color: "#14532D" }}>{a}</span>
-                    ))}
-                    {item.griStandards.map((g) => (
-                      <span key={g} className="px-2 py-0.5 rounded text-xs font-medium" style={{ background: "#EDE9FE", color: "#3B0764" }}>{g}</span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
+              ))}
           </div>
         </div>
       )}
