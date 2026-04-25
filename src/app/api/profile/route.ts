@@ -16,7 +16,7 @@ export async function GET() {
       companyName: true, department: true, jobTitle: true, phone: true, bio: true, website: true,
       createdAt: true,
       notifyProofSubmitted: true, notifyPendingReview: true, notifyMilestoneCompleted: true,
-      notifyFunded: true, notifyVerified: true, notifyRejected: true,
+      notifyFunded: true, notifyVerified: true, notifyRejected: true, notifyDigest: true,
       kycTier: true,
       dateOfBirth: true,
       // Feature 7: public profile
@@ -45,7 +45,7 @@ export async function PUT(request: NextRequest) {
   const {
     name, companyName, department, jobTitle, phone, bio, website,
     notifyProofSubmitted, notifyPendingReview, notifyMilestoneCompleted,
-    notifyFunded, notifyVerified, notifyRejected,
+    notifyFunded, notifyVerified, notifyRejected, notifyDigest,
     dateOfBirth,
     // Feature 7: public profile
     publicProfile, publicUsername, companyBio, companyWebsite, linkedinUrl,
@@ -98,6 +98,7 @@ export async function PUT(request: NextRequest) {
       ...(notifyFunded !== undefined && { notifyFunded: Boolean(notifyFunded) }),
       ...(notifyVerified !== undefined && { notifyVerified: Boolean(notifyVerified) }),
       ...(notifyRejected !== undefined && { notifyRejected: Boolean(notifyRejected) }),
+      ...(notifyDigest !== undefined && { notifyDigest: Boolean(notifyDigest) }),
       ...(validatedDOB !== undefined && { dateOfBirth: validatedDOB }),
       // Feature 7: public profile
       ...(publicProfile !== undefined && { publicProfile: Boolean(publicProfile) }),
@@ -120,7 +121,7 @@ export async function PUT(request: NextRequest) {
       id: true, email: true, name: true, role: true, walletAddress: true,
       companyName: true, department: true, jobTitle: true, phone: true, bio: true, website: true,
       notifyProofSubmitted: true, notifyPendingReview: true, notifyMilestoneCompleted: true,
-      notifyFunded: true, notifyVerified: true, notifyRejected: true,
+      notifyFunded: true, notifyVerified: true, notifyRejected: true, notifyDigest: true,
       dateOfBirth: true,
       publicProfile: true, publicUsername: true, companyBio: true, companyWebsite: true, linkedinUrl: true, verifiedBadgeNftId: true,
     },

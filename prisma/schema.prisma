@@ -39,6 +39,7 @@ model User {
   notifyFunded             Boolean @default(true) // Startup: milestone was funded
   notifyVerified           Boolean @default(true) // Startup: proof approved, funds released
   notifyRejected           Boolean @default(true) // Startup: proof rejected by AI
+  notifyDigest             Boolean @default(false) // true = batch into daily digest instead of instant emails
 
   // Brute-force protection
   loginAttempts Int       @default(0)
@@ -106,6 +107,9 @@ model User {
 
   // In-app notifications
   notifications Notification[]
+
+  // Support tickets submitted by this user
+  supportTickets SupportTicket[]
 
   // Feature 11: Audit partner + client access
   auditorPartner        AuditorPartner?
@@ -984,4 +988,53 @@ model ConsensusVote {
 
   @@index([milestoneId])
   @@index([token])
+}
+
+// ── Support Tickets ───────────────────────────────────────────────────────────
+
+/// Support request submitted by a user via the in-app chat widget.
+model SupportTicket {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// Email address — populated even for unauthenticated users if they provide it
+  email     String?
+  subject   String
+  /// Full conversation transcript stored as JSON [{role, content}]
+  messages  Json     @default("[]")
+  /// "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED"
+  status    String   @default("OPEN")
+  /// "LOW" | "MEDIUM" | "HIGH" — set by AI based on message content
+  priority  String   @default("LOW")
+  /// Error digest from error boundary, if the ticket was filed from the error page
+  errorDigest String?
+  /// Admin notes / resolution
+  adminNote String?  @db.Text
+  resolvedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status, createdAt(sort: Desc)])
+}
+
+// ── Admin Audit Log ───────────────────────────────────────────────────────────
+
+/// Immutable log of every admin action taken via the /internal panel.
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  /// Which admin performed the action (IP or identifier from cookie session)
+  adminIdent String
+  /// e.g. "KYC_TIER_CHANGED" | "CONTRACT_SUSPENDED" | "USER_LOCKED" | "TICKET_RESOLVED"
+  action     String
+  /// Target entity type: "USER" | "CONTRACT" | "TICKET"
+  targetType String
+  targetId   String
+  /// Before/after snapshot as JSON
+  before     Json?
+  after      Json?
+  createdAt  DateTime @default(now())
+
+  @@index([targetType, targetId])
+  @@index([createdAt(sort: Desc)])
 }

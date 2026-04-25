@@ -54,6 +54,7 @@ interface ProfileData {
   notifyFunded: boolean;
   notifyVerified: boolean;
   notifyRejected: boolean;
+  notifyDigest: boolean;
   kycTier: number;
   sanctionsStatus: string | null;
   sanctionsCheckedAt: string | null;
@@ -220,6 +221,7 @@ export default function ProfilePage() {
   const [notifyFunded, setNotifyFunded] = useState(true);
   const [notifyVerified, setNotifyVerified] = useState(true);
   const [notifyRejected, setNotifyRejected] = useState(true);
+  const [notifyDigest, setNotifyDigest] = useState(false);
   const [savingNotify, setSavingNotify] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState("");
@@ -306,6 +308,7 @@ export default function ProfilePage() {
         setNotifyFunded(user.notifyFunded);
         setNotifyVerified(user.notifyVerified);
         setNotifyRejected(user.notifyRejected);
+        setNotifyDigest(user.notifyDigest ?? false);
         setDateOfBirth(user.dateOfBirth ? user.dateOfBirth.split("T")[0] : "");
         setPublicProfile(user.publicProfile ?? false);
         setPublicUsername(user.publicUsername ?? "");
@@ -528,7 +531,7 @@ export default function ProfilePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           notifyProofSubmitted, notifyPendingReview, notifyMilestoneCompleted,
-          notifyFunded, notifyVerified, notifyRejected,
+          notifyFunded, notifyVerified, notifyRejected, notifyDigest,
         }),
       });
       if (!res.ok) throw new Error((await res.json()).error);
@@ -880,6 +883,14 @@ export default function ProfilePage() {
                   <NotifyToggle label="Proof rejected" description="AI rejected your proof — resubmission is possible" checked={notifyRejected} onChange={setNotifyRejected} />
                 </>
               )}
+              <div style={{ paddingTop: 8, borderTop: "1px solid rgba(196,112,75,0.12)", marginTop: 4 }}>
+                <NotifyToggle
+                  label="Daily digest mode"
+                  description="Receive a single daily summary email instead of one email per event"
+                  checked={notifyDigest}
+                  onChange={setNotifyDigest}
+                />
+              </div>
             </div>
             <div className="flex justify-end pt-2">
               <button onClick={handleSaveNotifications} disabled={savingNotify} className="cs-btn-ghost cs-btn-sm">

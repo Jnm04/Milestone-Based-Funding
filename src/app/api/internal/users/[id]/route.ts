@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { screenName } from "@/services/sanctions/sanctions.service";
 import { isInternalAuthorized } from "@/lib/internal-auth";
+import { logAdminAction } from "@/lib/admin-audit";
 
 /** PATCH /api/internal/users/[id] — manually set kycTier */
 export async function PATCH(
@@ -19,11 +20,13 @@ export async function PATCH(
   }
 
   try {
+    const existing = await prisma.user.findUnique({ where: { id }, select: { kycTier: true } });
     const user = await prisma.user.update({
       where: { id },
       data: { kycTier },
       select: { id: true, kycTier: true },
     });
+    await logAdminAction(request, "KYC_TIER_CHANGED", "USER", id, { kycTier: existing?.kycTier }, { kycTier });
     return NextResponse.json({ user });
   } catch (err) {
     console.error("[internal/users] PATCH failed:", err);

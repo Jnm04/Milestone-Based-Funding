@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 export default function GlobalError({
   error,
   reset,
@@ -7,6 +9,29 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const [reporting, setReporting] = useState(false);
+  const [reported, setReported] = useState(false);
+
+  async function reportError() {
+    setReporting(true);
+    try {
+      await fetch("/api/support/tickets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subject: `Error report: ${error.message?.slice(0, 80) ?? "Unknown error"}`,
+          message: `Error: ${error.message ?? "Unknown"}\nDigest: ${error.digest ?? "—"}\nURL: ${typeof window !== "undefined" ? window.location.href : "—"}`,
+          errorDigest: error.digest ?? null,
+        }),
+      });
+      setReported(true);
+    } catch {
+      // silent — user sees the button again
+    } finally {
+      setReporting(false);
+    }
+  }
+
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4"
@@ -41,13 +66,38 @@ export default function GlobalError({
           )}
         </div>
 
-        <button
-          onClick={reset}
-          className="cs-btn-primary"
-          style={{ minWidth: "160px" }}
-        >
-          Try again
-        </button>
+        <div className="flex flex-col gap-3 w-full">
+          <button
+            onClick={reset}
+            className="cs-btn-primary"
+          >
+            Try again
+          </button>
+
+          {!reported ? (
+            <button
+              onClick={reportError}
+              disabled={reporting}
+              style={{
+                padding: "9px 0",
+                borderRadius: 8,
+                background: "transparent",
+                border: "1px solid rgba(196,112,75,0.25)",
+                color: reporting ? "#A89B8C" : "#C4704B",
+                fontSize: 13,
+                cursor: reporting ? "default" : "pointer",
+                opacity: reporting ? 0.7 : 1,
+                transition: "opacity 0.15s",
+              }}
+            >
+              {reporting ? "Sending report…" : "Report this error"}
+            </button>
+          ) : (
+            <p style={{ fontSize: 12, color: "#22c55e" }}>
+              Report sent — our team will look into it.
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
