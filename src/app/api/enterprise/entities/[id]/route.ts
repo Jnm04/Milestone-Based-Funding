@@ -24,16 +24,25 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const entity = await prisma.entity.findUnique({ where: { id } });
   if (!entity || entity.orgId !== org.id) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const body = await req.json() as { name?: string; parentEntityId?: string | null };
-  if (body.name !== undefined && body.name.trim().length > 100) {
-    return NextResponse.json({ error: "Name must be 100 characters or less" }, { status: 400 });
+  const body = await req.json() as { name?: unknown; parentEntityId?: unknown };
+
+  if (body.name !== undefined) {
+    if (typeof body.name !== "string" || !body.name.trim()) {
+      return NextResponse.json({ error: "Name must be a non-empty string" }, { status: 400 });
+    }
+    if (body.name.trim().length > 100) {
+      return NextResponse.json({ error: "Name must be 100 characters or less" }, { status: 400 });
+    }
+  }
+  if ("parentEntityId" in body && body.parentEntityId !== null && typeof body.parentEntityId !== "string") {
+    return NextResponse.json({ error: "parentEntityId must be a string or null" }, { status: 400 });
   }
 
   const updated = await prisma.entity.update({
     where: { id },
     data: {
-      ...(body.name?.trim() ? { name: body.name.trim() } : {}),
-      ...("parentEntityId" in body ? { parentEntityId: body.parentEntityId ?? null } : {}),
+      ...(typeof body.name === "string" && body.name.trim() ? { name: body.name.trim() } : {}),
+      ...("parentEntityId" in body ? { parentEntityId: (body.parentEntityId as string | null) ?? null } : {}),
     },
   });
 

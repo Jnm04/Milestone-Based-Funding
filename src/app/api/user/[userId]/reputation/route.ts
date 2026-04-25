@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { ReputationCategory } from "@/services/ai/reputation.service";
 import { REPUTATION_CATEGORIES } from "@/services/ai/reputation.service";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 /**
  * GET /api/user/[userId]/reputation
@@ -10,9 +11,15 @@ import { REPUTATION_CATEGORIES } from "@/services/ai/reputation.service";
  * Returns the startup's aggregated reputation score and their opted-in public milestone cards.
  */
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
+  // Rate limit: 60 req/min per IP — prevents user-ID enumeration
+  const ip = getClientIp(req);
+  if (!(await checkRateLimit(`reputation:${ip}`, 60, 60_000))) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   const { userId } = await params;
 
   // Verify the user exists and is a STARTUP

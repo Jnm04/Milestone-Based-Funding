@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 /**
  * GET /api/startup/[username]
  * Public — no auth required. Returns a startup's public profile data.
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ username: string }> }
 ) {
+  // Rate limit: 60 req/min per IP — prevents username enumeration
+  const ip = getClientIp(request);
+  if (!(await checkRateLimit(`startup-profile:${ip}`, 60, 60_000))) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   const { username } = await params;
 
   const user = await prisma.user.findUnique({

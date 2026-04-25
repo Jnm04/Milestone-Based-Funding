@@ -17,12 +17,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
+  const VALID_STATUSES = ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"];
+
+  if (body.status !== undefined && !VALID_STATUSES.includes(body.status)) {
+    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+  }
+
   const existing = await prisma.supportTicket.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const updates: Record<string, unknown> = {};
   if (body.status) updates.status = body.status;
-  if (body.adminNote !== undefined) updates.adminNote = body.adminNote;
+  if (body.adminNote !== undefined) updates.adminNote = (body.adminNote ?? "").slice(0, 5000);
   if (body.status === "RESOLVED" || body.status === "CLOSED") updates.resolvedAt = new Date();
 
   const updated = await prisma.supportTicket.update({ where: { id }, data: updates });

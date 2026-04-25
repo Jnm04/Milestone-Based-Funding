@@ -3,10 +3,23 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { isInternalAuthorized } from "@/lib/internal-auth";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+
+const MAX_SUBJECT = 200;
+const MAX_MESSAGE = 5000;
 
 // POST /api/support/tickets — create ticket (authenticated or anonymous with email)
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
+  const ip = getClientIp(req);
+
+  // Rate limit: 5 tickets per hour per user/IP
+  const rlKey = session?.user?.id
+    ? `support-ticket:${session.user.id}`
+    : `support-ticket:${ip}`;
+  if (!(await checkRateLimit(rlKey, 5, 60 * 60 * 1000))) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
 
   let body: { subject: string; message: string; email?: string; errorDigest?: string };
   try {
@@ -26,8 +39,8 @@ export async function POST(req: NextRequest) {
     data: {
       userId: session?.user?.id ?? null,
       email: resolvedEmail,
-      subject: subject.slice(0, 200),
-      messages: [{ role: "user", content: message }],
+      subject: subject.slice(0, MAX_SUBJECT),
+      messages: [{ role: "user", content: message.slice(0, MAX_MESSAGE) }],
       errorDigest: errorDigest ?? null,
       priority: errorDigest ? "HIGH" : "LOW",
       status: "OPEN",

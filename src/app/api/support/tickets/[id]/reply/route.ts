@@ -20,6 +20,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!body.message?.trim()) {
     return NextResponse.json({ error: "message required" }, { status: 400 });
   }
+  if (body.message.length > 5000) {
+    return NextResponse.json({ error: "message too long" }, { status: 400 });
+  }
 
   const ticket = await prisma.supportTicket.findUnique({ where: { id } });
   if (!ticket) return NextResponse.json({ error: "Not found" }, { status: 404 });
