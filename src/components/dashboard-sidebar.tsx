@@ -127,12 +127,21 @@ export function DashboardSidebar({ role }: SidebarProps) {
         {/* User + Logout */}
         <div className="px-3 py-4 border-t" style={{ borderColor: "rgba(196,112,75,0.12)" }}>
           <div className="flex items-center gap-3 px-3 py-2 mb-2">
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0"
-              style={{ background: "rgba(196,112,75,0.15)", color: "#C4704B" }}
-            >
-              {initials}
-            </div>
+            {session?.user?.avatarUrl ? (
+              <img
+                src={session.user.avatarUrl}
+                alt="Avatar"
+                className="w-8 h-8 rounded-full object-cover shrink-0"
+                style={{ border: "1px solid rgba(196,112,75,0.3)" }}
+              />
+            ) : (
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0"
+                style={{ background: "rgba(196,112,75,0.15)", color: "#C4704B" }}
+              >
+                {initials}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium truncate" style={{ color: "#EDE6DD" }}>
                 {session?.user?.name ?? session?.user?.email}

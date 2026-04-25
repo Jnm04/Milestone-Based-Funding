@@ -6,6 +6,15 @@ import { generateSecret, generateURI, verify as verifyTotp } from "otplib";
 import QRCode from "qrcode";
 import bcrypt from "bcryptjs";
 
+function generateRecoveryCodes(): string[] {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  return Array.from({ length: 10 }, () => {
+    const part = (n: number) =>
+      Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    return `${part(4)}-${part(4)}`;
+  });
+}
+
 // GET /api/auth/totp — returns current 2FA status
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -64,12 +73,15 @@ export async function PUT(req: NextRequest) {
   const result = await verifyTotp({ token: body.code, secret: user.totpSecret });
   if (!result.valid) return NextResponse.json({ error: "Invalid code — check your authenticator app" }, { status: 400 });
 
+  const plainCodes = generateRecoveryCodes();
+  const hashes = await Promise.all(plainCodes.map((c) => bcrypt.hash(c, 10)));
+
   await prisma.user.update({
     where: { id: session.user.id },
-    data: { totpEnabled: true },
+    data: { totpEnabled: true, totpRecoveryCodes: JSON.stringify(hashes) },
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, recoveryCodes: plainCodes });
 }
 
 // DELETE /api/auth/totp — disable 2FA (requires password + current TOTP code)

@@ -102,8 +102,23 @@ model User {
   dealRoomsAsInvestor DealRoom[] @relation("DealRoomInvestor")
 
   // 2FA / TOTP
-  totpSecret  String?
-  totpEnabled Boolean @default(false)
+  totpSecret        String?
+  totpEnabled       Boolean @default(false)
+  totpRecoveryCodes String? @db.Text // JSON array of bcrypt-hashed recovery codes
+
+  // Avatar
+  avatarUrl String?
+
+  // Email change
+  pendingEmail             String?
+  emailChangeToken         String?   @unique
+  emailChangeTokenExpiry   DateTime?
+
+  // Session management — incrementing this number invalidates all existing JWTs
+  sessionVersion Int @default(1)
+
+  // Login history
+  loginEvents LoginEvent[]
 
   // In-app notifications
   notifications Notification[]
@@ -988,6 +1003,19 @@ model ConsensusVote {
 
   @@index([milestoneId])
   @@index([token])
+}
+
+// ── Login Events ──────────────────────────────────────────────────────────────
+
+model LoginEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt(sort: Desc)])
 }
 
 // ── Support Tickets ───────────────────────────────────────────────────────────

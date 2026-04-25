@@ -117,6 +117,32 @@ export async function sendVerificationEmail({
   });
 }
 
+// ── Email address change ────────────────────────────────────────────────────
+
+export async function sendEmailChangeVerification({
+  to,
+  token,
+  currentEmail,
+}: {
+  to: string;
+  token: string;
+  currentEmail: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  const link = `${BASE_URL}/api/user/change-email/confirm?token=${token}`;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: "Confirm your new Cascrow email address",
+    html: `
+      <p>Hi,</p>
+      <p>A request was made to change the email address on your Cascrow account from <strong>${esc(currentEmail)}</strong> to this address.</p>
+      <p><a href="${link}">Confirm new email address →</a></p>
+      <p>This link expires in 24 hours. If you did not request this change, you can safely ignore this email — your account remains unchanged.</p>
+    `,
+  });
+}
+
 // ── Password reset ──────────────────────────────────────────────────────────
 
 export async function sendPasswordResetEmail({

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -68,6 +68,8 @@ interface ProfileData {
   verifiedBadgeNftId: string | null;
   // Enterprise
   isEnterprise: boolean;
+  // Avatar
+  avatarUrl: string | null;
 }
 
 /* ── Password eye icon ────────────────────────────────────── */
@@ -286,6 +288,29 @@ export default function ProfilePage() {
     createdAt: string; messages: { role: string; content: string; timestamp?: string }[];
   }>>([]);
 
+  // Avatar
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  // Email change
+  const [showEmailChange, setShowEmailChange] = useState(false);
+  const [emailChangeNew, setEmailChangeNew] = useState("");
+  const [emailChangePw, setEmailChangePw] = useState("");
+  const [emailChangeSaving, setEmailChangeSaving] = useState(false);
+  const [emailChangeSent, setEmailChangeSent] = useState(false);
+
+  // Recovery codes
+  const [recoveryCodesCount, setRecoveryCodesCount] = useState<number | null>(null);
+  const [freshRecoveryCodes, setFreshRecoveryCodes] = useState<string[] | null>(null);
+  const [showRecoveryRegen, setShowRecoveryRegen] = useState(false);
+  const [recoveryRegenCode, setRecoveryRegenCode] = useState("");
+  const [recoveryRegenLoading, setRecoveryRegenLoading] = useState(false);
+
+  // Sessions / login history
+  const [sessions, setSessions] = useState<Array<{ id: string; ip: string | null; userAgent: string | null; createdAt: string }>>([]);
+  const [revokeAllLoading, setRevokeAllLoading] = useState(false);
+
   // GDPR
   const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -321,11 +346,20 @@ export default function ProfilePage() {
         setCompanyBio(user.companyBio ?? "");
         setCompanyWebsite(user.companyWebsite ?? "");
         setLinkedinUrl(user.linkedinUrl ?? "");
+        setAvatarUrl(user.avatarUrl ?? null);
       });
   }
 
   function fetchTotpStatus() {
-    fetch("/api/auth/totp").then(r => r.json()).then(d => setTotpEnabled(d.totpEnabled ?? false));
+    fetch("/api/auth/totp").then(r => r.json()).then(d => {
+      setTotpEnabled(d.totpEnabled ?? false);
+      if (d.totpEnabled) {
+        fetch("/api/auth/totp/recovery-codes")
+          .then(r => r.json())
+          .then(rc => setRecoveryCodesCount(rc.count ?? 0))
+          .catch(() => {});
+      }
+    });
   }
 
   useEffect(() => {
@@ -373,6 +407,11 @@ export default function ProfilePage() {
     fetch("/api/support/tickets/mine")
       .then((r) => r.json())
       .then((d) => setMyTickets(d.tickets ?? []))
+      .catch(() => {});
+    // Load login history
+    fetch("/api/user/sessions")
+      .then((r) => r.json())
+      .then((d) => setSessions(d.events ?? []))
       .catch(() => {});
   }, [status, router]);
 
@@ -554,6 +593,81 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/user/avatar", { method: "POST", body: fd });
+      const data = await res.json() as { avatarUrl?: string; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Upload failed");
+      setAvatarUrl(data.avatarUrl ?? null);
+      toast.success("Avatar updated.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setAvatarUploading(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  }
+
+  async function handleChangeEmail(e: React.FormEvent) {
+    e.preventDefault();
+    setEmailChangeSaving(true);
+    try {
+      const res = await fetch("/api/user/change-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newEmail: emailChangeNew, currentPassword: emailChangePw }),
+      });
+      const data = await res.json() as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Failed");
+      setEmailChangeSent(true);
+      setEmailChangePw("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to send verification.");
+    } finally {
+      setEmailChangeSaving(false);
+    }
+  }
+
+  async function handleRegenerateRecoveryCodes(e: React.FormEvent) {
+    e.preventDefault();
+    setRecoveryRegenLoading(true);
+    try {
+      const res = await fetch("/api/auth/totp/recovery-codes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: recoveryRegenCode }),
+      });
+      const data = await res.json() as { codes?: string[]; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Failed");
+      setFreshRecoveryCodes(data.codes ?? []);
+      setRecoveryCodesCount(data.codes?.length ?? 0);
+      setShowRecoveryRegen(false);
+      setRecoveryRegenCode("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to regenerate codes.");
+    } finally {
+      setRecoveryRegenLoading(false);
+    }
+  }
+
+  async function handleRevokeAllSessions() {
+    setRevokeAllLoading(true);
+    try {
+      const res = await fetch("/api/user/sessions", { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed");
+      toast.success("All other sessions have been signed out.");
+    } catch {
+      toast.error("Failed to sign out sessions.");
+    } finally {
+      setRevokeAllLoading(false);
+    }
+  }
+
   async function handleExportData() {
     setExportingData(true);
     try {
@@ -651,15 +765,38 @@ export default function ProfilePage() {
           {/* Avatar + header */}
           <div className="flex items-center gap-5">
             <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 text-xl font-semibold"
-              style={{
-                background: "rgba(196,112,75,0.15)",
-                border: "1px solid rgba(196,112,75,0.3)",
-                color: "#C4704B",
-                fontFamily: "var(--font-libre-franklin)",
-              }}
+              style={{ position: "relative", cursor: "pointer", flexShrink: 0 }}
+              onClick={() => avatarInputRef.current?.click()}
+              title="Change avatar"
             >
-              {initials}
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt="Avatar"
+                  style={{ width: 64, height: 64, borderRadius: 12, objectFit: "cover", border: "1px solid rgba(196,112,75,0.3)", display: "block" }}
+                />
+              ) : (
+                <div
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-semibold"
+                  style={{
+                    background: "rgba(196,112,75,0.15)",
+                    border: "1px solid rgba(196,112,75,0.3)",
+                    color: "#C4704B",
+                    fontFamily: "var(--font-libre-franklin)",
+                  }}
+                >
+                  {initials}
+                </div>
+              )}
+              <div style={{ position: "absolute", bottom: -4, right: -4, width: 22, height: 22, borderRadius: "50%", background: "#C4704B", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.4)" }}>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              </div>
+              {avatarUploading && (
+                <div style={{ position: "absolute", inset: 0, borderRadius: 12, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "rgba(196,112,75,0.4)", borderTopColor: "#C4704B" }} />
+                </div>
+              )}
+              <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleAvatarUpload} />
             </div>
             <div className="flex flex-col gap-1">
               <h1
@@ -788,7 +925,7 @@ export default function ProfilePage() {
           {/* Profile Information */}
           <SectionCard title="Profile Information" subtitle="Your personal and professional details">
 
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-2">
               <label className="cs-label">Email</label>
               <div
                 className="px-3 py-2.5 rounded-xl text-sm font-mono"
@@ -800,6 +937,35 @@ export default function ProfilePage() {
               >
                 {profile.email}
               </div>
+              {!showEmailChange ? (
+                <button type="button" onClick={() => setShowEmailChange(true)} className="cs-btn-ghost cs-btn-sm self-start">
+                  Change email
+                </button>
+              ) : emailChangeSent ? (
+                <div className="flex items-start gap-2 p-3 rounded-xl text-sm" style={{ background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.2)", color: "#86efac" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 mt-0.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>Verification sent to <strong>{emailChangeNew}</strong>. Click the link in that email to confirm.</span>
+                </div>
+              ) : (
+                <form onSubmit={handleChangeEmail} className="flex flex-col gap-3 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.12)" }}>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="cs-label">New email address</label>
+                    <input type="email" value={emailChangeNew} onChange={e => setEmailChangeNew(e.target.value)} placeholder="new@example.com" className="cs-input" required />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="cs-label">Current password</label>
+                    <input type="password" value={emailChangePw} onChange={e => setEmailChangePw(e.target.value)} placeholder="••••••••" className="cs-input" autoComplete="current-password" />
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="submit" disabled={emailChangeSaving || !emailChangeNew} className="cs-btn-ghost cs-btn-sm">
+                      {emailChangeSaving ? "Sending…" : "Send verification email"}
+                    </button>
+                    <button type="button" onClick={() => { setShowEmailChange(false); setEmailChangeNew(""); setEmailChangePw(""); }} className="cs-btn-ghost cs-btn-sm" style={{ opacity: 0.6 }}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
 
             <form onSubmit={handleSaveProfile} className="flex flex-col gap-5">
@@ -983,6 +1149,7 @@ export default function ProfilePage() {
                             if (!r.ok) { toast.error(d.error ?? "Failed"); return; }
                             toast.success("2FA disabled");
                             setTotpEnabled(false); setShowDisable2FA(false); setTotpDisablePw(""); setTotpDisableCode("");
+                            setRecoveryCodesCount(null); setFreshRecoveryCodes(null);
                           } finally { setTotpLoading(false); }
                         }}
                         className="cs-btn-ghost cs-btn-sm"
@@ -992,6 +1159,44 @@ export default function ProfilePage() {
                       </button>
                       <button onClick={() => setShowDisable2FA(false)} className="cs-btn-ghost cs-btn-sm">Cancel</button>
                     </div>
+                  </div>
+                )}
+
+                {/* Recovery codes */}
+                {freshRecoveryCodes ? (
+                  <div className="flex flex-col gap-3 p-4 rounded-xl" style={{ background: "rgba(196,112,75,0.06)", border: "1px solid rgba(196,112,75,0.2)" }}>
+                    <p className="text-sm font-semibold" style={{ color: "#EDE6DD" }}>Save your recovery codes</p>
+                    <p className="text-xs" style={{ color: "#A89B8C" }}>These 10 codes can each be used once to sign in if you lose access to your authenticator app. Store them somewhere safe — they won&apos;t be shown again.</p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {freshRecoveryCodes.map((c) => (
+                        <code key={c} className="px-3 py-1.5 rounded-lg text-center text-sm font-mono" style={{ background: "rgba(255,255,255,0.05)", color: "#EDE6DD", letterSpacing: "0.1em" }}>{c}</code>
+                      ))}
+                    </div>
+                    <button type="button" onClick={() => setFreshRecoveryCodes(null)} className="cs-btn-ghost cs-btn-sm self-start">
+                      I&apos;ve saved my codes
+                    </button>
+                  </div>
+                ) : recoveryCodesCount !== null && (
+                  <div className="flex items-center justify-between gap-4 py-3" style={{ borderTop: "1px solid rgba(196,112,75,0.1)" }}>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-sm font-medium" style={{ color: "#EDE6DD" }}>Recovery codes</span>
+                      <span className="text-xs" style={{ color: recoveryCodesCount === 0 ? "#f87171" : "#A89B8C" }}>
+                        {recoveryCodesCount === 0 ? "All codes used — regenerate now" : `${recoveryCodesCount} of 10 remaining`}
+                      </span>
+                    </div>
+                    {!showRecoveryRegen ? (
+                      <button type="button" onClick={() => setShowRecoveryRegen(true)} className="cs-btn-ghost cs-btn-sm shrink-0">
+                        Regenerate
+                      </button>
+                    ) : (
+                      <form onSubmit={handleRegenerateRecoveryCodes} className="flex gap-2 items-center">
+                        <input type="text" inputMode="numeric" maxLength={6} value={recoveryRegenCode} onChange={e => setRecoveryRegenCode(e.target.value.replace(/\D/g,""))} placeholder="Current code" className="cs-input" style={{ width: 110, letterSpacing: "0.15em" }} />
+                        <button type="submit" disabled={recoveryRegenLoading || recoveryRegenCode.length !== 6} className="cs-btn-ghost cs-btn-sm shrink-0">
+                          {recoveryRegenLoading ? "…" : "Confirm"}
+                        </button>
+                        <button type="button" onClick={() => { setShowRecoveryRegen(false); setRecoveryRegenCode(""); }} className="cs-btn-ghost cs-btn-sm shrink-0" style={{ opacity: 0.6 }}>Cancel</button>
+                      </form>
+                    )}
                   </div>
                 )}
               </div>
@@ -1016,10 +1221,11 @@ export default function ProfilePage() {
                       setTotpLoading(true);
                       try {
                         const r = await fetch("/api/auth/totp", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: totpCode }) });
-                        const d = await r.json() as { ok?: boolean; error?: string };
+                        const d = await r.json() as { ok?: boolean; error?: string; recoveryCodes?: string[] };
                         if (!r.ok) { toast.error(d.error ?? "Invalid code"); setTotpCode(""); return; }
                         toast.success("2FA enabled!");
                         setTotpEnabled(true); setTotpSetupQr(null); setTotpSetupSecret(null); setTotpCode("");
+                        if (d.recoveryCodes) { setFreshRecoveryCodes(d.recoveryCodes); setRecoveryCodesCount(d.recoveryCodes.length); }
                       } finally { setTotpLoading(false); }
                     }}
                     className="cs-btn-primary"
@@ -1649,6 +1855,51 @@ export default function ProfilePage() {
                 + Add Endpoint
               </button>
             )}
+          </SectionCard>
+
+          {/* Security — Sessions */}
+          <SectionCard title="Security" subtitle="Recent sign-ins and active session management">
+            <div className="flex flex-col gap-4">
+              {sessions.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "#A89B8C" }}>Recent sign-ins</p>
+                  {sessions.map((s) => {
+                    const ua = s.userAgent ?? "";
+                    const browser = ua.includes("Chrome") ? "Chrome"
+                      : ua.includes("Firefox") ? "Firefox"
+                      : ua.includes("Safari") ? "Safari"
+                      : ua.includes("Edge") ? "Edge"
+                      : ua ? "Browser" : "Unknown";
+                    const os = ua.includes("Windows") ? "Windows"
+                      : ua.includes("Mac") ? "macOS"
+                      : ua.includes("Linux") ? "Linux"
+                      : ua.includes("Android") ? "Android"
+                      : ua.includes("iPhone") || ua.includes("iPad") ? "iOS"
+                      : "";
+                    return (
+                      <div key={s.id} className="flex items-center justify-between gap-4 py-2.5 text-sm" style={{ borderBottom: "1px solid rgba(196,112,75,0.07)" }}>
+                        <div className="flex flex-col gap-0.5">
+                          <span style={{ color: "#EDE6DD" }}>{[browser, os].filter(Boolean).join(" · ") || "Unknown device"}</span>
+                          <span className="text-xs" style={{ color: "#A89B8C" }}>{s.ip ?? "IP unknown"}</span>
+                        </div>
+                        <span className="text-xs shrink-0" style={{ color: "#6B5E54" }}>
+                          {new Date(s.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="flex items-start justify-between gap-4 p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.1)" }}>
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-medium" style={{ color: "#EDE6DD" }}>Sign out of all sessions</span>
+                  <p className="text-xs" style={{ color: "#A89B8C" }}>Revokes all active sessions across every device. You will need to sign in again.</p>
+                </div>
+                <button type="button" onClick={handleRevokeAllSessions} disabled={revokeAllLoading} className="cs-btn-ghost cs-btn-sm shrink-0" style={{ color: "#ef4444", borderColor: "rgba(239,68,68,0.3)" }}>
+                  {revokeAllLoading ? "Signing out…" : "Sign out everywhere"}
+                </button>
+              </div>
+            </div>
           </SectionCard>
 
           {/* Account Info */}

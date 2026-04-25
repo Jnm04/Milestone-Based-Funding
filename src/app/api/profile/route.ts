@@ -19,6 +19,10 @@ export async function GET() {
       notifyFunded: true, notifyVerified: true, notifyRejected: true, notifyDigest: true,
       kycTier: true,
       dateOfBirth: true,
+      avatarUrl: true,
+      isEnterprise: true,
+      sanctionsStatus: true,
+      sanctionsCheckedAt: true,
       // Feature 7: public profile
       publicProfile: true,
       publicUsername: true,

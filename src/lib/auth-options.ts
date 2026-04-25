@@ -34,13 +34,22 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) return null;
 
         // Reject obviously oversized inputs before hitting the DB
         if (credentials.email.length > 254 || credentials.password.length > 72) return null;
 
-        const user = await prisma.user.findUnique({ where: { email: credentials.email } });
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+          select: {
+            id: true, email: true, name: true, role: true, walletAddress: true,
+            isEnterprise: true, passwordHash: true, emailVerified: true,
+            loginAttempts: true, lockoutUntil: true,
+            totpEnabled: true, totpSecret: true, totpRecoveryCodes: true,
+            sessionVersion: true,
+          },
+        });
         if (!user) {
           // Constant-time dummy compare to prevent user enumeration timing attacks
           await bcrypt.compare(credentials.password, "$2a$12$invalidhashpadding000000000000000000000000000000000000");
@@ -52,7 +61,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error("TooManyAttempts");
         }
 
-        if (!user.passwordHash) return null; // Google-only account
+        if (!user.passwordHash) return null; // OAuth-only account
 
         const valid = await bcrypt.compare(credentials.password, user.passwordHash);
 
@@ -71,22 +80,46 @@ export const authOptions: NextAuthOptions = {
 
         if (!user.emailVerified) throw new Error("EmailNotVerified");
 
-        // 2FA check — if enabled, require a valid TOTP code
+        // 2FA check — TOTP code or backup recovery code
         if (user.totpEnabled && user.totpSecret) {
           const totpCode = (credentials as Record<string, string>).totpCode;
           if (!totpCode) throw new Error("TotpRequired");
+
           const totpResult = await verifyTotp({ token: totpCode, secret: user.totpSecret });
-          const valid = totpResult.valid;
-          if (!valid) throw new Error("TotpInvalid");
+          if (!totpResult.valid) {
+            // Try recovery code (format: XXXX-XXXX)
+            if (/^[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(totpCode)) {
+              const stored = JSON.parse(user.totpRecoveryCodes ?? "[]") as string[];
+              let usedIndex = -1;
+              for (let i = 0; i < stored.length; i++) {
+                if (await bcrypt.compare(totpCode, stored[i])) { usedIndex = i; break; }
+              }
+              if (usedIndex === -1) throw new Error("TotpInvalid");
+              const remaining = stored.filter((_, i) => i !== usedIndex);
+              await prisma.user.update({
+                where: { id: user.id },
+                data: { totpRecoveryCodes: JSON.stringify(remaining) },
+              });
+            } else {
+              throw new Error("TotpInvalid");
+            }
+          }
         }
 
-        // Reset on successful login
+        // Reset failed attempts on successful login
         if (user.loginAttempts > 0 || user.lockoutUntil) {
           await prisma.user.update({
             where: { id: user.id },
             data: { loginAttempts: 0, lockoutUntil: null },
           });
         }
+
+        // Log login event (fire-and-forget)
+        const ipRaw = req?.headers?.["x-forwarded-for"] ?? req?.headers?.["x-real-ip"];
+        const ip = Array.isArray(ipRaw) ? ipRaw[0] : (typeof ipRaw === "string" ? ipRaw.split(",")[0].trim() : null);
+        const uaRaw = req?.headers?.["user-agent"];
+        const userAgent = Array.isArray(uaRaw) ? uaRaw[0] : (uaRaw ?? null);
+        void prisma.loginEvent.create({ data: { userId: user.id, ip, userAgent } }).catch(() => {});
 
         return {
           id: user.id,
@@ -95,6 +128,7 @@ export const authOptions: NextAuthOptions = {
           role: user.role,
           walletAddress: user.walletAddress ?? null,
           isEnterprise: user.isEnterprise,
+          sessionVersion: user.sessionVersion,
         };
       },
     }),
@@ -139,6 +173,8 @@ export const authOptions: NextAuthOptions = {
           token.role = dbUser.role;
           token.walletAddress = dbUser.walletAddress ?? null;
           token.isEnterprise = dbUser.isEnterprise;
+          token.avatarUrl = dbUser.avatarUrl ?? null;
+          token.sessionVersion = dbUser.sessionVersion;
         }
         return token;
       }
@@ -147,21 +183,28 @@ export const authOptions: NextAuthOptions = {
         token.role = (user as unknown as { role: string }).role;
         token.walletAddress = (user as unknown as { walletAddress: string | null }).walletAddress;
         token.isEnterprise = (user as unknown as { isEnterprise: boolean }).isEnterprise ?? false;
+        token.sessionVersion = (user as unknown as { sessionVersion: number }).sessionVersion ?? 1;
         return token;
       }
-      // Allow updating wallet address via session update
-      if (trigger === "update" && session?.walletAddress) {
-        token.walletAddress = session.walletAddress;
+      // Allow updating wallet address or avatarUrl via session update
+      if (trigger === "update") {
+        if (session?.walletAddress) token.walletAddress = session.walletAddress;
+        if (session?.avatarUrl !== undefined) token.avatarUrl = session.avatarUrl as string | null;
       }
-      // On every token refresh (not fresh login), verify account hasn't been deleted.
-      // Account deletion clears passwordHash to "". One primary-key lookup per request.
+      // On every token refresh (not fresh login), verify account hasn't been deleted
+      // and that the session version is still valid.
       if (token.id) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { passwordHash: true },
+          select: { passwordHash: true, sessionVersion: true, avatarUrl: true },
         });
         if (!dbUser || dbUser.passwordHash === "") {
           (token as JWT & { accountDeleted: boolean }).accountDeleted = true;
+        } else if (token.sessionVersion !== undefined && dbUser.sessionVersion !== token.sessionVersion) {
+          (token as JWT & { accountDeleted: boolean }).accountDeleted = true;
+        } else {
+          // Keep avatarUrl in sync without a separate update call
+          token.avatarUrl = dbUser.avatarUrl ?? null;
         }
       }
       return token;
@@ -179,6 +222,7 @@ export const authOptions: NextAuthOptions = {
       session.user.role = token.role as string;
       session.user.walletAddress = (token.walletAddress as string | null) ?? null;
       session.user.isEnterprise = (token.isEnterprise as boolean) ?? false;
+      session.user.avatarUrl = (token.avatarUrl as string | null) ?? null;
       return session;
     },
   },
