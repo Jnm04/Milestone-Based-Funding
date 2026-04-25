@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MaterialityMatrix } from "@/components/materiality-matrix";
@@ -41,6 +41,67 @@ type MatrixItem = {
   griStandards: string[];
   rationale: string;
 };
+
+function parseInlineText(text: string): React.ReactNode {
+  // Convert **bold** to <strong>
+  const parts = text.split(/\*\*(.+?)\*\*/g);
+  return parts.map((p, i) => i % 2 === 1 ? <strong key={i} style={{ color: "var(--ent-text)", fontWeight: 600 }}>{p}</strong> : p);
+}
+
+function renderSummary(summary: string): React.ReactNode {
+  const paragraphs = summary.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+  return (
+    <>
+      {paragraphs.map((para, pi) => {
+        // Detect numbered lists: (1), (2)... or (i), (ii)...
+        const hasNumbered = /\(\d+\)|\([ivxlIVXL]+\)/.test(para);
+        if (hasNumbered) {
+          const splitIdx = para.search(/\(\d+\)|\([ivxlIVXL]+\)/);
+          const intro = para.slice(0, splitIdx).trim();
+          const itemsPart = para.slice(splitIdx);
+          const items = itemsPart
+            .split(/\s*\(\d+\)\s*|\s*\([ivxlIVXL]+\)\s*/)
+            .map((s) => s.replace(/[,;.]\s*$/, "").trim())
+            .filter(Boolean);
+
+          return (
+            <div key={pi} style={pi > 0 ? { marginTop: 16 } : {}}>
+              {intro && (
+                <p style={{ margin: "0 0 10px", fontSize: 13.5, lineHeight: 1.7, color: "var(--ent-muted)" }}>
+                  {parseInlineText(intro)}
+                </p>
+              )}
+              <div style={{ border: "1px solid var(--ent-border)", borderRadius: 8, overflow: "hidden" }}>
+                {items.map((item, j) => (
+                  <div key={j} style={{
+                    display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 14px",
+                    borderBottom: j < items.length - 1 ? "1px solid var(--ent-border)" : undefined,
+                    background: j % 2 === 0 ? "white" : "#FAFAFA",
+                  }}>
+                    <span style={{
+                      flexShrink: 0, width: 22, height: 22, borderRadius: "50%",
+                      background: "#EFF6FF", color: "var(--ent-accent)",
+                      fontSize: 11, fontWeight: 700,
+                      display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1,
+                    }}>{j + 1}</span>
+                    <span style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--ent-text)" }}>
+                      {parseInlineText(item)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        }
+        return (
+          <p key={pi} style={{ margin: pi > 0 ? "14px 0 0" : 0, fontSize: 13.5, lineHeight: 1.7, color: "var(--ent-muted)" }}>
+            {parseInlineText(para)}
+          </p>
+        );
+      })}
+    </>
+  );
+}
 
 export default function MaterialityWizardPage() {
   const { id } = useParams<{ id: string }>();
@@ -146,8 +207,14 @@ export default function MaterialityWizardPage() {
           <span style={{ fontSize: 12.5, color: "var(--ent-muted)" }}>Sector: {assessment.sector}</span>
         </div>
         {assessment.summary && (
-          <div style={{ marginBottom: 24, padding: 20, borderRadius: 10, background: "white", border: "1px solid var(--ent-border)" }}>
-            <p style={{ margin: 0, fontSize: 13.5, color: "var(--ent-muted)", lineHeight: 1.7 }}>{assessment.summary}</p>
+          <div style={{ marginBottom: 24, borderRadius: 10, overflow: "hidden", border: "1px solid var(--ent-border)" }}>
+            <div style={{ padding: "8px 16px", background: "var(--ent-accent)", display: "flex", alignItems: "center", gap: 8 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "white" }}>Executive Summary</span>
+            </div>
+            <div style={{ padding: 20, background: "white" }}>
+              {renderSummary(assessment.summary)}
+            </div>
           </div>
         )}
         <MaterialityMatrix matrix={assessment.matrix} />
