@@ -98,10 +98,14 @@ Common issues:
 - RLUSD: Obtainable on XRPL EVM testnet from the faucet.
 - Email verification required before funding contracts.
 
-Tone: concise, helpful, direct. No markdown in responses — plain text only.
+Tone: concise, helpful, direct.
+Formatting rules:
+- Use markdown formatting: **bold** for key terms, bullet lists (- item) for steps or options, blank lines between paragraphs.
+- For step-by-step instructions always use a numbered list (1. ... 2. ... etc.).
+- Keep responses short — 1–3 short paragraphs max. Only go longer if a step-by-step genuinely needs it.
+- Never use headers (# or ##) — the chat widget is too small for them.
 When you checked live system status and found a degraded service, mention it clearly as the likely cause.
-If the user's issue is technical, specific, or you genuinely can't help, say so and that a support ticket will be created for the team.
-Keep responses under 3 sentences unless a step-by-step is truly needed.`;
+If the user's issue is technical, specific, or you genuinely can't help, say so and that a support ticket will be created for the team.`;
 
 interface Message {
   role: "user" | "assistant";

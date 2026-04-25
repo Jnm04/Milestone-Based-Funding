@@ -1,6 +1,70 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import type { ReactNode } from "react";
+
+function renderMarkdown(text: string): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  const lines = text.split("\n");
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Blank line → skip (paragraph spacing handled by gap)
+    if (line.trim() === "") {
+      i++;
+      continue;
+    }
+
+    // Numbered list: collect consecutive "N. " lines
+    if (/^\d+\.\s/.test(line)) {
+      const items: string[] = [];
+      while (i < lines.length && /^\d+\.\s/.test(lines[i])) {
+        items.push(lines[i].replace(/^\d+\.\s/, ""));
+        i++;
+      }
+      nodes.push(
+        <ol key={nodes.length} style={{ margin: "4px 0 4px 0", paddingLeft: 18, display: "flex", flexDirection: "column", gap: 2 }}>
+          {items.map((item, j) => <li key={j}>{inlineMarkdown(item)}</li>)}
+        </ol>
+      );
+      continue;
+    }
+
+    // Bullet list: collect consecutive "- " lines
+    if (/^[-*]\s/.test(line)) {
+      const items: string[] = [];
+      while (i < lines.length && /^[-*]\s/.test(lines[i])) {
+        items.push(lines[i].replace(/^[-*]\s/, ""));
+        i++;
+      }
+      nodes.push(
+        <ul key={nodes.length} style={{ margin: "4px 0 4px 0", paddingLeft: 18, display: "flex", flexDirection: "column", gap: 2 }}>
+          {items.map((item, j) => <li key={j}>{inlineMarkdown(item)}</li>)}
+        </ul>
+      );
+      continue;
+    }
+
+    // Regular paragraph line
+    nodes.push(<p key={nodes.length} style={{ margin: 0 }}>{inlineMarkdown(line)}</p>);
+    i++;
+  }
+
+  return nodes;
+}
+
+function inlineMarkdown(text: string): ReactNode[] {
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**"))
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    if (part.startsWith("`") && part.endsWith("`"))
+      return <code key={i} style={{ background: "rgba(255,255,255,0.08)", borderRadius: 3, padding: "1px 4px", fontFamily: "monospace", fontSize: "0.9em" }}>{part.slice(1, -1)}</code>;
+    return part;
+  });
+}
 import { useSession } from "next-auth/react";
 
 interface Message {
@@ -297,7 +361,11 @@ export function SupportChat() {
                         <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
                       </svg>
                     )}
-                    {msg.content}
+                    {(msg.role === "assistant" || msg.role === "admin") ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        {renderMarkdown(msg.content)}
+                      </div>
+                    ) : msg.content}
                   </div>
                 </div>
               );
