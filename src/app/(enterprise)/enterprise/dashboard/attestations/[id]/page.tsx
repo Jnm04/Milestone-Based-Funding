@@ -72,6 +72,9 @@ export default async function AttestationDetailPage({ params }: { params: Promis
     internalApprovedBy: m.internalApprovedBy,
     internalApprovedAt: m.internalApprovedAt?.toISOString() ?? null,
     internalApprovalNote: m.internalApprovalNote,
+    dataSourceConnector: m.dataSourceConnector ?? null,
+    connectorStatus: m.connectorStatus ?? null,
+    connectorLastHealthy: m.connectorLastHealthy?.toISOString() ?? null,
   }));
 
   const verifiedCount = milestones.filter((m) =>

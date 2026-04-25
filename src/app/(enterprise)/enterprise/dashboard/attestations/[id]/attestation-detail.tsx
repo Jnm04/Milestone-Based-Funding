@@ -36,6 +36,9 @@ interface MilestoneData {
   internalApprovedBy: string | null;
   internalApprovedAt: string | null;
   internalApprovalNote: string | null;
+  dataSourceConnector: string | null;
+  connectorStatus: string | null;
+  connectorLastHealthy: string | null;
 }
 
 interface GoalSet {
@@ -63,10 +66,11 @@ const VERDICT_CFG = {
 } as const;
 
 const SRC_LABEL: Record<string, string> = {
-  URL_SCRAPE:    "URL Scraping",
-  REST_API:      "REST API",
-  FILE_UPLOAD:   "File Upload",
-  MANUAL_REVIEW: "Manual Review",
+  URL_SCRAPE:           "URL Scraping",
+  REST_API:             "REST API",
+  FILE_UPLOAD:          "File Upload",
+  MANUAL_REVIEW:        "Manual Review",
+  ENTERPRISE_CONNECTOR: "Enterprise Connector",
 };
 
 // ── Small helpers ─────────────────────────────────────────────────────────────
@@ -124,9 +128,77 @@ function DataSourceConfigPanel({ milestoneId, contractId, onLocked }: ConfigPane
   const [testPreview,  setTestPreview]  = useState<{ preview: string; statusCode: number } | null>(null);
   const [locking,      setLocking]      = useState(false);
 
+  // Enterprise connector fields
+  const [connSystem,       setConnSystem]       = useState("SAP");
+  const [connBaseUrl,      setConnBaseUrl]       = useState("");
+  const [connAuthType,     setConnAuthType]     = useState("BASIC");
+  const [connUsername,     setConnUsername]     = useState("");
+  const [connPassword,     setConnPassword]     = useState("");
+  const [connClientId,     setConnClientId]     = useState("");
+  const [connClientSecret, setConnClientSecret] = useState("");
+  const [connTokenUrl,     setConnTokenUrl]     = useState("");
+  const [connEntity,       setConnEntity]       = useState("");
+  const [connFilter,       setConnFilter]       = useState("");
+  const [connTestResult,   setConnTestResult]   = useState<{ success: boolean; recordCount?: number; error?: string } | null>(null);
+
   const canTest = (srcType === "URL_SCRAPE" && url.trim()) ||
                   (srcType === "REST_API" && url.trim() && apiKey.trim());
-  const canLock = srcType === "MANUAL_REVIEW" || srcType === "FILE_UPLOAD" || canTest;
+  const canLock = srcType === "MANUAL_REVIEW" || srcType === "FILE_UPLOAD" || canTest ||
+                  (srcType === "ENTERPRISE_CONNECTOR" && connBaseUrl.trim() && (
+                    (connAuthType === "BASIC" && connUsername && connPassword) ||
+                    (connAuthType !== "BASIC" && connClientId && connClientSecret)
+                  ));
+
+  async function handleConnectorTest() {
+    setTesting(true);
+    setConnTestResult(null);
+    try {
+      const res = await fetch(`/api/enterprise/attestations/${contractId}/milestones/${milestoneId}/connector`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system: connSystem, baseUrl: connBaseUrl, authType: connAuthType,
+          username: connUsername || undefined, password: connPassword || undefined,
+          clientId: connClientId || undefined, clientSecret: connClientSecret || undefined,
+          tokenUrl: connTokenUrl || undefined, entity: connEntity || undefined,
+          filter: connFilter || undefined, testOnly: true,
+        }),
+      });
+      const data = await res.json() as { success: boolean; recordCount?: number; error?: string };
+      setConnTestResult(data);
+      if (data.success) toast.success(`Connection OK — ${data.recordCount ?? "?"} records`);
+      else toast.error(data.error ?? "Connection failed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Connection failed");
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  async function handleConnectorLock() {
+    setLocking(true);
+    try {
+      const res = await fetch(`/api/enterprise/attestations/${contractId}/milestones/${milestoneId}/connector`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system: connSystem, baseUrl: connBaseUrl, authType: connAuthType,
+          username: connUsername || undefined, password: connPassword || undefined,
+          clientId: connClientId || undefined, clientSecret: connClientSecret || undefined,
+          tokenUrl: connTokenUrl || undefined, entity: connEntity || undefined,
+          filter: connFilter || undefined, scheduleType: schedule, testOnly: false,
+        }),
+      });
+      const data = await res.json() as { success: boolean; error?: string; recordCount?: number };
+      if (!res.ok || !data.success) throw new Error(data.error ?? "Save failed");
+      toast.success("Enterprise connector configured");
+      onLocked("REST_API", connBaseUrl);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setLocking(false);
+    }
+  }
 
   async function handleTest() {
     setTesting(true);
@@ -194,7 +266,7 @@ function DataSourceConfigPanel({ milestoneId, contractId, onLocked }: ConfigPane
 
       {/* Source type tabs */}
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-        {(["URL_SCRAPE", "REST_API", "FILE_UPLOAD", "MANUAL_REVIEW"] as const).map((t) => (
+        {(["URL_SCRAPE", "REST_API", "FILE_UPLOAD", "MANUAL_REVIEW", "ENTERPRISE_CONNECTOR"] as const).map((t) => (
           <button key={t} type="button" onClick={() => setSrcType(t)} style={tabStyle(srcType === t)}>
             {SRC_LABEL[t]}
           </button>
@@ -250,6 +322,90 @@ function DataSourceConfigPanel({ milestoneId, contractId, onLocked }: ConfigPane
         </div>
       )}
 
+      {/* Enterprise Connector form */}
+      {srcType === "ENTERPRISE_CONNECTOR" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 }}>
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--ent-muted)", marginBottom: 4 }}>System</label>
+              <select value={connSystem} onChange={(e) => setConnSystem(e.target.value)} style={{ ...inputCss(), width: "100%" }}>
+                <option value="SAP">SAP</option>
+                <option value="WORKDAY">Workday</option>
+                <option value="SALESFORCE">Salesforce</option>
+                <option value="NETSUITE">NetSuite</option>
+              </select>
+            </div>
+            <div style={{ flex: 2 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--ent-muted)", marginBottom: 4 }}>Base URL</label>
+              <input type="url" placeholder="https://your-instance.example.com" value={connBaseUrl} onChange={(e) => setConnBaseUrl(e.target.value)} style={inputCss()} />
+            </div>
+          </div>
+          <div>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--ent-muted)", marginBottom: 4 }}>Authentication</label>
+            <select value={connAuthType} onChange={(e) => setConnAuthType(e.target.value)} style={{ ...inputCss(), width: "100%" }}>
+              <option value="BASIC">Basic (username + password)</option>
+              <option value="OAUTH2_CLIENT">OAuth 2.0 Client Credentials</option>
+              <option value="OAUTH1">OAuth 1.0</option>
+            </select>
+          </div>
+          {connAuthType === "BASIC" ? (
+            <div style={{ display: "flex", gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--ent-muted)", marginBottom: 4 }}>Username</label>
+                <input type="text" placeholder="user@company.com" value={connUsername} onChange={(e) => setConnUsername(e.target.value)} style={inputCss()} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--ent-muted)", marginBottom: 4 }}>Password</label>
+                <input type="password" value={connPassword} onChange={(e) => setConnPassword(e.target.value)} style={inputCss()} />
+              </div>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: "flex", gap: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--ent-muted)", marginBottom: 4 }}>Client ID</label>
+                  <input type="text" value={connClientId} onChange={(e) => setConnClientId(e.target.value)} style={inputCss()} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--ent-muted)", marginBottom: 4 }}>Client Secret</label>
+                  <input type="password" value={connClientSecret} onChange={(e) => setConnClientSecret(e.target.value)} style={inputCss()} />
+                </div>
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--ent-muted)", marginBottom: 4 }}>Token URL</label>
+                <input type="url" placeholder="https://auth.example.com/token" value={connTokenUrl} onChange={(e) => setConnTokenUrl(e.target.value)} style={inputCss()} />
+              </div>
+            </>
+          )}
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--ent-muted)", marginBottom: 4 }}>
+                Entity / Object <span style={{ fontWeight: 400, fontSize: 11 }}>(e.g. CostCenter, Employee)</span>
+              </label>
+              <input type="text" placeholder="CostCenter" value={connEntity} onChange={(e) => setConnEntity(e.target.value)} style={inputCss()} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--ent-muted)", marginBottom: 4 }}>
+                Filter <span style={{ fontWeight: 400, fontSize: 11 }}>(optional OData / SOQL)</span>
+              </label>
+              <input type="text" placeholder="Year eq '2026'" value={connFilter} onChange={(e) => setConnFilter(e.target.value)} style={inputCss()} />
+            </div>
+          </div>
+          {connTestResult && (
+            <div style={{
+              padding: "10px 14px", borderRadius: 6, fontSize: 12.5,
+              background: connTestResult.success ? "#F0FDF4" : "#FEF2F2",
+              border: `1px solid ${connTestResult.success ? "#BBF7D0" : "#FECACA"}`,
+              color: connTestResult.success ? "#166534" : "#991B1B",
+            }}>
+              {connTestResult.success
+                ? `✓ Connected — ${connTestResult.recordCount ?? "?"} records fetched`
+                : `✗ ${connTestResult.error ?? "Connection failed"}`}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Schedule */}
       <div style={{ marginBottom: 14 }}>
         <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--ent-muted)", marginBottom: 4 }}>
@@ -275,20 +431,39 @@ function DataSourceConfigPanel({ milestoneId, contractId, onLocked }: ConfigPane
 
       {/* Actions */}
       <div style={{ display: "flex", gap: 8 }}>
-        {canTest && (
-          <button
-            type="button" disabled={testing} onClick={handleTest}
-            style={{ padding: "7px 14px", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: testing ? "not-allowed" : "pointer", border: "1px solid var(--ent-border)", background: "white", color: "var(--ent-text)" }}
-          >
-            {testing ? "Testing…" : "Test Source"}
-          </button>
+        {srcType === "ENTERPRISE_CONNECTOR" ? (
+          <>
+            <button
+              type="button" disabled={testing || !connBaseUrl} onClick={handleConnectorTest}
+              style={{ padding: "7px 14px", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: (testing || !connBaseUrl) ? "not-allowed" : "pointer", border: "1px solid var(--ent-border)", background: "white", color: "var(--ent-text)" }}
+            >
+              {testing ? "Testing…" : "Test Connection"}
+            </button>
+            <button
+              type="button" disabled={locking || !canLock} onClick={handleConnectorLock}
+              style={{ padding: "7px 16px", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: (locking || !canLock) ? "not-allowed" : "pointer", border: "none", background: canLock ? "var(--ent-accent)" : "#E5E7EB", color: canLock ? "white" : "#9CA3AF" }}
+            >
+              {locking ? "Saving…" : "Save & Lock Connector"}
+            </button>
+          </>
+        ) : (
+          <>
+            {canTest && (
+              <button
+                type="button" disabled={testing} onClick={handleTest}
+                style={{ padding: "7px 14px", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: testing ? "not-allowed" : "pointer", border: "1px solid var(--ent-border)", background: "white", color: "var(--ent-text)" }}
+              >
+                {testing ? "Testing…" : "Test Source"}
+              </button>
+            )}
+            <button
+              type="button" disabled={locking || !canLock} onClick={handleLock}
+              style={{ padding: "7px 16px", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: (locking || !canLock) ? "not-allowed" : "pointer", border: "none", background: canLock ? "var(--ent-accent)" : "#E5E7EB", color: canLock ? "white" : "#9CA3AF" }}
+            >
+              {locking ? "Locking…" : "Lock Data Source"}
+            </button>
+          </>
         )}
-        <button
-          type="button" disabled={locking || !canLock} onClick={handleLock}
-          style={{ padding: "7px 16px", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: (locking || !canLock) ? "not-allowed" : "pointer", border: "none", background: canLock ? "var(--ent-accent)" : "#E5E7EB", color: canLock ? "white" : "#9CA3AF" }}
-        >
-          {locking ? "Locking…" : "Lock Data Source"}
-        </button>
       </div>
     </div>
   );
@@ -558,6 +733,19 @@ function MilestoneCard({ milestone, goalSetId, requiresApproval, userRole, onUpd
           )}
           {milestone.dataSourceApiKeyHint && (
             <span style={{ color: "var(--ent-muted)", flexShrink: 0 }}>key …{milestone.dataSourceApiKeyHint}</span>
+          )}
+          {milestone.dataSourceConnector && (
+            <span style={{
+              fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20,
+              color: milestone.connectorStatus === "OK" ? "#16A34A" : milestone.connectorStatus === "ERROR" ? "#DC2626" : "#6B7280",
+              background: milestone.connectorStatus === "OK" ? "#DCFCE7" : milestone.connectorStatus === "ERROR" ? "#FEE2E2" : "#F3F4F6",
+              flexShrink: 0,
+            }}>
+              {milestone.dataSourceConnector} · {milestone.connectorStatus ?? "UNKNOWN"}
+              {milestone.connectorLastHealthy && milestone.connectorStatus === "OK" && (
+                <> · {new Date(milestone.connectorLastHealthy).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</>
+              )}
+            </span>
           )}
           {milestone.scheduleType && milestone.scheduleType !== "ONE_OFF" && (
             <span style={{ marginLeft: "auto", color: "var(--ent-muted)", flexShrink: 0 }}>
@@ -1010,6 +1198,12 @@ export function AttestationDetail({
   const [boardPackPeriod, setBoardPackPeriod] = useState("");
   const [boardPackOpen, setBoardPackOpen] = useState(false);
   const [boardPackLoading, setBoardPackLoading] = useState(false);
+  const [transparencyPeriod, setTransparencyPeriod] = useState(() => {
+    const now = new Date();
+    return `Q${Math.ceil((now.getMonth() + 1) / 3)}-${now.getFullYear()}`;
+  });
+  const [transparencyOpen, setTransparencyOpen] = useState(false);
+  const [transparencyLoading, setTransparencyLoading] = useState(false);
 
   async function handleToggleApproval() {
     setTogglingApproval(true);
@@ -1062,6 +1256,28 @@ export function AttestationDetail({
       toast.error("Network error");
     } finally {
       setBoardPackLoading(false);
+    }
+  }
+
+  async function handleTransparencyReport() {
+    const period = transparencyPeriod.trim();
+    if (!period) { toast.error("Enter a report period (e.g. Q2-2026)"); return; }
+    setTransparencyLoading(true);
+    try {
+      const res = await fetch(`/api/enterprise/attestations/${goalSet.id}/transparency-report`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ period }),
+      });
+      const data = await res.json() as { url?: string; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Failed to generate report");
+      window.open(data.url, "_blank");
+      toast.success("Transparency report generated");
+      setTransparencyOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to generate report");
+    } finally {
+      setTransparencyLoading(false);
     }
   }
 
@@ -1181,6 +1397,42 @@ export function AttestationDetail({
         </div>
       )}
 
+      {/* Transparency Report modal */}
+      {transparencyOpen && (
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center" }}
+          onClick={() => setTransparencyOpen(false)}
+        >
+          <div style={{ background: "white", borderRadius: 12, padding: 28, width: 420, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: "0 0 6px", fontSize: 16, fontWeight: 700, color: "#111827" }}>Stakeholder Transparency Report</h3>
+            <p style={{ margin: "0 0 18px", fontSize: 13, color: "#6B7280", lineHeight: 1.5 }}>
+              Generates a public-facing HTML report with verified goals, evidence summaries, XRPL proof links, and regulatory coverage — suitable for investors, regulators, or annual reports.
+            </p>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Report Period</label>
+            <input
+              type="text"
+              placeholder="Q2-2026"
+              value={transparencyPeriod}
+              onChange={(e) => setTransparencyPeriod(e.target.value)}
+              style={{ width: "100%", padding: "9px 12px", borderRadius: 7, border: "1px solid #D1D5DB", fontSize: 14, outline: "none", marginBottom: 16, boxSizing: "border-box" }}
+            />
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button type="button" onClick={() => setTransparencyOpen(false)} style={{ padding: "8px 16px", borderRadius: 7, fontSize: 13, fontWeight: 600, border: "1px solid #D1D5DB", background: "white", color: "#374151", cursor: "pointer" }}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={transparencyLoading}
+                onClick={() => void handleTransparencyReport()}
+                style={{ padding: "8px 20px", borderRadius: 7, fontSize: 13, fontWeight: 600, border: "none", background: "var(--ent-accent)", color: "white", cursor: transparencyLoading ? "not-allowed" : "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
+              >
+                {transparencyLoading ? "Generating…" : "Generate & Open"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Approval workflow toggle + pending notice */}
       <div style={{ marginBottom: 20, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         {userRole !== "VIEWER" && (
@@ -1209,11 +1461,27 @@ export function AttestationDetail({
             {pendingApprovalCount} milestone{pendingApprovalCount !== 1 ? "s" : ""} awaiting approval
           </span>
         )}
+        <a
+          href={`/enterprise/dashboard/attestations/${goalSet.id}/consensus`}
+          style={{
+            marginLeft: "auto",
+            display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "6px 14px", borderRadius: 6, fontSize: 12.5, fontWeight: 600,
+            border: "1px solid var(--ent-border)",
+            background: "white", color: "var(--ent-muted)",
+            textDecoration: "none",
+          }}
+          title="Manage consensus voting — invite auditors, regulators, and investors to verify milestones"
+        >
+          <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+          </svg>
+          Consensus
+        </a>
         <button
           type="button"
           onClick={() => setBoardPackOpen(true)}
           style={{
-            marginLeft: "auto",
             display: "inline-flex", alignItems: "center", gap: 6,
             padding: "6px 14px", borderRadius: 6, fontSize: 12.5, fontWeight: 600,
             border: "1px solid var(--ent-border)",
@@ -1226,6 +1494,23 @@ export function AttestationDetail({
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
           </svg>
           Board Pack
+        </button>
+        <button
+          type="button"
+          onClick={() => setTransparencyOpen(true)}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "6px 14px", borderRadius: 6, fontSize: 12.5, fontWeight: 600,
+            border: "1px solid var(--ent-border)",
+            background: "white", color: "var(--ent-muted)",
+            cursor: "pointer",
+          }}
+          title="Generate a public-facing stakeholder transparency report"
+        >
+          <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
+          </svg>
+          Transparency Report
         </button>
       </div>
 
