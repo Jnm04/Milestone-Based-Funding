@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, type ChangeEvent } from "react";
 import type { ReactNode } from "react";
 import { useSession } from "next-auth/react";
 
@@ -99,13 +99,17 @@ export function SupportChat() {
   const [ticketSubject, setTicketSubject] = useState("");
   const [showTicketForm, setShowTicketForm] = useState(false);
   const [unread, setUnread] = useState(false);
-  const [lastAdminMsgCount, setLastAdminMsgCount] = useState(0);
+  const [lastAdminMsgCount, setLastAdminMsgCount] = useState<number>(
+    () => loadLS<Message[]>(LS_MESSAGES, []).filter((m) => m.role === "admin").length,
+  );
   const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Persist messages and ticketId to localStorage
+  // Persist messages and ticketId to localStorage (exclude transient system messages)
   useEffect(() => {
-    try { localStorage.setItem(LS_MESSAGES, JSON.stringify(messages)); } catch {}
+    try {
+      localStorage.setItem(LS_MESSAGES, JSON.stringify(messages.filter((m) => m.role !== "system")));
+    } catch {}
   }, [messages]);
 
   useEffect(() => {
@@ -215,6 +219,7 @@ export function SupportChat() {
       });
       if (data.cantHelp) setCantHelp(true);
       if (!open) setUnread(true);
+      // data.systemChecked intentionally not used in UI
     } catch {
       setMessages((prev) => {
         const filtered = prev.filter((m) => m.role !== "system");
@@ -232,7 +237,7 @@ export function SupportChat() {
     if (loading) return;
     const subject =
       ticketSubject.trim() ||
-      messages.find((m) => m.role === "user")?.content?.slice(0, 80) ||
+      [...messages].reverse().find((m) => m.role === "user")?.content?.slice(0, 80) ||
       "Support request";
 
     setLoading(true);
@@ -559,23 +564,40 @@ export function SupportChat() {
           <div style={{
             padding: "10px 12px",
             borderTop: "1px solid rgba(196,112,75,0.12)",
-            display: "flex", gap: 8, alignItems: "center",
+            display: "flex", gap: 8, alignItems: "flex-end",
             background: "rgba(0,0,0,0.2)",
           }}>
-            <input
+            <textarea
               ref={inputRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
+              rows={1}
+              onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
+                setInput(e.target.value);
+                e.target.style.height = "auto";
+                e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  send();
+                  if (inputRef.current) {
+                    inputRef.current.style.height = "auto";
+                  }
+                }
+              }}
               placeholder={ticketId ? "Continue the conversation…" : "Ask a question…"}
               disabled={loading}
               style={{
                 flex: 1, padding: "8px 12px",
-                borderRadius: 20,
+                borderRadius: 14,
                 border: "1px solid rgba(196,112,75,0.2)",
                 background: "rgba(255,255,255,0.05)",
                 color: "#EDE6DD", fontSize: 13,
                 outline: "none",
+                resize: "none",
+                overflowY: "auto",
+                lineHeight: 1.5,
+                fontFamily: "inherit",
               }}
             />
             <button
