@@ -48,7 +48,7 @@ function renderSummary(summary: string) {
   const elements: React.ReactNode[] = [];
 
   for (const para of paragraphs) {
-    const numberedMatch = para.match(/^(.*?)\(1\)/s);
+    const numberedMatch = para.match(/^([\s\S]*?)\(1\)/);
     if (numberedMatch) {
       const intro = numberedMatch[1].trim();
       const itemsPart = para.slice(para.indexOf("(1)"));
