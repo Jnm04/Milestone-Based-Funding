@@ -517,18 +517,33 @@ model ProofEmbedding {
 /// Outbound webhook endpoint registered by a user.
 /// Cascrow sends a signed POST to this URL on every subscribed event.
 model WebhookEndpoint {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  url       String
+  id         String            @id @default(cuid())
+  userId     String
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  url        String
   /// HMAC-SHA256 secret — used to sign the request body
-  secret    String
+  secret     String
   /// JSON array of subscribed event names, e.g. ["contract.funded","proof.submitted"]
-  events    String   @db.Text
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
+  events     String            @db.Text
+  active     Boolean           @default(true)
+  createdAt  DateTime          @default(now())
+  deliveries WebhookDelivery[]
 
   @@index([userId])
+}
+
+/// One delivery attempt log for a webhook endpoint.
+model WebhookDelivery {
+  id         String          @id @default(cuid())
+  endpointId String
+  endpoint   WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  event      String
+  statusCode Int?
+  success    Boolean
+  responseMs Int
+  createdAt  DateTime        @default(now())
+
+  @@index([endpointId, createdAt(sort: Desc)])
 }
 
 // ── Telegram ──────────────────────────────────────────────────────────────────

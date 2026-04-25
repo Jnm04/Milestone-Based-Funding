@@ -13,6 +13,7 @@
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "npx tsx scripts/seed-demo.ts",
+    "test": "vitest run",
     "test:e2e": "npx tsx scripts/test-e2e-flow.ts",
     "test:xrpl": "npx tsx scripts/test-xrpl.ts",
     "test:ai": "npx tsx scripts/test-ai.ts"
@@ -96,6 +97,7 @@
     "prisma": "^7.5.0",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.5"
   }
 }

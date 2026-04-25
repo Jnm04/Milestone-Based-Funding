@@ -106,18 +106,21 @@ export interface WebhookPayload {
  * payload. Receivers can reject requests where the timestamp is stale without
  * needing to parse the JSON body first.
  */
-function sign(secret: string, timestampMs: number, body: string): string {
+export function sign(secret: string, timestampMs: number, body: string): string {
   const input = `t=${timestampMs}.${body}`;
   return "sha256=" + crypto.createHmac("sha256", secret).update(input).digest("hex");
 }
 
 // ─── Single delivery attempt ──────────────────────────────────────────────────
 
-async function deliver(url: string, secret: string, payload: WebhookPayload): Promise<boolean> {
-  // Re-validate at delivery time to defend against DNS rebinding attacks
+async function deliver(
+  url: string,
+  secret: string,
+  payload: WebhookPayload
+): Promise<{ ok: boolean; statusCode: number | null; responseMs: number }> {
   if (await isPrivateUrl(url)) {
     console.warn(`[webhook] Blocked delivery to private/internal URL: ${url}`);
-    return false;
+    return { ok: false, statusCode: null, responseMs: 0 };
   }
 
   const body = JSON.stringify(payload);
@@ -125,6 +128,7 @@ async function deliver(url: string, secret: string, payload: WebhookPayload): Pr
   const signature = sign(secret, timestampMs, body);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10_000);
+  const start = Date.now();
 
   try {
     const res = await fetch(url, {
@@ -140,9 +144,9 @@ async function deliver(url: string, secret: string, payload: WebhookPayload): Pr
       signal: controller.signal,
       redirect: "manual",
     });
-    return res.ok;
+    return { ok: res.ok, statusCode: res.status, responseMs: Date.now() - start };
   } catch {
-    return false;
+    return { ok: false, statusCode: null, responseMs: Date.now() - start };
   } finally {
     clearTimeout(timer);
   }
@@ -151,14 +155,27 @@ async function deliver(url: string, secret: string, payload: WebhookPayload): Pr
 // ─── Retry wrapper ────────────────────────────────────────────────────────────
 
 async function deliverWithRetry(
+  endpointId: string,
   url: string,
   secret: string,
   payload: WebhookPayload,
   maxAttempts = 3
 ): Promise<void> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const ok = await deliver(url, secret, payload);
-    if (ok) return;
+    const result = await deliver(url, secret, payload);
+    // Log final attempt (success or last failure)
+    if (result.ok || attempt === maxAttempts) {
+      void prisma.webhookDelivery.create({
+        data: {
+          endpointId,
+          event: payload.event,
+          statusCode: result.statusCode,
+          success: result.ok,
+          responseMs: result.responseMs,
+        },
+      }).catch(() => { /* non-fatal */ });
+    }
+    if (result.ok) return;
     if (attempt < maxAttempts) {
       await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
     }
@@ -182,11 +199,11 @@ async function fireForUser(
   event: WebhookEvent,
   payload: WebhookPayload
 ): Promise<void> {
-  let endpoints: { url: string; secret: string; events: string }[] = [];
+  let endpoints: { id: string; url: string; secret: string; events: string }[] = [];
   try {
     endpoints = await prisma.webhookEndpoint.findMany({
       where: { userId, active: true },
-      select: { url: true, secret: true, events: true },
+      select: { id: true, url: true, secret: true, events: true },
     });
   } catch (err) {
     console.warn("[webhook] DB lookup failed (non-fatal):", err);
@@ -205,7 +222,7 @@ async function fireForUser(
   if (subscribed.length === 0) return;
 
   void Promise.allSettled(
-    subscribed.map((ep) => deliverWithRetry(ep.url, ep.secret, payload))
+    subscribed.map((ep) => deliverWithRetry(ep.id, ep.url, ep.secret, payload))
   );
 }
 

@@ -170,7 +170,7 @@ function parseAIResponse(raw: string, source: string): AIVerificationResult {
  * Reasoning: summarises which models agreed/disagreed.
  * Also returns individual model votes for brain/training storage.
  */
-function combineResults(results: { model: string; result: AIVerificationResult }[]): AIVerificationResultWithVotes {
+export function combineResults(results: { model: string; result: AIVerificationResult }[]): AIVerificationResultWithVotes {
   const yesVoters = results.filter((r) => r.result.decision === "YES");
   const noVoters = results.filter((r) => r.result.decision === "NO");
   const decision = yesVoters.length >= 3 ? "YES" : "NO";

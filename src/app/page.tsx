@@ -349,6 +349,20 @@ function CheckItem({ children }: { children: React.ReactNode }) {
 ═══════════════════════════════════════════════════════════════ */
 export default function LandingPage() {
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [demoLoading, setDemoLoading] = React.useState(false);
+
+  async function handleTryDemo() {
+    setDemoLoading(true);
+    try {
+      const res = await fetch("/api/demo", { method: "POST" });
+      const data = await res.json() as { url?: string; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Failed to create demo");
+      window.location.href = data.url!;
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Could not start demo");
+      setDemoLoading(false);
+    }
+  }
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -505,7 +519,15 @@ export default function LandingPage() {
           {/* CTAs */}
           <div className="animate-fade-up-3 flex flex-col sm:flex-row gap-4">
             <Link href="/register" className="cs-btn-primary">Get Started</Link>
-            <a href="#how"         className="cs-btn-ghost">Learn More</a>
+            <button
+              onClick={handleTryDemo}
+              disabled={demoLoading}
+              className="cs-btn-ghost"
+              style={{ opacity: demoLoading ? 0.6 : 1, cursor: demoLoading ? "not-allowed" : "pointer" }}
+            >
+              {demoLoading ? "Loading demo…" : "Try Live Demo"}
+            </button>
+            <a href="#how" className="cs-btn-ghost">Learn More</a>
           </div>
         </div>
       </section>

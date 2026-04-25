@@ -19,6 +19,9 @@ import { IS_MAINNET } from "@/lib/config";
 import { CalendarButton } from "@/components/calendar-button";
 import { CopyButton } from "@/components/copy-button";
 import { CounterProposalBanner, type CounterProposalData } from "@/components/counter-proposal-banner";
+import { XRPL_EVM_CHAIN_ID } from "@/lib/evm-abi";
+
+const IS_EVM_TESTNET = XRPL_EVM_CHAIN_ID === 1449000;
 
 interface ContractPageProps {
   params: Promise<{ id: string }>;
@@ -163,6 +166,19 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           </span>
         </div>
       </nav>
+
+      {IS_EVM_TESTNET && (
+        <div
+          className="w-full flex items-center justify-center gap-2 py-2 px-4 text-xs font-medium"
+          style={{ background: "rgba(196,112,75,0.12)", borderBottom: "1px solid rgba(196,112,75,0.2)", color: "#C4704B" }}
+        >
+          <span
+            className="inline-block w-1.5 h-1.5 rounded-full animate-pulse"
+            style={{ background: "#C4704B" }}
+          />
+          XRPL EVM Testnet — funds use test RLUSD only, not real money
+        </div>
+      )}
 
       <div className="max-w-2xl mx-auto py-10 px-6 flex flex-col gap-6">
         {/* Header */}

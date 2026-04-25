@@ -20,6 +20,15 @@ interface WebhookEndpoint {
   createdAt: string;
 }
 
+interface WebhookDelivery {
+  id: string;
+  event: string;
+  statusCode: number | null;
+  success: boolean;
+  responseMs: number;
+  createdAt: string;
+}
+
 const ALL_WEBHOOK_EVENTS = [
   "contract.created", "contract.funded", "contract.expired",
   "proof.submitted", "ai.decision", "manual_review.required",
@@ -265,6 +274,9 @@ export default function ProfilePage() {
   // Webhooks
   const [webhooks, setWebhooks] = useState<WebhookEndpoint[]>([]);
   const [showNewWebhook, setShowNewWebhook] = useState(false);
+  const [deliveryHistory, setDeliveryHistory] = useState<Record<string, WebhookDelivery[]>>({});
+  const [loadingDeliveries, setLoadingDeliveries] = useState<string | null>(null);
+  const [expandedDeliveries, setExpandedDeliveries] = useState<string | null>(null);
 
   // GDPR
   const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
@@ -447,6 +459,25 @@ export default function ProfilePage() {
       setWebhooks((prev) => prev.map((w) => w.id === id ? { ...w, active } : w));
     } catch {
       toast.error("Failed to update webhook.");
+    }
+  }
+
+  async function handleViewDeliveries(id: string) {
+    if (expandedDeliveries === id) {
+      setExpandedDeliveries(null);
+      return;
+    }
+    setExpandedDeliveries(id);
+    if (deliveryHistory[id]) return;
+    setLoadingDeliveries(id);
+    try {
+      const res = await fetch(`/api/webhooks/deliveries?endpointId=${id}`);
+      const data = await res.json() as { deliveries?: WebhookDelivery[] };
+      setDeliveryHistory((prev) => ({ ...prev, [id]: data.deliveries ?? [] }));
+    } catch {
+      toast.error("Failed to load delivery history.");
+    } finally {
+      setLoadingDeliveries(null);
     }
   }
 
@@ -1476,35 +1507,67 @@ export default function ProfilePage() {
             {webhooks.length > 0 && (
               <div className="flex flex-col gap-2 mb-2">
                 {webhooks.map((wh) => (
-                  <div key={wh.id} className="flex items-start gap-3 p-3 rounded-xl text-sm" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.12)" }}>
-                    <div className="flex flex-col gap-1 flex-1 min-w-0">
-                      <code className="text-xs font-mono truncate" style={{ color: "#EDE6DD" }}>{wh.url}</code>
-                      <div className="flex flex-wrap gap-1 mt-0.5">
-                        {wh.events.map((ev) => (
-                          <span key={ev} className="text-xs px-1.5 py-0.5 rounded" style={{ background: "rgba(196,112,75,0.1)", color: "#C4704B" }}>{ev}</span>
-                        ))}
+                  <div key={wh.id} className="flex flex-col rounded-xl overflow-hidden" style={{ border: "1px solid rgba(196,112,75,0.12)" }}>
+                    <div className="flex items-start gap-3 p-3 text-sm" style={{ background: "rgba(255,255,255,0.03)" }}>
+                      <div className="flex flex-col gap-1 flex-1 min-w-0">
+                        <code className="text-xs font-mono truncate" style={{ color: "#EDE6DD" }}>{wh.url}</code>
+                        <div className="flex flex-wrap gap-1 mt-0.5">
+                          {wh.events.map((ev) => (
+                            <span key={ev} className="text-xs px-1.5 py-0.5 rounded" style={{ background: "rgba(196,112,75,0.1)", color: "#C4704B" }}>{ev}</span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleViewDeliveries(wh.id)}
+                          className="text-xs"
+                          style={{ color: "#A89B8C" }}
+                        >
+                          {expandedDeliveries === wh.id ? "Hide" : "History"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleWebhook(wh.id, !wh.active)}
+                          className="text-xs"
+                          style={{ color: wh.active ? "#22c55e" : "#A89B8C" }}
+                        >
+                          {wh.active ? "Active" : "Paused"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteWebhook(wh.id)}
+                          className="text-xs"
+                          style={{ color: "#A89B8C" }}
+                          onMouseOver={(e) => (e.currentTarget.style.color = "#ef4444")}
+                          onMouseOut={(e) => (e.currentTarget.style.color = "#A89B8C")}
+                        >
+                          Remove
+                        </button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleWebhook(wh.id, !wh.active)}
-                        className="text-xs"
-                        style={{ color: wh.active ? "#22c55e" : "#A89B8C" }}
-                      >
-                        {wh.active ? "Active" : "Paused"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteWebhook(wh.id)}
-                        className="text-xs"
-                        style={{ color: "#A89B8C" }}
-                        onMouseOver={(e) => (e.currentTarget.style.color = "#ef4444")}
-                        onMouseOut={(e) => (e.currentTarget.style.color = "#A89B8C")}
-                      >
-                        Remove
-                      </button>
-                    </div>
+                    {expandedDeliveries === wh.id && (
+                      <div className="flex flex-col gap-0 border-t" style={{ borderColor: "rgba(196,112,75,0.12)", background: "rgba(0,0,0,0.15)" }}>
+                        {loadingDeliveries === wh.id ? (
+                          <p className="text-xs p-3" style={{ color: "#A89B8C" }}>Loading…</p>
+                        ) : (deliveryHistory[wh.id] ?? []).length === 0 ? (
+                          <p className="text-xs p-3" style={{ color: "#A89B8C" }}>No deliveries yet.</p>
+                        ) : (
+                          (deliveryHistory[wh.id] ?? []).map((d) => (
+                            <div key={d.id} className="flex items-center gap-3 px-3 py-2 text-xs border-b last:border-b-0" style={{ borderColor: "rgba(196,112,75,0.08)" }}>
+                              <span
+                                className="w-1.5 h-1.5 rounded-full shrink-0"
+                                style={{ background: d.success ? "#22c55e" : "#ef4444" }}
+                              />
+                              <span className="font-mono" style={{ color: "#C4704B", minWidth: 28 }}>{d.statusCode ?? "—"}</span>
+                              <span style={{ color: "#D4B896", flex: 1 }}>{d.event}</span>
+                              <span style={{ color: "#A89B8C" }}>{d.responseMs}ms</span>
+                              <span style={{ color: "#6B5E55" }}>{new Date(d.createdAt).toLocaleString()}</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
