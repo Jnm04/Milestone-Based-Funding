@@ -320,6 +320,7 @@ export default function ProfilePage() {
   const [whEvents, setWhEvents] = useState<string[]>(["contract.funded", "proof.submitted", "ai.decision", "funds.released"]);
   const [whSaving, setWhSaving] = useState(false);
   const [whSecret, setWhSecret] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"account" | "security" | "notifications" | "integrations" | "privacy">("account");
 
   function fetchProfile() {
     fetch("/api/profile")
@@ -822,6 +823,37 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          {/* ── Tab navigation ─────────────────────────────────────────────────── */}
+          <div className="flex border-b" style={{ borderColor: "rgba(196,112,75,0.15)" }}>
+            {([
+              { id: "account", label: "Account" },
+              { id: "security", label: "Security" },
+              { id: "notifications", label: "Notifications" },
+              { id: "integrations", label: "Integrations" },
+              { id: "privacy", label: "Privacy" },
+            ] as const).map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className="px-4 py-2.5 text-sm font-medium transition-colors"
+                style={{
+                  color: activeTab === tab.id ? "#EDE6DD" : "#A89B8C",
+                  background: "none",
+                  border: "none",
+                  borderBottom: activeTab === tab.id ? "2px solid #C4704B" : "2px solid transparent",
+                  cursor: "pointer",
+                  marginBottom: -1,
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* ══ ACCOUNT ══════════════════════════════════════════════════════════ */}
+          {activeTab === "account" && <>
+
           {/* Verification / KYC */}
           <SectionCard title="Verification" subtitle="Your identity verification level determines your contract limits.">
             {(() => {
@@ -1043,6 +1075,11 @@ export default function ProfilePage() {
             </form>
           </SectionCard>
 
+          </>}
+
+          {/* ══ NOTIFICATIONS ════════════════════════════════════════════════════ */}
+          {activeTab === "notifications" && <>
+
           {/* Email Notifications */}
           <SectionCard title="Email Notifications" subtitle="Choose when you want to be notified by email">
             <div className="flex flex-col">
@@ -1075,6 +1112,11 @@ export default function ProfilePage() {
               </button>
             </div>
           </SectionCard>
+
+          </>}
+
+          {/* ══ SECURITY ═════════════════════════════════════════════════════════ */}
+          {activeTab === "security" && <>
 
           {/* Change Password */}
           <SectionCard title="Change Password">
@@ -1259,6 +1301,11 @@ export default function ProfilePage() {
             )}
           </SectionCard>
 
+          </>}
+
+          {/* ══ INTEGRATIONS ═════════════════════════════════════════════════════ */}
+          {activeTab === "integrations" && <>
+
           {/* SSO / SAML (enterprise only) */}
           {profile?.isEnterprise && (
             <SectionCard title="Single Sign-On" subtitle="Allow team members to log in with their company credentials (Okta, Azure AD, Google Workspace).">
@@ -1420,8 +1467,10 @@ export default function ProfilePage() {
             </SectionCard>
           )}
 
-          {/* Public Profile (startup only) */}
-          {profile?.role === "STARTUP" && (
+          </>}
+
+          {/* Public Profile (startup only — account tab) */}
+          {activeTab === "account" && profile?.role === "STARTUP" && (
             <SectionCard title="Public Profile" subtitle="Show your verified track record to investors. Opt in to make your profile discoverable.">
               <form
                 onSubmit={async (e) => {
@@ -1494,6 +1543,9 @@ export default function ProfilePage() {
               </form>
             </SectionCard>
           )}
+
+          {/* ══ NOTIFICATIONS (continued) ════════════════════════════════════════ */}
+          {activeTab === "notifications" && <>
 
           {/* Telegram Notifications */}
           <SectionCard title="Telegram Notifications" subtitle="Get instant push notifications directly in Telegram — no inbox required.">
@@ -1721,6 +1773,11 @@ export default function ProfilePage() {
             </div>
           </SectionCard>
 
+          </>}
+
+          {/* ══ INTEGRATIONS (continued) ═════════════════════════════════════════ */}
+          {activeTab === "integrations" && <>
+
           {/* Webhooks */}
           <SectionCard title="Webhooks" subtitle="Send signed POST requests to your systems on every contract event.">
             {whSecret && (
@@ -1857,6 +1914,11 @@ export default function ProfilePage() {
             )}
           </SectionCard>
 
+          </>}
+
+          {/* ══ SECURITY (continued) ═════════════════════════════════════════════ */}
+          {activeTab === "security" && <>
+
           {/* Security — Sessions */}
           <SectionCard title="Security" subtitle="Recent sign-ins and active session management">
             <div className="flex flex-col gap-4">
@@ -1929,6 +1991,11 @@ export default function ProfilePage() {
               </div>
             </div>
           </SectionCard>
+
+          </>}
+
+          {/* ══ PRIVACY ══════════════════════════════════════════════════════════ */}
+          {activeTab === "privacy" && <>
 
           {/* Privacy & Data (GDPR) */}
           <SectionCard title="Privacy & Data" subtitle="Your rights under GDPR / data protection law">
@@ -2106,6 +2173,8 @@ export default function ProfilePage() {
               )}
             </div>
           </SectionCard>
+
+          </>}
 
         </div>
       </main>
