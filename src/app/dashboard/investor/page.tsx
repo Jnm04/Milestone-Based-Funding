@@ -105,8 +105,8 @@ function HealthDot({ contract }: { contract: Contract }) {
   const health = dealHealth(contract);
   const cfg = HEALTH_CONFIG[health];
 
-  // Don't show dot for terminal / draft statuses
-  if (["COMPLETED", "EXPIRED", "DECLINED", "DRAFT"].includes(contract.status)) return null;
+  // Don't show dot for terminal / draft statuses — return empty span to hold the grid column
+  if (["COMPLETED", "EXPIRED", "DECLINED", "DRAFT"].includes(contract.status)) return <span />;
 
   const [note, setNote] = useState<string | null>(null);
   const [noteLoading, setNoteLoading] = useState(false);
@@ -837,12 +837,12 @@ export default function InvestorDashboard() {
               {/* Table header */}
               {!loadingContracts && contracts.length > 0 && (
                 <div
-                  className="rounded-xl overflow-hidden"
-                  style={{ border: "1px solid rgba(196,112,75,0.1)" }}
+                  className="rounded-xl"
+                  style={{ border: "1px solid rgba(196,112,75,0.1)", overflow: "visible" }}
                 >
                   {/* Table header row */}
                   <div
-                    className="hidden md:grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] gap-4 px-5 py-3 text-xs uppercase tracking-wide"
+                    className="hidden md:grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] gap-4 px-5 py-3 text-xs uppercase tracking-wide rounded-t-xl"
                     style={{ background: "rgba(255,255,255,0.02)", color: "#A89B8C", borderBottom: "1px solid rgba(196,112,75,0.08)" }}
                   >
                     <span>Contract</span>
@@ -862,7 +862,7 @@ export default function InvestorDashboard() {
                     return (
                       <div
                         key={c.id}
-                        className="group px-5 py-4 transition-all"
+                        className={`group px-5 py-4 transition-all${idx === arr.length - 1 ? " rounded-b-xl" : ""}`}
                         style={{
                           background: isHidden ? "rgba(255,255,255,0.01)" : "transparent",
                           borderBottom: idx < arr.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
