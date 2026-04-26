@@ -842,7 +842,7 @@ export default function InvestorDashboard() {
                 >
                   {/* Table header row */}
                   <div
-                    className="hidden md:grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] gap-4 px-5 py-3 text-xs uppercase tracking-wide rounded-t-xl"
+                    className="hidden md:grid grid-cols-[1fr_auto_auto_auto_90px_auto_auto] gap-4 px-5 py-3 text-xs uppercase tracking-wide rounded-t-xl"
                     style={{ background: "rgba(255,255,255,0.02)", color: "#A89B8C", borderBottom: "1px solid rgba(196,112,75,0.08)" }}
                   >
                     <span>Contract</span>
@@ -918,7 +918,7 @@ export default function InvestorDashboard() {
                         </div>
 
                         {/* Desktop layout */}
-                        <div className="hidden md:grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] gap-4 items-center">
+                        <div className="hidden md:grid grid-cols-[1fr_auto_auto_auto_90px_auto_auto] gap-4 items-center">
                           <div className="flex flex-col gap-1.5 min-w-0">
                             <div className="flex items-center gap-2">
                               <p className="text-sm font-medium truncate" style={{ color: "#EDE6DD" }}>{c.milestone}</p>
