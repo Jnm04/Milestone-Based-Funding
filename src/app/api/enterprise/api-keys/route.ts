@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
+import { writeOrgAuditLog } from "@/lib/org-audit";
 
 const MAX_KEYS = 10;
 
@@ -45,6 +46,14 @@ export async function POST(req: NextRequest) {
   const key = await prisma.apiKey.create({
     data: { userId: session.user.id, name, keyHash, keyPrefix },
     select: { id: true, name: true, keyPrefix: true, createdAt: true },
+  });
+
+  void writeOrgAuditLog({
+    orgId: session.user.id,
+    actorId: session.user.id,
+    action: "API_KEY_CREATED",
+    detail: `API key "${name}" created`,
+    meta: { keyName: name, keyPrefix },
   });
 
   return NextResponse.json({

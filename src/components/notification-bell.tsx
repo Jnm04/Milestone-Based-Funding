@@ -96,7 +96,7 @@ export function NotificationBell() {
           {notifications.length === 0 ? (
             <p style={{ padding: "20px 16px", fontSize: 13, color: "#A89B8C", textAlign: "center" }}>No notifications yet</p>
           ) : (
-            notifications.map(n => {
+            notifications.slice(0, 8).map(n => {
               const inner = (
                 <div
                   key={n.id}
@@ -118,6 +118,13 @@ export function NotificationBell() {
               );
             })
           )}
+          <Link
+            href="/notifications"
+            onClick={() => setOpen(false)}
+            style={{ display: "block", padding: "10px 16px", textAlign: "center", fontSize: 12, color: "#C4704B", borderTop: "1px solid rgba(196,112,75,0.1)", textDecoration: "none" }}
+          >
+            View all notifications →
+          </Link>
         </div>
       )}
     </div>

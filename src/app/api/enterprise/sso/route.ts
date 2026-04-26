@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
+import { writeOrgAuditLog } from "@/lib/org-audit";
 
 const ALLOWED_PROVIDERS = ["OKTA", "AZURE_AD", "GOOGLE_WORKSPACE", "SAML"] as const;
 
@@ -70,6 +71,14 @@ export async function POST(request: NextRequest) {
     },
   });
 
+  void writeOrgAuditLog({
+    orgId: session.user.id,
+    actorId: session.user.id,
+    action: "SSO_CONFIGURED",
+    detail: `SSO configured with ${parsed.data.provider} for domain ${normalised}`,
+    meta: { provider: parsed.data.provider, domain: normalised },
+  });
+
   return NextResponse.json({ config });
 }
 
@@ -82,5 +91,13 @@ export async function DELETE() {
   if (!allowed) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   await prisma.ssoConfig.deleteMany({ where: { orgId: session.user.id } });
+
+  void writeOrgAuditLog({
+    orgId: session.user.id,
+    actorId: session.user.id,
+    action: "SSO_REMOVED",
+    detail: "SSO configuration removed",
+  });
+
   return NextResponse.json({ ok: true });
 }

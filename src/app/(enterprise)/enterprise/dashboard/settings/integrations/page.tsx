@@ -19,6 +19,7 @@ const TABS = [
   { href: "/enterprise/dashboard/settings/webhooks", label: "Webhooks" },
   { href: "/enterprise/dashboard/settings/integrations", label: "Integrations" },
   { href: "/enterprise/dashboard/settings/sso", label: "SSO" },
+  { href: "/enterprise/dashboard/settings/audit-log", label: "Audit Log" },
 ];
 
 const ALL_EVENTS: { id: string; label: string; desc: string }[] = [

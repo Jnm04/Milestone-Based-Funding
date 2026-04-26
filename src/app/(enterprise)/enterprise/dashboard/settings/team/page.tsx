@@ -21,6 +21,7 @@ const TABS = [
   { href: "/enterprise/dashboard/settings/webhooks", label: "Webhooks" },
   { href: "/enterprise/dashboard/settings/integrations", label: "Integrations" },
   { href: "/enterprise/dashboard/settings/sso", label: "SSO" },
+  { href: "/enterprise/dashboard/settings/audit-log", label: "Audit Log" },
 ];
 
 const ROLE_INFO: Record<string, { label: string; desc: string }> = {
@@ -56,6 +57,7 @@ export default function TeamSettingsPage() {
   const [role, setRole] = useState("VIEWER");
   const [inviting, setInviting] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [changingRole, setChangingRole] = useState<string | null>(null);
 
   async function load() {
     try {
@@ -90,6 +92,25 @@ export default function TeamSettingsPage() {
       toast.error(err instanceof Error ? err.message : "Invite failed");
     } finally {
       setInviting(false);
+    }
+  }
+
+  async function handleRoleChange(id: string, newRole: string) {
+    setChangingRole(id);
+    try {
+      const res = await fetch("/api/enterprise/team", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, role: newRole }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Role change failed");
+      toast.success("Role updated");
+      setMembers(m => m.map(x => x.id === id ? { ...x, role: newRole } : x));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Role change failed");
+    } finally {
+      setChangingRole(null);
     }
   }
 
@@ -311,14 +332,28 @@ export default function TeamSettingsPage() {
                   </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-                  <span style={{
-                    fontSize: 11.5, fontWeight: 600,
-                    padding: "3px 9px", borderRadius: 99,
-                    background: m.acceptedAt ? "#DCFCE7" : "#FEF9C3",
-                    color: m.acceptedAt ? "#15803D" : "#92400E",
-                  }}>
-                    {m.acceptedAt ? m.role : "Pending"}
-                  </span>
+                  {m.acceptedAt ? (
+                    <select
+                      value={m.role}
+                      disabled={changingRole === m.id}
+                      onChange={(e) => handleRoleChange(m.id, e.target.value)}
+                      style={{
+                        fontSize: 12, fontWeight: 600,
+                        padding: "3px 8px", borderRadius: 99,
+                        background: "#DCFCE7", color: "#15803D",
+                        border: "1px solid #86EFAC",
+                        cursor: changingRole === m.id ? "not-allowed" : "pointer",
+                        outline: "none",
+                      }}
+                    >
+                      <option value="VIEWER">Viewer</option>
+                      <option value="EDITOR">Editor</option>
+                    </select>
+                  ) : (
+                    <span style={{ fontSize: 11.5, fontWeight: 600, padding: "3px 9px", borderRadius: 99, background: "#FEF9C3", color: "#92400E" }}>
+                      Pending
+                    </span>
+                  )}
                   <button
                     onClick={() => handleRemove(m.id, m.email)}
                     disabled={removing === m.id}

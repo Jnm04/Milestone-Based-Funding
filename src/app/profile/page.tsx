@@ -320,7 +320,14 @@ export default function ProfilePage() {
   const [whEvents, setWhEvents] = useState<string[]>(["contract.funded", "proof.submitted", "ai.decision", "funds.released"]);
   const [whSaving, setWhSaving] = useState(false);
   const [whSecret, setWhSecret] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"account" | "security" | "notifications" | "integrations" | "privacy">("account");
+  const [activeTab, setActiveTab] = useState<"account" | "security" | "notifications" | "integrations" | "privacy" | "usage">("account");
+  const [usageStats, setUsageStats] = useState<{
+    contractsAsInvestor: number; contractsAsStartup: number;
+    totalMilestones: number; milestonesVerified: number; milestonesCompleted: number;
+    milestonesRejected: number; milestonesPending: number;
+    proofCount: number; memberSince: string | null;
+  } | null>(null);
+  const [loadingUsage, setLoadingUsage] = useState(false);
 
   function fetchProfile() {
     fetch("/api/profile")
@@ -415,6 +422,16 @@ export default function ProfilePage() {
       .then((d) => setSessions(d.events ?? []))
       .catch(() => {});
   }, [status, router]);
+
+  useEffect(() => {
+    if (activeTab !== "usage" || usageStats || loadingUsage) return;
+    setLoadingUsage(true);
+    fetch("/api/user/usage")
+      .then(r => r.json())
+      .then(d => setUsageStats(d))
+      .catch(() => {})
+      .finally(() => setLoadingUsage(false));
+  }, [activeTab, usageStats, loadingUsage]);
 
   async function handleTelegramConnect() {
     setTgLoading(true);
@@ -831,6 +848,7 @@ export default function ProfilePage() {
               { id: "notifications", label: "Notifications" },
               { id: "integrations", label: "Integrations" },
               { id: "privacy", label: "Privacy" },
+              { id: "usage", label: "Usage" },
             ] as const).map((tab) => (
               <button
                 key={tab.id}
@@ -2174,6 +2192,44 @@ export default function ProfilePage() {
             </div>
           </SectionCard>
 
+          </>}
+
+          {/* ══ USAGE ══════════════════════════════════════════════════════════ */}
+          {activeTab === "usage" && <>
+          <SectionCard title="Your Activity" subtitle="A summary of your activity on cascrow">
+            {loadingUsage ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {[1,2,3,4,5,6].map(i => (
+                  <div key={i} className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.08)", height: 72 }} />
+                ))}
+              </div>
+            ) : usageStats ? (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+                  {[
+                    { label: "Contracts created", value: usageStats.contractsAsInvestor, show: role === "INVESTOR" },
+                    { label: "Contracts received", value: usageStats.contractsAsStartup, show: role === "STARTUP" },
+                    { label: "Total milestones", value: usageStats.totalMilestones, show: true },
+                    { label: "Milestones verified", value: usageStats.milestonesVerified + usageStats.milestonesCompleted, show: true },
+                    { label: "Milestones rejected", value: usageStats.milestonesRejected, show: true },
+                    { label: "Proofs submitted", value: usageStats.proofCount, show: true },
+                  ].filter(s => s.show).map(s => (
+                    <div key={s.label} className="rounded-xl p-4 flex flex-col gap-1" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.08)" }}>
+                      <span className="text-2xl font-bold" style={{ color: "#EDE6DD", letterSpacing: "-0.03em" }}>{s.value}</span>
+                      <span className="text-xs" style={{ color: "#A89B8C" }}>{s.label}</span>
+                    </div>
+                  ))}
+                </div>
+                {usageStats.memberSince && (
+                  <p className="text-xs" style={{ color: "#6B5E54" }}>
+                    Member since {new Date(usageStats.memberSince).toLocaleDateString("en-GB", { year: "numeric", month: "long", day: "numeric" })}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm" style={{ color: "#A89B8C" }}>Could not load usage stats.</p>
+            )}
+          </SectionCard>
           </>}
 
         </div>

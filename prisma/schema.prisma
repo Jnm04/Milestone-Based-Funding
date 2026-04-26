@@ -123,6 +123,10 @@ model User {
   // In-app notifications
   notifications Notification[]
 
+  // Enterprise org audit log
+  orgAuditLogs      OrgAuditLog[] @relation("OrgAuditLogs")
+  orgAuditActorLogs OrgAuditLog[] @relation("OrgAuditActor")
+
   // Support tickets submitted by this user
   supportTickets SupportTicket[]
 
@@ -1065,4 +1069,26 @@ model AdminAuditLog {
 
   @@index([targetType, targetId])
   @@index([createdAt(sort: Desc)])
+}
+
+// ── Enterprise Org Audit Log ──────────────────────────────────────────────────
+
+/// Activity log for enterprise workspace events (team changes, SSO, API keys, etc.)
+model OrgAuditLog {
+  id       String   @id @default(cuid())
+  /// The enterprise account owner (org) this event belongs to
+  orgId    String
+  org      User     @relation("OrgAuditLogs", fields: [orgId], references: [id], onDelete: Cascade)
+  /// Who performed the action (could be the owner or a team member)
+  actorId  String?
+  actor    User?    @relation("OrgAuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  /// e.g. "MEMBER_INVITED" | "MEMBER_REMOVED" | "MEMBER_ROLE_CHANGED" | "SSO_CONFIGURED" | "SSO_REMOVED" | "API_KEY_CREATED" | "API_KEY_DELETED"
+  action   String
+  /// Human-readable description
+  detail   String?
+  /// Optional JSON metadata (e.g. { email, role, keyName })
+  meta     Json?
+  createdAt DateTime @default(now())
+
+  @@index([orgId, createdAt(sort: Desc)])
 }

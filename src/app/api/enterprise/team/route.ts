@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { sendTeamInviteEmail } from "@/lib/email";
+import { writeOrgAuditLog } from "@/lib/org-audit";
 
 const MAX_MEMBERS = 20;
 
@@ -75,7 +76,45 @@ export async function POST(req: NextRequest) {
     inviteToken,
   }).catch(() => {});
 
+  void writeOrgAuditLog({
+    orgId: session.user.id,
+    actorId: session.user.id,
+    action: "MEMBER_INVITED",
+    detail: `Invited ${email} as ${role}`,
+    meta: { email, role },
+  });
+
   return NextResponse.json({ member });
+}
+
+// ── PATCH /api/enterprise/team — change role of an existing member ────────────
+
+export async function PATCH(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const body = await req.json().catch(() => null);
+  const id = typeof body?.id === "string" ? body.id : null;
+  const role = body?.role === "EDITOR" ? "EDITOR" : body?.role === "VIEWER" ? "VIEWER" : null;
+
+  if (!id || !role) return NextResponse.json({ error: "id and role required" }, { status: 400 });
+
+  const member = await prisma.orgMember.findUnique({ where: { id } });
+  if (!member) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (member.ownerId !== session.user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!member.acceptedAt) return NextResponse.json({ error: "Cannot change role of pending invite" }, { status: 400 });
+
+  const updated = await prisma.orgMember.update({ where: { id }, data: { role } });
+
+  void writeOrgAuditLog({
+    orgId: session.user.id,
+    actorId: session.user.id,
+    action: "MEMBER_ROLE_CHANGED",
+    detail: `Changed ${member.email} role to ${role}`,
+    meta: { email: member.email, previousRole: member.role, newRole: role },
+  });
+
+  return NextResponse.json({ member: updated });
 }
 
 // ── DELETE /api/enterprise/team?id=xxx ────────────────────────────────────────
@@ -92,5 +131,14 @@ export async function DELETE(req: NextRequest) {
   if (member.ownerId !== session.user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   await prisma.orgMember.delete({ where: { id } });
+
+  void writeOrgAuditLog({
+    orgId: session.user.id,
+    actorId: session.user.id,
+    action: "MEMBER_REMOVED",
+    detail: `Removed ${member.email} from team`,
+    meta: { email: member.email, role: member.role },
+  });
+
   return NextResponse.json({ ok: true });
 }
