@@ -105,8 +105,7 @@ function HealthDot({ contract }: { contract: Contract }) {
   const health = dealHealth(contract);
   const cfg = HEALTH_CONFIG[health];
 
-  // Don't show dot for terminal / draft statuses — return empty span to hold the grid column
-  if (["COMPLETED", "EXPIRED", "DECLINED", "DRAFT"].includes(contract.status)) return <span />;
+  if (["COMPLETED", "EXPIRED", "DECLINED", "DRAFT"].includes(contract.status)) return null;
 
   const [note, setNote] = useState<string | null>(null);
   const [noteLoading, setNoteLoading] = useState(false);
@@ -151,7 +150,7 @@ function HealthDot({ contract }: { contract: Contract }) {
       {/* Tooltip */}
       {hovered && (
         <div
-          className="absolute z-50 bottom-full left-0 mb-2 p-3 rounded-xl text-xs max-w-xs pointer-events-none"
+          className="absolute z-50 top-full left-0 mt-2 p-3 rounded-xl text-xs max-w-xs pointer-events-none"
           style={{
             background: "#1F1A18",
             border: `1px solid ${cfg.border}`,
@@ -842,14 +841,13 @@ export default function InvestorDashboard() {
                 >
                   {/* Table header row */}
                   <div
-                    className="hidden md:grid grid-cols-[1fr_auto_auto_auto_90px_auto_auto] gap-4 px-5 py-3 text-xs uppercase tracking-wide rounded-t-xl"
+                    className="hidden md:grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-4 px-5 py-3 text-xs uppercase tracking-wide rounded-t-xl"
                     style={{ background: "rgba(255,255,255,0.02)", color: "#A89B8C", borderBottom: "1px solid rgba(196,112,75,0.08)" }}
                   >
                     <span>Contract</span>
                     <span>Receiver</span>
                     <span>Amount</span>
                     <span>Status</span>
-                    <span>Health</span>
                     <span>Actions</span>
                     <span></span>
                   </div>
@@ -918,10 +916,11 @@ export default function InvestorDashboard() {
                         </div>
 
                         {/* Desktop layout */}
-                        <div className="hidden md:grid grid-cols-[1fr_auto_auto_auto_90px_auto_auto] gap-4 items-center">
+                        <div className="hidden md:grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-4 items-center">
                           <div className="flex flex-col gap-1.5 min-w-0">
                             <div className="flex items-center gap-2">
                               <p className="text-sm font-medium truncate" style={{ color: "#EDE6DD" }}>{c.milestone}</p>
+                              <HealthDot contract={c} />
                               {c.mode === "ATTESTATION" && (
                                 <span className="text-xs px-2 py-0.5 rounded-full font-semibold shrink-0" style={{ background: "rgba(196,112,75,0.15)", border: "1px solid rgba(196,112,75,0.3)", color: "#C4704B" }}>
                                   Attestation
@@ -949,7 +948,6 @@ export default function InvestorDashboard() {
                           <span className={STATUS_CLASS[c.status] ?? "cs-badge cs-badge-draft"}>
                             {STATUS_LABELS[c.status] ?? c.status}
                           </span>
-                          <HealthDot contract={c} />
                           {!isHidden ? (
                             <div className="flex items-center gap-2">
                               <Link
