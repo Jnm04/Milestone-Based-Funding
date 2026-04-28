@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
       amountUSD:  25000,
       cancelAfter: deadline,
       status: "AWAITING_ESCROW",
+      isDemo: true,
       inviteLink: nanoid(32),
       milestones: {
         create: [

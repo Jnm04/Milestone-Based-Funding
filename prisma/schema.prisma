@@ -173,6 +173,8 @@ model Contract {
   auditorEmail        String?
   /// Enterprise approval workflow — when true, milestones must be approved before AI verification runs
   requiresApproval    Boolean        @default(false)
+  /// Demo contracts created by /api/demo — bypass investor session auth for public showcase
+  isDemo              Boolean        @default(false)
   proofs              Proof[]
   milestones          Milestone[]
   auditLogs           AuditLog[]

@@ -81,10 +81,12 @@ export default async function ContractPage({ params, searchParams }: ContractPag
   const isAuthenticatedInvestor =
     session?.user?.id === contract.investorId;
 
-  // Fetch cached credibility score only when the session actually belongs to the
-  // investor — avoids a guaranteed 403 on the client-side refetch button.
+  // Fetch cached credibility score for authenticated investors, or for demo contracts
+  // where the URL wallet param identifies the demo investor (public showcase).
+  const canViewCredibility =
+    isAuthenticatedInvestor || (contract.isDemo && !!isInvestorViewerEarly);
   const credibilityRecord =
-    isAuthenticatedInvestor && contract.startup
+    canViewCredibility && contract.startup
       ? await prisma.credibilityScore.findUnique({
           where: {
             startupId_contractId: {
@@ -422,8 +424,8 @@ export default async function ContractPage({ params, searchParams }: ContractPag
         {/* On-chain audit trail */}
         <AuditTrail logs={auditLogs} />
 
-        {/* AI Credibility Score — only when the logged-in user IS the investor */}
-        {isAuthenticatedInvestor && contract.startup && (
+        {/* AI Credibility Score — authenticated investor, or demo viewer */}
+        {canViewCredibility && contract.startup && (
           <CredibilityPanel
             contractId={contract.id}
             startupName={contract.startup.name ?? contract.startup.companyName ?? null}

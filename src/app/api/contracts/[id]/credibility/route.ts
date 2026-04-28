@@ -44,38 +44,40 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const { id: contractId } = await params;
 
-  // ── Authorization: only the investor on this contract ─────────────────────
-  const contract = await prisma.contract.findUnique({
-    where: { id: contractId },
-    select: {
-      investorId: true,
-      startupId: true,
-      startup: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          emailVerified: true,
-          kycTier: true,
-          companyName: true,
-          bio: true,
-          website: true,
+  // ── Authorization: investor session OR public demo contract ───────────────
+  const [session, contract] = await Promise.all([
+    getServerSession(authOptions),
+    prisma.contract.findUnique({
+      where: { id: contractId },
+      select: {
+        investorId: true,
+        startupId: true,
+        isDemo: true,
+        startup: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            emailVerified: true,
+            kycTier: true,
+            companyName: true,
+            bio: true,
+            website: true,
+          },
         },
       },
-    },
-  });
+    }),
+  ]);
 
   if (!contract) {
     return NextResponse.json({ error: "Contract not found" }, { status: 404 });
   }
-  if (contract.investorId !== session.user.id) {
+
+  const isAuthenticatedInvestor = !!session && session.user.id === contract.investorId;
+
+  if (!isAuthenticatedInvestor && !contract.isDemo) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   if (!contract.startup) {
@@ -100,9 +102,9 @@ export async function GET(
     } satisfies CredibilityResponse);
   }
 
-  // ── Rate limit: 20 generations per hour per user ──────────────────────────
+  // ── Rate limit: 20 generations per hour per user (IP fallback for demo) ───
   const ip = getClientIp(req);
-  const allowed = await checkRateLimit(`credibility:${session.user.id ?? ip}`, 20, 60 * 60 * 1000);
+  const allowed = await checkRateLimit(`credibility:${session?.user?.id ?? ip}`, 20, 60 * 60 * 1000);
   if (!allowed) {
     return NextResponse.json(
       { error: "Too many requests — please wait before recalculating." },
