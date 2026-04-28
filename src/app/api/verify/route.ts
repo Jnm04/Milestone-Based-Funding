@@ -104,6 +104,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Proof not found" }, { status: 404 });
   }
 
+  // Demo contracts must use /api/demo/advance — never the real AI pipeline
+  if (proof.contract.isDemo) {
+    return NextResponse.json({ error: "Use /api/demo/advance for demo contracts" }, { status: 403 });
+  }
+
   if (!isInternalCall && sessionUserId) {
     if (
       proof.contract.investorId !== sessionUserId &&
