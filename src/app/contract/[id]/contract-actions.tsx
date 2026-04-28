@@ -52,6 +52,8 @@ interface ContractActionsProps {
   interimAiPositive: boolean | null;
   /** Extension days requested: 7 | 14 | 30 */
   extensionDays: number | null;
+  /** True when this is a demo contract — bypasses MetaMask, role checks, and real blockchain calls. */
+  isDemo?: boolean;
   // ── Enterprise Attestation Mode ───────────────────────────────────────────
   /** "ESCROW" | "ATTESTATION" */
   contractMode: string;
@@ -281,6 +283,7 @@ export function ContractActions({
   interimAiAssessment,
   interimAiPositive,
   extensionDays,
+  isDemo,
   contractMode,
   dataSourceType,
   dataSourceUrl,
@@ -314,6 +317,38 @@ export function ContractActions({
   const [confirmCancelReneg, setConfirmCancelReneg] = useState(false);
   const [progressUpdateText, setProgressUpdateText] = useState("");
   const [loadingProgressUpdate, setLoadingProgressUpdate] = useState(false);
+  // ── Demo mode ─────────────────────────────────────────────────────────────
+  const [demoStep, setDemoStep] = useState<"idle" | "loading" | "overlay">("idle");
+  const [demoOverlayText, setDemoOverlayText] = useState<string | null>(null);
+
+  async function advanceDemo(step: "fund" | "submit_proof" | "verify" | "release", overlayText: string) {
+    setDemoOverlayText(overlayText);
+    setDemoStep("overlay");
+    await new Promise((r) => setTimeout(r, 2200));
+    setDemoStep("loading");
+    try {
+      const res = await fetch("/api/demo/advance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contractId, step }),
+      });
+      if (!res.ok) {
+        const err = (await res.json()) as { error?: string };
+        toast.error(err.error ?? "Demo step failed");
+        setDemoStep("idle");
+        return;
+      }
+      if (step === "verify") {
+        const data = (await res.json()) as { decision: string; confidence: number; reasoning: string };
+        toast.success(`AI verified: ${data.decision} (${data.confidence}% confidence)`);
+      }
+      setTimeout(() => window.location.reload(), 800);
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+      setDemoStep("idle");
+    }
+  }
+
   // ── Feature I: Proof Pre-Check ────────────────────────────────────────────
   const [loadingPreCheck, setLoadingPreCheck] = useState(false);
   const [preCheckResult, setPreCheckResult] = useState<{
@@ -995,14 +1030,69 @@ export function ContractActions({
 
   const isExpired = new Date() >= new Date(cancelAfter);
 
-  // ── AWAITING_ESCROW: investor funds via MetaMask ──────────────────────────
+  // ── AWAITING_ESCROW: investor funds via MetaMask (or demo simulation) ──────
   if (status === "AWAITING_ESCROW") {
-    if (viewerWallet !== investorAddress) {
+    if (!isDemo && viewerWallet !== investorAddress) {
       return (
         <div className="flex flex-col gap-3 p-5 rounded-xl" style={{ background: "rgba(196,112,75,0.08)", border: "1px solid rgba(196,112,75,0.25)" }}>
           <p className="text-sm font-medium" style={{ color: "#E8935A" }}>
             Waiting for the Grant Giver to fund the escrow.
           </p>
+        </div>
+      );
+    }
+
+    if (isDemo) {
+      const fundLabel =
+        totalMilestones > 1 && milestoneNumber !== null
+          ? `Fund Milestone ${milestoneNumber}/${totalMilestones} (Demo)`
+          : "Fund Escrow (Demo)";
+
+      return (
+        <div className="flex flex-col gap-3 p-5 rounded-xl" style={{ background: "rgba(196,112,75,0.08)", border: "1px solid rgba(196,112,75,0.25)" }}>
+          {/* Demo overlay */}
+          {demoStep === "overlay" && demoOverlayText && (
+            <div
+              className="flex flex-col gap-2 p-4 rounded-lg"
+              style={{ background: "rgba(196,112,75,0.12)", border: "1px solid rgba(196,112,75,0.4)" }}
+            >
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#C4704B" }}>
+                Demo: What MetaMask would do
+              </p>
+              <p className="text-sm leading-relaxed" style={{ color: "#D4B896" }}>{demoOverlayText}</p>
+              <p className="text-xs" style={{ color: "#8B7355" }}>Simulating confirmation…</p>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <span
+              className="px-2 py-0.5 rounded-full text-xs font-semibold uppercase tracking-widest"
+              style={{ background: "rgba(196,112,75,0.15)", color: "#C4704B", border: "1px solid rgba(196,112,75,0.3)" }}
+            >
+              Demo Mode
+            </span>
+            <p className="text-sm font-medium" style={{ color: "#E8935A" }}>
+              {totalMilestones > 1 && milestoneNumber !== null
+                ? `Milestone ${milestoneNumber} of ${totalMilestones}${milestoneTitle ? `: ${milestoneTitle}` : ""}`
+                : "Fund the escrow to lock RLUSD."}
+            </p>
+          </div>
+          <p className="text-xs" style={{ color: "#A89B8C" }}>
+            Amount: <strong style={{ color: "#D4B896" }}>{amountRLUSD} RLUSD</strong> — in the real app MetaMask
+            opens twice: once to approve RLUSD spending, then to sign the escrow transaction on XRPL EVM Sidechain.
+          </p>
+          <button
+            onClick={() =>
+              advanceDemo(
+                "fund",
+                `MetaMask popup 1/2: Approve ${amountRLUSD} RLUSD spending for the escrow contract.\n\nMetaMask popup 2/2: Sign the createMilestone() transaction on XRPL EVM Sidechain (Chain ID 1449000). Gas: ~0.001 XRP.\n\nBoth transactions confirmed — funds locked in escrow.`
+              )
+            }
+            disabled={demoStep !== "idle"}
+            className="w-full rounded-lg py-2.5 text-sm font-semibold transition-colors disabled:opacity-50"
+            style={{ background: "#C4704B", color: "#171311" }}
+          >
+            {demoStep === "loading" ? "Confirming…" : demoStep === "overlay" ? "MetaMask open…" : fundLabel}
+          </button>
         </div>
       );
     }
@@ -1066,7 +1156,7 @@ export function ContractActions({
 
   // ── FUNDED: startup uploads proof ─────────────────────────────────────────
   if (status === "FUNDED") {
-    if (viewerWallet !== startupAddress) {
+    if (!isDemo && viewerWallet !== startupAddress) {
       return (
         <div className="flex flex-col gap-3 p-5 rounded-xl" style={{ background: "rgba(96,165,250,0.07)", border: "1px solid rgba(96,165,250,0.2)" }}>
           <p className="text-sm font-medium" style={{ color: "#7DB8F7" }}>
@@ -1095,6 +1185,55 @@ export function ContractActions({
         </div>
       );
     }
+
+    if (isDemo) {
+      return (
+        <div className="flex flex-col gap-3 p-5 rounded-xl" style={{ background: "rgba(96,165,250,0.07)", border: "1px solid rgba(96,165,250,0.2)" }}>
+          {demoStep === "overlay" && demoOverlayText && (
+            <div
+              className="flex flex-col gap-2 p-4 rounded-lg"
+              style={{ background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.35)" }}
+            >
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#7DB8F7" }}>
+                Demo: What happens on the Receiver side
+              </p>
+              <p className="text-sm leading-relaxed" style={{ color: "#A8C8F7" }}>{demoOverlayText}</p>
+              <p className="text-xs" style={{ color: "#6B8AAA" }}>Uploading demo proof…</p>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <span
+              className="px-2 py-0.5 rounded-full text-xs font-semibold uppercase tracking-widest"
+              style={{ background: "rgba(96,165,250,0.12)", color: "#7DB8F7", border: "1px solid rgba(96,165,250,0.3)" }}
+            >
+              Demo Mode
+            </span>
+            <p className="text-sm font-medium" style={{ color: "#7DB8F7" }}>
+              Escrow funded — Receiver uploads milestone proof.
+            </p>
+          </div>
+          <p className="text-xs" style={{ color: "#A89B8C" }}>
+            In the real app the Receiver uploads a PDF or links a GitHub repo. For this demo we use a
+            pre-built proof from <strong style={{ color: "#D4B896" }}>Acme AI Labs</strong> with MVP metrics,
+            signed LOIs, and GitHub activity.
+          </p>
+          <button
+            onClick={() =>
+              advanceDemo(
+                "submit_proof",
+                "The Receiver (Acme AI Labs) uploads their milestone proof PDF.\n\nFile: acme-ai-labs-milestone-proof.pdf — 11 pages with screenshots, signed LOIs, and GitHub activity report.\n\nProof submitted and logged on XRPL audit trail."
+              )
+            }
+            disabled={demoStep !== "idle"}
+            className="w-full rounded-lg py-2.5 text-sm font-semibold transition-colors disabled:opacity-50"
+            style={{ background: "#7DB8F7", color: "#171311" }}
+          >
+            {demoStep === "loading" ? "Uploading…" : demoStep === "overlay" ? "Uploading proof…" : "Submit Demo Proof"}
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col gap-3">
         {milestoneId && (
@@ -1179,7 +1318,63 @@ export function ContractActions({
 
   // ── PROOF_SUBMITTED: trigger AI verification ──────────────────────────────
   if (status === "PROOF_SUBMITTED" && latestProofId && !verifyDone) {
-    const isStartup = viewerWallet === startupAddress;
+    const isStartup = isDemo || viewerWallet === startupAddress;
+
+    if (isDemo) {
+      return (
+        <div className="flex flex-col gap-3 p-5 rounded-xl" style={{ background: "rgba(96,165,250,0.07)", border: "1px solid rgba(96,165,250,0.2)" }}>
+          {demoStep === "overlay" && demoOverlayText && (
+            <div
+              className="flex flex-col gap-2 p-4 rounded-lg"
+              style={{ background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.35)" }}
+            >
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#7DB8F7" }}>
+                Demo: AI Verification running
+              </p>
+              <p className="text-sm leading-relaxed" style={{ color: "#A8C8F7" }}>{demoOverlayText}</p>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <span
+              className="px-2 py-0.5 rounded-full text-xs font-semibold uppercase tracking-widest"
+              style={{ background: "rgba(96,165,250,0.12)", color: "#7DB8F7", border: "1px solid rgba(96,165,250,0.3)" }}
+            >
+              Demo Mode
+            </span>
+            <p className="text-sm font-medium" style={{ color: "#7DB8F7" }}>Proof uploaded. Run the 5-model AI vote.</p>
+          </div>
+          <div
+            className="flex items-center gap-3 px-4 py-3 rounded-lg"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(96,165,250,0.2)" }}
+          >
+            <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(96,165,250,0.15)", color: "#7DB8F7" }}>PDF</span>
+            <span className="text-sm flex-1" style={{ color: "#EDE6DD" }}>acme-ai-labs-milestone-proof.pdf</span>
+          </div>
+          <p className="text-xs" style={{ color: "#A89B8C" }}>
+            cascrow runs <strong style={{ color: "#D4B896" }}>5 AI models in parallel</strong> (Claude, Gemini,
+            GPT-4o, Mistral, Cerebras). 3 of 5 YES votes needed to release funds.
+          </p>
+          <button
+            onClick={() =>
+              advanceDemo(
+                "verify",
+                "Querying 5 AI models in parallel:\n• Claude Haiku · Gemini Flash · GPT-4o-mini · Mistral Small · Cerebras/Qwen3\n\nAnalysing proof against milestone criteria…"
+              )
+            }
+            disabled={demoStep !== "idle"}
+            className="w-full rounded-lg py-2.5 text-sm font-semibold transition-colors disabled:opacity-50"
+            style={{ background: "#C4704B", color: "#171311" }}
+          >
+            {demoStep === "loading"
+              ? "Verifying…"
+              : demoStep === "overlay"
+              ? "Running 5 AI models…"
+              : "Run AI Verification"}
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col gap-3 p-5 rounded-xl" style={{ background: "rgba(96,165,250,0.07)", border: "1px solid rgba(96,165,250,0.2)" }}>
         <p className="text-sm" style={{ color: "#7DB8F7" }}>
@@ -1366,7 +1561,7 @@ export function ContractActions({
 
   // ── VERIFIED: startup releases funds (platform calls contract server-side) ─
   if (status === "VERIFIED") {
-    if (viewerWallet !== startupAddress) {
+    if (!isDemo && viewerWallet !== startupAddress) {
       return (
         <div className="flex flex-col gap-3 p-5 rounded-xl" style={{ background: "rgba(74,222,128,0.07)", border: "1px solid rgba(74,222,128,0.2)" }}>
           <p className="text-sm font-medium" style={{ color: "#6EE09A" }}>
@@ -1375,6 +1570,58 @@ export function ContractActions({
         </div>
       );
     }
+
+    if (isDemo) {
+      return (
+        <div className="flex flex-col gap-3 p-5 rounded-xl" style={{ background: "rgba(74,222,128,0.07)", border: "1px solid rgba(74,222,128,0.2)" }}>
+          {demoStep === "overlay" && demoOverlayText && (
+            <div
+              className="flex flex-col gap-2 p-4 rounded-lg"
+              style={{ background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.3)" }}
+            >
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#6EE09A" }}>
+                Demo: Releasing funds
+              </p>
+              <p className="text-sm leading-relaxed" style={{ color: "#A8F0C8" }}>{demoOverlayText}</p>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <span
+              className="px-2 py-0.5 rounded-full text-xs font-semibold uppercase tracking-widest"
+              style={{ background: "rgba(74,222,128,0.1)", color: "#6EE09A", border: "1px solid rgba(74,222,128,0.25)" }}
+            >
+              Demo Mode
+            </span>
+            <p className="text-sm font-medium" style={{ color: "#6EE09A" }}>
+              AI approved! Release the funds to the Receiver.
+            </p>
+          </div>
+          <p className="text-xs" style={{ color: "#A89B8C" }}>
+            The platform wallet calls <code style={{ color: "#D4B896" }}>releaseMilestone()</code> on the XRPL EVM
+            smart contract — no MetaMask required. RLUSD is transferred to the Receiver. An NFT certificate is
+            minted on XRPL Mainnet.
+          </p>
+          <button
+            onClick={() =>
+              advanceDemo(
+                "release",
+                "Platform calls releaseMilestone() on XRPL EVM Sidechain — 15,000 RLUSD sent to Receiver wallet.\n\nNFT certificate minted on XRPL Mainnet via NFTokenMint transaction.\n\nMilestone marked COMPLETED. Reputation score updated."
+              )
+            }
+            disabled={demoStep !== "idle"}
+            className="w-full rounded-lg py-2.5 text-sm font-semibold transition-colors disabled:opacity-50"
+            style={{ background: "#4ade80", color: "#171311" }}
+          >
+            {demoStep === "loading"
+              ? "Releasing…"
+              : demoStep === "overlay"
+              ? "Minting NFT certificate…"
+              : "Release Funds + Mint NFT Certificate"}
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col gap-3 p-5 rounded-xl" style={{ background: "rgba(74,222,128,0.07)", border: "1px solid rgba(74,222,128,0.2)" }}>
         <p className="text-sm font-medium" style={{ color: "#6EE09A" }}>

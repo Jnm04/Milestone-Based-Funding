@@ -449,6 +449,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
         {/* Interactive actions (client component) */}
         <ContractActions
           contractId={contract.id}
+          isDemo={contract.isDemo}
           status={contract.status as ContractStatus}
           investorAddress={contract.investor.walletAddress ?? ""}
           startupAddress={contract.startup?.walletAddress ?? null}

@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1A1210;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#0E0B09;stop-opacity:1"/>
+    </linearGradient>
+    <linearGradient id="border" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#C4704B;stop-opacity:0.8"/>
+      <stop offset="50%" style="stop-color:#D4B896;stop-opacity:0.6"/>
+      <stop offset="100%" style="stop-color:#C4704B;stop-opacity:0.8"/>
+    </linearGradient>
+    <linearGradient id="seal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#C4704B"/>
+      <stop offset="100%" style="stop-color:#8B4A2A"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="560" fill="url(#bg)" rx="16"/>
+
+  <!-- Outer border -->
+  <rect x="12" y="12" width="776" height="536" fill="none" stroke="url(#border)" stroke-width="1.5" rx="12"/>
+  <!-- Inner border -->
+  <rect x="20" y="20" width="760" height="520" fill="none" stroke="#C4704B" stroke-width="0.5" rx="8" opacity="0.3"/>
+
+  <!-- Corner ornaments -->
+  <g opacity="0.5" stroke="#C4704B" stroke-width="1.5" fill="none">
+    <path d="M32 32 L32 56 M32 32 L56 32"/>
+    <path d="M768 32 L768 56 M768 32 L744 32"/>
+    <path d="M32 528 L32 504 M32 528 L56 528"/>
+    <path d="M768 528 L768 504 M768 528 L744 528"/>
+  </g>
+
+  <!-- Header line -->
+  <line x1="80" y1="90" x2="720" y2="90" stroke="#C4704B" stroke-width="0.5" opacity="0.3"/>
+
+  <!-- cascrow wordmark -->
+  <text x="400" y="68" font-family="Georgia, serif" font-size="13" letter-spacing="8" fill="#A89B8C" text-anchor="middle" opacity="0.8">CASCROW</text>
+
+  <!-- Title -->
+  <text x="400" y="140" font-family="Georgia, serif" font-size="28" font-weight="400" fill="#EDE6DD" text-anchor="middle" letter-spacing="2">Milestone Completion Certificate</text>
+
+  <!-- Subtitle line -->
+  <line x1="200" y1="160" x2="600" y2="160" stroke="#C4704B" stroke-width="1" opacity="0.4"/>
+
+  <!-- Certificate text -->
+  <text x="400" y="200" font-family="Georgia, serif" font-size="14" fill="#A89B8C" text-anchor="middle" opacity="0.9">This certifies that</text>
+
+  <!-- Company name -->
+  <text x="400" y="238" font-family="Georgia, serif" font-size="26" font-weight="400" fill="#D4B896" text-anchor="middle">Acme AI Labs</text>
+
+  <!-- Achievement text -->
+  <text x="400" y="278" font-family="Georgia, serif" font-size="14" fill="#A89B8C" text-anchor="middle" opacity="0.9">has successfully completed the milestone</text>
+
+  <!-- Milestone title -->
+  <text x="400" y="316" font-family="Georgia, serif" font-size="18" font-weight="400" fill="#EDE6DD" text-anchor="middle">"MVP shipped — public beta with ≥100 signups"</text>
+
+  <!-- Amount row -->
+  <text x="400" y="358" font-family="Georgia, serif" font-size="14" fill="#A89B8C" text-anchor="middle" opacity="0.9">Grant released:</text>
+  <text x="400" y="382" font-family="Georgia, serif" font-size="22" fill="#C4704B" text-anchor="middle">15,000 RLUSD</text>
+
+  <!-- Divider -->
+  <line x1="200" y1="408" x2="600" y2="408" stroke="#C4704B" stroke-width="0.5" opacity="0.3"/>
+
+  <!-- AI verification badge -->
+  <rect x="250" y="422" width="300" height="36" rx="6" fill="#C4704B" fill-opacity="0.08" stroke="#C4704B" stroke-width="0.5" stroke-opacity="0.4"/>
+  <text x="400" y="445" font-family="Georgia, serif" font-size="12" fill="#C4704B" text-anchor="middle" letter-spacing="1">✓ VERIFIED BY 5-MODEL AI CONSENSUS · 94% CONFIDENCE</text>
+
+  <!-- Demo seal (bottom center) -->
+  <g transform="translate(400, 498)">
+    <circle r="30" fill="url(#seal)" fill-opacity="0.15" stroke="#C4704B" stroke-width="1" opacity="0.6"/>
+    <circle r="24" fill="none" stroke="#C4704B" stroke-width="0.5" opacity="0.4" stroke-dasharray="3 2"/>
+    <text y="5" font-family="Georgia, serif" font-size="9" fill="#C4704B" text-anchor="middle" letter-spacing="2" opacity="0.9">DEMO</text>
+  </g>
+
+  <!-- XRPL badge left -->
+  <text x="130" y="498" font-family="monospace" font-size="10" fill="#5A4A3A" text-anchor="middle">Token: DEMO-NFT-7X4KP2</text>
+  <text x="130" y="512" font-family="monospace" font-size="9" fill="#3A2E28" text-anchor="middle">XRPL Mainnet (Demo)</text>
+
+  <!-- Date right -->
+  <text x="670" y="498" font-family="monospace" font-size="10" fill="#5A4A3A" text-anchor="middle">Issued via cascrow</text>
+  <text x="670" y="512" font-family="monospace" font-size="9" fill="#3A2E28" text-anchor="middle">escrow.protocol · 2026</text>
+</svg>
