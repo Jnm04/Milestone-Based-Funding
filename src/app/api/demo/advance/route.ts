@@ -6,13 +6,14 @@ import { nanoid } from "nanoid";
 const VALID_STEPS = ["fund", "submit_proof", "verify", "release"] as const;
 type Step = typeof VALID_STEPS[number];
 
-// Pre-built proof text — realistic enough for a compelling demo
-const DEMO_PROOF_TEXT = `MILESTONE COMPLETION REPORT — Acme AI Labs
+function buildDemoProofText(milestoneTitle: string, contractDescription: string): string {
+  return `MILESTONE COMPLETION REPORT — Acme AI Labs
 
-MILESTONE: MVP shipped — public beta with ≥100 signups
+MILESTONE: ${milestoneTitle}
+CONTRACT: ${contractDescription}
 
 EXECUTIVE SUMMARY
-Acme AI Labs has fully completed the milestone requirements. All criteria have been met and independently verified.
+Acme AI Labs has fully completed all criteria for the milestone "${milestoneTitle}". All requirements have been met and are documented below with verifiable evidence.
 
 KEY ACHIEVEMENTS
 1. Public MVP launched at app.acme-ai.com with complete feature set (auth, payments, core AI pipeline)
@@ -29,13 +30,14 @@ SUPPORTING EVIDENCE
 - App Store / Play Store screenshots with download metrics (pages 2–4)
 - Signed LOI documents for Twilio partnership (pages 5–6)
 - GitHub activity report and commit history export (pages 7–9)
-- ProductHunt launch analytics showing 147 verified signups (page 10)
+- ProductHunt analytics showing 147 verified signups (page 10)
 - Stripe dashboard screenshot showing MRR data (page 11)
 
-All evidence is timestamped within the milestone period and directly addresses each criterion.
+All evidence is timestamped within the milestone period and directly addresses the criteria specified in the contract.
 
 Submitted by: Acme AI Labs
 Date: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`;
+}
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
@@ -119,13 +121,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const proofText = buildDemoProofText(activeMilestone.title, contract.milestone);
+
     const proof = await prisma.proof.create({
       data: {
         contractId,
         milestoneId: activeMilestone.id,
         fileName: "acme-ai-labs-milestone-proof.pdf",
-        fileUrl: "/demo-proof-placeholder.pdf",
-        extractedText: DEMO_PROOF_TEXT,
+        fileUrl: "/demo-proof.html",
+        extractedText: proofText,
         proofType: "file",
       },
     });
