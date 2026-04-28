@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import { resolveAuth } from "@/lib/api-key-auth";
 import { prisma } from "@/lib/prisma";
 
 const MAX_ROWS = 100;
@@ -45,13 +46,9 @@ function parseRow(line: string): string[] {
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { isEnterprise: true },
-  });
-  if (!user?.isEnterprise) return NextResponse.json({ error: "Enterprise account required" }, { status: 403 });
+  const auth = await resolveAuth(req.headers.get("authorization"), session?.user);
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!auth.isEnterprise) return NextResponse.json({ error: "Enterprise account required" }, { status: 403 });
 
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
@@ -115,7 +112,7 @@ export async function POST(req: NextRequest) {
   const contract = await prisma.$transaction(async (tx) => {
     const c = await tx.contract.create({
       data: {
-        investorId: session.user.id,
+        investorId: auth.userId,
         milestone: contractTitle ?? milestones[0].title,
         amountUSD: 0,
         cancelAfter: latestDeadline,

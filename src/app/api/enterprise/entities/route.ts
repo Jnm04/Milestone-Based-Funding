@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import { resolveAuth } from "@/lib/api-key-auth";
 import { prisma } from "@/lib/prisma";
 import { getEnterpriseContext } from "@/lib/enterprise-context";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await resolveAuth(request.headers.get("authorization"), session?.user);
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { effectiveUserId } = await getEnterpriseContext(session.user.id);
+  const { effectiveUserId } = await getEnterpriseContext(auth.userId);
 
   const org = await prisma.organisation.findUnique({ where: { ownerId: effectiveUserId } });
   if (!org) return NextResponse.json({ entities: [] });
@@ -23,9 +25,10 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await resolveAuth(req.headers.get("authorization"), session?.user);
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { effectiveUserId, role } = await getEnterpriseContext(session.user.id);
+  const { effectiveUserId, role } = await getEnterpriseContext(auth.userId);
   if (role !== "OWNER" && role !== "ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -36,9 +39,9 @@ export async function POST(req: NextRequest) {
 
   let org = await prisma.organisation.findUnique({ where: { ownerId: effectiveUserId } });
   if (!org) {
-    const user = await prisma.user.findUnique({ where: { id: effectiveUserId }, select: { companyName: true } });
+    const orgUser = await prisma.user.findUnique({ where: { id: effectiveUserId }, select: { companyName: true } });
     org = await prisma.organisation.create({
-      data: { ownerId: effectiveUserId, name: user?.companyName ?? "My Organisation" },
+      data: { ownerId: effectiveUserId, name: orgUser?.companyName ?? "My Organisation" },
     });
   }
 

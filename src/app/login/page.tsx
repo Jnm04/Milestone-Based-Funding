@@ -36,6 +36,9 @@ function LoginForm() {
   const [autoSigningIn, setAutoSigningIn] = useState(false);
   const [totpRequired, setTotpRequired] = useState(false);
   const [totpCode, setTotpCode] = useState("");
+  const [ssoRequired, setSsoRequired] = useState(false);
+  const [ssoProviderLabel, setSsoProviderLabel] = useState("SSO");
+  const [ssoChecking, setSsoChecking] = useState(false);
 
   // Poll for email verification every 3s — auto-login when verified on any device
   useEffect(() => {
@@ -94,14 +97,48 @@ function LoginForm() {
     }
   }, [searchParams]);
 
+  async function checkSso(emailValue: string) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) return;
+    setSsoChecking(true);
+    try {
+      const res = await fetch(`/api/auth/sso/check?email=${encodeURIComponent(emailValue)}`);
+      const data = await res.json() as { ssoRequired?: boolean; providerLabel?: string };
+      setSsoRequired(!!data.ssoRequired);
+      if (data.ssoRequired) setSsoProviderLabel(data.providerLabel ?? "SSO");
+    } catch {
+      // Ignore — fall back to password login
+    } finally {
+      setSsoChecking(false);
+    }
+  }
+
+  function handleEmailChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setEmail(e.target.value);
+    setSsoRequired(false);
+  }
+
+  function handleEmailBlur() {
+    if (email) checkSso(email);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // SSO domain — redirect to IdP instead of password login
+    if (ssoRequired) {
+      window.location.href = `/api/auth/sso/initiate?email=${encodeURIComponent(email)}&callbackUrl=${encodeURIComponent(callbackUrl ?? "/enterprise/dashboard")}`;
+      return;
+    }
     setLoading(true);
     try {
       const creds: Record<string, string> = { email, password, redirect: "false" };
       if (totpRequired) creds.totpCode = totpCode;
       const res = await signIn("credentials", { ...creds, redirect: false });
 
+      if (res?.error === "SsoRequired") {
+        setSsoRequired(true);
+        setLoading(false);
+        return;
+      }
       if (res?.error === "EmailNotVerified") {
         setUnverifiedEmail(email);
         return;
@@ -286,39 +323,57 @@ function LoginForm() {
                 type="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={handleEmailChange}
+                onBlur={handleEmailBlur}
                 className="cs-input"
                 placeholder="you@example.com"
               />
+              {ssoChecking && (
+                <p className="text-xs" style={{ color: "#A89B8C" }}>Checking sign-in method…</p>
+              )}
             </div>
 
-            {/* Password */}
-            <div className="flex flex-col gap-1.5">
-              <label className="cs-label">Password</label>
-              <div className="relative">
-                <input
-                  type={showPw ? "text" : "password"}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="cs-input"
-                  style={{ paddingRight: 44 }}
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2"
-                  style={{ color: "#A89B8C" }}
-                  tabIndex={-1}
-                >
-                  <EyeIcon open={showPw} />
-                </button>
+            {/* SSO redirect banner */}
+            {ssoRequired && (
+              <div style={{ padding: "12px 16px", borderRadius: 8, background: "rgba(29,78,216,0.12)", border: "1px solid rgba(29,78,216,0.3)", display: "flex", flexDirection: "column", gap: 6 }}>
+                <p className="text-sm font-medium" style={{ color: "#93C5FD", margin: 0 }}>
+                  Your organisation uses {ssoProviderLabel}
+                </p>
+                <p className="text-xs" style={{ color: "#A89B8C", margin: 0 }}>
+                  Click &quot;Sign in with {ssoProviderLabel}&quot; below to continue through your company&apos;s identity provider.
+                </p>
               </div>
-            </div>
+            )}
+
+            {/* Password — hidden when SSO required */}
+            {!ssoRequired && (
+              <div className="flex flex-col gap-1.5">
+                <label className="cs-label">Password</label>
+                <div className="relative">
+                  <input
+                    type={showPw ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="cs-input"
+                    style={{ paddingRight: 44 }}
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(!showPw)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                    style={{ color: "#A89B8C" }}
+                    tabIndex={-1}
+                  >
+                    <EyeIcon open={showPw} />
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* 2FA code (shown after TOTP_REQUIRED error) */}
-            {totpRequired && (
+            {totpRequired && !ssoRequired && (
               <div className="flex flex-col gap-1.5">
                 <label className="cs-label">Authenticator code</label>
                 <input
@@ -339,7 +394,7 @@ function LoginForm() {
             )}
 
             {/* Forgot password */}
-            {!totpRequired && (
+            {!totpRequired && !ssoRequired && (
               <div className="flex justify-end -mt-2">
                 <Link href="/forgot-password" className="text-xs hover:underline" style={{ color: "#A89B8C" }}>
                   Forgot password?
@@ -350,11 +405,11 @@ function LoginForm() {
             {/* Submit */}
             <button
               type="submit"
-              disabled={loading || (totpRequired && totpCode.length !== 6)}
+              disabled={loading || (!ssoRequired && totpRequired && totpCode.length !== 6)}
               className="cs-btn-primary w-full mt-1"
               style={{ width: "100%" }}
             >
-              {loading ? "Signing in…" : totpRequired ? "Verify code" : "Sign in"}
+              {loading ? "Redirecting…" : ssoRequired ? `Sign in with ${ssoProviderLabel}` : totpRequired ? "Verify code" : "Sign in"}
             </button>
           </form>
 

@@ -133,6 +133,9 @@ model User {
   // Feature 11: Audit partner + client access
   auditorPartner        AuditorPartner?
   auditorClientAccesses AuditorClientAccess[] @relation("AuditorAccessClient")
+
+  // SSO one-time token (redeemed after OIDC/SAML callback)
+  ssoToken SsoToken?
 }
 
 enum Role {
@@ -802,11 +805,31 @@ model OrgMember {
 model SsoConfig {
   id           String   @id @default(cuid())
   orgId        String   @unique
-  provider     String // "workos" | "saml" | "oidc"
-  connectionId String // WorkOS connection ID or SAML metadata URL
-  domain       String // e.g. "bmw.de"
+  provider     String   // "OKTA" | "AZURE_AD" | "GOOGLE_WORKSPACE" | "SAML"
+  connectionId String   @default("") // Legacy field, kept for backward compat
+  domain       String   // e.g. "bmw.de"
+  // OIDC fields (Okta, Azure AD, Google Workspace)
+  clientId     String?  // OIDC Client ID
+  clientSecret String?  // AES-256-GCM encrypted via encryptApiKey()
+  issuerUrl    String?  // OIDC discovery base URL, e.g. https://dev-xxx.okta.com
+  // SAML fields
+  samlSsoUrl      String?  // IdP SSO redirect URL (entryPoint)
+  samlCertificate String?  // IdP signing certificate — AES-256-GCM encrypted
+  samlEntityId    String?  // Optional IdP EntityID
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+/// Short-lived one-time token issued after SSO callback — redeemed by NextAuth sso-token provider.
+model SsoToken {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([token])
 }
 
 // ── Multi-Entity / Group Structure ────────────────────────────────────────────

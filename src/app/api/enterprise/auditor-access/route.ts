@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import { resolveAuth } from "@/lib/api-key-auth";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -10,12 +11,13 @@ import { prisma } from "@/lib/prisma";
  * GET /api/enterprise/auditor-access
  * List all auditors with access to the current user's workspace.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await resolveAuth(request.headers.get("authorization"), session?.user);
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const accesses = await prisma.auditorClientAccess.findMany({
-    where: { clientId: session.user.id, revokedAt: null },
+    where: { clientId: auth.userId, revokedAt: null },
     include: { auditor: { include: { user: { select: { email: true, name: true } } } } },
     orderBy: { grantedAt: "desc" },
   });
@@ -25,8 +27,9 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!session.user.isEnterprise) return NextResponse.json({ error: "Enterprise access required" }, { status: 403 });
+  const auth = await resolveAuth(request.headers.get("authorization"), session?.user);
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!auth.isEnterprise) return NextResponse.json({ error: "Enterprise access required" }, { status: 403 });
 
   const body = await request.json() as { auditorEmail?: string };
   if (!body.auditorEmail) return NextResponse.json({ error: "auditorEmail is required" }, { status: 400 });
@@ -45,7 +48,7 @@ export async function POST(request: NextRequest) {
   }
 
   const existing = await prisma.auditorClientAccess.findUnique({
-    where: { auditorId_clientId: { auditorId: auditorUser.auditorPartner.id, clientId: session.user.id } },
+    where: { auditorId_clientId: { auditorId: auditorUser.auditorPartner.id, clientId: auth.userId } },
   });
 
   if (existing && !existing.revokedAt) {
@@ -53,10 +56,10 @@ export async function POST(request: NextRequest) {
   }
 
   const access = await prisma.auditorClientAccess.upsert({
-    where: { auditorId_clientId: { auditorId: auditorUser.auditorPartner.id, clientId: session.user.id } },
+    where: { auditorId_clientId: { auditorId: auditorUser.auditorPartner.id, clientId: auth.userId } },
     create: {
       auditorId: auditorUser.auditorPartner.id,
-      clientId: session.user.id,
+      clientId: auth.userId,
     },
     update: {
       revokedAt: null,

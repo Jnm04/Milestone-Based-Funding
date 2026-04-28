@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import { resolveAuth } from "@/lib/api-key-auth";
 import { prisma } from "@/lib/prisma";
 import { decryptGoal } from "@/lib/confidential";
 
@@ -14,7 +15,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const auth = await resolveAuth(request.headers.get("authorization"), session?.user);
+  if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -39,12 +41,12 @@ export async function POST(
   if (!contract) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   // Allow owner, org members, or connected auditors
-  const isOwner = contract.investorId === session.user.id;
+  const isOwner = contract.investorId === auth.userId;
   let hasAccess = isOwner;
 
   if (!hasAccess) {
     const orgMember = await prisma.orgMember.findFirst({
-      where: { ownerId: contract.investorId, memberId: session.user.id, acceptedAt: { not: null } },
+      where: { ownerId: contract.investorId, memberId: auth.userId, acceptedAt: { not: null } },
     });
     hasAccess = !!orgMember;
   }
@@ -53,7 +55,7 @@ export async function POST(
     const auditorAccess = await prisma.auditorClientAccess.findFirst({
       where: {
         clientId: contract.investorId,
-        auditor: { userId: session.user.id },
+        auditor: { userId: auth.userId },
         revokedAt: null,
       },
     });

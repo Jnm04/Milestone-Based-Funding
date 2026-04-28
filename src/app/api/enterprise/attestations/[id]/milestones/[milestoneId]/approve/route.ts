@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import { resolveAuth } from "@/lib/api-key-auth";
 import { prisma } from "@/lib/prisma";
 import { getEnterpriseContext } from "@/lib/enterprise-context";
 
@@ -10,7 +11,8 @@ type Params = { params: Promise<{ id: string; milestoneId: string }> };
 // Body: { action: "APPROVED" | "REJECTED", note?: string }
 export async function POST(req: NextRequest, { params }: Params) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await resolveAuth(req.headers.get("authorization"), session?.user);
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id, milestoneId } = await params;
   const body = await req.json().catch(() => null) as { action?: string; note?: string } | null;
@@ -19,7 +21,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "action must be APPROVED or REJECTED" }, { status: 400 });
   }
 
-  const { effectiveUserId, role } = await getEnterpriseContext(session.user.id);
+  const { effectiveUserId, role } = await getEnterpriseContext(auth.userId);
 
   // Only OWNER or EDITOR can approve/reject
   if (role === "VIEWER") return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
@@ -39,7 +41,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   });
   if (!milestone || milestone.contractId !== id) return NextResponse.json({ error: "Milestone not found" }, { status: 404 });
 
-  const approverName = session.user.name ?? session.user.email ?? "Team member";
+  const approverName = session?.user?.name ?? session?.user?.email ?? auth.userId;
 
   await prisma.milestone.update({
     where: { id: milestoneId },

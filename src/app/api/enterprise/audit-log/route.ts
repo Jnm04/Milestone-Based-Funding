@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import { resolveAuth } from "@/lib/api-key-auth";
 import { prisma } from "@/lib/prisma";
 
 const PAGE_SIZE = 50;
@@ -8,20 +9,16 @@ const PAGE_SIZE = 50;
 // GET /api/enterprise/audit-log?page=1&action=MEMBER_INVITED
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { isEnterprise: true },
-  });
-  if (!user?.isEnterprise) return NextResponse.json({ error: "Enterprise account required" }, { status: 403 });
+  const auth = await resolveAuth(req.headers.get("authorization"), session?.user);
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!auth.isEnterprise) return NextResponse.json({ error: "Enterprise account required" }, { status: 403 });
 
   const { searchParams } = req.nextUrl;
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
   const action = searchParams.get("action") ?? undefined;
 
   const where = {
-    orgId: session.user.id,
+    orgId: auth.userId,
     ...(action ? { action } : {}),
   };
 

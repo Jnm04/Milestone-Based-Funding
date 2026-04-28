@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import { resolveAuth } from "@/lib/api-key-auth";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -8,11 +9,12 @@ import { prisma } from "@/lib/prisma";
  * Returns the latest health check result for every milestone in this contract.
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const auth = await resolveAuth(request.headers.get("authorization"), session?.user);
+  if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -24,10 +26,10 @@ export async function GET(
   });
 
   if (!contract) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (contract.investorId !== session.user.id) {
+  if (contract.investorId !== auth.userId) {
     // also allow org members
     const member = await prisma.orgMember.findFirst({
-      where: { ownerId: contract.investorId, memberId: session.user.id, acceptedAt: { not: null } },
+      where: { ownerId: contract.investorId, memberId: auth.userId, acceptedAt: { not: null } },
     });
     if (!member) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

@@ -40,6 +40,23 @@ export const authOptions: NextAuthOptions = {
         // Reject obviously oversized inputs before hitting the DB
         if (credentials.email.length > 254 || credentials.password.length > 72) return null;
 
+        // SSO domain enforcement: if this domain has an active OIDC/SAML config,
+        // reject password auth and signal the login page to redirect to SSO.
+        const emailDomain = credentials.email.split("@")[1]?.toLowerCase();
+        if (emailDomain) {
+          const ssoConfig = await prisma.ssoConfig.findFirst({
+            where: {
+              domain: emailDomain,
+              OR: [
+                { clientId: { not: null } },
+                { samlSsoUrl: { not: null } },
+              ],
+            },
+            select: { provider: true },
+          });
+          if (ssoConfig) throw new Error("SsoRequired");
+        }
+
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
           select: {
@@ -129,6 +146,45 @@ export const authOptions: NextAuthOptions = {
           walletAddress: user.walletAddress ?? null,
           isEnterprise: user.isEnterprise,
           sessionVersion: user.sessionVersion,
+        };
+      },
+    }),
+
+    // Redeems a short-lived token issued by the OIDC/SAML callback routes.
+    // The token is one-time-use and expires after 3 minutes.
+    CredentialsProvider({
+      id: "sso-token",
+      name: "SSO",
+      credentials: { token: { label: "Token", type: "text" } },
+      async authorize(credentials) {
+        if (!credentials?.token) return null;
+
+        const ssoToken = await prisma.ssoToken.findUnique({
+          where: { token: credentials.token },
+          include: {
+            user: {
+              select: {
+                id: true, email: true, name: true, role: true,
+                walletAddress: true, isEnterprise: true, sessionVersion: true,
+              },
+            },
+          },
+        });
+
+        if (!ssoToken || ssoToken.expiresAt < new Date()) return null;
+
+        // Invalidate immediately — one-time use
+        await prisma.ssoToken.delete({ where: { id: ssoToken.id } }).catch(() => {});
+
+        const u = ssoToken.user;
+        return {
+          id: u.id,
+          email: u.email,
+          name: u.name ?? u.email,
+          role: u.role,
+          walletAddress: u.walletAddress ?? null,
+          isEnterprise: u.isEnterprise,
+          sessionVersion: u.sessionVersion,
         };
       },
     }),
