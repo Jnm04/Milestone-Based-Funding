@@ -20,6 +20,8 @@ import { CalendarButton } from "@/components/calendar-button";
 import { CopyButton } from "@/components/copy-button";
 import { CounterProposalBanner, type CounterProposalData } from "@/components/counter-proposal-banner";
 import { XRPL_EVM_CHAIN_ID } from "@/lib/evm-abi";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 
 const IS_EVM_TESTNET = XRPL_EVM_CHAIN_ID === 1449000;
 
@@ -45,7 +47,8 @@ export default async function ContractPage({ params, searchParams }: ContractPag
   const { investor, startup } = await searchParams;
   const viewerWallet = investor ?? startup ?? null;
 
-  const [contract, auditLogs] = await Promise.all([
+  const [session, contract, auditLogs] = await Promise.all([
+    getServerSession(authOptions),
     prisma.contract.findUnique({
       where: { id },
       include: {
@@ -70,13 +73,18 @@ export default async function ContractPage({ params, searchParams }: ContractPag
 
   if (!contract) return notFound();
 
-  // Determine viewer role early so we can conditionally fetch credibility
+  // Determine viewer role early so we can conditionally fetch credibility.
+  // Wallet-address match (URL param) controls the visual investor view.
+  // Session match is required for API-backed features like the credibility scorer.
   const isInvestorViewerEarly =
     viewerWallet && viewerWallet === contract.investor.walletAddress;
+  const isAuthenticatedInvestor =
+    session?.user?.id === contract.investorId;
 
-  // Fetch cached credibility score for the investor (if startup has accepted)
+  // Fetch cached credibility score only when the session actually belongs to the
+  // investor — avoids a guaranteed 403 on the client-side refetch button.
   const credibilityRecord =
-    isInvestorViewerEarly && contract.startup
+    isAuthenticatedInvestor && contract.startup
       ? await prisma.credibilityScore.findUnique({
           where: {
             startupId_contractId: {
@@ -414,8 +422,8 @@ export default async function ContractPage({ params, searchParams }: ContractPag
         {/* On-chain audit trail */}
         <AuditTrail logs={auditLogs} />
 
-        {/* AI Credibility Score — investor-only, shown when startup has accepted */}
-        {isInvestorViewerEarly && contract.startup && (
+        {/* AI Credibility Score — only when the logged-in user IS the investor */}
+        {isAuthenticatedInvestor && contract.startup && (
           <CredibilityPanel
             contractId={contract.id}
             startupName={contract.startup.name ?? contract.startup.companyName ?? null}
