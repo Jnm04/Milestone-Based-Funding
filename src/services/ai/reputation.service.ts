@@ -70,7 +70,7 @@ export async function generateReputationSummary(opts: {
     .join("\n");
 
   const response = await getAnthropic().messages.create({
-    model: "claude-haiku-4-5",
+    model: "claude-haiku-4-5-20251001",
     max_tokens: 256,
     system: `You are a startup milestone achievement summarizer for a grant escrow platform.
 Given a completed milestone, produce a privacy-safe performance card.

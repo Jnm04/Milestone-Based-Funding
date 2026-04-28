@@ -202,7 +202,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const response = await anthropic.messages.create({
-      model: "claude-haiku-4-5",
+      model: "claude-haiku-4-5-20251001",
       max_tokens: 750,
       system: systemPrompt,
       messages: sanitized.map((m) => ({ role: m.role, content: m.content })),
