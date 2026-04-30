@@ -427,6 +427,111 @@ export default function GuidePage() {
             </div>
           </ScrollReveal>
 
+          {/* ── Agentic Mode ── */}
+          <ScrollReveal>
+            <div style={{ marginTop: 48, padding: "32px 36px", borderRadius: 16, background: "rgba(196,112,75,0.05)", border: "1px solid rgba(196,112,75,0.2)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+                <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(196,112,75,0.12)", border: "1px solid rgba(196,112,75,0.3)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C4704B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2 style={{ fontFamily: "var(--font-libre-franklin)", fontWeight: 600, fontSize: 22, color: "#EDE6DD", margin: 0 }}>Agentic Mode</h2>
+                  <p style={{ fontSize: 13, color: "#A89B8C", margin: 0 }}>Let AI agents verify milestones and release funds — fully autonomously</p>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+                {/* Step A */}
+                <div style={{ display: "flex", gap: 16 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(196,112,75,0.15)", border: "1px solid rgba(196,112,75,0.3)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#C4704B" }}>A</span>
+                  </div>
+                  <div>
+                    <p style={{ fontWeight: 600, color: "#EDE6DD", margin: "0 0 4px" }}>Generate an API Key</p>
+                    <p style={{ fontSize: 14, color: "#A89B8C", margin: 0 }}>
+                      Go to <strong style={{ color: "#D4B896" }}>Profile → Integrations → API Keys</strong> and click &ldquo;Generate API Key&rdquo;. Copy the <code style={{ color: "#C4704B", fontSize: 12 }}>csk_…</code> key — it&apos;s shown only once.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Step B */}
+                <div style={{ display: "flex", gap: 16 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(196,112,75,0.15)", border: "1px solid rgba(196,112,75,0.3)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#C4704B" }}>B</span>
+                  </div>
+                  <div>
+                    <p style={{ fontWeight: 600, color: "#EDE6DD", margin: "0 0 4px" }}>Connect Agent Connectors (optional — auto-collects proof)</p>
+                    <p style={{ fontSize: 14, color: "#A89B8C", margin: "0 0 8px" }}>
+                      When creating a contract, expand <strong style={{ color: "#D4B896" }}>Configure Agent Connectors</strong> inside each milestone. Add your GitHub repo URL and/or Stripe secret key. 48 hours before the deadline, Cascrow automatically collects commits and revenue data as a draft proof — the startup confirms with one click.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Step C */}
+                <div style={{ display: "flex", gap: 16 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(196,112,75,0.15)", border: "1px solid rgba(196,112,75,0.3)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#C4704B" }}>C</span>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontWeight: 600, color: "#EDE6DD", margin: "0 0 4px" }}>Call the MCP endpoint from your agent</p>
+                    <p style={{ fontSize: 14, color: "#A89B8C", margin: "0 0 10px" }}>
+                      Any AI agent (Claude Code, a custom LLM bot, a CI/CD pipeline) can submit evidence and trigger the 5-model verification pipeline via one API call:
+                    </p>
+                    <pre style={{ fontSize: 12, padding: "14px 16px", borderRadius: 8, background: "rgba(0,0,0,0.35)", color: "#EDE6DD", overflowX: "auto", margin: 0, lineHeight: 1.6 }}>{`curl -X POST https://cascrow.xyz/api/mcp/submit \\
+  -H "Authorization: Bearer csk_YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "contract_id": "YOUR_CONTRACT_ID",
+    "evidence": {
+      "description": "Shipped v1.0 — 47 commits, live at app.example.com",
+      "links": ["https://github.com/you/repo", "https://app.example.com"],
+      "github_commit": "abc1234",
+      "revenue_amount": 5000
+    }
+  }'`}</pre>
+                  </div>
+                </div>
+
+                {/* Step D — what happens */}
+                <div style={{ display: "flex", gap: 16 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.25)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p style={{ fontWeight: 600, color: "#EDE6DD", margin: "0 0 6px" }}>What happens next — fully autonomous</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      {[
+                        "5 AI models vote in parallel (Claude, GPT-4o, Gemini, Mistral, Cerebras)",
+                        "Confidence >85% + majority YES → RLUSD released on-chain automatically",
+                        "NFT certificate minted on XRP Ledger mainnet",
+                        "funds.released webhook fires to your systems",
+                        "Public proof page generated with QR code + LinkedIn share",
+                      ].map((item) => (
+                        <div key={item} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 14, color: "#A89B8C" }}>
+                          <span style={{ color: "#34d399", marginTop: 2, flexShrink: 0 }}>✓</span>
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* MCP manifest hint */}
+                <div style={{ padding: "10px 14px", borderRadius: 8, background: "rgba(196,112,75,0.05)", border: "1px solid rgba(196,112,75,0.12)", fontSize: 13, color: "#A89B8C" }}>
+                  <strong style={{ color: "#C4704B" }}>Claude Code users:</strong> add Cascrow as a tool with the MCP manifest at{" "}
+                  <code style={{ color: "#D4B896" }}>https://cascrow.xyz/mcp-manifest.json</code>.
+                  Tool name: <code style={{ color: "#D4B896" }}>cascrow_verify_milestone</code>.
+                </div>
+
+              </div>
+            </div>
+          </ScrollReveal>
+
         </div>
       </section>
 

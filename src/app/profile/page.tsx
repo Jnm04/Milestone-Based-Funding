@@ -320,6 +320,14 @@ export default function ProfilePage() {
   const [whEvents, setWhEvents] = useState<string[]>(["contract.funded", "proof.submitted", "ai.decision", "funds.released"]);
   const [whSaving, setWhSaving] = useState(false);
   const [whSecret, setWhSecret] = useState<string | null>(null);
+
+  // API Keys
+  const [apiKeys, setApiKeys] = useState<Array<{ id: string; name: string; keyPrefix: string; lastUsedAt: string | null; createdAt: string }>>([]);
+  const [newKeyName, setNewKeyName] = useState("");
+  const [creatingKey, setCreatingKey] = useState(false);
+  const [newKeySecret, setNewKeySecret] = useState<string | null>(null);
+  const [showNewKeyForm, setShowNewKeyForm] = useState(false);
+
   const [activeTab, setActiveTab] = useState<"account" | "security" | "notifications" | "integrations" | "privacy" | "usage">("account");
   const [usageStats, setUsageStats] = useState<{
     contractsAsInvestor: number; contractsAsStartup: number;
@@ -405,6 +413,11 @@ export default function ProfilePage() {
     fetch("/api/enterprise/integrations/teams")
       .then((r) => r.json())
       .then((d) => { if (d.integration) setTeamsIntegration(d.integration); })
+      .catch(() => {});
+    // Load API keys
+    fetch("/api/enterprise/api-keys")
+      .then((r) => r.json())
+      .then((d) => setApiKeys(d.keys ?? []))
       .catch(() => {});
     // Load webhooks
     fetch("/api/webhooks")
@@ -505,6 +518,40 @@ export default function ProfilePage() {
       toast.error(err instanceof Error ? err.message : "Failed");
     } finally {
       setWhSaving(false);
+    }
+  }
+
+  async function handleCreateApiKey(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newKeyName.trim()) return;
+    setCreatingKey(true);
+    try {
+      const res = await fetch("/api/enterprise/api-keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newKeyName.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to create API key");
+      setApiKeys((prev) => [{ id: data.key.id, name: data.key.name, keyPrefix: data.key.keyPrefix, lastUsedAt: null, createdAt: data.key.createdAt }, ...prev]);
+      setNewKeySecret(data.secret);
+      setNewKeyName("");
+      setShowNewKeyForm(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create API key");
+    } finally {
+      setCreatingKey(false);
+    }
+  }
+
+  async function handleDeleteApiKey(id: string) {
+    try {
+      const res = await fetch(`/api/enterprise/api-keys/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed");
+      setApiKeys((prev) => prev.filter((k) => k.id !== id));
+      toast.success("API key revoked.");
+    } catch {
+      toast.error("Failed to revoke API key.");
     }
   }
 
@@ -1795,6 +1842,88 @@ export default function ProfilePage() {
 
           {/* ══ INTEGRATIONS (continued) ═════════════════════════════════════════ */}
           {activeTab === "integrations" && <>
+
+          {/* API Keys */}
+          <SectionCard title="API Keys" subtitle="Generate keys for AI agents and external tools to call the Cascrow API on your behalf. Keys start with csk_.">
+            {newKeySecret && (
+              <div className="flex flex-col gap-2 p-4 rounded-xl mb-3" style={{ background: "rgba(196,112,75,0.08)", border: "1px solid rgba(196,112,75,0.3)" }}>
+                <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#C4704B" }}>Save this key — shown only once</span>
+                <code className="text-xs font-mono break-all select-all p-2 rounded" style={{ background: "rgba(0,0,0,0.3)", color: "#EDE6DD" }}>{newKeySecret}</code>
+                <p className="text-xs" style={{ color: "#A89B8C" }}>Use as: <code style={{ color: "#D4B896" }}>Authorization: Bearer {newKeySecret}</code></p>
+                <button type="button" onClick={() => setNewKeySecret(null)} className="text-xs self-end" style={{ color: "#A89B8C" }}>Dismiss</button>
+              </div>
+            )}
+
+            {apiKeys.length > 0 && (
+              <div className="flex flex-col gap-2 mb-3">
+                {apiKeys.map((k) => (
+                  <div key={k.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.12)" }}>
+                    <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                      <span className="text-sm font-medium" style={{ color: "#EDE6DD" }}>{k.name}</span>
+                      <div className="flex items-center gap-2">
+                        <code className="text-xs font-mono" style={{ color: "#C4704B" }}>{k.keyPrefix}…</code>
+                        <span className="text-xs" style={{ color: "#6B5E55" }}>
+                          {k.lastUsedAt ? `Last used ${new Date(k.lastUsedAt).toLocaleDateString()}` : "Never used"}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteApiKey(k.id)}
+                      className="text-xs shrink-0"
+                      style={{ color: "#A89B8C" }}
+                      onMouseOver={(e) => (e.currentTarget.style.color = "#ef4444")}
+                      onMouseOut={(e) => (e.currentTarget.style.color = "#A89B8C")}
+                    >
+                      Revoke
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {showNewKeyForm ? (
+              <form onSubmit={handleCreateApiKey} className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="cs-label">Key name</label>
+                  <input
+                    type="text"
+                    value={newKeyName}
+                    onChange={(e) => setNewKeyName(e.target.value)}
+                    placeholder="e.g. Claude Agent, My CI Bot"
+                    className="cs-input"
+                    maxLength={80}
+                    required
+                    autoFocus
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button type="submit" disabled={creatingKey} className="cs-btn-primary text-sm px-4 py-2">
+                    {creatingKey ? "Generating…" : "Generate Key"}
+                  </button>
+                  <button type="button" onClick={() => { setShowNewKeyForm(false); setNewKeyName(""); }} className="cs-btn text-sm px-4 py-2">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowNewKeyForm(true)}
+                disabled={apiKeys.length >= 10}
+                className="cs-btn text-sm"
+              >
+                + Generate API Key
+              </button>
+            )}
+
+            <div className="mt-3 p-3 rounded-lg text-xs" style={{ background: "rgba(196,112,75,0.05)", color: "#A89B8C" }}>
+              <span style={{ color: "#C4704B", fontWeight: 600 }}>MCP Integration:</span>{" "}
+              Add Cascrow as a tool in Claude Code or any MCP-compatible agent:{" "}
+              <code style={{ color: "#D4B896" }}>cascrow_verify_milestone</code> at{" "}
+              <code style={{ color: "#D4B896" }}>https://cascrow.xyz/api/mcp/submit</code>
+            </div>
+          </SectionCard>
 
           {/* Webhooks */}
           <SectionCard title="Webhooks" subtitle="Send signed POST requests to your systems on every contract event.">

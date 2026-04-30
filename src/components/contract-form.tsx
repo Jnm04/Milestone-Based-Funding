@@ -15,6 +15,9 @@ interface MilestoneInput {
   amountUSD: string;
   deadlineDays: string;
   dependsOnIndex: string; // "" = no dependency, "0","1",... = depends on that milestone index
+  agentGithubRepo: string;
+  agentStripeKey: string;
+  showAgentConfig: boolean;
 }
 
 const MILESTONE_TEMPLATES: { label: string; text: string }[] = [
@@ -77,7 +80,7 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
   const [projectTitle, setProjectTitle] = useState("");
   const [receiverWallet, setReceiverWallet] = useState("");
   const [milestones, setMilestones] = useState<MilestoneInput[]>([
-    { title: "", amountUSD: "", deadlineDays: "30", dependsOnIndex: "" },
+    { title: "", amountUSD: "", deadlineDays: "30", dependsOnIndex: "", agentGithubRepo: "", agentStripeKey: "", showAgentConfig: false },
   ]);
 
   // Attestation mode state
@@ -123,7 +126,7 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
   const debounceTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
 
   function addMilestone() {
-    setMilestones((prev) => [...prev, { title: "", amountUSD: "", deadlineDays: "30", dependsOnIndex: "" }]);
+    setMilestones((prev) => [...prev, { title: "", amountUSD: "", deadlineDays: "30", dependsOnIndex: "", agentGithubRepo: "", agentStripeKey: "", showAgentConfig: false }]);
   }
 
   function removeMilestone(index: number) {
@@ -208,6 +211,9 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
           amountUSD: String(m.amountUSD),
           deadlineDays: String(m.deadlineDays),
           dependsOnIndex: "",
+          agentGithubRepo: "",
+          agentStripeKey: "",
+          showAgentConfig: false,
         }))
       );
       setAiGenerated(true);
@@ -388,6 +394,8 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
           Date.now() + Number(m.deadlineDays) * 24 * 60 * 60 * 1000
         ).toISOString(),
         dependsOnIndex: m.dependsOnIndex !== "" && Number(m.dependsOnIndex) < i ? Number(m.dependsOnIndex) : undefined,
+        agentGithubRepo: m.agentGithubRepo.trim() || undefined,
+        agentStripeKey: m.agentStripeKey.trim() || undefined,
       }));
 
       const res = await fetch("/api/contracts", {
@@ -936,6 +944,9 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
                             amountUSD: String(m.amountUSD ?? ""),
                             dependsOnIndex: "",
                             deadlineDays: String(m.deadlineDays ?? "30"),
+                            agentGithubRepo: "",
+                            agentStripeKey: "",
+                            showAgentConfig: false,
                           })));
                           setTemplateOpen(false);
                           if (templateTab === "community") {
@@ -1235,6 +1246,48 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
                   </select>
                 </div>
               )}
+
+              {/* Agent Connectors */}
+              <div style={{ marginTop: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setMilestones((prev) => prev.map((m, i) => i === idx ? { ...m, showAgentConfig: !m.showAgentConfig } : m))}
+                  style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: ms.showAgentConfig ? "#C4704B" : "#A89B8C", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+                  </svg>
+                  {ms.showAgentConfig ? "Hide Agent Connectors" : "Configure Agent Connectors"}{(ms.agentGithubRepo || ms.agentStripeKey) ? " ✓" : ""}
+                </button>
+                {ms.showAgentConfig && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10, padding: "12px 14px", borderRadius: 8, background: "rgba(196,112,75,0.04)", border: "1px solid rgba(196,112,75,0.15)" }}>
+                    <p style={{ fontSize: 11, color: "#A89B8C", margin: 0 }}>
+                      The Agentic Proof Collector runs 48h before the deadline and automatically gathers evidence from these sources — no manual upload needed.
+                    </p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <label style={{ fontSize: 12, color: "#A89B8C" }}>GitHub Repository URL</label>
+                      <input
+                        type="url"
+                        value={ms.agentGithubRepo}
+                        onChange={(e) => updateMilestone(idx, "agentGithubRepo", e.target.value)}
+                        placeholder="https://github.com/your-org/your-repo"
+                        style={{ fontSize: 13, padding: "6px 10px", borderRadius: 6, border: "1px solid rgba(196,112,75,0.25)", background: "rgba(196,112,75,0.04)", color: "#EDE6DD", outline: "none" }}
+                      />
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <label style={{ fontSize: 12, color: "#A89B8C" }}>Stripe Secret Key (encrypted at rest)</label>
+                      <input
+                        type="password"
+                        value={ms.agentStripeKey}
+                        onChange={(e) => updateMilestone(idx, "agentStripeKey", e.target.value)}
+                        placeholder="sk_live_…"
+                        autoComplete="off"
+                        style={{ fontSize: 13, padding: "6px 10px", borderRadius: 6, border: "1px solid rgba(196,112,75,0.25)", background: "rgba(196,112,75,0.04)", color: "#EDE6DD", outline: "none" }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         ))}

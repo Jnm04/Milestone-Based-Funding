@@ -10,6 +10,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getPostHogClient } from "@/lib/posthog-server";
 import Anthropic from "@anthropic-ai/sdk";
 import { encryptGoal, hashGoal } from "@/lib/confidential";
+import { encryptApiKey } from "@/lib/encrypt";
 
 // ─── Lazy Anthropic client ────────────────────────────────────────────────────
 let _anthropic: Anthropic | null = null;
@@ -244,7 +245,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ── ESCROW MODE path ──────────────────────────────────────────────────────
-    let msData: { title: string; amountUSD: number; cancelAfter: string; dependsOnIndex?: number }[];
+    let msData: { title: string; amountUSD: number; cancelAfter: string; dependsOnIndex?: number; agentGithubRepo?: string; agentStripeKey?: string }[];
     if (milestonesInput) {
       msData = milestonesInput;
     } else {
@@ -307,6 +308,8 @@ export async function POST(request: NextRequest) {
             order: i,
             status: milestoneStatus,
             dependsOnMilestoneId: depId ?? null,
+            agentGithubRepo: m.agentGithubRepo?.trim() || null,
+            agentStripeKeyEnc: m.agentStripeKey?.trim() ? encryptApiKey(m.agentStripeKey.trim()) : null,
           },
         });
         createdMilestoneIds.push(ms.id);
