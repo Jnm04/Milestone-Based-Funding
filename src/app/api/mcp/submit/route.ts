@@ -20,6 +20,12 @@ import { resolveApiKey } from "@/lib/api-key-auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { verifyMilestone } from "@/services/ai/verifier.service";
 import { writeAuditLog } from "@/services/evm/audit.service";
+import { releaseMilestone, contractIdToBytes32 } from "@/services/evm/escrow.service";
+import { decryptFulfillment } from "@/lib/crypto";
+import { mintCompletionNFT } from "@/services/xrpl/nft.service";
+import { fireWebhook } from "@/services/webhook/webhook.service";
+import { sendVerifiedEmail, sendFulfillmentKeyEmail, sendMilestoneCompletedInvestorEmail } from "@/lib/email";
+import crypto from "crypto";
 
 export const maxDuration = 60;
 
@@ -53,6 +59,46 @@ function buildExtractedText(evidence: MCPEvidence): string {
   return lines.join("\n");
 }
 
+function generatePublicProofHash(contractId: string, milestoneId: string, verifiedAt: Date): string {
+  return crypto
+    .createHash("sha256")
+    .update(`${contractId}:${milestoneId}:${verifiedAt.toISOString()}`)
+    .digest("hex");
+}
+
+async function autoMintNft(params: {
+  contractId: string;
+  milestoneId?: string;
+  milestoneTitle: string;
+  amountUSD: string;
+  evmTxHash?: string;
+}): Promise<void> {
+  const { contractId, milestoneId, milestoneTitle, amountUSD, evmTxHash } = params;
+
+  const claimed = milestoneId
+    ? await prisma.milestone.updateMany({ where: { id: milestoneId, nftTokenId: null }, data: { nftTokenId: "PENDING" } })
+    : await prisma.contract.updateMany({ where: { id: contractId, nftTokenId: null }, data: { nftTokenId: "PENDING" } });
+
+  if (claimed.count === 0) return;
+
+  try {
+    const nft = await mintCompletionNFT({ contractId, milestoneTitle, amountUSD, completedAt: new Date(), evmTxHash });
+    if (milestoneId) {
+      await prisma.milestone.update({ where: { id: milestoneId }, data: { nftTokenId: nft.tokenId, nftTxHash: nft.txHash ?? null, nftImageUrl: nft.imageUrl ?? null } });
+    } else {
+      await prisma.contract.update({ where: { id: contractId }, data: { nftTokenId: nft.tokenId, nftTxHash: nft.txHash ?? null, nftImageUrl: nft.imageUrl ?? null } });
+    }
+    await writeAuditLog({ contractId, milestoneId, event: "NFT_MINTED", metadata: { tokenId: nft.tokenId, txHash: nft.txHash, auto: true, via: "mcp" } });
+  } catch (err) {
+    if (milestoneId) {
+      await prisma.milestone.updateMany({ where: { id: milestoneId, nftTokenId: "PENDING" }, data: { nftTokenId: null } }).catch(() => {});
+    } else {
+      await prisma.contract.updateMany({ where: { id: contractId, nftTokenId: "PENDING" }, data: { nftTokenId: null } }).catch(() => {});
+    }
+    throw err;
+  }
+}
+
 export async function POST(request: NextRequest) {
   // Auth
   const authHeader = request.headers.get("authorization");
@@ -79,10 +125,14 @@ export async function POST(request: NextRequest) {
   if (!contract_id) return NextResponse.json({ error: "contract_id is required" }, { status: 400 });
   if (!evidence?.description) return NextResponse.json({ error: "evidence.description is required" }, { status: 400 });
 
-  // Load contract
+  // Load contract with all data needed for release
   const contract = await prisma.contract.findUnique({
     where: { id: contract_id },
-    include: { milestones: { orderBy: { order: "asc" } } },
+    include: {
+      milestones: { orderBy: { order: "asc" } },
+      investor: true,
+      startup: true,
+    },
   });
   if (!contract) return NextResponse.json({ error: "Contract not found" }, { status: 404 });
 
@@ -98,6 +148,7 @@ export async function POST(request: NextRequest) {
   if (!milestone) return NextResponse.json({ error: "Milestone not found or no active milestone" }, { status: 404 });
 
   const milestoneTitle = milestone.title;
+  const amountUSD = (milestone.amountUSD ?? contract.amountUSD).toString();
   const extractedText = buildExtractedText(evidence);
 
   // Run 5-model verification
@@ -150,15 +201,133 @@ export async function POST(request: NextRequest) {
     metadata: { verdict, confidence: verifyResult.confidence, proofId: proof.id },
   });
 
-  // Update statuses if approved
   let onChainUrl: string | null = null;
+  let txHash: string | undefined;
+
   if (verdict === "approved") {
-    await prisma.milestone.update({ where: { id: milestone.id }, data: { status: "VERIFIED" as never } });
-    await prisma.contract.update({ where: { id: contract.id }, data: { status: "VERIFIED" as never } });
+    // ── Full release flow: same as /api/verify ──────────────────────────────
+    try {
+      const milestoneOrder = milestone.order ?? 0;
+      const rawFulfillment = milestone.escrowFulfillment ?? contract.escrowFulfillment;
+      if (!rawFulfillment) throw new Error("Fulfillment key not found");
+      const fulfillment = decryptFulfillment(rawFulfillment);
+
+      // Email startup the fulfillment key (they can also self-release)
+      if (contract.startup?.email) {
+        sendFulfillmentKeyEmail({
+          to: contract.startup.email,
+          contractId: contract.id,
+          milestoneTitle,
+          fulfillment,
+          contractIdHash: contractIdToBytes32(contract.id),
+          milestoneOrder,
+        }).catch((err) => console.error("[mcp] sendFulfillmentKeyEmail failed:", err));
+      }
+
+      txHash = await releaseMilestone(contract.id, milestoneOrder, fulfillment);
+      console.log("[mcp/submit] Auto-released on-chain:", txHash);
+
+      // Update milestone + contract status
+      const completedMilestone = await prisma.milestone.update({
+        where: { id: milestone.id },
+        data: { status: "COMPLETED", evmTxHash: txHash, escrowFulfillment: null },
+        include: { contract: { include: { milestones: { orderBy: { order: "asc" } } } } },
+      });
+      const milestones = completedMilestone.contract.milestones;
+      const remaining = milestones.find((m) => m.id !== milestone.id && !["COMPLETED", "EXPIRED"].includes(m.status));
+      const nextContractStatus = !remaining ? "COMPLETED" : remaining.status === "FUNDED" ? "FUNDED" : "AWAITING_ESCROW";
+      await prisma.contract.update({ where: { id: contract.id }, data: { status: nextContractStatus as never } });
+
+      await writeAuditLog({
+        contractId: contract.id,
+        milestoneId: milestone.id,
+        event: "FUNDS_RELEASED",
+        metadata: { txHash, amountUSD, auto: true, via: "mcp" },
+      });
+
+      // Generate public proof page
+      const proofHash = generatePublicProofHash(contract.id, milestone.id, new Date());
+      const baseUrl = process.env.NEXTAUTH_URL ?? "https://cascrow.xyz";
+      const publicUrl = `${baseUrl}/proof/${proofHash}`;
+      onChainUrl = publicUrl;
+      void prisma.milestone.update({
+        where: { id: milestone.id },
+        data: { publicProofHash: proofHash, publicProofGeneratedAt: new Date() },
+      }).then(async () => {
+        if (contract.startup?.email && contract.investor?.email) {
+          const { sendPublicProofReadyEmail } = await import("@/lib/email");
+          void sendPublicProofReadyEmail({
+            toInvestor: contract.investor.email,
+            toStartup: contract.startup.email,
+            contractId: contract.id,
+            milestoneTitle,
+            publicUrl,
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+
+      // Fire webhooks
+      fireWebhook({
+        investorId: contract.investorId,
+        startupId: contract.startupId,
+        event: "funds.released",
+        contractId: contract.id,
+        milestoneId: milestone.id,
+        data: { txHash, amountUSD, milestoneTitle, auto: true, via: "mcp" },
+      }).catch((err) => console.error("[mcp] funds.released webhook failed:", err));
+
+      // Send emails
+      if (contract.startup?.notifyVerified && contract.startup?.email) {
+        sendVerifiedEmail({ to: contract.startup.email, contractId: contract.id, milestoneTitle, amountUSD, txHash, startupId: contract.startupId ?? undefined })
+          .catch((err) => console.error("[mcp] sendVerifiedEmail failed:", err));
+      }
+      if (contract.investor?.notifyMilestoneCompleted) {
+        sendMilestoneCompletedInvestorEmail({ to: contract.investor.email, contractId: contract.id, milestoneTitle, amountUSD, investorId: contract.investorId })
+          .catch((err) => console.error("[mcp] sendMilestoneCompletedInvestorEmail failed:", err));
+      }
+
+      // Auto-mint NFT certificate
+      void autoMintNft({
+        contractId: contract.id,
+        milestoneId: milestone.id,
+        milestoneTitle,
+        amountUSD,
+        evmTxHash: txHash,
+      }).catch((err) => console.warn("[mcp] auto-nft mint failed (non-fatal):", err));
+
+    } catch (releaseErr) {
+      const errMsg = releaseErr instanceof Error ? releaseErr.message : String(releaseErr);
+      console.error("[mcp/submit] Auto-release failed:", errMsg);
+
+      // Attestation mode: no escrow — mark COMPLETED directly
+      if (contract.mode === "ATTESTATION") {
+        const completedMs = await prisma.milestone.update({
+          where: { id: milestone.id },
+          data: { status: "COMPLETED" },
+          include: { contract: { include: { milestones: { orderBy: { order: "asc" } } } } },
+        });
+        const remaining = completedMs.contract.milestones.find(
+          (m) => m.id !== milestone.id && !["COMPLETED", "EXPIRED"].includes(m.status)
+        );
+        await prisma.contract.update({ where: { id: contract.id }, data: { status: remaining ? "FUNDED" : "COMPLETED" } });
+      } else {
+        // Escrow release failed — mark VERIFIED so admin/startup can manually trigger
+        await prisma.milestone.update({ where: { id: milestone.id }, data: { status: "VERIFIED" as never } });
+        await prisma.contract.update({ where: { id: contract.id }, data: { status: "VERIFIED" as never } });
+        await writeAuditLog({
+          contractId: contract.id,
+          milestoneId: milestone.id,
+          event: "FUNDS_RELEASED",
+          actor: "SYSTEM",
+          metadata: { error: errMsg, auto: true, failed: true, via: "mcp" },
+        });
+      }
+    }
   } else if (verdict === "rejected") {
     await prisma.milestone.update({ where: { id: milestone.id }, data: { status: "REJECTED" as never } });
     await prisma.contract.update({ where: { id: contract.id }, data: { status: "REJECTED" as never } });
   } else {
+    // pending_review
     await prisma.milestone.update({ where: { id: milestone.id }, data: { status: "PENDING_REVIEW" as never } });
     await prisma.contract.update({ where: { id: contract.id }, data: { status: "PENDING_REVIEW" as never } });
   }
