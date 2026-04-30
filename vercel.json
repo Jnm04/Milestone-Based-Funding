@@ -39,6 +39,14 @@
     {
       "path": "/api/cron/regulatory-alerts",
       "schedule": "0 8 * * 1"
+    },
+    {
+      "path": "/api/cron/proof-collector",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/feedback-loop",
+      "schedule": "0 4 * * 1"
     }
   ],
   "functions": {
@@ -85,6 +93,15 @@
       "maxDuration": 60
     },
     "src/app/api/cron/regulatory-alerts/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/cron/proof-collector/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/cron/feedback-loop/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/mcp/submit/route.ts": {
       "maxDuration": 60
     }
   },

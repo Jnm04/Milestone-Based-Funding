@@ -234,6 +234,13 @@ model Proof {
   aiContentSummary   String?    @db.Text
   /// Feature W: AI-generated resubmission diff (JSON: {addressed: string[], stillOpen: string[]})
   aiResubmissionDiff String?    @db.Text
+  /// Feature AC: "DRAFT" = auto-collected, awaiting startup confirmation; null = normal proof
+  draftStatus        String?
+  /// Feature AD: public proof page URL
+  publicProofUrl     String?
+  /// Feature: Adaptive Loop — how many times the startup has been nudged to address objections
+  nudgeCount         Int        @default(0)
+  nudgedAt           DateTime?
   createdAt          DateTime   @default(now())
 
   @@index([contractId])
@@ -385,6 +392,19 @@ model Milestone {
   internalApprovedBy     String? // name of approver (denormalised for display)
   internalApprovedAt     DateTime?
   internalApprovalNote   String?   @db.Text
+
+  // Feature AC: Agentic Proof Collector — optional connectors set at milestone creation
+  agentGithubRepo        String?   // e.g. "https://github.com/owner/repo"
+  agentGithubBranch      String?   @default("main")
+  agentGithubTokenEnc    String?   @db.Text // AES-256-GCM encrypted GitHub PAT
+  agentStripeKeyEnc      String?   @db.Text // AES-256-GCM encrypted Stripe read-only key
+  agentStripeProductId   String?   // Stripe Product/Price ID to filter revenue
+  agentProofDraftId      String?   // Proof.id of the auto-collected draft (DRAFT status)
+  agentCollectedAt       DateTime? // When the collector last ran for this milestone
+
+  // Feature AD: Public Proof Pages
+  publicProofHash        String?   @unique // SHA-256(contractId+milestoneId+verifiedAt)
+  publicProofGeneratedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1116,4 +1136,43 @@ model OrgAuditLog {
   createdAt DateTime @default(now())
 
   @@index([orgId, createdAt(sort: Desc)])
+}
+
+// ── Feature: Feedback Loop — Per-Model Confidence Weights ────────────────────
+
+/// Tracks how often each AI model's verdict was overturned by appeal.
+/// Updated weekly by /api/cron/feedback-loop.
+/// Used to adjust effective confidence weighting in verification.
+model ModelFeedbackWeight {
+  id              String   @id @default(cuid())
+  /// "claude-haiku" | "gpt-4o-mini" | "gemini-flash" | "mistral-small" | "cerebras"
+  modelKey        String   @unique
+  /// Total appeals where this model voted YES but was overturned (false positive)
+  falsePositives  Int      @default(0)
+  /// Total appeals where this model voted NO but was overturned (false negative)
+  falseNegatives  Int      @default(0)
+  /// Total verifications this model participated in
+  totalVotes      Int      @default(0)
+  /// Adjusted weight multiplier: 1.0 = neutral, <1 = less trusted, >1 = more trusted
+  weightMultiplier Float   @default(1.0)
+  lastCalculatedAt DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([modelKey])
+}
+
+// ── Feature AC: Agentic Proof Collector — Stripe Revenue Cache ────────────────
+
+/// Cached Stripe revenue data fetched by the Agentic Proof Collector.
+model AgentStripeSnapshot {
+  id            String   @id @default(cuid())
+  milestoneId   String
+  periodStart   DateTime
+  periodEnd     DateTime
+  revenueUsd    Float    // Total revenue in USD for the period
+  subCount      Int      // Active subscription count at period end
+  rawJson       String   @db.Text // Full Stripe API response for audit
+  fetchedAt     DateTime @default(now())
+
+  @@index([milestoneId])
 }

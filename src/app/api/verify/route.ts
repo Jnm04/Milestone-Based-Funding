@@ -15,6 +15,51 @@ import { createNotification } from "@/services/notifications/inapp.service";
 import { getPostHogClient } from "@/lib/posthog-server";
 import { isValidCronSecret } from "@/lib/cron-auth";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { mintCompletionNFT } from "@/services/xrpl/nft.service";
+import { writeAuditLog as writeAuditLogNft } from "@/services/evm/audit.service";
+import crypto from "crypto";
+
+function generatePublicProofHash(contractId: string, milestoneId: string, verifiedAt: Date): string {
+  return crypto
+    .createHash("sha256")
+    .update(`${contractId}:${milestoneId}:${verifiedAt.toISOString()}`)
+    .digest("hex");
+}
+
+async function autoMintNft(params: {
+  contractId: string;
+  milestoneId?: string;
+  milestoneTitle: string;
+  amountUSD: string;
+  evmTxHash?: string;
+}): Promise<void> {
+  const { contractId, milestoneId, milestoneTitle, amountUSD, evmTxHash } = params;
+
+  // Optimistic lock — only one concurrent caller wins
+  const claimed = milestoneId
+    ? await prisma.milestone.updateMany({ where: { id: milestoneId, nftTokenId: null }, data: { nftTokenId: "PENDING" } })
+    : await prisma.contract.updateMany({ where: { id: contractId, nftTokenId: null }, data: { nftTokenId: "PENDING" } });
+
+  if (claimed.count === 0) return; // already minting or minted
+
+  try {
+    const nft = await mintCompletionNFT({ contractId, milestoneTitle, amountUSD, completedAt: new Date(), evmTxHash });
+    if (milestoneId) {
+      await prisma.milestone.update({ where: { id: milestoneId }, data: { nftTokenId: nft.tokenId, nftTxHash: nft.txHash ?? null, nftImageUrl: nft.imageUrl ?? null } });
+    } else {
+      await prisma.contract.update({ where: { id: contractId }, data: { nftTokenId: nft.tokenId, nftTxHash: nft.txHash ?? null, nftImageUrl: nft.imageUrl ?? null } });
+    }
+    await writeAuditLogNft({ contractId, milestoneId, event: "NFT_MINTED", metadata: { tokenId: nft.tokenId, txHash: nft.txHash, auto: true } });
+  } catch (err) {
+    // Release lock on failure so manual mint button still works
+    if (milestoneId) {
+      await prisma.milestone.updateMany({ where: { id: milestoneId, nftTokenId: "PENDING" }, data: { nftTokenId: null } }).catch(() => {});
+    } else {
+      await prisma.contract.updateMany({ where: { id: contractId, nftTokenId: "PENDING" }, data: { nftTokenId: null } }).catch(() => {});
+    }
+    throw err;
+  }
+}
 
 // 150s: up to 3 AI attempts (10s + 60s waits) + XRPL/NFT overhead
 export const maxDuration = 150;
@@ -406,12 +451,25 @@ export async function POST(request: NextRequest) {
               extractedText,
               aiReasoning: result.reasoning,
             })
-              .then((objections) =>
-                prisma.proof.update({
+              .then(async (objections) => {
+                await prisma.proof.update({
                   where: { id: proofId },
                   data: { aiObjections: objections as never },
-                })
-              )
+                });
+                // Adaptive loop: nudge startup with targeted fix list
+                if (contract.startup && objections.length > 0) {
+                  const { nudgeStartupOnRejection } = await import("@/services/ai/adaptive-loop.service");
+                  void nudgeStartupOnRejection({
+                    proofId,
+                    contractId: contract.id,
+                    milestoneId: proof.milestoneId ?? undefined,
+                    milestoneTitle,
+                    startupEmail: contract.startup.email,
+                    startupId: contract.startupId ?? "",
+                    objections,
+                  });
+                }
+              })
               .catch((err) => console.warn("[verify] Failed to generate objections:", err));
           }
         }
@@ -478,6 +536,37 @@ export async function POST(request: NextRequest) {
               sendMilestoneCompletedInvestorEmail({ to: contract.investor.email, contractId: contract.id, milestoneTitle, amountUSD, investorId: contract.investorId })
                 .catch((err) => console.error("[email] sendMilestoneCompletedInvestorEmail failed:", err));
             }
+
+            // Generate public proof page hash for Enterprise + opt-in Escrow
+            if (proof.milestoneId && (contract.mode === "ATTESTATION" || contract.mode === "ESCROW")) {
+              const proofHash = generatePublicProofHash(contract.id, proof.milestoneId, new Date());
+              const baseUrl = process.env.NEXTAUTH_URL ?? "https://cascrow.xyz";
+              void prisma.milestone.update({
+                where: { id: proof.milestoneId },
+                data: { publicProofHash: proofHash, publicProofGeneratedAt: new Date() },
+              }).then(async () => {
+                const publicUrl = `${baseUrl}/proof/${proofHash}`;
+                if (contract.startup?.email) {
+                  const { sendPublicProofReadyEmail } = await import("@/lib/email");
+                  void sendPublicProofReadyEmail({
+                    toInvestor: contract.investor.email,
+                    toStartup: contract.startup.email,
+                    contractId: contract.id,
+                    milestoneTitle,
+                    publicUrl,
+                  }).catch(() => {});
+                }
+              }).catch(() => {});
+            }
+
+            // Auto-mint NFT certificate after successful fund release
+            void autoMintNft({
+              contractId: contract.id,
+              milestoneId: proof.milestoneId ?? undefined,
+              milestoneTitle,
+              amountUSD,
+              evmTxHash: txHash,
+            }).catch((err) => console.warn("[auto-nft] mint failed (non-fatal):", err));
 
             send({ type: "complete", decision: result.decision, reasoning: result.reasoning, confidence: result.confidence, action: "COMPLETED", txHash });
             return;

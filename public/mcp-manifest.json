@@ -1,0 +1,117 @@
+{
+  "schema_version": "1.0",
+  "name": "cascrow",
+  "display_name": "Cascrow — AI Milestone Escrow",
+  "description": "Cascrow is an agentic escrow platform. AI agents can submit milestone evidence and trigger a 5-model majority-vote verification pipeline that autonomously releases RLUSD funds on the XRPL EVM Sidechain.",
+  "version": "1.0.0",
+  "base_url": "https://cascrow.xyz",
+  "auth": {
+    "type": "bearer",
+    "description": "Generate an API key in your Cascrow dashboard under Settings → API Keys. Keys start with csk_."
+  },
+  "tools": [
+    {
+      "name": "cascrow_verify_milestone",
+      "description": "Submit evidence for a milestone and trigger Cascrow's 5-model AI verification pipeline. Returns a verdict (approved/rejected/pending_review), confidence score, and on-chain proof URL. If approved with high confidence (>85%), funds are automatically released on-chain.",
+      "endpoint": "/api/mcp/submit",
+      "method": "POST",
+      "input_schema": {
+        "type": "object",
+        "required": ["contract_id", "evidence"],
+        "properties": {
+          "contract_id": {
+            "type": "string",
+            "description": "The Cascrow contract ID (cuid format)"
+          },
+          "milestone_id": {
+            "type": "string",
+            "description": "Optional specific milestone ID. If omitted, the first active milestone is used."
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["escrow", "enterprise"],
+            "description": "Verification mode. Escrow releases RLUSD on approval. Enterprise writes attestation on-chain.",
+            "default": "escrow"
+          },
+          "evidence": {
+            "type": "object",
+            "required": ["description"],
+            "properties": {
+              "description": {
+                "type": "string",
+                "description": "Free-text description of the evidence. Be specific about what milestone criteria are met."
+              },
+              "links": {
+                "type": "array",
+                "items": { "type": "string", "format": "uri" },
+                "description": "Optional supporting URLs (GitHub repos, live demos, dashboards, etc.)"
+              },
+              "github_commit": {
+                "type": "string",
+                "description": "Optional specific GitHub commit SHA or URL"
+              },
+              "revenue_amount": {
+                "type": "number",
+                "description": "Optional revenue figure in USD if the milestone involves revenue targets"
+              },
+              "custom_fields": {
+                "type": "object",
+                "description": "Any additional key-value pairs relevant to this milestone"
+              }
+            }
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "enum": ["approved", "rejected", "pending_review"],
+            "description": "The AI panel's decision"
+          },
+          "confidence": {
+            "type": "number",
+            "description": "Confidence score 0-100. >85 = auto-release. 60-85 = pending_review. <60 = rejected."
+          },
+          "reasoning": {
+            "type": "string",
+            "description": "The AI panel's reasoning for the verdict"
+          },
+          "model_votes": {
+            "type": "array",
+            "description": "Individual votes from each of the 5 AI models"
+          },
+          "on_chain_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "XRPL transaction URL if the verdict was written on-chain. Public proof page at /proof/[hash]."
+          },
+          "proof_id": {
+            "type": "string",
+            "description": "Cascrow proof record ID for audit trail"
+          },
+          "signed_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp of when the verdict was signed"
+          }
+        }
+      },
+      "examples": [
+        {
+          "title": "Submit GitHub activity as proof",
+          "input": {
+            "contract_id": "clxyz123",
+            "evidence": {
+              "description": "We shipped v1.0.0 of our API with 50+ commits since the contract start. Revenue is $12,000 MRR.",
+              "links": ["https://github.com/acme/api", "https://app.acme.io"],
+              "github_commit": "abc1234",
+              "revenue_amount": 12000
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

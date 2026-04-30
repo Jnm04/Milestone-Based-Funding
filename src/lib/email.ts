@@ -379,6 +379,97 @@ export async function sendRejectedEmail({
   });
 }
 
+export async function sendPublicProofReadyEmail({
+  toInvestor,
+  toStartup,
+  contractId,
+  milestoneTitle,
+  publicUrl,
+}: {
+  toInvestor: string;
+  toStartup: string;
+  contractId: string;
+  milestoneTitle: string;
+  publicUrl: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  const html = `
+    <p>Hi,</p>
+    <p>The milestone <strong>${esc(milestoneTitle)}</strong> has been verified by Cascrow's AI panel.</p>
+    <p>A public verification page is now available — share it to showcase your achievement:</p>
+    <p><a href="${esc(publicUrl)}" style="color:#C4704B;">${esc(publicUrl)}</a></p>
+    <p>The page includes the AI verdict summary, confidence score, and a QR code for easy sharing.</p>
+    <p><a href="${contractLink(contractId)}">View contract →</a></p>
+  `;
+  await Promise.allSettled([
+    resend.emails.send({ from: FROM, to: toInvestor, subject: `Milestone verified: ${milestoneTitle}`, html }),
+    resend.emails.send({ from: FROM, to: toStartup, subject: `Your public proof page is ready: ${milestoneTitle}`, html }),
+  ]);
+}
+
+export async function sendAgentProofCollectedEmail({
+  to,
+  contractId,
+  milestoneTitle,
+  proofId,
+  sourcesCount,
+  sourceTypes,
+}: {
+  to: string;
+  contractId: string;
+  milestoneTitle: string;
+  proofId: string;
+  sourcesCount: number;
+  sourceTypes: string[];
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  const sourceList = sourceTypes.map((t) => `<li>${esc(t === "github" ? "GitHub repository activity" : "Stripe revenue data")}</li>`).join("");
+  const confirmUrl = `${BASE_URL}/contract/${contractId}?confirmDraft=${proofId}`;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `We collected proof automatically for "${milestoneTitle}" — review & confirm`,
+    html: `
+      <p>Hi,</p>
+      <p>Your milestone <strong>${esc(milestoneTitle)}</strong> is coming up soon. We automatically collected evidence from ${sourcesCount} source${sourcesCount !== 1 ? "s" : ""}:</p>
+      <ul>${sourceList}</ul>
+      <p>Please review the collected evidence and confirm with one click to send it to the AI verification panel.</p>
+      <p><a href="${confirmUrl}" style="background:#C4704B;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block;">Review &amp; Confirm Proof →</a></p>
+      <p style="color:#888;font-size:12px;">You can also edit or replace this proof before confirming.</p>
+    `,
+  });
+}
+
+export async function sendAdaptiveNudgeEmail({
+  to,
+  contractId,
+  milestoneTitle,
+  objections,
+  startupId,
+}: {
+  to: string;
+  contractId: string;
+  milestoneTitle: string;
+  objections: { code: string; description: string }[];
+  startupId?: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  const items = objections.map((o) => `<li><strong>${esc(o.code)}:</strong> ${esc(o.description)}</li>`).join("");
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Action needed: address these points to get "${milestoneTitle}" approved`,
+    html: `
+      <p>Hi,</p>
+      <p>The AI panel reviewed your proof for <strong>${esc(milestoneTitle)}</strong> and identified specific items you need to address before resubmitting:</p>
+      <ul>${items}</ul>
+      <p>Once you've gathered the additional evidence, resubmit through the platform — the AI will automatically re-verify your updated proof.</p>
+      <p><a href="${contractLink(contractId)}">Resubmit proof →</a></p>
+    `,
+  });
+  void startupId; // reserved for Telegram notification if added later
+}
+
 export async function sendDeadlineReminderEmail({
   to,
   contractId,

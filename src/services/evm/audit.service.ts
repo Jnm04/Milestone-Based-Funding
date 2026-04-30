@@ -15,7 +15,8 @@ export type AuditEvent =
   | "MANUAL_REVIEW_REJECTED"
   | "NFT_MINTED"
   | "EXTENSION_APPROVED"
-  | "EXTENSION_REJECTED";
+  | "EXTENSION_REJECTED"
+  | "MCP_SUBMISSION";
 
 interface AuditParams {
   contractId: string;
