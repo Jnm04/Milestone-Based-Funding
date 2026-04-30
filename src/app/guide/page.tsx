@@ -447,15 +447,41 @@ export default function GuidePage() {
               {/* 3-column capability cards */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 40 }}>
                 {[
-                  { icon: "🔑", title: "API Key auth", body: "Generate a csk_… key in your profile. Any HTTP client or agent framework can authenticate." },
-                  { icon: "🐙", title: "GitHub connector", body: "Link a repo per milestone. The proof collector fetches commits automatically 48h before deadline." },
-                  { icon: "💳", title: "Stripe connector", body: "Link your Stripe key. Revenue data is encrypted, collected, and included in the proof package." },
-                  { icon: "🤖", title: "MCP protocol", body: "Native Claude Code tool. Add the manifest and call cascrow_verify_milestone from any session." },
-                  { icon: "⛓️", title: "On-chain release", body: "Approved evidence triggers releaseMilestone on XRPL EVM — funds move in 3-5 seconds." },
-                  { icon: "📡", title: "Webhook events", body: "Subscribe to funds.released to trigger downstream logic in your treasury or DAO." },
+                  {
+                    svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C4704B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="2"/><path d="M10 21h7a1 1 0 0 0 .8-1.6l-5.4-6.8A1 1 0 0 1 13 11V3H9v8a1 1 0 0 1-.2.6L3.2 19.4A1 1 0 0 0 4 21h4"/><path d="M10 3h4"/></svg>,
+                    title: "API Key auth",
+                    body: "Generate a csk_… key in your profile. Any HTTP client or agent framework can authenticate.",
+                  },
+                  {
+                    svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C4704B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>,
+                    title: "GitHub connector",
+                    body: "Link a repo per milestone. The proof collector fetches commits automatically 48h before deadline.",
+                  },
+                  {
+                    svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C4704B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
+                    title: "Stripe connector",
+                    body: "Link your Stripe key. Revenue data is encrypted, collected, and included in the proof package.",
+                  },
+                  {
+                    svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C4704B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>,
+                    title: "MCP protocol",
+                    body: "Native Claude Code tool. Add the manifest and call cascrow_verify_milestone from any session.",
+                  },
+                  {
+                    svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C4704B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+                    title: "On-chain release",
+                    body: "Approved evidence triggers releaseMilestone on XRPL EVM — funds move in 3-5 seconds.",
+                  },
+                  {
+                    svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C4704B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>,
+                    title: "Webhook events",
+                    body: "Subscribe to funds.released to trigger downstream logic in your treasury or DAO.",
+                  },
                 ].map((c) => (
-                  <div key={c.title} style={{ padding: "18px 20px", borderRadius: 14, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.12)", display: "flex", flexDirection: "column", gap: 8 }}>
-                    <span style={{ fontSize: 22 }}>{c.icon}</span>
+                  <div key={c.title} style={{ padding: "18px 20px", borderRadius: 14, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.12)", display: "flex", flexDirection: "column", gap: 10 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {c.svg}
+                    </div>
                     <p style={{ fontWeight: 600, color: "#EDE6DD", fontSize: 14, margin: 0 }}>{c.title}</p>
                     <p style={{ fontSize: 13, color: "#A89B8C", margin: 0, lineHeight: 1.5 }}>{c.body}</p>
                   </div>
@@ -529,15 +555,35 @@ export default function GuidePage() {
                     <p style={{ fontWeight: 600, color: "#EDE6DD", margin: "3px 0 10px", fontSize: 15 }}>What happens — fully autonomous</p>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 8 }}>
                       {[
-                        { icon: "🧠", text: "5 AI models vote in parallel (Claude, GPT-4o, Gemini, Mistral, Cerebras)" },
-                        { icon: "⛓️", text: "Confidence >85% + majority YES → RLUSD released on XRPL EVM automatically" },
-                        { icon: "🏆", text: "NFT certificate minted on XRP Ledger mainnet" },
-                        { icon: "📡", text: "funds.released webhook fires to your downstream systems" },
-                        { icon: "🔗", text: "Public proof page with QR code + LinkedIn share generated" },
-                        { icon: "📈", text: "Model weights adjusted weekly via feedback loop cron" },
+                        {
+                          svg: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
+                          text: "5 AI models vote in parallel (Claude, GPT-4o, Gemini, Mistral, Cerebras)",
+                        },
+                        {
+                          svg: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+                          text: "Confidence >85% + majority YES → RLUSD released on XRPL EVM automatically",
+                        },
+                        {
+                          svg: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 15 11 17 15 13"/></svg>,
+                          text: "NFT certificate minted on XRP Ledger mainnet",
+                        },
+                        {
+                          svg: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>,
+                          text: "funds.released webhook fires to your downstream systems",
+                        },
+                        {
+                          svg: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>,
+                          text: "Public proof page with QR code + LinkedIn share generated",
+                        },
+                        {
+                          svg: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>,
+                          text: "Model weights adjusted weekly via feedback loop cron",
+                        },
                       ].map((item) => (
                         <div key={item.text} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px", borderRadius: 10, background: "rgba(52,211,153,0.04)", border: "1px solid rgba(52,211,153,0.1)" }}>
-                          <span style={{ fontSize: 16, flexShrink: 0, lineHeight: 1 }}>{item.icon}</span>
+                          <div style={{ width: 22, height: 22, borderRadius: 6, background: "rgba(52,211,153,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                            {item.svg}
+                          </div>
                           <span style={{ fontSize: 13, color: "#A89B8C", lineHeight: 1.5 }}>{item.text}</span>
                         </div>
                       ))}
