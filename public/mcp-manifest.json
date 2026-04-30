@@ -4,7 +4,7 @@
   "display_name": "Cascrow — AI Milestone Escrow",
   "description": "Cascrow is an agentic escrow platform. AI agents can submit milestone evidence and trigger a 5-model majority-vote verification pipeline that autonomously releases RLUSD funds on the XRPL EVM Sidechain.",
   "version": "1.0.0",
-  "base_url": "https://cascrow.xyz",
+  "base_url": "https://cascrow.com",
   "auth": {
     "type": "bearer",
     "description": "Generate an API key in your Cascrow dashboard under Settings → API Keys. Keys start with csk_."

@@ -55,7 +55,7 @@ export default async function PublicProofPage({ params }: Props) {
 
   const verifiedAt = latestProof.createdAt;
   const confidence = latestProof.aiConfidence ?? 0;
-  const pageUrl = `${process.env.NEXTAUTH_URL ?? "https://cascrow.xyz"}/verify/${hash}`;
+  const pageUrl = `${process.env.NEXTAUTH_URL ?? "https://cascrow.com"}/verify/${hash}`;
   const xrplUrl = milestone.nftTxHash
     ? `https://livenet.xrpl.org/transactions/${milestone.nftTxHash}`
     : null;
@@ -159,7 +159,7 @@ export default async function PublicProofPage({ params }: Props) {
       {/* Powered by Cascrow */}
       <p className="mt-8 text-xs" style={{ color: "#6B5E54" }}>
         Powered by{" "}
-        <a href="https://cascrow.xyz" style={{ color: "#C4704B" }} className="hover:underline">Cascrow</a>
+        <a href="https://cascrow.com" style={{ color: "#C4704B" }} className="hover:underline">Cascrow</a>
         {" "}— AI-powered milestone escrow on the XRP Ledger
       </p>
     </div>

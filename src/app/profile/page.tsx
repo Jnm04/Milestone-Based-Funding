@@ -1921,7 +1921,7 @@ export default function ProfilePage() {
               <span style={{ color: "#C4704B", fontWeight: 600 }}>MCP Integration:</span>{" "}
               Add Cascrow as a tool in Claude Code or any MCP-compatible agent:{" "}
               <code style={{ color: "#D4B896" }}>cascrow_verify_milestone</code> at{" "}
-              <code style={{ color: "#D4B896" }}>https://cascrow.xyz/api/mcp/submit</code>
+              <code style={{ color: "#D4B896" }}>https://cascrow.com/api/mcp/submit</code>
             </div>
           </SectionCard>
 

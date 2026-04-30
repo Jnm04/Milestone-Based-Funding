@@ -740,6 +740,73 @@ export default function LandingPage() {
             </div>
             <SettlementMockup />
           </ScrollReveal>
+
+          {/* Feature D — Agentic */}
+          <ScrollReveal className="mt-24">
+            <div
+              className="rounded-3xl p-8 md:p-12 flex flex-col md:flex-row gap-10 items-center"
+              style={{ background: "linear-gradient(135deg, rgba(196,112,75,0.07) 0%, rgba(196,112,75,0.02) 100%)", border: "1px solid rgba(196,112,75,0.22)" }}
+            >
+              {/* Left: copy */}
+              <div className="flex flex-col gap-5 flex-1 min-w-0">
+                <div className="inline-flex items-center gap-2 self-start px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest" style={{ background: "rgba(196,112,75,0.12)", border: "1px solid rgba(196,112,75,0.3)", color: "#C4704B" }}>
+                  <span className="w-1.5 h-1.5 rounded-full animate-pulse-dot inline-block" style={{ background: "#C4704B" }} />
+                  Live now · Agentic
+                </div>
+                <h3 className="text-2xl md:text-3xl font-semibold leading-snug" style={{ color: "#EDE6DD" }}>
+                  AI agents can verify milestones<br className="hidden md:block" /> and release funds on their own
+                </h3>
+                <p className="text-base leading-relaxed" style={{ color: "#A89B8C" }}>
+                  Connect Cascrow to any AI agent via the MCP protocol. The agent submits evidence, triggers the 5-model verification pipeline, and — if approved — RLUSD is released on-chain automatically. No human in the loop.
+                </p>
+                <div className="flex flex-col gap-2.5">
+                  <CheckItem>MCP endpoint compatible with Claude Code, LangChain, any LLM</CheckItem>
+                  <CheckItem>GitHub + Stripe connectors auto-collect proof 48h before deadline</CheckItem>
+                  <CheckItem>Adaptive feedback loop — model weights improve over time</CheckItem>
+                </div>
+                <div className="flex gap-3 mt-1">
+                  <Link href="/guide#agentic" className="cs-btn-primary">Agent setup guide →</Link>
+                  <a href="/mcp-manifest.json" target="_blank" rel="noopener noreferrer" className="cs-btn-ghost text-sm">MCP manifest</a>
+                </div>
+              </div>
+              {/* Right: code snippet */}
+              <div className="w-full md:w-[420px] shrink-0">
+                <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(196,112,75,0.2)" }}>
+                  <div className="flex items-center gap-2 px-4 py-3" style={{ background: "rgba(0,0,0,0.4)", borderBottom: "1px solid rgba(196,112,75,0.12)" }}>
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: "rgba(196,112,75,0.4)" }} />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: "rgba(196,112,75,0.25)" }} />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: "rgba(196,112,75,0.15)" }} />
+                    <span className="text-xs font-mono ml-2" style={{ color: "#6B5E55" }}>agent → cascrow</span>
+                  </div>
+                  <pre className="text-xs font-mono leading-relaxed p-5 overflow-x-auto" style={{ background: "rgba(0,0,0,0.3)", color: "#EDE6DD", margin: 0 }}>{`POST /api/mcp/submit
+Authorization: Bearer csk_…
+
+{
+  "contract_id": "clxyz123",
+  "evidence": {
+    "description": "Shipped v1.0 — 47 commits",
+    "links": ["https://github.com/…"],
+    "revenue_amount": 12000
+  }
+}
+
+← 200 OK
+{
+  "verdict": "approved",
+  "confidence": 91,
+  "on_chain_url": "cascrow.com/proof/…"
+}`}</pre>
+                </div>
+                <div className="flex gap-2 mt-3 flex-wrap">
+                  {["Claude", "GPT-4o", "Gemini", "Mistral", "Cerebras"].map((m) => (
+                    <span key={m} className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: "rgba(196,112,75,0.08)", border: "1px solid rgba(196,112,75,0.18)", color: "#C4704B" }}>{m}</span>
+                  ))}
+                  <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.2)", color: "#34d399" }}>3/5 majority → release</span>
+                </div>
+              </div>
+            </div>
+          </ScrollReveal>
+
         </div>
       </section>
 
@@ -948,6 +1015,36 @@ export default function LandingPage() {
               </ScrollReveal>
             </div>
           </div>
+
+          {/* Agentic — full-width highlight card */}
+          <ScrollReveal delay={0} className="mt-6">
+            <div
+              className="rounded-2xl p-7 flex flex-col md:flex-row gap-6 items-start md:items-center"
+              style={{ background: "linear-gradient(135deg, rgba(196,112,75,0.09) 0%, rgba(196,112,75,0.03) 100%)", border: "1px solid rgba(196,112,75,0.28)" }}
+            >
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(196,112,75,0.15)", border: "1px solid rgba(196,112,75,0.3)" }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C4704B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+                  </svg>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#C4704B" }}>Agentic</p>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.25)", color: "#34d399" }}>live now</span>
+                  </div>
+                  <h3 className="font-semibold text-lg" style={{ color: "#EDE6DD" }}>MCP-native agent integration</h3>
+                </div>
+              </div>
+              <p className="text-sm leading-relaxed flex-1" style={{ color: "#A89B8C" }}>
+                External AI agents submit milestone evidence via a single API call. The 5-model pipeline verifies and — if approved — releases RLUSD on-chain, mints an NFT certificate, and fires a webhook. Zero human intervention after setup.
+              </p>
+              <div className="flex gap-2 shrink-0 flex-wrap md:flex-nowrap">
+                <Link href="/guide#agentic" className="cs-btn-primary text-sm whitespace-nowrap">Agent docs →</Link>
+                <a href="/mcp-manifest.json" target="_blank" rel="noopener noreferrer" className="cs-btn text-sm whitespace-nowrap">MCP manifest</a>
+              </div>
+            </div>
+          </ScrollReveal>
 
           {/* Second row */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6 items-stretch">

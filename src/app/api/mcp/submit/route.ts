@@ -247,7 +247,7 @@ export async function POST(request: NextRequest) {
 
       // Generate public proof page
       const proofHash = generatePublicProofHash(contract.id, milestone.id, new Date());
-      const baseUrl = process.env.NEXTAUTH_URL ?? "https://cascrow.xyz";
+      const baseUrl = process.env.NEXTAUTH_URL ?? "https://cascrow.com";
       const publicUrl = `${baseUrl}/proof/${proofHash}`;
       onChainUrl = publicUrl;
       void prisma.milestone.update({

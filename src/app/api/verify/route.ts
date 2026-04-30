@@ -540,7 +540,7 @@ export async function POST(request: NextRequest) {
             // Generate public proof page hash for Enterprise + opt-in Escrow
             if (proof.milestoneId && (contract.mode === "ATTESTATION" || contract.mode === "ESCROW")) {
               const proofHash = generatePublicProofHash(contract.id, proof.milestoneId, new Date());
-              const baseUrl = process.env.NEXTAUTH_URL ?? "https://cascrow.xyz";
+              const baseUrl = process.env.NEXTAUTH_URL ?? "https://cascrow.com";
               void prisma.milestone.update({
                 where: { id: proof.milestoneId },
                 data: { publicProofHash: proofHash, publicProofGeneratedAt: new Date() },
