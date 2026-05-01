@@ -24,8 +24,8 @@ export function ImpressumContent() {
   return (
     <>
       <main
-        className="min-h-screen px-4 py-16"
-        style={{ background: "#171311", color: "#EDE6DD" }}
+        className="min-h-screen px-4 pt-32 pb-16"
+        style={{ background: "hsl(24 14% 4%)", color: "#EDE6DD" }}
       >
         <div className="max-w-2xl mx-auto flex flex-col gap-8">
           {/* Header */}
@@ -48,7 +48,7 @@ export function ImpressumContent() {
             </div>
             <h1
               className="text-3xl mt-6 mb-2"
-              style={{ fontFamily: "var(--font-libre-franklin)", fontWeight: 300 }}
+              style={{ fontWeight: 300 }}
             >
               {de ? "Impressum" : "Legal Notice"}
             </h1>

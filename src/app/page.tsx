@@ -250,7 +250,7 @@ function HowItWorks() {
                   </div>
                 </div>
               </div>
-              <div className="gradient-border rounded-2xl p-7" style={{ background: "hsl(24 12% 6% / 0.5)", backdropFilter: "blur(12px)" }}>
+              <div className="gradient-border glow-on-hover rounded-2xl p-7 h-full" style={{ background: "hsl(24 12% 6% / 0.5)", backdropFilter: "blur(12px)" }}>
                 <s.icon className="mb-4 h-6 w-6" style={{ color: "hsl(22 55% 54%)" }} />
                 <h3 className="mb-2 text-xl font-semibold tracking-tight">{s.title}</h3>
                 <p className="text-sm leading-relaxed" style={{ color: "hsl(30 10% 62%)" }}>{s.body}</p>

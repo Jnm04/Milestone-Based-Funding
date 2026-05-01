@@ -71,7 +71,7 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
           <div style={{ width: 1, flex: 1, background: "rgba(196,112,75,0.15)", marginTop: 8 }} />
         </div>
         <div style={{ flex: 1, paddingBottom: 40, display: "flex", flexDirection: "column", gap: 16 }}>
-          <h3 style={{ fontFamily: "var(--font-libre-franklin)", fontWeight: 600, fontSize: 20, color: "#EDE6DD", marginTop: 6 }}>{title}</h3>
+          <h3 style={{ fontWeight: 600, fontSize: 20, color: "hsl(32 35% 92%)", marginTop: 6 }}>{title}</h3>
           {children}
         </div>
       </div>
@@ -111,18 +111,18 @@ function Ol({ items }: { items: string[] }) {
 
 export default function GuidePage() {
   return (
-    <main style={{ minHeight: "100vh", background: "#171311", color: "#EDE6DD" }}>
+    <main style={{ minHeight: "100vh", background: "hsl(24 14% 4%)", color: "hsl(32 35% 92%)" }}>
       <NodeBackground />
 
       <SiteNav activePage="Guide" />
 
       {/* Hero */}
-      <section className="py-24 px-6 text-center" style={{ position: "relative", zIndex: 1 }}>
+      <section className="py-24 pt-36 px-6 text-center" style={{ position: "relative", zIndex: 1 }}>
         <ScrollReveal>
-          <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: "#C4704B" }}>Testnet Guide</p>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: "hsl(22 55% 54%)" }}>Testnet Guide</p>
           <h1
             className="tracking-tight"
-            style={{ fontFamily: "var(--font-libre-franklin)", fontWeight: 600, fontSize: "clamp(36px, 6vw, 58px)", color: "#EDE6DD" }}
+            style={{ fontWeight: 600, fontSize: "clamp(36px, 6vw, 58px)", color: "hsl(32 35% 92%)" }}
           >
             Get started on testnet
           </h1>
@@ -417,7 +417,7 @@ export default function GuidePage() {
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               </div>
-              <h2 style={{ fontFamily: "var(--font-libre-franklin)", fontWeight: 600, fontSize: 28, color: "#EDE6DD" }}>
+              <h2 style={{ fontWeight: 600, fontSize: 28, color: "#EDE6DD" }}>
                 You&apos;re set.
               </h2>
               <p style={{ fontSize: 15, color: "#A89B8C", maxWidth: 400 }}>
@@ -436,7 +436,7 @@ export default function GuidePage() {
                   <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#C4704B", display: "inline-block" }} />
                   <span style={{ fontSize: 11, fontWeight: 700, color: "#C4704B", textTransform: "uppercase", letterSpacing: "0.1em" }}>Live Now · Agentic Mode</span>
                 </div>
-                <h2 style={{ fontFamily: "var(--font-libre-franklin)", fontWeight: 600, fontSize: "clamp(28px, 5vw, 42px)", color: "#EDE6DD", margin: 0, lineHeight: 1.1 }}>
+                <h2 style={{ fontWeight: 600, fontSize: "clamp(28px, 5vw, 42px)", color: "#EDE6DD", margin: 0, lineHeight: 1.1 }}>
                   Let agents do the work
                 </h2>
                 <p style={{ fontSize: 16, color: "#A89B8C", maxWidth: 520, margin: 0, lineHeight: 1.6 }}>
