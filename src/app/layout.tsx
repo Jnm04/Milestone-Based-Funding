@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
-import { Libre_Franklin } from "next/font/google";
+import { Inter_Tight, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import "@/lib/env-validation";
 import { Toaster } from "@/components/ui/sonner";
@@ -8,11 +7,16 @@ import { AuthSessionProvider } from "@/components/session-provider";
 import { CookieBanner } from "@/components/cookie-banner";
 import { SupportChat } from "@/components/support-chat";
 
-const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
-const libreFranklin = Libre_Franklin({
+const interTight = Inter_Tight({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-  variable: "--font-libre-franklin",
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-inter-tight",
+  display: "swap",
+});
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-jetbrains-mono",
   display: "swap",
 });
 
@@ -132,7 +136,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${geist.variable} ${libreFranklin.variable} dark h-full antialiased`}
+      className={`${interTight.variable} ${jetbrainsMono.variable} dark h-full antialiased`}
     >
       <head>
         <script
@@ -142,7 +146,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body
         className="min-h-full bg-background text-foreground flex flex-col"
-        style={{ fontFamily: "var(--font-libre-franklin), var(--font-geist-sans), sans-serif" }}
+        style={{ fontFamily: "var(--font-inter-tight), 'Inter Tight', system-ui, sans-serif" }}
       >
         <AuthSessionProvider>
           {children}
