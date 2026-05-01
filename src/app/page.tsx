@@ -78,7 +78,6 @@ function Hero() {
   return (
     <section className="relative overflow-hidden pt-36 pb-28 noise">
       <div className="absolute inset-0 -z-10 bg-aurora animate-aurora" aria-hidden />
-      <div className="absolute inset-0 -z-10 opacity-50" aria-hidden style={{ backgroundImage: "linear-gradient(hsl(32 35% 92% / 0.04) 1px, transparent 1px), linear-gradient(90deg, hsl(32 35% 92% / 0.04) 1px, transparent 1px)", backgroundSize: "56px 56px", maskImage: "radial-gradient(ellipse at center, black 30%, transparent 75%)" }} />
       <div className="absolute left-1/2 top-1/2 -z-10 h-[800px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-40 blur-3xl" style={{ background: "conic-gradient(from 90deg, hsl(22 70% 35% / 0.6), transparent 40%, hsl(28 80% 50% / 0.4) 70%, transparent)" }} />
 
       <div className="container-tight relative">
@@ -103,7 +102,12 @@ function Hero() {
           <Link href="/register" className="group inline-flex items-center gap-2 rounded-full bg-gradient-copper px-7 py-3.5 text-sm font-medium glow-on-hover" style={{ color: "hsl(24 14% 6%)" }}>
             Start building <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Link>
-          <a href="https://github.com/Jnm04/Milestone-Based-Funding" target="_blank" rel="noopener noreferrer" className="group inline-flex items-center gap-2 rounded-full border px-7 py-3.5 transition-colors hover:border-primary/60" style={{ borderColor: "hsl(28 18% 14%)", background: "hsl(24 12% 6% / 0.4)", backdropFilter: "blur(12px)", color: "hsl(32 35% 92%)", fontFamily: "'JetBrains Mono', monospace", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.18em" }}>
+          <a href="https://github.com/Jnm04/Milestone-Based-Funding" target="_blank" rel="noopener noreferrer"
+            className="group inline-flex items-center gap-2 rounded-full border px-7 py-3.5"
+            style={{ borderColor: "hsl(22 55% 54% / 0.35)", background: "hsl(24 12% 6% / 0.4)", backdropFilter: "blur(12px)", color: "hsl(32 35% 92%)", fontFamily: "'JetBrains Mono', monospace", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.18em", transition: "border-color 0.2s, background 0.2s" }}
+            onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = "hsl(22 55% 54% / 0.7)"; (e.currentTarget as HTMLAnchorElement).style.background = "hsl(22 55% 54% / 0.08)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = "hsl(22 55% 54% / 0.35)"; (e.currentTarget as HTMLAnchorElement).style.background = "hsl(24 12% 6% / 0.4)"; }}
+          >
             <Terminal className="h-3.5 w-3.5" /> View source
           </a>
         </div>
@@ -241,7 +245,9 @@ function HowItWorks() {
               <div className="mb-6 flex items-center gap-4">
                 <div className="relative grid h-24 w-24 place-items-center">
                   <div className="absolute inset-0 rounded-full opacity-20 blur-xl bg-gradient-copper" />
-                  <div className="relative grid h-24 w-24 place-items-center rounded-full border font-semibold text-2xl text-gradient-copper" style={{ borderColor: "hsl(22 55% 54% / 0.3)", background: "hsl(24 12% 6%)", fontFamily: "'JetBrains Mono', monospace" }}>{s.n}</div>
+                  <div className="relative grid h-24 w-24 place-items-center rounded-full border font-semibold text-2xl" style={{ borderColor: "hsl(22 55% 54% / 0.3)", background: "hsl(24 12% 6%)", fontFamily: "'JetBrains Mono', monospace", backgroundClip: "unset", WebkitBackgroundClip: "unset" }}>
+                    <span style={{ background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>{s.n}</span>
+                  </div>
                 </div>
               </div>
               <div className="gradient-border rounded-2xl p-7" style={{ background: "hsl(24 12% 6% / 0.5)", backdropFilter: "blur(12px)" }}>
@@ -343,7 +349,13 @@ function Stack() {
         <Reveal delay={150}>
           <div className="flex flex-wrap gap-2">
             {items.map(s => (
-              <span key={s} className="gradient-border rounded-full px-4 py-2 cursor-default transition-colors hover:text-foreground" style={{ background: "hsl(24 12% 6% / 0.5)", backdropFilter: "blur(12px)", fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: "hsl(30 10% 62%)" }}>{s}</span>
+              <span
+                key={s}
+                className="rounded-full px-4 py-2 cursor-default border"
+                style={{ borderColor: "hsl(22 55% 54% / 0.25)", background: "hsl(24 12% 6% / 0.5)", backdropFilter: "blur(12px)", fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: "hsl(30 10% 62%)", transition: "border-color 0.2s, background 0.2s, color 0.2s" }}
+                onMouseEnter={e => { const el = e.currentTarget as HTMLSpanElement; el.style.borderColor = "hsl(22 55% 54% / 0.6)"; el.style.background = "hsl(22 55% 54% / 0.08)"; el.style.color = "hsl(32 35% 92%)"; }}
+                onMouseLeave={e => { const el = e.currentTarget as HTMLSpanElement; el.style.borderColor = "hsl(22 55% 54% / 0.25)"; el.style.background = "hsl(24 12% 6% / 0.5)"; el.style.color = "hsl(30 10% 62%)"; }}
+              >{s}</span>
             ))}
           </div>
         </Reveal>
@@ -367,7 +379,12 @@ function CTA() {
               <Link href="/register" className="group inline-flex items-center gap-2 rounded-full bg-gradient-copper px-8 py-4 text-sm font-medium glow-on-hover" style={{ color: "hsl(24 14% 6%)" }}>
                 Get Started — it's live <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
-              <Link href="/guide" className="inline-flex items-center gap-2 rounded-full border px-8 py-4 text-sm font-medium transition-colors hover:border-primary/60" style={{ borderColor: "hsl(28 18% 14%)", background: "hsl(24 12% 6% / 0.5)", color: "hsl(32 35% 92%)" }}>
+              <Link href="/guide"
+                className="inline-flex items-center gap-2 rounded-full border px-8 py-4 text-sm font-medium"
+                style={{ borderColor: "hsl(22 55% 54% / 0.35)", background: "hsl(24 12% 6% / 0.5)", color: "hsl(32 35% 92%)", transition: "border-color 0.2s, background 0.2s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = "hsl(22 55% 54% / 0.7)"; (e.currentTarget as HTMLAnchorElement).style.background = "hsl(22 55% 54% / 0.08)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = "hsl(22 55% 54% / 0.35)"; (e.currentTarget as HTMLAnchorElement).style.background = "hsl(24 12% 6% / 0.5)"; }}
+              >
                 Read the guide
               </Link>
             </div>

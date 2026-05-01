@@ -179,8 +179,8 @@
     font-family: var(--font-inter-tight), 'Inter Tight', system-ui, sans-serif;
     font-feature-settings: 'ss01', 'cv11';
     background-image:
-      radial-gradient(1200px 600px at 50% -10%, hsl(22 55% 18% / 0.5), transparent 60%),
-      radial-gradient(800px 500px at 100% 20%, hsl(28 60% 14% / 0.35), transparent 70%);
+      radial-gradient(1200px 600px at 50% -10%, hsl(22 55% 14% / 0.3), transparent 55%),
+      radial-gradient(800px 500px at 100% 20%, hsl(28 60% 10% / 0.2), transparent 65%);
     background-attachment: fixed;
   }
   ::selection {
