@@ -154,7 +154,7 @@ function RegisterForm() {
     return (
       <main
         className="min-h-screen flex items-center justify-center px-4"
-        style={{ background: "#171311" }}
+        style={{ background: "hsl(24 14% 4%)" }}
       >
         <div
           className="animate-fade-up w-full max-w-md flex flex-col items-center gap-6 p-8 rounded-2xl text-center"
@@ -210,7 +210,7 @@ function RegisterForm() {
   return (
     <main
       className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden"
-      style={{ background: "#171311" }}
+      style={{ background: "hsl(24 14% 4%)" }}
     >
       <NodeBackground />
       <div

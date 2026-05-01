@@ -85,39 +85,45 @@ export function DashboardSidebar({ role }: SidebarProps) {
     ? session.user.name.slice(0, 2).toUpperCase()
     : session?.user?.email?.slice(0, 2).toUpperCase() ?? "??";
 
+  const primaryColor = "hsl(22 55% 54%)";
+  const mutedColor = "hsl(30 10% 62%)";
+  const fgColor = "hsl(32 35% 92%)";
+  const borderColor = "hsl(28 18% 14%)";
+  const bgSidebar = "hsl(24 12% 6%)";
+
   return (
     <>
-      {/* ── Desktop sidebar ── */}
+      {/* ── Desktop sidebar (Lovable style) ── */}
       <aside
-        className="hidden md:flex flex-col w-60 shrink-0 h-screen sticky top-0"
-        style={{
-          background: "#1C1917",
-          borderRight: "1px solid rgba(196,112,75,0.12)",
-        }}
+        className="hidden md:flex flex-col w-64 shrink-0 h-screen sticky top-0"
+        style={{ background: `${bgSidebar}`, borderRight: `1px solid ${borderColor}`, backdropFilter: "blur(20px)" }}
       >
         {/* Logo */}
-        <div className="px-6 py-6 border-b" style={{ borderColor: "rgba(196,112,75,0.12)" }}>
-          <Link href="/">
-            <Logo variant="nav" />
+        <div className="flex h-16 items-center gap-2 px-5 border-b" style={{ borderColor }}>
+          <Link href="/" className="flex items-center gap-2">
+            <span className="grid h-7 w-7 place-items-center rounded-md font-bold" style={{ background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)", fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: "hsl(24 14% 6%)" }}>c</span>
+            <span className="text-sm font-semibold tracking-tight">cascrow</span>
           </Link>
+          <span className="ml-auto rounded-full border px-2 py-0.5" style={{ borderColor, background: "hsl(24 14% 4% / 0.6)", fontFamily: "'JetBrains Mono', monospace", fontSize: 9, textTransform: "uppercase" as const, letterSpacing: "0.2em", color: mutedColor }}>app</span>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
+        <nav className="flex-1 p-3 flex flex-col gap-1">
           {nav.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "?");
             return (
               <Link key={item.href} href={getHref(item)}>
                 <div
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors"
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors"
                   style={{
-                    background: isActive ? "rgba(196,112,75,0.1)" : "transparent",
-                    color: isActive ? "#EDE6DD" : "#A89B8C",
-                    borderLeft: isActive ? "2px solid #C4704B" : "2px solid transparent",
+                    background: isActive ? "hsl(24 12% 8%)" : "transparent",
+                    color: isActive ? fgColor : mutedColor,
                   }}
+                  onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "hsl(24 12% 8% / 0.6)"; (e.currentTarget as HTMLDivElement).style.color = fgColor; }}
+                  onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "transparent"; if (!isActive) (e.currentTarget as HTMLDivElement).style.color = mutedColor; }}
                 >
-                  <item.icon />
-                  <span className="text-sm font-medium">{item.label}</span>
+                  <span style={{ color: isActive ? primaryColor : "inherit" }}><item.icon /></span>
+                  <span className="font-medium">{item.label}</span>
                 </div>
               </Link>
             );
@@ -125,73 +131,61 @@ export function DashboardSidebar({ role }: SidebarProps) {
         </nav>
 
         {/* User + Logout */}
-        <div className="px-3 py-4 border-t" style={{ borderColor: "rgba(196,112,75,0.12)" }}>
-          <div className="flex items-center gap-3 px-3 py-2 mb-2">
+        <div className="p-3 border-t space-y-3" style={{ borderColor }}>
+          {/* Wallet pill */}
+          {session?.user?.walletAddress && (
+            <div className="flex items-center gap-2 rounded-lg border px-3 py-2" style={{ borderColor, background: "hsl(24 14% 4% / 0.6)" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: primaryColor, flexShrink: 0 }}><rect x="1" y="7" width="22" height="14" rx="2"/><path d="M16 3H5a2 2 0 0 0-2 2v2"/><circle cx="17" cy="14" r="2"/></svg>
+              <span className="flex-1 min-w-0 truncate" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: mutedColor }}>
+                {session.user.walletAddress.slice(0, 6)}…{session.user.walletAddress.slice(-4)}
+              </span>
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: primaryColor }} />
+            </div>
+          )}
+
+          {/* User info */}
+          <div className="flex items-center gap-3 px-3 py-2">
             {session?.user?.avatarUrl ? (
-              <img
-                src={session.user.avatarUrl}
-                alt="Avatar"
-                className="w-8 h-8 rounded-full object-cover shrink-0"
-                style={{ border: "1px solid rgba(196,112,75,0.3)" }}
-              />
+              <img src={session.user.avatarUrl} alt="Avatar" className="w-8 h-8 rounded-full object-cover shrink-0" style={{ border: `1px solid ${borderColor}` }} />
             ) : (
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0"
-                style={{ background: "rgba(196,112,75,0.15)", color: "#C4704B" }}
-              >
+              <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0" style={{ background: "hsl(22 55% 54% / 0.15)", color: primaryColor }}>
                 {initials}
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium truncate" style={{ color: "#EDE6DD" }}>
-                {session?.user?.name ?? session?.user?.email}
-              </p>
-              <p className="text-xs truncate" style={{ color: "#A89B8C" }}>
-                {role === "investor" ? "Grant Giver" : "Receiver"}
-              </p>
+              <p className="text-xs font-medium truncate" style={{ color: fgColor }}>{session?.user?.name ?? session?.user?.email}</p>
+              <p className="text-xs truncate" style={{ color: mutedColor, fontFamily: "'JetBrains Mono', monospace" }}>{role === "investor" ? "investor" : "startup"}</p>
             </div>
             <NotificationBell />
           </div>
+
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg w-full text-left transition-colors"
-            style={{ color: "#A89B8C" }}
-            onMouseOver={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#EDE6DD"; }}
-            onMouseOut={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#A89B8C"; }}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg w-full text-left text-xs transition-colors"
+            style={{ color: mutedColor }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "hsl(24 12% 8% / 0.6)"; (e.currentTarget as HTMLButtonElement).style.color = fgColor; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = mutedColor; }}
           >
             <IconLogout />
-            <span className="text-sm">Sign out</span>
+            <span>Sign out</span>
           </button>
         </div>
       </aside>
 
       {/* ── Mobile bottom bar ── */}
-      <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2 py-3"
-        style={{
-          background: "#1C1917",
-          borderTop: "1px solid rgba(196,112,75,0.12)",
-        }}
-      >
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2 py-3" style={{ background: bgSidebar, borderTop: `1px solid ${borderColor}` }}>
         {nav.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link key={item.href} href={getHref(item)}>
-              <div
-                className="flex flex-col items-center gap-1 px-4 py-1"
-                style={{ color: isActive ? "#C4704B" : "#A89B8C" }}
-              >
+              <div className="flex flex-col items-center gap-1 px-4 py-1" style={{ color: isActive ? primaryColor : mutedColor }}>
                 <item.icon />
                 <span className="text-xs">{item.label}</span>
               </div>
             </Link>
           );
         })}
-        <button
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          className="flex flex-col items-center gap-1 px-4 py-1"
-          style={{ color: "#A89B8C" }}
-        >
+        <button onClick={() => signOut({ callbackUrl: "/login" })} className="flex flex-col items-center gap-1 px-4 py-1" style={{ color: mutedColor }}>
           <IconLogout />
           <span className="text-xs">Sign out</span>
         </button>

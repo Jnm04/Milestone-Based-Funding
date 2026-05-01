@@ -160,7 +160,7 @@ export default function ResetPasswordPage() {
   return (
     <main
       className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
-      style={{ background: "#171311" }}
+      style={{ background: "hsl(24 14% 4%)" }}
     >
       <NodeBackground />
       <div className="relative z-10 w-full max-w-md flex flex-col gap-8">
