@@ -44,6 +44,51 @@ interface MCPSubmitBody {
   evidence: MCPEvidence;
 }
 
+const MAX_DESCRIPTION_LEN = 10_000;
+const MAX_LINKS = 20;
+const MAX_LINK_LEN = 2_000;
+const MAX_COMMIT_LEN = 200;
+const MAX_CUSTOM_FIELDS = 20;
+const MAX_CUSTOM_KEY_LEN = 100;
+const MAX_CUSTOM_VAL_LEN = 1_000;
+
+function validateEvidence(evidence: MCPEvidence): string | null {
+  if (typeof evidence.description !== "string" || evidence.description.trim().length === 0)
+    return "evidence.description is required";
+  if (evidence.description.length > MAX_DESCRIPTION_LEN)
+    return `evidence.description must be at most ${MAX_DESCRIPTION_LEN} characters`;
+  if (evidence.links !== undefined) {
+    if (!Array.isArray(evidence.links)) return "evidence.links must be an array";
+    if (evidence.links.length > MAX_LINKS) return `evidence.links must have at most ${MAX_LINKS} entries`;
+    for (const l of evidence.links) {
+      if (typeof l !== "string") return "each link must be a string";
+      if (l.length > MAX_LINK_LEN) return `each link must be at most ${MAX_LINK_LEN} characters`;
+    }
+  }
+  if (evidence.github_commit !== undefined) {
+    if (typeof evidence.github_commit !== "string") return "evidence.github_commit must be a string";
+    if (evidence.github_commit.length > MAX_COMMIT_LEN) return `evidence.github_commit must be at most ${MAX_COMMIT_LEN} characters`;
+  }
+  if (evidence.revenue_amount !== undefined) {
+    if (typeof evidence.revenue_amount !== "number" || !Number.isFinite(evidence.revenue_amount))
+      return "evidence.revenue_amount must be a finite number";
+    if (evidence.revenue_amount < 0 || evidence.revenue_amount > 999_999_999)
+      return "evidence.revenue_amount must be between 0 and 999,999,999";
+  }
+  if (evidence.custom_fields !== undefined) {
+    if (typeof evidence.custom_fields !== "object" || Array.isArray(evidence.custom_fields) || evidence.custom_fields === null)
+      return "evidence.custom_fields must be a plain object";
+    const entries = Object.entries(evidence.custom_fields);
+    if (entries.length > MAX_CUSTOM_FIELDS) return `evidence.custom_fields must have at most ${MAX_CUSTOM_FIELDS} keys`;
+    for (const [k, v] of entries) {
+      if (k.length > MAX_CUSTOM_KEY_LEN) return `custom field key "${k.slice(0, 20)}…" exceeds max length`;
+      const serialized = JSON.stringify(v);
+      if (serialized.length > MAX_CUSTOM_VAL_LEN) return `custom field "${k}" value exceeds max length`;
+    }
+  }
+  return null;
+}
+
 function buildExtractedText(evidence: MCPEvidence): string {
   const lines: string[] = ["=== MCP Agent Submission ===", ""];
   lines.push(`Description: ${evidence.description}`);
@@ -60,9 +105,10 @@ function buildExtractedText(evidence: MCPEvidence): string {
 }
 
 function generatePublicProofHash(contractId: string, milestoneId: string, verifiedAt: Date): string {
+  const nonce = crypto.randomBytes(16).toString("hex");
   return crypto
     .createHash("sha256")
-    .update(`${contractId}:${milestoneId}:${verifiedAt.toISOString()}`)
+    .update(`${contractId}:${milestoneId}:${verifiedAt.toISOString()}:${nonce}`)
     .digest("hex");
 }
 
@@ -122,8 +168,13 @@ export async function POST(request: NextRequest) {
 
   const { contract_id, milestone_id, evidence } = body;
 
-  if (!contract_id) return NextResponse.json({ error: "contract_id is required" }, { status: 400 });
-  if (!evidence?.description) return NextResponse.json({ error: "evidence.description is required" }, { status: 400 });
+  if (!contract_id || typeof contract_id !== "string" || contract_id.length > 200)
+    return NextResponse.json({ error: "contract_id is required" }, { status: 400 });
+  if (!evidence || typeof evidence !== "object")
+    return NextResponse.json({ error: "evidence is required" }, { status: 400 });
+
+  const evidenceError = validateEvidence(evidence);
+  if (evidenceError) return NextResponse.json({ error: evidenceError }, { status: 400 });
 
   // Load contract with all data needed for release
   const contract = await prisma.contract.findUnique({

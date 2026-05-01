@@ -47,6 +47,23 @@ const milestoneItemSchema = z.object({
     .refine((val) => new Date(val) > new Date(), { message: "Deadline must be in the future" }),
 
   dependsOnIndex: z.number().int().min(0).optional(),
+
+  agentGithubRepo: z
+    .string()
+    .max(500, "GitHub repo URL too long")
+    .url("agentGithubRepo must be a valid URL")
+    .refine((v) => {
+      try { return new URL(v).hostname === "github.com"; } catch { return false; }
+    }, "agentGithubRepo must be a github.com URL")
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+
+  agentStripeKey: z
+    .string()
+    .max(200, "Stripe key too long")
+    .refine((v) => v.startsWith("sk_"), "Stripe key must start with sk_")
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
 });
 
 // Attestation milestone — amountUSD is optional (repurposed as "tracked value")
