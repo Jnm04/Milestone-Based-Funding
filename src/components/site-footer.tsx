@@ -20,7 +20,7 @@ export function SiteFooter() {
               <span className="text-sm font-semibold tracking-tight" style={{ color: fg }}>cascrow</span>
             </Link>
             <p className="text-sm leading-relaxed max-w-xs" style={{ color: muted }}>
-              AI-powered escrow on the XRP Ledger. Lock RLUSD, verify milestones with 5-model consensus, release funds instantly.
+              The escrow layer for the agent economy. Agents deliver, AI verifies, funds move. No humans required.
             </p>
             <div className="flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full" style={{ background: "hsl(22 55% 54%)" }} />
