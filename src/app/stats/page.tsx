@@ -133,35 +133,21 @@ export default async function StatsPage() {
       <nav
         className="sticky top-0 z-40 border-b"
         style={{
-          background: "rgba(23,19,17,0.92)",
+          background: "hsl(24 14% 4% / 0.92)",
           backdropFilter: "blur(20px)",
-          borderBottomColor: "rgba(196,112,75,0.12)",
+          borderBottomColor: "hsl(22 55% 54% / 0.12)",
         }}
       >
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <div style={{ width: 20, height: 3, borderRadius: 2, background: "hsl(22 55% 54%)" }} />
-              <div style={{ width: 20, height: 3, borderRadius: 2, background: "hsl(22 55% 54%)", opacity: 0.55, marginLeft: 4 }} />
-              <div style={{ width: 20, height: 3, borderRadius: 2, background: "hsl(22 55% 54%)", opacity: 0.22, marginLeft: 8 }} />
-            </div>
-            <span
-              style={{
-                fontFamily: "var(--font-inter-tight), sans-serif",
-                fontWeight: 300,
-                fontSize: 16,
-                color: "hsl(32 35% 92%)",
-                letterSpacing: "4px",
-              }}
-            >
-              cascrow
-            </span>
+          <Link href="/" className="flex items-center gap-2">
+            <span className="grid h-7 w-7 place-items-center rounded-md font-bold" style={{ background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)", fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: "hsl(24 14% 6%)" }}>c</span>
+            <span className="text-sm font-semibold tracking-tight" style={{ color: "hsl(32 35% 92%)" }}>cascrow</span>
           </Link>
           <span
             className="px-3 py-1 rounded-full text-xs font-medium uppercase tracking-widest"
             style={{
-              background: "rgba(196,112,75,0.1)",
-              border: "1px solid rgba(196,112,75,0.25)",
+              background: "hsl(22 55% 54% / 0.1)",
+              border: "1px solid hsl(22 55% 54% / 0.25)",
               color: "hsl(22 55% 54%)",
             }}
           >
@@ -204,12 +190,12 @@ export default async function StatsPage() {
               className="p-5 rounded-2xl flex flex-col gap-1.5"
               style={{
                 background: s.accent
-                  ? "rgba(196,112,75,0.07)"
-                  : "rgba(255,255,255,0.03)",
+                  ? "hsl(22 55% 54% / 0.07)"
+                  : "hsl(24 12% 6% / 0.5)",
                 border: s.accent
-                  ? "1px solid rgba(196,112,75,0.3)"
-                  : "1px solid rgba(196,112,75,0.12)",
-                borderTop: s.accent ? "1px solid #C4704B" : undefined,
+                  ? "1px solid hsl(22 55% 54% / 0.3)"
+                  : "1px solid hsl(22 55% 54% / 0.12)",
+                borderTop: s.accent ? "1px solid hsl(22 55% 54%)" : undefined,
               }}
             >
               <span
@@ -230,7 +216,7 @@ export default async function StatsPage() {
                 {s.value}
               </span>
               {s.sub && (
-                <span className="text-xs" style={{ color: "#6B5E52" }}>
+                <span className="text-xs" style={{ color: "hsl(28 14% 36%)" }}>
                   {s.sub}
                 </span>
               )}
@@ -239,13 +225,13 @@ export default async function StatsPage() {
         </div>
 
         {/* Footer note */}
-        <p className="text-xs text-center" style={{ color: "#3D342C" }}>
+        <p className="text-xs text-center" style={{ color: "hsl(24 16% 20%)" }}>
           All escrow activity is publicly verifiable on the{" "}
           <a
             href="https://xrpscan.com"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: "#6B5E52", textDecoration: "underline" }}
+            style={{ color: "hsl(28 14% 36%)", textDecoration: "underline" }}
           >
             XRP Ledger
           </a>{" "}

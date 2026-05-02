@@ -152,23 +152,19 @@ export default async function ContractPage({ params, searchParams }: ContractPag
       <nav
         className="sticky top-0 z-40 border-b"
         style={{
-          background: "rgba(23,19,17,0.92)",
+          background: "hsl(24 14% 4% / 0.92)",
           backdropFilter: "blur(20px)",
-          borderBottomColor: "rgba(196,112,75,0.12)",
+          borderBottomColor: "hsl(22 55% 54% / 0.12)",
         }}
       >
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <div style={{ width: 20, height: 3, borderRadius: 2, background: "hsl(22 55% 54%)" }} />
-              <div style={{ width: 20, height: 3, borderRadius: 2, background: "hsl(22 55% 54%)", opacity: 0.55, marginLeft: 4 }} />
-              <div style={{ width: 20, height: 3, borderRadius: 2, background: "hsl(22 55% 54%)", opacity: 0.22, marginLeft: 8 }} />
-            </div>
-            <span style={{ fontFamily: "var(--font-inter-tight), sans-serif", fontWeight: 300, fontSize: 16, color: "hsl(32 35% 92%)", letterSpacing: "4px" }}>cascrow</span>
+          <Link href="/" className="flex items-center gap-2">
+            <span className="grid h-7 w-7 place-items-center rounded-md font-bold" style={{ background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)", fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: "hsl(24 14% 6%)" }}>c</span>
+            <span className="text-sm font-semibold tracking-tight" style={{ color: "hsl(32 35% 92%)" }}>cascrow</span>
           </Link>
           <span
             className="px-3 py-1 rounded-full text-xs font-medium uppercase tracking-widest"
-            style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.25)", color: "hsl(22 55% 54%)" }}
+            style={{ background: "hsl(22 55% 54% / 0.1)", border: "1px solid hsl(22 55% 54% / 0.25)", color: "hsl(22 55% 54%)" }}
           >
             Contract
           </span>
@@ -178,7 +174,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
       {IS_EVM_TESTNET && (
         <div
           className="w-full flex items-center justify-center gap-2 py-2 px-4 text-xs font-medium"
-          style={{ background: "rgba(196,112,75,0.12)", borderBottom: "1px solid rgba(196,112,75,0.2)", color: "hsl(22 55% 54%)" }}
+          style={{ background: "hsl(22 55% 54% / 0.12)", borderBottom: "1px solid hsl(22 55% 54% / 0.2)", color: "hsl(22 55% 54%)" }}
         >
           <span
             className="inline-block w-1.5 h-1.5 rounded-full animate-pulse"
@@ -214,9 +210,9 @@ export default async function ContractPage({ params, searchParams }: ContractPag
         <div
           className="p-5 rounded-2xl flex flex-col gap-3"
           style={{
-            background: "rgba(255,255,255,0.03)",
-            border: "1px solid rgba(196,112,75,0.15)",
-            borderTop: "1px solid #C4704B",
+            background: "hsl(24 12% 6% / 0.5)",
+            border: "1px solid hsl(22 55% 54% / 0.15)",
+            borderTop: "1px solid hsl(22 55% 54%)",
           }}
         >
           <div className="flex items-start justify-between gap-3">
@@ -243,8 +239,8 @@ export default async function ContractPage({ params, searchParams }: ContractPag
         {Array.isArray(contract.riskFlags) && (contract.riskFlags as unknown[]).length > 0 && (
           <details
             style={{
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(196,112,75,0.2)",
+              background: "hsl(24 12% 6% / 0.5)",
+              border: "1px solid hsl(22 55% 54% / 0.2)",
               borderTop: "1px solid rgba(212,160,60,0.5)",
               borderRadius: "16px",
               overflow: "hidden",
@@ -298,8 +294,8 @@ export default async function ContractPage({ params, searchParams }: ContractPag
                     borderRadius: "10px",
                     background: flag.severity === "WARNING"
                       ? "rgba(212,160,60,0.07)"
-                      : "rgba(255,255,255,0.04)",
-                    border: `1px solid ${flag.severity === "WARNING" ? "rgba(212,160,60,0.2)" : "rgba(255,255,255,0.06)"}`,
+                      : "hsl(24 12% 6% / 0.6)",
+                    border: `1px solid ${flag.severity === "WARNING" ? "rgba(212,160,60,0.2)" : "hsl(28 18% 14% / 0.6)"}`,
                   }}
                 >
                   <span style={{ flexShrink: 0, marginTop: "1px", fontSize: "13px" }}>
@@ -358,14 +354,14 @@ export default async function ContractPage({ params, searchParams }: ContractPag
         <div className="grid grid-cols-2 gap-4">
           <div
             className="p-4 rounded-2xl flex flex-col gap-1.5"
-            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.12)" }}
+            style={{ background: "hsl(24 12% 6% / 0.5)", border: "1px solid hsl(22 55% 54% / 0.12)" }}
           >
             <span className="text-xs uppercase tracking-widest font-medium" style={{ color: "hsl(30 10% 62%)" }}>Grant Giver</span>
             <code className="text-xs font-mono break-all" style={{ color: "hsl(32 35% 92%)" }}>{contract.investor.walletAddress}</code>
           </div>
           <div
             className="p-4 rounded-2xl flex flex-col gap-1.5"
-            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.12)" }}
+            style={{ background: "hsl(24 12% 6% / 0.5)", border: "1px solid hsl(22 55% 54% / 0.12)" }}
           >
             <span className="text-xs uppercase tracking-widest font-medium" style={{ color: "hsl(30 10% 62%)" }}>Receiver</span>
             {contract.startup ? (

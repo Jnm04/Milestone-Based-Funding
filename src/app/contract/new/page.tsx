@@ -6,29 +6,6 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { ContractForm } from "@/components/contract-form";
 
-/* ── Inline logo mark ───────────────────────────────────────── */
-function LogoMark() {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        <div style={{ width: 20, height: 3, borderRadius: 2, background: "hsl(22 55% 54%)" }} />
-        <div style={{ width: 20, height: 3, borderRadius: 2, background: "hsl(22 55% 54%)", opacity: 0.55, marginLeft: 4 }} />
-        <div style={{ width: 20, height: 3, borderRadius: 2, background: "hsl(22 55% 54%)", opacity: 0.22, marginLeft: 8 }} />
-      </div>
-      <span
-        style={{
-          fontFamily: "var(--font-inter-tight), sans-serif",
-          fontWeight: 300,
-          fontSize: 16,
-          color: "hsl(32 35% 92%)",
-          letterSpacing: "4px",
-        }}
-      >
-        cascrow
-      </span>
-    </div>
-  );
-}
 
 function NewContractContent() {
   const params = useSearchParams();
@@ -41,7 +18,7 @@ function NewContractContent() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center">
         <div
           className="w-16 h-16 rounded-full flex items-center justify-center mb-2"
-          style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.2)" }}
+          style={{ background: "hsl(22 55% 54% / 0.1)", border: "1px solid hsl(22 55% 54% / 0.2)" }}
         >
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="hsl(22 55% 54%)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="11" width="18" height="11" rx="2" />
@@ -91,13 +68,13 @@ function NewContractContent() {
       <div
         className="flex items-center gap-3 px-4 py-3 rounded-xl"
         style={{
-          background: "rgba(196,112,75,0.06)",
-          border: "1px solid rgba(196,112,75,0.2)",
+          background: "hsl(22 55% 54% / 0.06)",
+          border: "1px solid hsl(22 55% 54% / 0.2)",
         }}
       >
         <div
           className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-          style={{ background: "rgba(196,112,75,0.15)" }}
+          style={{ background: "hsl(22 55% 54% / 0.15)" }}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="hsl(22 55% 54%)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 12V22H4V12" />
@@ -117,9 +94,9 @@ function NewContractContent() {
       <div
         className="rounded-2xl p-8 flex flex-col gap-6"
         style={{
-          background: "rgba(255,255,255,0.03)",
-          border: "1px solid rgba(196,112,75,0.15)",
-          borderTop: "1px solid #C4704B",
+          background: "hsl(24 12% 6% / 0.5)",
+          border: "1px solid hsl(22 55% 54% / 0.15)",
+          borderTop: "1px solid hsl(22 55% 54%)",
         }}
       >
         <ContractForm investorAddress={investorAddress} isEnterprise={isEnterprise} />
@@ -136,21 +113,22 @@ export default function NewContractPage() {
       <nav
         className="sticky top-0 z-40 border-b"
         style={{
-          background: "rgba(23,19,17,0.92)",
+          background: "hsl(24 14% 4% / 0.92)",
           backdropFilter: "blur(20px)",
-          borderBottomColor: "rgba(196,112,75,0.12)",
+          borderBottomColor: "hsl(22 55% 54% / 0.12)",
         }}
       >
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/">
-            <LogoMark />
+          <Link href="/" className="flex items-center gap-2">
+            <span className="grid h-7 w-7 place-items-center rounded-md font-bold" style={{ background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)", fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: "hsl(24 14% 6%)" }}>c</span>
+            <span className="text-sm font-semibold tracking-tight" style={{ color: "hsl(32 35% 92%)" }}>cascrow</span>
           </Link>
           <div className="flex items-center gap-3">
             <span
               className="px-3 py-1 rounded-full text-xs font-medium uppercase tracking-widest"
               style={{
-                background: "rgba(196,112,75,0.1)",
-                border: "1px solid rgba(196,112,75,0.3)",
+                background: "hsl(22 55% 54% / 0.1)",
+                border: "1px solid hsl(22 55% 54% / 0.3)",
                 color: "hsl(22 55% 54%)",
               }}
             >

@@ -33,7 +33,7 @@ const CATEGORY_LABELS: Record<ReputationCategory, string> = {
 };
 
 const CATEGORY_COLORS: Record<ReputationCategory, { bg: string; text: string; border: string }> = {
-  MVP:         { bg: "rgba(196,112,75,0.12)",  text: "#E8935A",  border: "rgba(196,112,75,0.3)"  },
+  MVP:         { bg: "hsl(22 55% 54% / 0.12)",  text: "#E8935A",  border: "hsl(22 55% 54% / 0.3)"  },
   REVENUE:     { bg: "rgba(74,222,128,0.1)",   text: "#6EE09A",  border: "rgba(74,222,128,0.25)" },
   PARTNERSHIP: { bg: "rgba(167,139,250,0.12)", text: "#C4ADFA",  border: "rgba(167,139,250,0.3)" },
   GITHUB:      { bg: "rgba(96,165,250,0.12)",  text: "#7DB8F7",  border: "rgba(96,165,250,0.3)"  },
@@ -86,7 +86,7 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
 
   const TIER_CONFIG = {
     new:         { label: "New",         bg: "rgba(168,155,140,0.1)",  text: "hsl(30 10% 62%)",  border: "rgba(168,155,140,0.25)" },
-    rising:      { label: "Rising",      bg: "rgba(196,112,75,0.12)",  text: "#E8935A",  border: "rgba(196,112,75,0.35)"  },
+    rising:      { label: "Rising",      bg: "hsl(22 55% 54% / 0.12)",  text: "#E8935A",  border: "hsl(22 55% 54% / 0.35)"  },
     established: { label: "Established", bg: "rgba(167,139,250,0.12)", text: "#C4ADFA",  border: "rgba(167,139,250,0.35)" },
     trusted:     { label: "Trusted",     bg: "rgba(74,222,128,0.12)",  text: "#6EE09A",  border: "rgba(74,222,128,0.35)"  },
   };
@@ -99,23 +99,19 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
       <nav
         className="sticky top-0 z-40 border-b"
         style={{
-          background: "rgba(23,19,17,0.92)",
+          background: "hsl(24 14% 4% / 0.92)",
           backdropFilter: "blur(20px)",
-          borderBottomColor: "rgba(196,112,75,0.12)",
+          borderBottomColor: "hsl(22 55% 54% / 0.12)",
         }}
       >
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <div style={{ width: 20, height: 3, borderRadius: 2, background: "hsl(22 55% 54%)" }} />
-              <div style={{ width: 20, height: 3, borderRadius: 2, background: "hsl(22 55% 54%)", opacity: 0.55, marginLeft: 4 }} />
-              <div style={{ width: 20, height: 3, borderRadius: 2, background: "hsl(22 55% 54%)", opacity: 0.22, marginLeft: 8 }} />
-            </div>
-            <span style={{ fontFamily: "var(--font-inter-tight), sans-serif", fontWeight: 300, fontSize: 16, color: "hsl(32 35% 92%)", letterSpacing: "4px" }}>cascrow</span>
+          <Link href="/" className="flex items-center gap-2">
+            <span className="grid h-7 w-7 place-items-center rounded-md font-bold" style={{ background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)", fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: "hsl(24 14% 6%)" }}>c</span>
+            <span className="text-sm font-semibold tracking-tight" style={{ color: "hsl(32 35% 92%)" }}>cascrow</span>
           </Link>
           <span
             className="px-3 py-1 rounded-full text-xs font-medium uppercase tracking-widest"
-            style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.25)", color: "hsl(22 55% 54%)" }}
+            style={{ background: "hsl(22 55% 54% / 0.1)", border: "1px solid hsl(22 55% 54% / 0.25)", color: "hsl(22 55% 54%)" }}
           >
             Reputation Profile
           </span>
@@ -130,8 +126,8 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
           <div
             className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 text-2xl font-semibold"
             style={{
-              background: "rgba(196,112,75,0.15)",
-              border: "1px solid rgba(196,112,75,0.3)",
+              background: "hsl(22 55% 54% / 0.15)",
+              border: "1px solid hsl(22 55% 54% / 0.3)",
               color: "hsl(22 55% 54%)",
               fontFamily: "var(--font-inter-tight)",
             }}
@@ -219,9 +215,9 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
               key={stat.label}
               className="p-4 rounded-2xl flex flex-col gap-1.5"
               style={{
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(196,112,75,0.12)",
-                borderTop: "1px solid rgba(196,112,75,0.3)",
+                background: "hsl(24 12% 6% / 0.5)",
+                border: "1px solid hsl(22 55% 54% / 0.12)",
+                borderTop: "1px solid hsl(22 55% 54% / 0.3)",
               }}
             >
               <span className="text-xs uppercase tracking-widest font-medium" style={{ color: "hsl(30 10% 62%)" }}>
@@ -233,7 +229,7 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
               >
                 {stat.value}
               </span>
-              <span className="text-xs" style={{ color: "#6B5E52" }}>{stat.sub}</span>
+              <span className="text-xs" style={{ color: "hsl(28 14% 36%)" }}>{stat.sub}</span>
             </div>
           ))}
         </div>
@@ -243,8 +239,8 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
           <div
             className="p-5 rounded-2xl flex flex-col gap-4"
             style={{
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(196,112,75,0.12)",
+              background: "hsl(24 12% 6% / 0.5)",
+              border: "1px solid hsl(22 55% 54% / 0.12)",
             }}
           >
             <h2 className="text-xs uppercase tracking-widest font-semibold" style={{ color: "hsl(22 55% 54%)" }}>
@@ -290,8 +286,8 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
                     key={ms.id}
                     className="p-4 rounded-2xl flex flex-col gap-3"
                     style={{
-                      background: "rgba(255,255,255,0.03)",
-                      border: "1px solid rgba(196,112,75,0.12)",
+                      background: "hsl(24 12% 6% / 0.5)",
+                      border: "1px solid hsl(22 55% 54% / 0.12)",
                       borderTop: `1px solid ${cfg.border}`,
                     }}
                   >
@@ -319,7 +315,7 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
                     </p>
 
                     {/* Meta */}
-                    <div className="flex items-center justify-between text-xs" style={{ color: "#6B5E52" }}>
+                    <div className="flex items-center justify-between text-xs" style={{ color: "hsl(28 14% 36%)" }}>
                       <span>
                         <strong style={{ color: "#D4B896" }}>${Number(ms.amountUSD).toLocaleString()}</strong>{" "}RLUSD
                       </span>
@@ -334,8 +330,8 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
           <div
             className="p-5 rounded-2xl text-center"
             style={{
-              background: "rgba(255,255,255,0.02)",
-              border: "1px solid rgba(196,112,75,0.1)",
+              background: "hsl(24 12% 6% / 0.3)",
+              border: "1px solid hsl(22 55% 54% / 0.1)",
             }}
           >
             <p className="text-sm" style={{ color: "hsl(30 10% 62%)" }}>
@@ -346,13 +342,13 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
           <div
             className="p-8 rounded-2xl flex flex-col items-center gap-3 text-center"
             style={{
-              background: "rgba(255,255,255,0.02)",
-              border: "1px dashed rgba(196,112,75,0.2)",
+              background: "hsl(24 12% 6% / 0.3)",
+              border: "1px dashed hsl(22 55% 54% / 0.2)",
             }}
           >
             <div
               className="w-12 h-12 rounded-2xl flex items-center justify-center"
-              style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.2)" }}
+              style={{ background: "hsl(22 55% 54% / 0.1)", border: "1px solid hsl(22 55% 54% / 0.2)" }}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="hsl(22 55% 54%)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="8" r="4" />
@@ -368,7 +364,7 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
 
         {/* Powered by cascrow footer note */}
         <div className="flex items-center justify-center gap-2 pt-4 pb-8">
-          <span className="text-xs" style={{ color: "#6B5E52" }}>
+          <span className="text-xs" style={{ color: "hsl(28 14% 36%)" }}>
             Verified on-chain by
           </span>
           <Link
@@ -378,7 +374,7 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
           >
             cascrow
           </Link>
-          <span className="text-xs" style={{ color: "#6B5E52" }}>
+          <span className="text-xs" style={{ color: "hsl(28 14% 36%)" }}>
             · Milestone-based grant escrow
           </span>
         </div>

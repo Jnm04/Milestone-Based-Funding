@@ -97,7 +97,7 @@ export default function NotificationsPage() {
         {/* Top bar */}
         <div
           className="sticky top-0 z-30 px-6 py-4 flex items-center justify-between border-b"
-          style={{ background: "rgba(23,19,17,0.92)", backdropFilter: "blur(20px)", borderBottomColor: "rgba(196,112,75,0.12)" }}
+          style={{ background: "hsl(24 14% 4% / 0.92)", backdropFilter: "blur(20px)", borderBottomColor: "hsl(22 55% 54% / 0.12)" }}
         >
           <div className="flex items-center gap-2 text-sm" style={{ color: "hsl(30 10% 62%)" }}>
             <Link href={dashboardHref} className="transition-colors hover:text-[#EDE6DD]">Dashboard</Link>
@@ -121,7 +121,7 @@ export default function NotificationsPage() {
                 onClick={markAllRead}
                 disabled={markingAll}
                 className="text-sm px-4 py-2 rounded-lg transition-colors"
-                style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.2)", color: "hsl(22 55% 54%)", cursor: markingAll ? "not-allowed" : "pointer" }}
+                style={{ background: "hsl(22 55% 54% / 0.1)", border: "1px solid hsl(22 55% 54% / 0.2)", color: "hsl(22 55% 54%)", cursor: markingAll ? "not-allowed" : "pointer" }}
               >
                 {markingAll ? "Marking…" : "Mark all read"}
               </button>
@@ -129,7 +129,7 @@ export default function NotificationsPage() {
           </div>
 
           {/* Filter tabs */}
-          <div className="flex border-b mb-4" style={{ borderColor: "rgba(196,112,75,0.15)" }}>
+          <div className="flex border-b mb-4" style={{ borderColor: "hsl(22 55% 54% / 0.15)" }}>
             {(["all", "unread"] as const).map(f => (
               <button
                 key={f}
@@ -139,7 +139,7 @@ export default function NotificationsPage() {
                   color: filter === f ? "hsl(32 35% 92%)" : "hsl(30 10% 62%)",
                   background: "none",
                   border: "none",
-                  borderBottom: filter === f ? "2px solid #C4704B" : "2px solid transparent",
+                  borderBottom: filter === f ? "2px solid hsl(22 55% 54%)" : "2px solid transparent",
                   cursor: "pointer",
                   marginBottom: -1,
                 }}
@@ -152,20 +152,20 @@ export default function NotificationsPage() {
           {/* List */}
           <div
             className="rounded-xl overflow-hidden"
-            style={{ border: "1px solid rgba(196,112,75,0.1)" }}
+            style={{ border: "1px solid hsl(22 55% 54% / 0.1)" }}
           >
             {loading ? (
               <div className="flex flex-col">
                 {[1, 2, 3, 4].map(i => (
-                  <div key={i} className="px-5 py-4 border-b" style={{ borderColor: "rgba(196,112,75,0.06)" }}>
-                    <div className="h-3 w-48 rounded mb-2" style={{ background: "rgba(255,255,255,0.06)" }} />
-                    <div className="h-2.5 w-64 rounded" style={{ background: "rgba(255,255,255,0.04)" }} />
+                  <div key={i} className="px-5 py-4 border-b" style={{ borderColor: "hsl(22 55% 54% / 0.06)" }}>
+                    <div className="h-3 w-48 rounded mb-2" style={{ background: "hsl(28 18% 14% / 0.6)" }} />
+                    <div className="h-2.5 w-64 rounded" style={{ background: "hsl(24 12% 6% / 0.6)" }} />
                   </div>
                 ))}
               </div>
             ) : notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4" style={{ background: "rgba(196,112,75,0.1)" }}>
+                <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4" style={{ background: "hsl(22 55% 54% / 0.1)" }}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="hsl(22 55% 54%)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                     <path d="M13.73 21a2 2 0 0 1-3.46 0" />
@@ -187,18 +187,18 @@ export default function NotificationsPage() {
                     onClick={() => { if (!n.read) markRead(n.id); }}
                     className="flex gap-3 items-start px-5 py-4 transition-colors"
                     style={{
-                      background: n.read ? "transparent" : "rgba(196,112,75,0.04)",
-                      borderBottom: isLast ? "none" : "1px solid rgba(196,112,75,0.06)",
+                      background: n.read ? "transparent" : "hsl(22 55% 54% / 0.04)",
+                      borderBottom: isLast ? "none" : "1px solid hsl(22 55% 54% / 0.06)",
                       cursor: n.href ? "pointer" : "default",
                     }}
-                    onMouseOver={e => { if (!n.read) (e.currentTarget as HTMLDivElement).style.background = "rgba(196,112,75,0.08)"; }}
-                    onMouseOut={e => { (e.currentTarget as HTMLDivElement).style.background = n.read ? "transparent" : "rgba(196,112,75,0.04)"; }}
+                    onMouseOver={e => { if (!n.read) (e.currentTarget as HTMLDivElement).style.background = "hsl(22 55% 54% / 0.08)"; }}
+                    onMouseOut={e => { (e.currentTarget as HTMLDivElement).style.background = n.read ? "transparent" : "hsl(22 55% 54% / 0.04)"; }}
                   >
                     <div className="mt-1.5 shrink-0" style={{ width: 7, height: 7, borderRadius: "50%", background: n.read ? "transparent" : "hsl(22 55% 54%)" }} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold mb-0.5" style={{ color: "hsl(32 35% 92%)" }}>{n.title}</p>
                       <p className="text-xs leading-relaxed mb-1" style={{ color: "hsl(30 10% 62%)" }}>{n.body}</p>
-                      <p className="text-xs" style={{ color: "#6B5E54" }}>{timeAgo(n.createdAt)}</p>
+                      <p className="text-xs" style={{ color: "hsl(28 14% 36%)" }}>{timeAgo(n.createdAt)}</p>
                     </div>
                   </div>
                 );
@@ -213,7 +213,7 @@ export default function NotificationsPage() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4 pt-4" style={{ borderTop: "1px solid rgba(196,112,75,0.1)" }}>
+            <div className="flex items-center justify-between mt-4 pt-4" style={{ borderTop: "1px solid hsl(22 55% 54% / 0.1)" }}>
               <span className="text-xs" style={{ color: "hsl(30 10% 62%)" }}>
                 Page {page} of {totalPages} · {total} total
               </span>
@@ -222,7 +222,7 @@ export default function NotificationsPage() {
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
                   className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(196,112,75,0.12)", color: page === 1 ? "#6B5E54" : "hsl(30 10% 62%)", cursor: page === 1 ? "not-allowed" : "pointer" }}
+                  style={{ background: "hsl(24 12% 6% / 0.6)", border: "1px solid hsl(22 55% 54% / 0.12)", color: page === 1 ? "hsl(28 14% 36%)" : "hsl(30 10% 62%)", cursor: page === 1 ? "not-allowed" : "pointer" }}
                 >
                   Previous
                 </button>
@@ -230,7 +230,7 @@ export default function NotificationsPage() {
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(196,112,75,0.12)", color: page === totalPages ? "#6B5E54" : "hsl(30 10% 62%)", cursor: page === totalPages ? "not-allowed" : "pointer" }}
+                  style={{ background: "hsl(24 12% 6% / 0.6)", border: "1px solid hsl(22 55% 54% / 0.12)", color: page === totalPages ? "hsl(28 14% 36%)" : "hsl(30 10% 62%)", cursor: page === totalPages ? "not-allowed" : "pointer" }}
                 >
                   Next
                 </button>

@@ -100,7 +100,7 @@ function NotifyToggle({
   return (
     <div
       className="flex items-center justify-between gap-4 py-3"
-      style={{ borderBottom: "1px solid rgba(196,112,75,0.1)" }}
+      style={{ borderBottom: "1px solid hsl(22 55% 54% / 0.1)" }}
     >
       <div className="flex flex-col gap-0.5">
         <span className="text-sm font-medium" style={{ color: "hsl(32 35% 92%)" }}>{label}</span>
@@ -114,7 +114,7 @@ function NotifyToggle({
         className="cs-toggle"
         data-checked={checked}
         style={{
-          background: checked ? "hsl(22 55% 54%)" : "rgba(255,255,255,0.1)",
+          background: checked ? "hsl(22 55% 54%)" : "hsl(28 18% 14%)",
         }}
       >
         <span
@@ -140,8 +140,8 @@ function SectionCard({ title, subtitle, children }: { title: string; subtitle?: 
     <div
       className="flex flex-col gap-5 rounded-2xl p-6"
       style={{
-        background: "rgba(255,255,255,0.03)",
-        border: "1px solid rgba(196,112,75,0.15)",
+        background: "hsl(24 12% 6% / 0.5)",
+        border: "1px solid hsl(22 55% 54% / 0.15)",
         borderTop: "1px solid #C4704B",
       }}
     >
@@ -782,7 +782,7 @@ export default function ProfilePage() {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "hsl(24 14% 4%)" }}>
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "rgba(196,112,75,0.4)", borderTopColor: "hsl(22 55% 54%)" }} />
+          <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "hsl(22 55% 54% / 0.4)", borderTopColor: "hsl(22 55% 54%)" }} />
           <span className="text-sm" style={{ color: "hsl(30 10% 62%)" }}>Loading profile…</span>
         </div>
       </div>
@@ -802,9 +802,9 @@ export default function ProfilePage() {
         <div
           className="sticky top-0 z-30 px-6 py-4 flex items-center justify-between border-b"
           style={{
-            background: "rgba(23,19,17,0.92)",
+            background: "hsl(24 14% 4% / 0.92)",
             backdropFilter: "blur(20px)",
-            borderBottomColor: "rgba(196,112,75,0.12)",
+            borderBottomColor: "hsl(22 55% 54% / 0.12)",
           }}
         >
           <div className="flex items-center gap-2 text-sm" style={{ color: "hsl(30 10% 62%)" }}>
@@ -836,14 +836,14 @@ export default function ProfilePage() {
                 <img
                   src={avatarUrl}
                   alt="Avatar"
-                  style={{ width: 64, height: 64, borderRadius: 12, objectFit: "cover", border: "1px solid rgba(196,112,75,0.3)", display: "block" }}
+                  style={{ width: 64, height: 64, borderRadius: 12, objectFit: "cover", border: "1px solid hsl(22 55% 54% / 0.3)", display: "block" }}
                 />
               ) : (
                 <div
                   className="w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-semibold"
                   style={{
-                    background: "rgba(196,112,75,0.15)",
-                    border: "1px solid rgba(196,112,75,0.3)",
+                    background: "hsl(22 55% 54% / 0.15)",
+                    border: "1px solid hsl(22 55% 54% / 0.3)",
                     color: "hsl(22 55% 54%)",
                     fontFamily: "var(--font-inter-tight)",
                   }}
@@ -856,7 +856,7 @@ export default function ProfilePage() {
               </div>
               {avatarUploading && (
                 <div style={{ position: "absolute", inset: 0, borderRadius: 12, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "rgba(196,112,75,0.4)", borderTopColor: "hsl(22 55% 54%)" }} />
+                  <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "hsl(22 55% 54% / 0.4)", borderTopColor: "hsl(22 55% 54%)" }} />
                 </div>
               )}
               <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleAvatarUpload} />
@@ -875,8 +875,8 @@ export default function ProfilePage() {
               <span
                 className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium uppercase tracking-widest self-start"
                 style={{
-                  background: "rgba(196,112,75,0.1)",
-                  border: "1px solid rgba(196,112,75,0.25)",
+                  background: "hsl(22 55% 54% / 0.1)",
+                  border: "1px solid hsl(22 55% 54% / 0.25)",
                   color: "hsl(22 55% 54%)",
                 }}
               >
@@ -886,7 +886,7 @@ export default function ProfilePage() {
           </div>
 
           {/* ── Tab navigation ─────────────────────────────────────────────────── */}
-          <div className="flex border-b" style={{ borderColor: "rgba(196,112,75,0.15)" }}>
+          <div className="flex border-b" style={{ borderColor: "hsl(22 55% 54% / 0.15)" }}>
             {([
               { id: "account", label: "Account" },
               { id: "security", label: "Security" },
@@ -933,7 +933,7 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-3">
                     <div
                       className="px-3 py-1.5 rounded-xl text-sm font-semibold"
-                      style={{ background: "rgba(196,112,75,0.15)", border: "1px solid rgba(196,112,75,0.3)", color: "hsl(22 55% 54%)" }}
+                      style={{ background: "hsl(22 55% 54% / 0.15)", border: "1px solid hsl(22 55% 54% / 0.3)", color: "hsl(22 55% 54%)" }}
                     >
                       Tier {tier}
                     </div>
@@ -971,8 +971,8 @@ export default function ProfilePage() {
                           key={t.tier}
                           className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
                           style={{
-                            background: isCurrent ? "rgba(196,112,75,0.08)" : "rgba(255,255,255,0.02)",
-                            border: isCurrent ? "1px solid rgba(196,112,75,0.25)" : "1px solid transparent",
+                            background: isCurrent ? "hsl(22 55% 54% / 0.08)" : "hsl(24 12% 6% / 0.3)",
+                            border: isCurrent ? "1px solid hsl(22 55% 54% / 0.25)" : "1px solid transparent",
                             opacity: isComingSoon ? 0.5 : 1,
                           }}
                         >
@@ -994,7 +994,7 @@ export default function ProfilePage() {
                           <div className="flex items-center gap-2 shrink-0">
                             <span className="text-xs font-medium" style={{ color: "hsl(32 35% 92%)" }}>{t.limit}</span>
                             {isCurrent && (
-                              <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "rgba(196,112,75,0.15)", color: "hsl(22 55% 54%)" }}>
+                              <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "hsl(22 55% 54% / 0.15)", color: "hsl(22 55% 54%)" }}>
                                 Current
                               </span>
                             )}
@@ -1025,8 +1025,8 @@ export default function ProfilePage() {
               <div
                 className="px-3 py-2.5 rounded-xl text-sm font-mono"
                 style={{
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid rgba(196,112,75,0.1)",
+                  background: "hsl(24 12% 6% / 0.5)",
+                  border: "1px solid hsl(22 55% 54% / 0.1)",
                   color: "hsl(30 10% 62%)",
                 }}
               >
@@ -1042,7 +1042,7 @@ export default function ProfilePage() {
                   <span>Verification sent to <strong>{emailChangeNew}</strong>. Click the link in that email to confirm.</span>
                 </div>
               ) : (
-                <form onSubmit={handleChangeEmail} className="flex flex-col gap-3 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.12)" }}>
+                <form onSubmit={handleChangeEmail} className="flex flex-col gap-3 p-3 rounded-xl" style={{ background: "hsl(24 12% 6% / 0.3)", border: "1px solid hsl(22 55% 54% / 0.12)" }}>
                   <div className="flex flex-col gap-1.5">
                     <label className="cs-label">New email address</label>
                     <input type="email" value={emailChangeNew} onChange={e => setEmailChangeNew(e.target.value)} placeholder="new@example.com" className="cs-input" required />
@@ -1120,8 +1120,8 @@ export default function ProfilePage() {
                 <div
                   className="px-3 py-2.5 rounded-xl text-xs font-mono break-all"
                   style={{
-                    background: "rgba(255,255,255,0.03)",
-                    border: "1px solid rgba(196,112,75,0.1)",
+                    background: "hsl(24 12% 6% / 0.5)",
+                    border: "1px solid hsl(22 55% 54% / 0.1)",
                     color: profile.walletAddress ? "hsl(32 35% 92%)" : "hsl(30 10% 62%)",
                   }}
                 >
@@ -1160,7 +1160,7 @@ export default function ProfilePage() {
                   <NotifyToggle label="Proof rejected" description="AI rejected your proof — resubmission is possible" checked={notifyRejected} onChange={setNotifyRejected} />
                 </>
               )}
-              <div style={{ paddingTop: 8, borderTop: "1px solid rgba(196,112,75,0.12)", marginTop: 4 }}>
+              <div style={{ paddingTop: 8, borderTop: "1px solid hsl(22 55% 54% / 0.12)", marginTop: 4 }}>
                 <NotifyToggle
                   label="Daily digest mode"
                   description="Receive a single daily summary email instead of one email per event"
@@ -1269,12 +1269,12 @@ export default function ProfilePage() {
 
                 {/* Recovery codes */}
                 {freshRecoveryCodes ? (
-                  <div className="flex flex-col gap-3 p-4 rounded-xl" style={{ background: "rgba(196,112,75,0.06)", border: "1px solid rgba(196,112,75,0.2)" }}>
+                  <div className="flex flex-col gap-3 p-4 rounded-xl" style={{ background: "hsl(22 55% 54% / 0.06)", border: "1px solid hsl(22 55% 54% / 0.2)" }}>
                     <p className="text-sm font-semibold" style={{ color: "hsl(32 35% 92%)" }}>Save your recovery codes</p>
                     <p className="text-xs" style={{ color: "hsl(30 10% 62%)" }}>These 10 codes can each be used once to sign in if you lose access to your authenticator app. Store them somewhere safe — they won&apos;t be shown again.</p>
                     <div className="grid grid-cols-2 gap-1.5">
                       {freshRecoveryCodes.map((c) => (
-                        <code key={c} className="px-3 py-1.5 rounded-lg text-center text-sm font-mono" style={{ background: "rgba(255,255,255,0.05)", color: "hsl(32 35% 92%)", letterSpacing: "0.1em" }}>{c}</code>
+                        <code key={c} className="px-3 py-1.5 rounded-lg text-center text-sm font-mono" style={{ background: "hsl(24 12% 6% / 0.7)", color: "hsl(32 35% 92%)", letterSpacing: "0.1em" }}>{c}</code>
                       ))}
                     </div>
                     <button type="button" onClick={() => setFreshRecoveryCodes(null)} className="cs-btn-ghost cs-btn-sm self-start">
@@ -1282,7 +1282,7 @@ export default function ProfilePage() {
                     </button>
                   </div>
                 ) : recoveryCodesCount !== null && (
-                  <div className="flex items-center justify-between gap-4 py-3" style={{ borderTop: "1px solid rgba(196,112,75,0.1)" }}>
+                  <div className="flex items-center justify-between gap-4 py-3" style={{ borderTop: "1px solid hsl(22 55% 54% / 0.1)" }}>
                     <div className="flex flex-col gap-0.5">
                       <span className="text-sm font-medium" style={{ color: "hsl(32 35% 92%)" }}>Recovery codes</span>
                       <span className="text-xs" style={{ color: recoveryCodesCount === 0 ? "#f87171" : "hsl(30 10% 62%)" }}>
@@ -1467,7 +1467,7 @@ export default function ProfilePage() {
                       <div
                         key={access.auditorId}
                         className="flex items-center justify-between rounded-lg px-4 py-3"
-                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                        style={{ background: "hsl(24 12% 6% / 0.6)", border: "1px solid hsl(28 18% 14% / 0.8)" }}
                       >
                         <div>
                           <span className="text-sm font-medium" style={{ color: "hsl(32 35% 92%)" }}>{access.auditor.firmName}</span>
@@ -1565,7 +1565,7 @@ export default function ProfilePage() {
                   <div
                     onClick={() => setPublicProfile((v) => !v)}
                     className="relative"
-                    style={{ width: 44, height: 24, borderRadius: 12, background: publicProfile ? "hsl(22 55% 54%)" : "rgba(255,255,255,0.15)", transition: "background 0.2s", cursor: "pointer", flexShrink: 0 }}
+                    style={{ width: 44, height: 24, borderRadius: 12, background: publicProfile ? "hsl(22 55% 54%)" : "hsl(28 18% 14%)", transition: "background 0.2s", cursor: "pointer", flexShrink: 0 }}
                   >
                     <div style={{ position: "absolute", top: 3, left: publicProfile ? 23 : 3, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "left 0.2s" }} />
                   </div>
@@ -1614,7 +1614,7 @@ export default function ProfilePage() {
           <SectionCard title="Telegram Notifications" subtitle="Get instant push notifications directly in Telegram — no inbox required.">
             {tgStatus && !tgStatus.configured ? (
               <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-2 p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.15)" }}>
+                <div className="flex flex-col gap-2 p-4 rounded-xl" style={{ background: "hsl(24 12% 6% / 0.5)", border: "1px solid hsl(22 55% 54% / 0.15)" }}>
                   <span className="text-sm font-medium" style={{ color: "#D4B896" }}>Bot not yet activated</span>
                   <p className="text-xs leading-relaxed" style={{ color: "hsl(30 10% 62%)" }}>
                     Set up in 2 minutes — completely free:
@@ -1705,7 +1705,7 @@ export default function ProfilePage() {
           <SectionCard title="Slack & Teams" subtitle="Get instant notifications where your team works.">
             <div className="flex flex-col gap-4">
               {/* Slack */}
-              <div className="p-4 rounded-xl flex flex-col gap-3" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="p-4 rounded-xl flex flex-col gap-3" style={{ background: "hsl(24 12% 6% / 0.6)", border: "1px solid hsl(28 18% 14% / 0.8)" }}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold" style={{ color: "hsl(32 35% 92%)" }}>Slack</span>
@@ -1757,7 +1757,7 @@ export default function ProfilePage() {
               </div>
 
               {/* Microsoft Teams */}
-              <div className="p-4 rounded-xl flex flex-col gap-3" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="p-4 rounded-xl flex flex-col gap-3" style={{ background: "hsl(24 12% 6% / 0.6)", border: "1px solid hsl(28 18% 14% / 0.8)" }}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold" style={{ color: "hsl(32 35% 92%)" }}>Microsoft Teams</span>
@@ -1844,7 +1844,7 @@ export default function ProfilePage() {
           {/* API Keys */}
           <SectionCard title="API Keys" subtitle="Generate keys for AI agents and external tools to call the Cascrow API on your behalf. Keys start with csk_.">
             {newKeySecret && (
-              <div className="flex flex-col gap-2 p-4 rounded-xl mb-3" style={{ background: "rgba(196,112,75,0.08)", border: "1px solid rgba(196,112,75,0.3)" }}>
+              <div className="flex flex-col gap-2 p-4 rounded-xl mb-3" style={{ background: "hsl(22 55% 54% / 0.08)", border: "1px solid hsl(22 55% 54% / 0.3)" }}>
                 <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "hsl(22 55% 54%)" }}>Save this key — shown only once</span>
                 <code className="text-xs font-mono break-all select-all p-2 rounded" style={{ background: "rgba(0,0,0,0.3)", color: "hsl(32 35% 92%)" }}>{newKeySecret}</code>
                 <p className="text-xs" style={{ color: "hsl(30 10% 62%)" }}>Use as: <code style={{ color: "#D4B896" }}>Authorization: Bearer {newKeySecret}</code></p>
@@ -1855,12 +1855,12 @@ export default function ProfilePage() {
             {apiKeys.length > 0 && (
               <div className="flex flex-col gap-2 mb-3">
                 {apiKeys.map((k) => (
-                  <div key={k.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.12)" }}>
+                  <div key={k.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ background: "hsl(24 12% 6% / 0.5)", border: "1px solid hsl(22 55% 54% / 0.12)" }}>
                     <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                       <span className="text-sm font-medium" style={{ color: "hsl(32 35% 92%)" }}>{k.name}</span>
                       <div className="flex items-center gap-2">
                         <code className="text-xs font-mono" style={{ color: "hsl(22 55% 54%)" }}>{k.keyPrefix}…</code>
-                        <span className="text-xs" style={{ color: "#6B5E55" }}>
+                        <span className="text-xs" style={{ color: "hsl(28 14% 36%)" }}>
                           {k.lastUsedAt ? `Last used ${new Date(k.lastUsedAt).toLocaleDateString()}` : "Never used"}
                         </span>
                       </div>
@@ -1915,7 +1915,7 @@ export default function ProfilePage() {
               </button>
             )}
 
-            <div className="mt-3 p-3 rounded-lg text-xs" style={{ background: "rgba(196,112,75,0.05)", color: "hsl(30 10% 62%)" }}>
+            <div className="mt-3 p-3 rounded-lg text-xs" style={{ background: "hsl(22 55% 54% / 0.05)", color: "hsl(30 10% 62%)" }}>
               <span style={{ color: "hsl(22 55% 54%)", fontWeight: 600 }}>MCP Integration:</span>{" "}
               Add Cascrow as a tool in Claude Code or any MCP-compatible agent:{" "}
               <code style={{ color: "#D4B896" }}>cascrow_verify_milestone</code> at{" "}
@@ -1926,7 +1926,7 @@ export default function ProfilePage() {
           {/* Webhooks */}
           <SectionCard title="Webhooks" subtitle="Send signed POST requests to your systems on every contract event.">
             {whSecret && (
-              <div className="flex flex-col gap-2 p-4 rounded-xl mb-2" style={{ background: "rgba(196,112,75,0.08)", border: "1px solid rgba(196,112,75,0.3)" }}>
+              <div className="flex flex-col gap-2 p-4 rounded-xl mb-2" style={{ background: "hsl(22 55% 54% / 0.08)", border: "1px solid hsl(22 55% 54% / 0.3)" }}>
                 <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "hsl(22 55% 54%)" }}>Save this secret — shown only once</span>
                 <code className="text-xs font-mono break-all select-all p-2 rounded" style={{ background: "rgba(0,0,0,0.3)", color: "hsl(32 35% 92%)" }}>{whSecret}</code>
                 <p className="text-xs" style={{ color: "hsl(30 10% 62%)" }}>Verify incoming requests: <code style={{ color: "#D4B896" }}>HMAC-SHA256(secret, rawBody) === X-Cascrow-Signature</code></p>
@@ -1937,13 +1937,13 @@ export default function ProfilePage() {
             {webhooks.length > 0 && (
               <div className="flex flex-col gap-2 mb-2">
                 {webhooks.map((wh) => (
-                  <div key={wh.id} className="flex flex-col rounded-xl overflow-hidden" style={{ border: "1px solid rgba(196,112,75,0.12)" }}>
-                    <div className="flex items-start gap-3 p-3 text-sm" style={{ background: "rgba(255,255,255,0.03)" }}>
+                  <div key={wh.id} className="flex flex-col rounded-xl overflow-hidden" style={{ border: "1px solid hsl(22 55% 54% / 0.12)" }}>
+                    <div className="flex items-start gap-3 p-3 text-sm" style={{ background: "hsl(24 12% 6% / 0.5)" }}>
                       <div className="flex flex-col gap-1 flex-1 min-w-0">
                         <code className="text-xs font-mono truncate" style={{ color: "hsl(32 35% 92%)" }}>{wh.url}</code>
                         <div className="flex flex-wrap gap-1 mt-0.5">
                           {wh.events.map((ev) => (
-                            <span key={ev} className="text-xs px-1.5 py-0.5 rounded" style={{ background: "rgba(196,112,75,0.1)", color: "hsl(22 55% 54%)" }}>{ev}</span>
+                            <span key={ev} className="text-xs px-1.5 py-0.5 rounded" style={{ background: "hsl(22 55% 54% / 0.1)", color: "hsl(22 55% 54%)" }}>{ev}</span>
                           ))}
                         </div>
                       </div>
@@ -1977,14 +1977,14 @@ export default function ProfilePage() {
                       </div>
                     </div>
                     {expandedDeliveries === wh.id && (
-                      <div className="flex flex-col gap-0 border-t" style={{ borderColor: "rgba(196,112,75,0.12)", background: "rgba(0,0,0,0.15)" }}>
+                      <div className="flex flex-col gap-0 border-t" style={{ borderColor: "hsl(22 55% 54% / 0.12)", background: "rgba(0,0,0,0.15)" }}>
                         {loadingDeliveries === wh.id ? (
                           <p className="text-xs p-3" style={{ color: "hsl(30 10% 62%)" }}>Loading…</p>
                         ) : (deliveryHistory[wh.id] ?? []).length === 0 ? (
                           <p className="text-xs p-3" style={{ color: "hsl(30 10% 62%)" }}>No deliveries yet.</p>
                         ) : (
                           (deliveryHistory[wh.id] ?? []).map((d) => (
-                            <div key={d.id} className="flex items-center gap-3 px-3 py-2 text-xs border-b last:border-b-0" style={{ borderColor: "rgba(196,112,75,0.08)" }}>
+                            <div key={d.id} className="flex items-center gap-3 px-3 py-2 text-xs border-b last:border-b-0" style={{ borderColor: "hsl(22 55% 54% / 0.08)" }}>
                               <span
                                 className="w-1.5 h-1.5 rounded-full shrink-0"
                                 style={{ background: d.success ? "#22c55e" : "#ef4444" }}
@@ -1992,7 +1992,7 @@ export default function ProfilePage() {
                               <span className="font-mono" style={{ color: "hsl(22 55% 54%)", minWidth: 28 }}>{d.statusCode ?? "—"}</span>
                               <span style={{ color: "#D4B896", flex: 1 }}>{d.event}</span>
                               <span style={{ color: "hsl(30 10% 62%)" }}>{d.responseMs}ms</span>
-                              <span style={{ color: "#6B5E55" }}>{new Date(d.createdAt).toLocaleString()}</span>
+                              <span style={{ color: "hsl(28 14% 36%)" }}>{new Date(d.createdAt).toLocaleString()}</span>
                             </div>
                           ))
                         )}
@@ -2028,8 +2028,8 @@ export default function ProfilePage() {
                           onClick={() => setWhEvents((prev) => checked ? prev.filter((e) => e !== ev) : [...prev, ev])}
                           className="text-xs px-2.5 py-1 rounded-full transition-colors"
                           style={{
-                            background: checked ? "rgba(196,112,75,0.2)" : "rgba(255,255,255,0.05)",
-                            border: `1px solid ${checked ? "hsl(22 55% 54%)" : "rgba(196,112,75,0.2)"}`,
+                            background: checked ? "hsl(22 55% 54% / 0.2)" : "hsl(24 12% 6% / 0.7)",
+                            border: `1px solid ${checked ? "hsl(22 55% 54%)" : "hsl(22 55% 54% / 0.2)"}`,
                             color: checked ? "hsl(22 55% 54%)" : "hsl(30 10% 62%)",
                           }}
                         >
@@ -2084,12 +2084,12 @@ export default function ProfilePage() {
                       : ua.includes("iPhone") || ua.includes("iPad") ? "iOS"
                       : "";
                     return (
-                      <div key={s.id} className="flex items-center justify-between gap-4 py-2.5 text-sm" style={{ borderBottom: "1px solid rgba(196,112,75,0.07)" }}>
+                      <div key={s.id} className="flex items-center justify-between gap-4 py-2.5 text-sm" style={{ borderBottom: "1px solid hsl(22 55% 54% / 0.07)" }}>
                         <div className="flex flex-col gap-0.5">
                           <span style={{ color: "hsl(32 35% 92%)" }}>{[browser, os].filter(Boolean).join(" · ") || "Unknown device"}</span>
                           <span className="text-xs" style={{ color: "hsl(30 10% 62%)" }}>{s.ip ?? "IP unknown"}</span>
                         </div>
-                        <span className="text-xs shrink-0" style={{ color: "#6B5E54" }}>
+                        <span className="text-xs shrink-0" style={{ color: "hsl(28 14% 36%)" }}>
                           {new Date(s.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                         </span>
                       </div>
@@ -2097,7 +2097,7 @@ export default function ProfilePage() {
                   })}
                 </div>
               )}
-              <div className="flex items-start justify-between gap-4 p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.1)" }}>
+              <div className="flex items-start justify-between gap-4 p-4 rounded-xl" style={{ background: "hsl(24 12% 6% / 0.3)", border: "1px solid hsl(22 55% 54% / 0.1)" }}>
                 <div className="flex flex-col gap-1">
                   <span className="text-sm font-medium" style={{ color: "hsl(32 35% 92%)" }}>Sign out of all sessions</span>
                   <p className="text-xs" style={{ color: "hsl(30 10% 62%)" }}>Revokes all active sessions across every device. You will need to sign in again.</p>
@@ -2114,7 +2114,7 @@ export default function ProfilePage() {
             <div className="flex flex-col gap-3">
               <div
                 className="flex items-center justify-between py-3 text-sm"
-                style={{ borderBottom: "1px solid rgba(196,112,75,0.1)" }}
+                style={{ borderBottom: "1px solid hsl(22 55% 54% / 0.1)" }}
               >
                 <span style={{ color: "hsl(30 10% 62%)" }}>Member since</span>
                 <span style={{ color: "hsl(32 35% 92%)" }}>
@@ -2126,8 +2126,8 @@ export default function ProfilePage() {
                 <span
                   className="px-2.5 py-0.5 rounded-full text-xs font-medium uppercase tracking-widest"
                   style={{
-                    background: "rgba(196,112,75,0.1)",
-                    border: "1px solid rgba(196,112,75,0.25)",
+                    background: "hsl(22 55% 54% / 0.1)",
+                    border: "1px solid hsl(22 55% 54% / 0.25)",
                     color: "hsl(22 55% 54%)",
                   }}
                 >
@@ -2148,7 +2148,7 @@ export default function ProfilePage() {
               {/* Export */}
               <div
                 className="flex items-start justify-between gap-4 p-4 rounded-xl"
-                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.1)" }}
+                style={{ background: "hsl(24 12% 6% / 0.3)", border: "1px solid hsl(22 55% 54% / 0.1)" }}
               >
                 <div className="flex flex-col gap-1">
                   <span className="text-sm font-medium" style={{ color: "hsl(32 35% 92%)" }}>Export My Data</span>
@@ -2227,7 +2227,7 @@ export default function ProfilePage() {
               {/* Open chat button */}
               <div
                 className="flex items-center justify-between gap-4 p-4 rounded-xl"
-                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.1)" }}
+                style={{ background: "hsl(24 12% 6% / 0.3)", border: "1px solid hsl(22 55% 54% / 0.1)" }}
               >
                 <div className="flex flex-col gap-1">
                   <span className="text-sm font-medium" style={{ color: "hsl(32 35% 92%)" }}>Live Support Chat</span>
@@ -2248,7 +2248,7 @@ export default function ProfilePage() {
               {/* System status link */}
               <div
                 className="flex items-center justify-between gap-4 p-4 rounded-xl"
-                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.1)" }}
+                style={{ background: "hsl(24 12% 6% / 0.3)", border: "1px solid hsl(22 55% 54% / 0.1)" }}
               >
                 <div className="flex flex-col gap-1">
                   <span className="text-sm font-medium" style={{ color: "hsl(32 35% 92%)" }}>System Status</span>
@@ -2282,7 +2282,7 @@ export default function ProfilePage() {
                       <div
                         key={ticket.id}
                         className="flex flex-col gap-2 p-4 rounded-xl"
-                        style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(196,112,75,0.1)" }}
+                        style={{ background: "hsl(24 12% 6% / 0.3)", border: "1px solid hsl(22 55% 54% / 0.1)" }}
                       >
                         <div className="flex items-center justify-between gap-3">
                           <span className="text-sm" style={{ color: "hsl(32 35% 92%)", fontWeight: 500 }}>{ticket.subject}</span>
@@ -2293,7 +2293,7 @@ export default function ProfilePage() {
                         {lastAdminReply ? (
                           <div
                             className="rounded-lg p-3 text-xs"
-                            style={{ background: "rgba(196,112,75,0.08)", border: "1px solid rgba(196,112,75,0.15)", color: "hsl(32 35% 92%)", lineHeight: 1.5 }}
+                            style={{ background: "hsl(22 55% 54% / 0.08)", border: "1px solid hsl(22 55% 54% / 0.15)", color: "hsl(32 35% 92%)", lineHeight: 1.5 }}
                           >
                             <span style={{ color: "hsl(22 55% 54%)", fontWeight: 700, fontSize: 10, textTransform: "uppercase", display: "block", marginBottom: 4 }}>
                               cascrow team replied
@@ -2327,7 +2327,7 @@ export default function ProfilePage() {
             {loadingUsage ? (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {[1,2,3,4,5,6].map(i => (
-                  <div key={i} className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.08)", height: 72 }} />
+                  <div key={i} className="rounded-xl p-4" style={{ background: "hsl(24 12% 6% / 0.5)", border: "1px solid hsl(22 55% 54% / 0.08)", height: 72 }} />
                 ))}
               </div>
             ) : usageStats ? (
@@ -2341,14 +2341,14 @@ export default function ProfilePage() {
                     { label: "Milestones rejected", value: usageStats.milestonesRejected, show: true },
                     { label: "Proofs submitted", value: usageStats.proofCount, show: true },
                   ].filter(s => s.show).map(s => (
-                    <div key={s.label} className="rounded-xl p-4 flex flex-col gap-1" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.08)" }}>
+                    <div key={s.label} className="rounded-xl p-4 flex flex-col gap-1" style={{ background: "hsl(24 12% 6% / 0.5)", border: "1px solid hsl(22 55% 54% / 0.08)" }}>
                       <span className="text-2xl font-bold" style={{ color: "hsl(32 35% 92%)", letterSpacing: "-0.03em" }}>{s.value}</span>
                       <span className="text-xs" style={{ color: "hsl(30 10% 62%)" }}>{s.label}</span>
                     </div>
                   ))}
                 </div>
                 {usageStats.memberSince && (
-                  <p className="text-xs" style={{ color: "#6B5E54" }}>
+                  <p className="text-xs" style={{ color: "hsl(28 14% 36%)" }}>
                     Member since {new Date(usageStats.memberSince).toLocaleDateString("en-GB", { year: "numeric", month: "long", day: "numeric" })}
                   </p>
                 )}
