@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { BuyRlusdModal } from "@/components/buy-rlusd-modal";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { CopyButton } from "@/components/copy-button";
+import { PageLoader } from "@/components/page-loader";
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT:            "Draft",
@@ -507,10 +508,7 @@ export default function InvestorDashboard() {
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "hsl(24 14% 4%)" }}>
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-6 h-6 rounded-full border-2 animate-spin" style={{ borderColor: "rgba(196,112,75,0.3)", borderTopColor: "#C4704B" }} />
-          <p className="text-sm" style={{ color: "#A89B8C" }}>Loading…</p>
-        </div>
+        <PageLoader />
       </div>
     );
   }

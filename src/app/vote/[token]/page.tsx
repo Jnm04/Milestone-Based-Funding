@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import { PageLoader } from "@/components/page-loader";
 
 interface VoteInfo {
   milestoneTitle: string;
@@ -52,11 +53,7 @@ export default function VotePage() {
     }
   }
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "#0E0B0A" }}>
-      <div className="w-10 h-10 border-4 border-[#C4704B] border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
+  if (loading) return <PageLoader />;
 
   if (done) return (
     <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#0E0B0A" }}>

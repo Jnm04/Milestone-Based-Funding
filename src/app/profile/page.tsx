@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
+import { PageLoader } from "@/components/page-loader";
 
 // ── Telegram state ─────────────────────────────────────────────────────────
 interface TelegramStatus { configured: boolean; connected: boolean; connectedAt: string | null }
@@ -781,10 +782,7 @@ export default function ProfilePage() {
   if (status === "loading" || !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "hsl(24 14% 4%)" }}>
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "hsl(22 55% 54% / 0.4)", borderTopColor: "hsl(22 55% 54%)" }} />
-          <span className="text-sm" style={{ color: "hsl(30 10% 62%)" }}>Loading profile…</span>
-        </div>
+        <PageLoader label="Loading profile" />
       </div>
     );
   }
