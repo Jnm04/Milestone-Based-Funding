@@ -338,9 +338,12 @@ function LoginForm() {
           <div className="absolute inset-0 bg-aurora animate-aurora opacity-60" />
           <div className="relative z-10 flex flex-col gap-8 text-center">
             <blockquote className="text-xl font-semibold tracking-[-0.02em]" style={{ color: "hsl(32 35% 92%)" }}>
-              &ldquo;Cascrow turned three weeks of back-and-forth into a single API call.&rdquo;
+              &ldquo;Cascrow turns three weeks of back-and-forth into a single API call.&rdquo;
             </blockquote>
-            <p className="text-sm" style={{ color: "hsl(30 10% 62%)" }}>— Sarah Chen, Helios Labs</p>
+            <div>
+              <p className="text-sm font-medium" style={{ color: "hsl(32 35% 92%)" }}>— Jan-Niklas Möller</p>
+              <p className="text-xs mt-0.5" style={{ color: "hsl(30 10% 62%)" }}>Co-Founder of Cascrow</p>
+            </div>
             <div className="flex flex-col gap-4 pt-4 text-left">
               {[["Non-custodial", "You stay in control of all funds."], ["EU-region", "Compliant with GDPR & financial regulations."], ["5-model quorum", "Consensus across leading AI providers."]].map(([label, desc]) => (
                 <div key={label}>
