@@ -48,3 +48,4 @@ public/uploads/
 # Serena MCP
 .serena/
 .env.local
+cascrow-mcp/node_modules/
