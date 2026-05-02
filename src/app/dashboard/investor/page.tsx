@@ -664,7 +664,7 @@ export default function InvestorDashboard() {
                     3
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-semibold" style={{ color: "#A89B8C" }}>Invite your startup & fund escrow</p>
+                    <p className="text-sm font-semibold" style={{ color: "#A89B8C" }}>Invite your Builder & fund escrow</p>
                     <p className="text-xs mt-0.5" style={{ color: "#6B5E52" }}>
                       Share the invite link. Once they accept, lock RLUSD on-chain via MetaMask.
                     </p>
@@ -851,7 +851,7 @@ export default function InvestorDashboard() {
                     style={{ background: "rgba(255,255,255,0.02)", color: "#A89B8C", borderBottom: "1px solid rgba(196,112,75,0.08)" }}
                   >
                     <span>Contract</span>
-                    <span>Receiver</span>
+                    <span>Builder</span>
                     <span>Amount</span>
                     <span>Status</span>
                     <span>Actions</span>

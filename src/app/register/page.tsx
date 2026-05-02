@@ -221,8 +221,8 @@ function RegisterForm() {
               <RoleCard
                 active={role === "INVESTOR"}
                 onClick={() => setRole("INVESTOR")}
-                title="Grant Giver"
-                desc="I fund projects and lock RLUSD in escrow."
+                title="Requester"
+                desc="I define milestones and lock funds in escrow."
                 icon={
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={role === "INVESTOR" ? "hsl(22 55% 54%)" : "hsl(30 10% 62%)"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
@@ -232,8 +232,8 @@ function RegisterForm() {
               <RoleCard
                 active={role === "STARTUP"}
                 onClick={() => setRole("STARTUP")}
-                title="Receiver"
-                desc="I deliver milestones and receive funds."
+                title="Builder"
+                desc="I deliver milestones and receive payment."
                 icon={
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={role === "STARTUP" ? "hsl(22 55% 54%)" : "hsl(30 10% 62%)"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2.22L6.61 2a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17" />
@@ -241,6 +241,10 @@ function RegisterForm() {
                 }
               />
             </div>
+            <p className="text-xs mt-1" style={{ color: "hsl(30 10% 50%)" }}>
+              <strong style={{ color: "hsl(30 10% 65%)" }}>Requester</strong> — you or your agent defines the work and locks payment.{"  "}
+              <strong style={{ color: "hsl(30 10% 65%)" }}>Builder</strong> — you deliver the milestone and get paid when AI verifies it.
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">

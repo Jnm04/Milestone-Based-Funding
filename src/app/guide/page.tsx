@@ -142,8 +142,8 @@ export default function GuidePage() {
               <svg viewBox="0 0 700 120" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "auto" }}>
                 {/* Nodes */}
                 {[
-                  { x: 30, label: "Investor", sub: "Creates contract" },
-                  { x: 175, label: "Startup", sub: "Accepts invite" },
+                  { x: 30, label: "Requester", sub: "Creates contract" },
+                  { x: 175, label: "Builder", sub: "Accepts invite" },
                   { x: 320, label: "Escrow", sub: "RLUSD locked" },
                   { x: 465, label: "AI Vote", sub: "5-model consensus" },
                   { x: 610, label: "Settlement", sub: "Funds released" },
@@ -325,15 +325,15 @@ export default function GuidePage() {
 
           {/* ── Step 6 ── */}
           <Step n={6} title="Register on Cascrow">
-            <P>Both the investor and the startup need a Cascrow account. Registration takes under a minute:</P>
+            <P>Both the Requester and the Builder need a Cascrow account. Registration takes under a minute:</P>
             <Ol items={[
               'Go to cascrow.com/register',
-              'Enter your email, choose a password, and select your role (Grant Giver or Receiver)',
+              'Enter your email, choose a password, and select your role (Requester or Builder)',
               'Check your email and click the verification link',
               'Log in — you\'re in',
             ]} />
             <InfoBox>
-              For a full test of the flow you need two accounts — one as Grant Giver (investor), one as Receiver (startup). Use two different email addresses or two different browsers.
+              For a full test of the flow you need two accounts — one as Requester, one as Builder. Use two different email addresses or two different browsers.
             </InfoBox>
           </Step>
 
@@ -349,13 +349,13 @@ export default function GuidePage() {
           </Step>
 
           {/* ── Step 8 ── */}
-          <Step n={8} title="Create a contract (Grant Giver)">
-            <P>As the Grant Giver, you define the milestone and the payout amount:</P>
+          <Step n={8} title="Create a contract (Requester)">
+            <P>As the Requester, you define the milestone and the payout amount:</P>
             <Ol items={[
               'Click "New Contract" on your dashboard',
               'Enter a project title and describe the milestone clearly — this is what the AI will verify against',
               'Set the RLUSD amount and the deadline in days',
-              'Optionally enter the Receiver\'s wallet address directly, or leave blank to get a shareable invite link',
+              'Optionally enter the Builder\'s wallet address directly, or leave blank to get a shareable invite link',
               'Click "Create Contract"',
             ]} />
             <InfoBox>
@@ -364,7 +364,7 @@ export default function GuidePage() {
           </Step>
 
           {/* ── Step 9 ── */}
-          <Step n={9} title="Fund the escrow (Grant Giver)">
+          <Step n={9} title="Fund the escrow (Requester)">
             <P>Once both parties are linked, you lock the RLUSD on-chain:</P>
             <Ol items={[
               'Open the contract detail page',
@@ -379,16 +379,16 @@ export default function GuidePage() {
           </Step>
 
           {/* ── Step 10 ── */}
-          <Step n={10} title="Submit proof (Receiver)">
-            <P>As the Receiver (startup), upload evidence that the milestone was completed:</P>
+          <Step n={10} title="Submit proof (Builder)">
+            <P>As the Builder, upload evidence that the milestone was completed:</P>
             <Ol items={[
-              'Log in with the Receiver account and open the contract',
+              'Log in with the Builder account and open the contract',
               'Click "Upload Proof"',
               'Upload a PDF document describing what was delivered',
               'Click "Submit" — the AI verification starts automatically',
             ]} />
             <InfoBox>
-              The document should clearly address the milestone criteria set by the investor. Vague or unrelated content will likely get rejected.
+              The document should clearly address the milestone criteria set by the Requester. Vague or unrelated content will likely get rejected.
             </InfoBox>
           </Step>
 
@@ -397,10 +397,10 @@ export default function GuidePage() {
             <P>Five AI models independently read the proof and vote. The result is immediate:</P>
             <Ol items={[
               'Watch the contract status — it updates in real time',
-              'If 3/5 models vote YES with high confidence → funds are released automatically to the Receiver',
-              'If confidence is medium (60–85%) → the investor is notified to review manually',
-              'If 3/5 models vote NO → the Receiver is notified with a rejection reason and can resubmit',
-              'If the deadline passes without a verified proof → the investor can cancel and get a full refund',
+              'If 3/5 models vote YES with high confidence → funds are released automatically to the Builder',
+              'If confidence is medium (60–85%) → the Requester is notified to review manually',
+              'If 3/5 models vote NO → the Builder is notified with a rejection reason and can resubmit',
+              'If the deadline passes without a verified proof → the Requester can cancel and get a full refund',
             ]} />
             <SuccessBox>
               ✓ On approval, an NFT completion certificate is minted on the native XRPL Ledger as permanent proof — visible on testnet.xrpl.org.

@@ -167,7 +167,7 @@ export async function sendPasswordResetEmail({
   });
 }
 
-// ── Grant Giver notifications ───────────────────────────────────────────────
+// ── Requester notifications ───────────────────────────────────────────────
 
 export async function sendProofSubmittedEmail({
   to,
@@ -188,11 +188,11 @@ export async function sendProofSubmittedEmail({
   }
   if (!process.env.RESEND_API_KEY) return;
   const aiBody = await generateEmailBody("proof-submitted-investor", {
-    "startup name": startupName || "The Receiver",
+    "startup name": startupName || "The Builder",
     "milestone title": milestoneTitle,
   });
   const bodyText = aiBody
-    ?? `<strong>${esc(startupName) || "The Receiver"}</strong> has submitted proof for the milestone <strong>${esc(milestoneTitle)}</strong>.`;
+    ?? `<strong>${esc(startupName) || "The Builder"}</strong> has submitted proof for the milestone <strong>${esc(milestoneTitle)}</strong>.`;
   await resend.emails.send({
     from: FROM,
     to,
@@ -272,7 +272,7 @@ export async function sendMilestoneCompletedInvestorEmail({
   });
 }
 
-// ── Receiver notifications ──────────────────────────────────────────────────
+// ── Builder notifications ──────────────────────────────────────────────────
 
 export async function sendFundedEmail({
   to,
@@ -505,7 +505,7 @@ export async function sendDeadlineReminderEmail({
          }
          <p><a href="${contractLink(contractId)}">Open milestone →</a></p>`
       : `<p>Hi,</p>
-         <p>The startup has not yet submitted proof for milestone <strong>${esc(milestoneTitle)}</strong>.</p>
+         <p>The Builder has not yet submitted proof for milestone <strong>${esc(milestoneTitle)}</strong>.</p>
          <p>The deadline is in <strong>${timeLabel}</strong>. If no proof is submitted, the escrow will be automatically returned to you.</p>
          <p><a href="${contractLink(contractId)}">View contract →</a></p>`;
 
@@ -535,7 +535,7 @@ export async function sendManualApprovedEmail({
     subject: `Approved — release your funds: ${milestoneTitle}`,
     html: `
       <p>Hi,</p>
-      <p>Great news! The Grant Giver has manually approved your proof for <strong>${esc(milestoneTitle)}</strong>.</p>
+      <p>Great news! The Requester has manually approved your proof for <strong>${esc(milestoneTitle)}</strong>.</p>
       <p><strong>$${Number(amountUSD).toLocaleString()} RLUSD</strong> is ready to be released to your wallet.</p>
       <p>Open the contract page and click <strong>Release Funds</strong> to receive your payment.</p>
       <p><a href="${contractLink(contractId)}">Release funds →</a></p>
@@ -606,7 +606,7 @@ export async function sendRenegotiationOpenedEmail({
       html: `
         <p>Hi,</p>
         <p>The deadline for milestone <strong>${esc(milestoneTitle)}</strong> has passed without a submitted proof.</p>
-        <p>A <strong>${deadlineHours}-hour renegotiation window</strong> is now open. The Receiver can submit a progress update to request an extension — you will be notified when they do.</p>
+        <p>A <strong>${deadlineHours}-hour renegotiation window</strong> is now open. The Builder can submit a progress update to request an extension — you will be notified when they do.</p>
         <p>If no request is submitted within ${deadlineHours} hours, the escrow will be automatically cancelled and RLUSD returned to you.</p>
         <p><a href="${link}">View contract →</a></p>
       `,
@@ -618,7 +618,7 @@ export async function sendRenegotiationOpenedEmail({
       html: `
         <p>Hi,</p>
         <p>The deadline for milestone <strong>${esc(milestoneTitle)}</strong> has passed.</p>
-        <p>You have <strong>${deadlineHours} hours</strong> to submit a progress update and request a deadline extension. The Grant Giver will review your request and decide whether to approve it.</p>
+        <p>You have <strong>${deadlineHours} hours</strong> to submit a progress update and request a deadline extension. The Requester will review your request and decide whether to approve it.</p>
         <p>If no request is submitted in time, the escrow will be automatically cancelled.</p>
         <p><a href="${link}">Submit progress update →</a></p>
       `,
@@ -646,7 +646,7 @@ export async function sendExtensionRequestedEmail({
     subject: `Extension request: ${milestoneTitle}`,
     html: `
       <p>Hi,</p>
-      <p><strong>${esc(startupName) || "The Receiver"}</strong> has submitted a progress update and is requesting a <strong>${extensionDays}-day extension</strong> for milestone <strong>${esc(milestoneTitle)}</strong>.</p>
+      <p><strong>${esc(startupName) || "The Builder"}</strong> has submitted a progress update and is requesting a <strong>${extensionDays}-day extension</strong> for milestone <strong>${esc(milestoneTitle)}</strong>.</p>
       <p>Open the contract to review the update and AI plausibility assessment, then approve or reject.</p>
       <p><a href="${contractLink(contractId)}">Review extension request →</a></p>
     `,
@@ -673,7 +673,7 @@ export async function sendExtensionApprovedEmail({
     subject: `Extension approved: ${milestoneTitle}`,
     html: `
       <p>Hi,</p>
-      <p>The Grant Giver has approved your extension request for <strong>${esc(milestoneTitle)}</strong>.</p>
+      <p>The Requester has approved your extension request for <strong>${esc(milestoneTitle)}</strong>.</p>
       <p>You now have <strong>${extensionDays} additional days</strong>. New deadline: <strong>${newDeadline.toLocaleDateString()}</strong>.</p>
       <p>Upload your proof before the new deadline to receive payment.</p>
       <p><a href="${contractLink(contractId)}">Open milestone →</a></p>
@@ -697,8 +697,8 @@ export async function sendExtensionRejectedEmail({
     subject: `Extension rejected: ${milestoneTitle}`,
     html: `
       <p>Hi,</p>
-      <p>The Grant Giver has rejected your extension request for <strong>${esc(milestoneTitle)}</strong>.</p>
-      <p>The escrow has been cancelled and funds returned to the Grant Giver.</p>
+      <p>The Requester has rejected your extension request for <strong>${esc(milestoneTitle)}</strong>.</p>
+      <p>The escrow has been cancelled and funds returned to the Requester.</p>
       <p><a href="${contractLink(contractId)}">View contract →</a></p>
     `,
   });
@@ -706,7 +706,7 @@ export async function sendExtensionRejectedEmail({
 
 // ── Feature G: Progress Check-ins ────────────────────────────────────────────
 
-/** Weekly nudge sent to the startup for a FUNDED milestone. */
+/** Weekly nudge sent to the Builder for a FUNDED milestone. */
 export async function sendProgressCheckinEmail({
   to,
   contractId,
@@ -724,13 +724,13 @@ export async function sendProgressCheckinEmail({
     html: `
       <p>Hi,</p>
       <p>Quick check-in for milestone <strong>${esc(milestoneTitle)}</strong> — how's it going?</p>
-      <p>Share a short progress update on the contract page so the Grant Giver knows where things stand.</p>
+      <p>Share a short progress update on the contract page so the Requester knows where things stand.</p>
       <p><a href="${contractLink(contractId)}">Log a progress update →</a></p>
     `,
   });
 }
 
-/** Notify investor when the startup has logged a progress update. */
+/** Notify Requester when the Builder has logged a progress update. */
 export async function sendProgressUpdateNotifiedEmail({
   to,
   contractId,
@@ -751,7 +751,7 @@ export async function sendProgressUpdateNotifiedEmail({
     subject: `Progress update: ${milestoneTitle}`,
     html: `
       <p>Hi,</p>
-      <p><strong>${esc(startupName) || "The Receiver"}</strong> has shared a progress update for milestone <strong>${esc(milestoneTitle)}</strong>:</p>
+      <p><strong>${esc(startupName) || "The Builder"}</strong> has shared a progress update for milestone <strong>${esc(milestoneTitle)}</strong>:</p>
       <blockquote style="border-left:3px solid #C4704B;margin:12px 0;padding:8px 14px;color:#555;">${esc(updateText.slice(0, 500))}${updateText.length > 500 ? "…" : ""}</blockquote>
       <p><a href="${contractLink(contractId)}">View contract →</a></p>
     `,
@@ -760,7 +760,7 @@ export async function sendProgressUpdateNotifiedEmail({
 
 // ── Feature Z: Contract Counter-Proposal ────────────────────────────────────
 
-/** Notify the investor that a startup has submitted a counter-proposal. */
+/** Notify the Requester that a Builder has submitted a counter-proposal. */
 export async function sendCounterProposalSubmittedEmail({
   to,
   contractId,
@@ -790,7 +790,7 @@ export async function sendCounterProposalSubmittedEmail({
   });
 }
 
-/** Notify the startup that the investor responded to their counter-proposal. */
+/** Notify the Builder that the Requester responded to their counter-proposal. */
 export async function sendCounterProposalRespondedEmail({
   to,
   contractId,
@@ -812,9 +812,9 @@ export async function sendCounterProposalRespondedEmail({
     subject: `Counter-proposal ${accepted ? "accepted" : "rejected"}: ${contractTitle}`,
     html: `
       <p>Hi,</p>
-      <p><strong>${esc(investorName) || "The Grant Giver"}</strong> has <strong>${accepted ? "accepted" : "rejected"}</strong> your counter-proposal for <strong>${esc(contractTitle)}</strong>.</p>
+      <p><strong>${esc(investorName) || "The Requester"}</strong> has <strong>${accepted ? "accepted" : "rejected"}</strong> your counter-proposal for <strong>${esc(contractTitle)}</strong>.</p>
       ${accepted
-        ? `<p>Your proposed terms have been applied. The contract is now awaiting escrow funding — the Grant Giver will lock RLUSD shortly.</p>`
+        ? `<p>Your proposed terms have been applied. The contract is now awaiting escrow funding — the Requester will lock RLUSD shortly.</p>`
         : `<p>Your proposed changes were not accepted. The original terms remain in place — you can still accept the original invitation or decline it.</p>`
       }
       <p><a href="${contractLink(contractId)}">View contract →</a></p>

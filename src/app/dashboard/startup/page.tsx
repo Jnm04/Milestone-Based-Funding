@@ -274,7 +274,7 @@ function StartupDashboardContent() {
       if (!res.ok) throw new Error(data.error ?? "Failed");
       setCounterSubmitted(true);
       setShowCounterForm(false);
-      toast.success("Counter-proposal submitted! The Grant Giver will be notified.");
+      toast.success("Counter-proposal submitted! The Requester will be notified.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to submit counter-proposal.");
     } finally {
@@ -332,8 +332,8 @@ function StartupDashboardContent() {
           </div>
           <p className="text-lg font-semibold" style={{ color: "#EDE6DD" }}>Wrong account</p>
           <p className="text-sm leading-relaxed" style={{ color: "#A89B8C" }}>
-            You&apos;re logged in as a <strong style={{ color: "#EDE6DD" }}>Grant Giver</strong>.
-            This invite link is for a <strong style={{ color: "#EDE6DD" }}>Receiver</strong> account.
+            You&apos;re logged in as a <strong style={{ color: "#EDE6DD" }}>Requester</strong>.
+            This invite link is for a <strong style={{ color: "#EDE6DD" }}>Builder</strong> account.
           </p>
           <button
             onClick={() => signOut({ callbackUrl: `/dashboard/startup?invite=${inviteCode}` })}
@@ -368,7 +368,7 @@ function StartupDashboardContent() {
             className="text-3xl"
             style={{ fontWeight: 300, color: "hsl(32 35% 92%)" }}
           >
-            Receiver Dashboard
+            Builder Dashboard
           </h1>
           <p className="text-sm mt-1" style={{ color: "#A89B8C" }}>
             {inviteCode
@@ -417,7 +417,7 @@ function StartupDashboardContent() {
                     </div>
                     {preview.investorWallet && (
                       <div>
-                        <p className="text-xs uppercase tracking-wide mb-1" style={{ color: "#A89B8C" }}>Grant Giver</p>
+                        <p className="text-xs uppercase tracking-wide mb-1" style={{ color: "#A89B8C" }}>Requester</p>
                         <code className="text-xs font-mono" style={{ color: "#EDE6DD" }}>{preview.investorWallet.slice(0, 12)}…</code>
                       </div>
                     )}
@@ -475,7 +475,7 @@ function StartupDashboardContent() {
                       <div>
                         <p className="text-sm font-semibold" style={{ color: "#EDE6DD" }}>Counter-proposal sent</p>
                         <p className="text-xs mt-0.5" style={{ color: "#A89B8C" }}>
-                          The Grant Giver has been notified. You&apos;ll receive an email when they respond.
+                          The Requester has been notified. You&apos;ll receive an email when they respond.
                           You can still accept the original terms below if needed.
                         </p>
                       </div>
@@ -600,7 +600,7 @@ function StartupDashboardContent() {
                         <textarea
                           value={counterRationale}
                           onChange={(e) => setCounterRationale(e.target.value.slice(0, 800))}
-                          placeholder="Explain why you are requesting these changes. Be specific — the Grant Giver will see this."
+                          placeholder="Explain why you are requesting these changes. Be specific — the Requester will see this."
                           rows={4}
                           className="cs-input resize-none text-sm"
                           style={{ fontSize: "13px" }}
@@ -639,7 +639,7 @@ function StartupDashboardContent() {
                         )}
                       </div>
                       <p className="text-xs" style={{ color: "#6B5E52" }}>
-                        You have one counter-proposal per contract. Make it count. After submitting, you can still accept the original terms if the Grant Giver rejects your counter-proposal.
+                        You have one counter-proposal per contract. Make it count. After submitting, you can still accept the original terms if the Requester rejects your counter-proposal.
                       </p>
                     </div>
                   )}
@@ -729,7 +729,7 @@ function StartupDashboardContent() {
                     </svg>
                   </div>
                   <p className="text-sm font-medium" style={{ color: "#EDE6DD" }}>No contracts yet</p>
-                  <p className="text-xs" style={{ color: "#A89B8C" }}>Wait for an invite link from your Grant Giver.</p>
+                  <p className="text-xs" style={{ color: "#A89B8C" }}>Wait for an invite link from your Requester.</p>
                 </div>
               )}
 
@@ -811,7 +811,7 @@ function StartupDashboardContent() {
                             <strong style={{ color: "#EDE6DD" }}>${Number(c.amountUSD).toLocaleString()}</strong> RLUSD
                           </span>
                           <span>
-                            Grant Giver:{" "}
+                            Requester:{" "}
                             <code className="font-mono">{c.investor.walletAddress?.slice(0, 8)}…</code>
                           </span>
                           {!isHidden && (

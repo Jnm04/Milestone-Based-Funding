@@ -2332,8 +2332,8 @@ export default function ProfilePage() {
               <>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
                   {[
-                    { label: "Contracts created", value: usageStats.contractsAsInvestor, show: role === "INVESTOR" },
-                    { label: "Contracts received", value: usageStats.contractsAsStartup, show: role === "STARTUP" },
+                    { label: "Contracts requested", value: usageStats.contractsAsInvestor, show: role === "INVESTOR" },
+                    { label: "Contracts built", value: usageStats.contractsAsStartup, show: role === "STARTUP" },
                     { label: "Total milestones", value: usageStats.totalMilestones, show: true },
                     { label: "Milestones verified", value: usageStats.milestonesVerified + usageStats.milestonesCompleted, show: true },
                     { label: "Milestones rejected", value: usageStats.milestonesRejected, show: true },

@@ -154,7 +154,7 @@ export function DashboardSidebar({ role }: SidebarProps) {
             )}
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium truncate" style={{ color: fgColor }}>{session?.user?.name ?? session?.user?.email}</p>
-              <p className="text-xs truncate" style={{ color: mutedColor, fontFamily: "'JetBrains Mono', monospace" }}>{role === "investor" ? "investor" : "startup"}</p>
+              <p className="text-xs truncate" style={{ color: mutedColor, fontFamily: "'JetBrains Mono', monospace" }}>{role === "investor" ? "requester" : "builder"}</p>
             </div>
             <NotificationBell />
           </div>
