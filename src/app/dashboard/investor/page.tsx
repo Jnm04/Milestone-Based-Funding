@@ -10,6 +10,7 @@ import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { CopyButton } from "@/components/copy-button";
 import { PageLoader } from "@/components/page-loader";
 import { LoaderDotMatrix } from "@/components/elements/loader-dot-matrix";
+import { DeployAgentModal } from "@/components/deploy-agent-modal";
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT:            "Draft",
@@ -460,6 +461,7 @@ export default function InvestorDashboard() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalContracts, setTotalContracts] = useState(0);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showDeployAgent, setShowDeployAgent] = useState(false);
   const PAGE_SIZE = 20;
 
   useEffect(() => {
@@ -529,6 +531,7 @@ export default function InvestorDashboard() {
     <div className="flex min-h-screen" style={{ background: "hsl(24 14% 4%)" }}>
       <DashboardSidebar role="investor" />
       {showReportModal && <TransparencyReportModal onClose={() => setShowReportModal(false)} />}
+      {showDeployAgent && <DeployAgentModal onClose={() => setShowDeployAgent(false)} />}
 
       {/* Main */}
       <main className="flex-1 flex flex-col min-h-screen overflow-x-hidden pb-20 md:pb-0">
@@ -554,6 +557,14 @@ export default function InvestorDashboard() {
             >
               <IconFileText />
               <span className="hidden sm:inline">Generate Report</span>
+            </button>
+            <button
+              onClick={() => setShowDeployAgent(true)}
+              className="cs-btn-ghost cs-btn-sm flex items-center gap-1.5"
+              title="Deploy an AI agent"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="12" y1="16" x2="12" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg>
+              <span className="hidden sm:inline">Deploy Agent</span>
             </button>
             {walletAddress && (
               <>
