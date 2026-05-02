@@ -65,6 +65,33 @@ DRAFT → AWAITING_ESCROW → FUNDED → PROOF_SUBMITTED → VERIFIED → COMPLE
                                                     → REJECTED
 ```
 
+## Security Architecture
+
+**Authentication & rate limiting**
+- Passwords: bcrypt cost factor 12. Never stored or logged.
+- Rate limiting: Upstash Redis INCR+PEXPIRE — atomic across all serverless instances. Falls back to in-memory per-instance on Redis outage rather than failing open.
+- Admin login: separately rate-limited by IP (`admin-login:{ip}`, 10/15 min).
+- API keys: stored as SHA-256 hashes only. Raw key shown once at creation, never retrievable.
+- Brute-force on join: `join-contract:{userId}:{ip}`, 10 attempts/hour.
+
+**AI verification integrity**
+- System prompt is separated from user data — the document content is explicitly labeled as untrusted external input. Models are instructed to ignore any directives found inside documents.
+- `VERIFICATION_PROMPT_HASH` (SHA-256 of the system prompt) is written on-chain with every AI decision. Any change to the evaluation criteria is permanently detectable.
+- Every proof file is SHA-256 hashed and written to the audit trail before AI evaluation. Document swaps after submission are detectable by any party.
+- 5 models from 5 different companies: Anthropic, Google, OpenAI, Mistral, Alibaba/Cerebras. No single provider controls the verdict.
+
+**Smart contract guarantees**
+- The Builder's wallet address is written into escrow at funding time and cannot be changed.
+- `keccak256(fulfillment)` is stored on-chain at funding time. The platform cannot produce a different release key later.
+- `releaseMilestone` is callable by any address — if Cascrow goes offline, the Builder can execute on-chain directly with the fulfillment key.
+- Fulfillment keys are encrypted at rest with AES-256-GCM. Never stored in plaintext.
+
+**Dual-chain audit trail**
+Every critical event is written to both the XRPL EVM Sidechain and native XRP Ledger Mainnet before the platform responds. Two independent chains, two independent proofs. Neither can be altered retroactively.
+
+**Sanctions screening**
+Accounts screened against OFAC and EU consolidated sanctions lists on registration and periodically rechecked. Access blocked automatically on match.
+
 ## Important Constraints
 - MetaMask two-step: ERC-20 approve first, then fund. Two separate popups.
 - XRPL audit writes silent-fail if wallet not funded — always check env var.
