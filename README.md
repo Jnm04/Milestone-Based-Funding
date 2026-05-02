@@ -16,7 +16,7 @@ Cascrow replaces that with verifiable finality:
 
 - **Escrow mode** — RLUSD locked in a smart contract on the XRPL EVM Sidechain. Five independent AI models from five different companies must reach a 3/5 majority before a single token moves.
 - **Verification-only mode** — No escrow required. AI agents create a contract, submit proof, and get a cryptographic verification record — no MetaMask, no blockchain transaction. $0.10 per verification.
-- **Attestation mode** — Enterprise teams verify ESG, sustainability, and KPI commitments. Every verdict is written to the XRP Ledger as a permanent, tamper-evident record.
+- **Attestation mode** *(coming soon)* — Enterprise teams verify ESG, sustainability, and KPI commitments. Every verdict written to the XRP Ledger as a permanent, tamper-evident record.
 
 ---
 
@@ -137,16 +137,9 @@ Over time, a builder accumulates a collection of AI-verified, real-money-backed 
 
 ---
 
-## Enterprise features
+## Enterprise features *(coming soon)*
 
-- **Attestation mode** — ESG / KPI / CSRD compliance verification without escrow
-- **Team management** — roles (Owner, Admin, Member), multi-entity group structures
-- **Audit firm access** — read-only access for named auditors, revocable by client
-- **Slack & Teams** — real-time notifications on verification outcomes
-- **Regulatory change alerts** — CSRD/ESRS updates from EUR-Lex and EFRAG classified weekly by AI
-- **Confidential goals** — AES-256-GCM encrypted; hash stored on-chain so commitment is provable without revealing content
-- **API keys** — programmatic access for automated proof submissions
-- **Deal Rooms** — due-diligence workspace; builder uploads documents, requester gets AI brief, converts to contract or declines
+Enterprise attestation is built and functional — not yet publicly available. Infrastructure includes ESG/KPI attestation, team management, audit firm access, Slack/Teams integrations, regulatory change alerts (CSRD/ESRS), confidential goals, and deal rooms.
 
 ---
 

@@ -61,7 +61,7 @@ function LoginForm() {
           if (callbackUrl && callbackUrl.startsWith("/")) {
             router.push(callbackUrl);
           } else if (session?.user?.isEnterprise) {
-            router.push("/enterprise/dashboard");
+            router.push("/dashboard/investor");
           } else if (role === "INVESTOR") {
             router.push("/dashboard/investor");
           } else if (role === "STARTUP") {
@@ -124,7 +124,7 @@ function LoginForm() {
     e.preventDefault();
     // SSO domain — redirect to IdP instead of password login
     if (ssoRequired) {
-      window.location.href = `/api/auth/sso/initiate?email=${encodeURIComponent(email)}&callbackUrl=${encodeURIComponent(callbackUrl ?? "/enterprise/dashboard")}`;
+      window.location.href = `/api/auth/sso/initiate?email=${encodeURIComponent(email)}&callbackUrl=${encodeURIComponent(callbackUrl ?? "/dashboard/investor")}`;
       return;
     }
     setLoading(true);
@@ -173,8 +173,6 @@ function LoginForm() {
 
       if (callbackUrl && callbackUrl.startsWith("/")) {
         router.push(callbackUrl);
-      } else if (session?.user?.isEnterprise) {
-        router.push("/enterprise/dashboard");
       } else if (role === "INVESTOR") {
         router.push("/dashboard/investor");
       } else if (role === "STARTUP") {
