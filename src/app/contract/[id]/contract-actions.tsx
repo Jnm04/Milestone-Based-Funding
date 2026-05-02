@@ -1622,6 +1622,23 @@ export function ContractActions({
       );
     }
 
+    // Verification-only contract (no escrow) — just show confirmed badge
+    if (!amountRLUSD || Number(amountRLUSD) === 0) {
+      return (
+        <div className="flex flex-col gap-3 p-5 rounded-xl" style={{ background: "rgba(74,222,128,0.07)", border: "1px solid rgba(74,222,128,0.2)" }}>
+          <div className="flex items-center gap-2">
+            <span style={{ fontSize: "18px" }}>✅</span>
+            <p className="text-sm font-medium" style={{ color: "#6EE09A" }}>
+              Milestone verified by 5 AI models
+            </p>
+          </div>
+          <p className="text-xs" style={{ color: "#A89B8C" }}>
+            Verification fee of <strong style={{ color: "#D4B896" }}>$0.10</strong> was charged on trigger.
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col gap-3 p-5 rounded-xl" style={{ background: "rgba(74,222,128,0.07)", border: "1px solid rgba(74,222,128,0.2)" }}>
         <p className="text-sm font-medium" style={{ color: "#6EE09A" }}>
