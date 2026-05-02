@@ -10,7 +10,7 @@ interface ContractPollerProps {
   hasNft?: boolean;
 }
 
-const INTERVAL_MS = 3000;
+const INTERVAL_MS = 1500;
 
 export function ContractPoller({
   contractId,
