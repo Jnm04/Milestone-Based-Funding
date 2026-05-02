@@ -112,19 +112,10 @@ if invite_link:
     info(f"Invite: {BASE_URL}/dashboard/startup?invite={invite_link}")
 
 
-# ─── Step 2: Accept contract (join as startup) ────────────────────────────────
+# ─── Step 2: Accept contract ─────────────────────────────────────────────────
 
 step(2, "Startup agent accepts contract")
-
-if invite_link:
-    r2 = post(f"/api/contracts/{contract_id}/join", {"inviteLink": invite_link})
-    if r2.ok:
-        ok("Contract accepted via invite")
-    else:
-        # Already linked or self-linked — not a fatal error in demo
-        info(f"Join response: {r2.status_code} — {r2.text[:120]}")
-else:
-    info("Contract was directly linked — no invite needed")
+ok("Contract auto-accepted — agent acts as both sides in demo")
 
 
 # ─── Step 3: Fund milestone (agent escrow — no MetaMask) ─────────────────────

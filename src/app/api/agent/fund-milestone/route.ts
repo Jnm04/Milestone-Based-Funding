@@ -5,8 +5,8 @@ import { nanoid } from "nanoid";
 
 // Agent-only endpoint: sets a milestone to FUNDED with a simulated tx hash.
 // Requires API key auth. Only works for contracts owned by the API key's user.
-// This allows agent demos to bypass MetaMask while the normal browser escrow
-// flow (MetaMask → EVM) remains unchanged.
+// If contract is still DRAFT (no startup joined yet), it auto-advances to
+// AWAITING_ESCROW first, then immediately to FUNDED — bypassing MetaMask.
 export async function POST(request: NextRequest) {
   const apiKeyCtx = await resolveApiKey(request.headers.get("authorization"));
   if (!apiKeyCtx) {
@@ -25,51 +25,69 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "milestoneId or contractId is required" }, { status: 400 });
   }
 
-  // Fetch milestone with contract for ownership check
-  const milestone = milestoneId
-    ? await prisma.milestone.findUnique({
-        where: { id: milestoneId },
-        include: { contract: { select: { id: true, investorId: true } } },
-      })
-    : await prisma.milestone.findFirst({
-        where: { contractId: contractId!, status: "AWAITING_ESCROW" },
-        include: { contract: { select: { id: true, investorId: true } } },
-        orderBy: { order: "asc" },
-      });
+  // Fetch contract + milestones for ownership check
+  const resolvedContractId = contractId ?? (
+    await prisma.milestone.findUnique({ where: { id: milestoneId! }, select: { contractId: true } })
+  )?.contractId;
 
-  if (!milestone) {
-    return NextResponse.json({ error: "Milestone not found or not in AWAITING_ESCROW status" }, { status: 404 });
+  if (!resolvedContractId) {
+    return NextResponse.json({ error: "Milestone not found" }, { status: 404 });
   }
 
-  // Only the contract owner (investor) may fund via API key
-  if (milestone.contract.investorId !== apiKeyCtx.userId) {
+  const contract = await prisma.contract.findUnique({
+    where: { id: resolvedContractId },
+    include: { milestones: { orderBy: { order: "asc" } } },
+  });
+
+  if (!contract) {
+    return NextResponse.json({ error: "Contract not found" }, { status: 404 });
+  }
+
+  if (contract.investorId !== apiKeyCtx.userId) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  if (milestone.status !== "AWAITING_ESCROW") {
-    return NextResponse.json(
-      { error: `Expected AWAITING_ESCROW, got ${milestone.status}` },
-      { status: 409 }
-    );
+  // If still DRAFT, auto-advance: set startup = investor (self-funded agent demo),
+  // move contract + all milestones to AWAITING_ESCROW
+  if (contract.status === "DRAFT") {
+    await prisma.$transaction([
+      prisma.contract.update({
+        where: { id: resolvedContractId },
+        data: { status: "AWAITING_ESCROW", startupId: apiKeyCtx.userId },
+      }),
+      prisma.milestone.updateMany({
+        where: { contractId: resolvedContractId },
+        data: { status: "AWAITING_ESCROW" },
+      }),
+    ]);
+  }
+
+  // Pick the target milestone
+  const target = milestoneId
+    ? contract.milestones.find((m) => m.id === milestoneId)
+    : contract.milestones.find((m) => ["AWAITING_ESCROW", "PENDING"].includes(m.status));
+
+  if (!target) {
+    return NextResponse.json({ error: "No fundable milestone found" }, { status: 409 });
   }
 
   const fakeTxHash = `0xagent${nanoid(61)}`.slice(0, 66);
 
   await prisma.$transaction([
     prisma.milestone.update({
-      where: { id: milestone.id },
+      where: { id: target.id },
       data: { status: "FUNDED", evmTxHash: fakeTxHash },
     }),
     prisma.contract.update({
-      where: { id: milestone.contractId },
+      where: { id: resolvedContractId },
       data: { status: "FUNDED", evmTxHash: fakeTxHash },
     }),
   ]);
 
   return NextResponse.json({
     ok: true,
-    milestoneId: milestone.id,
-    contractId: milestone.contractId,
+    milestoneId: target.id,
+    contractId: resolvedContractId,
     txHash: fakeTxHash,
     status: "FUNDED",
   });
