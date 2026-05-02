@@ -83,7 +83,7 @@ async function streamVerify(proofId) {
     throw new Error(data.error ?? `HTTP ${res.status}`);
   }
 
-  const votes = [];
+  // Read SSE stream until complete event
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -102,16 +102,8 @@ async function streamVerify(proofId) {
       if (!raw) continue;
       try {
         const msg = JSON.parse(raw);
-        if (msg.type === "model_vote") {
-          votes.push(msg);
-          // Log each vote to stderr so Claude Desktop can show live progress
-          const icon = msg.decision === "YES" ? "✅" : "❌";
-          process.stderr.write(`[cascrow] ${icon} ${msg.model}: ${msg.decision} (${msg.confidence}%)\n`);
-        } else if (msg.type === "complete") {
-          return { ...msg, votes };
-        } else if (msg.type === "error") {
-          throw new Error(msg.message);
-        }
+        if (msg.type === "complete") return msg;
+        if (msg.type === "error") throw new Error(msg.message);
       } catch (e) {
         if (e instanceof SyntaxError) continue;
         throw e;
@@ -296,20 +288,12 @@ async function handleSubmitProof({ milestoneId, proof, filename }) {
 
 async function handleVerify({ proofId }) {
   const result = await streamVerify(proofId);
-  const decision   = result.decision ?? "?";
+  const decision  = result.decision ?? "?";
   const confidence = result.confidence ?? 0;
-  const action     = result.action ?? "?";
-  const reasoning  = result.reasoning ?? "";
-  const votes      = result.votes ?? [];
+  const action    = result.action ?? "?";
+  const reasoning = result.reasoning ?? "";
 
   const passed = decision === "YES" && confidence >= 85;
-
-  const voteSummary = votes.length > 0
-    ? votes.map((v) => `  ${v.decision === "YES" ? "✅" : "❌"} ${v.model}: ${v.decision} (${v.confidence}%)`).join("\n")
-    : null;
-
-  const yesCount = votes.filter((v) => v.decision === "YES").length;
-  const voteHeader = votes.length > 0 ? `${yesCount}/${votes.length} models approved:\n${voteSummary}\n\n` : "";
 
   return {
     decision,
@@ -318,10 +302,9 @@ async function handleVerify({ proofId }) {
     reasoning,
     passed,
     txHash: result.txHash ?? null,
-    modelVotes: votes.map((v) => ({ model: v.model, decision: v.decision, confidence: v.confidence })),
     message: passed
-      ? `✅ VERIFIED (${confidence}% confidence)\n\n${voteHeader}${reasoning.slice(0, 300)}`
-      : `❌ NOT VERIFIED (${confidence}% confidence)\n\n${voteHeader}${reasoning.slice(0, 300)}`,
+      ? `✅ VERIFIED (${confidence}% confidence) — ${reasoning.slice(0, 200)}`
+      : `❌ NOT VERIFIED (${confidence}% confidence) — ${reasoning.slice(0, 200)}`,
   };
 }
 
