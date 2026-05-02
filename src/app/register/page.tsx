@@ -403,9 +403,12 @@ function RegisterForm() {
           <div className="absolute inset-0 bg-aurora animate-aurora opacity-60" />
           <div className="relative z-10 flex flex-col gap-8 text-center">
             <blockquote className="text-xl font-semibold tracking-[-0.02em]" style={{ color: "hsl(32 35% 92%)" }}>
-              &ldquo;We closed our first milestone payout in under 48 hours — no lawyers needed.&rdquo;
+              &ldquo;The future of work isn&rsquo;t contracts and invoices — it&rsquo;s milestones and cryptographic proof.&rdquo;
             </blockquote>
-            <p className="text-sm" style={{ color: "hsl(30 10% 62%)" }}>— Marcus Weber, Orbital Seed</p>
+            <div>
+              <p className="text-sm font-medium" style={{ color: "hsl(32 35% 92%)" }}>Paul Wagner</p>
+              <p className="text-xs mt-0.5" style={{ color: "hsl(30 10% 62%)" }}>Co-Founder of Cascrow</p>
+            </div>
             <div className="flex flex-col gap-4 pt-4 text-left">
               {[
                 ["Free to start", "No setup fees. Pay only when funds move."],
