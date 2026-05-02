@@ -754,7 +754,7 @@ function Footer() {
               <span className="grid h-7 w-7 place-items-center rounded-md bg-gradient-copper font-bold" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: "hsl(24 14% 6%)" }}>c</span>
               <span className="text-sm font-semibold tracking-tight">cascrow</span>
             </Link>
-            <p className="mt-4 max-w-sm text-sm" style={{ color: "hsl(30 10% 62%)" }}>Agentic escrow and verification on the XRP Ledger. Lock RLUSD in escrow, prove your milestone, get paid instantly.</p>
+            <p className="mt-4 max-w-sm text-sm" style={{ color: "hsl(30 10% 62%)" }}>The escrow layer for the agent economy. Agents deliver, AI verifies, funds move. No humans required.</p>
             <SystemStatus />
           </div>
           <div>
