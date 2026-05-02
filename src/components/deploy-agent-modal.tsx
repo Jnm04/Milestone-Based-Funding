@@ -46,8 +46,8 @@ export function DeployAgentModal({ onClose }: DeployAgentModalProps) {
   const mcpConfig = secret ? JSON.stringify({
     mcpServers: {
       cascrow: {
-        command: "node",
-        args: ["/path/to/cascrow-mcp/index.js"],
+        command: "npx",
+        args: ["cascrow-mcp"],
         env: { CASCROW_API_KEY: secret },
       },
     },

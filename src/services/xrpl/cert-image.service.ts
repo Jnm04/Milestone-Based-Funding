@@ -41,7 +41,10 @@ export function generateCertificateSVG(params: CertImageParams): string {
     day: "numeric",
   });
 
-  const amount = `$${Number(params.amountUSD).toLocaleString("en-US", { minimumFractionDigits: 0 })}`;
+  const isVerificationOnly = Number(params.amountUSD) === 0;
+  const amount = isVerificationOnly
+    ? "AI VERIFIED"
+    : `$${Number(params.amountUSD).toLocaleString("en-US", { minimumFractionDigits: 0 })}`;
   const titleLines = wrapText(params.milestoneTitle, 42);
   const shortId = params.contractId.slice(0, 10) + "…" + params.contractId.slice(-8);
 
@@ -119,8 +122,8 @@ export function generateCertificateSVG(params: CertImageParams): string {
   ${titleLines[1] ? `<text x="400" y="${titleY2}" font-family="Georgia, 'Times New Roman', serif" font-size="24" font-weight="400" fill="#EDE6DD" text-anchor="middle">${escapeXml(titleLines[1])}</text>` : ""}
 
   <!-- Amount -->
-  <text x="400" y="290" font-family="Georgia, 'Times New Roman', serif" font-size="64" font-weight="300" fill="#C4704B" text-anchor="middle">${escapeXml(amount)}</text>
-  <text x="400" y="316" font-family="Arial, Helvetica, sans-serif" font-size="13" letter-spacing="0.18em" fill="#8A7D72" text-anchor="middle">RLUSD</text>
+  <text x="400" y="290" font-family="Georgia, 'Times New Roman', serif" font-size="${isVerificationOnly ? 42 : 64}" font-weight="300" fill="#C4704B" text-anchor="middle">${escapeXml(amount)}</text>
+  ${isVerificationOnly ? "" : `<text x="400" y="316" font-family="Arial, Helvetica, sans-serif" font-size="13" letter-spacing="0.18em" fill="#8A7D72" text-anchor="middle">RLUSD</text>`}
 
   <!-- Divider 2 -->
   <rect x="40" y="340" width="720" height="1" fill="url(#div)"/>

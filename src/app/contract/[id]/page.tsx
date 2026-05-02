@@ -365,14 +365,14 @@ export default async function ContractPage({ params, searchParams }: ContractPag
             className="p-4 rounded-2xl flex flex-col gap-1.5"
             style={{ background: "hsl(24 12% 6% / 0.5)", border: "1px solid hsl(22 55% 54% / 0.12)" }}
           >
-            <span className="text-xs uppercase tracking-widest font-medium" style={{ color: "hsl(30 10% 62%)" }}>Grant Giver</span>
+            <span className="text-xs uppercase tracking-widest font-medium" style={{ color: "hsl(30 10% 62%)" }}>Requester</span>
             <code className="text-xs font-mono break-all" style={{ color: "hsl(32 35% 92%)" }}>{contract.investor.walletAddress}</code>
           </div>
           <div
             className="p-4 rounded-2xl flex flex-col gap-1.5"
             style={{ background: "hsl(24 12% 6% / 0.5)", border: "1px solid hsl(22 55% 54% / 0.12)" }}
           >
-            <span className="text-xs uppercase tracking-widest font-medium" style={{ color: "hsl(30 10% 62%)" }}>Receiver</span>
+            <span className="text-xs uppercase tracking-widest font-medium" style={{ color: "hsl(30 10% 62%)" }}>Builder</span>
             {contract.startup ? (
               <code className="text-xs font-mono break-all" style={{ color: "hsl(32 35% 92%)" }}>{contract.startup.walletAddress}</code>
             ) : (

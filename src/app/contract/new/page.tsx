@@ -60,7 +60,7 @@ function NewContractContent() {
           New Contract
         </h1>
         <p className="text-sm mt-1" style={{ color: "hsl(30 10% 62%)" }}>
-          Define the milestone criteria and lock RLUSD in escrow for the Receiver.
+          Define the milestone criteria and lock RLUSD in escrow for the Builder.
         </p>
       </div>
 
@@ -85,7 +85,7 @@ function NewContractContent() {
           </svg>
         </div>
         <div className="flex flex-col min-w-0">
-          <span className="text-xs uppercase tracking-widest" style={{ color: "hsl(30 10% 62%)" }}>Grant Giver Wallet</span>
+          <span className="text-xs uppercase tracking-widest" style={{ color: "hsl(30 10% 62%)" }}>Requester Wallet</span>
           <code className="text-xs font-mono mt-0.5 truncate" style={{ color: "hsl(32 35% 92%)" }}>{investorAddress}</code>
         </div>
       </div>
@@ -132,7 +132,7 @@ export default function NewContractPage() {
                 color: "hsl(22 55% 54%)",
               }}
             >
-              Grant Giver
+              Requester
             </span>
           </div>
         </div>
