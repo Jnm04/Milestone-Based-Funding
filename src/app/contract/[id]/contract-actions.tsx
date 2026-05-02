@@ -57,6 +57,7 @@ interface ContractActionsProps {
   // ── Enterprise Attestation Mode ───────────────────────────────────────────
   /** "ESCROW" | "ATTESTATION" */
   contractMode: string;
+  isVerificationOnly?: boolean;
   dataSourceType: string | null;
   dataSourceUrl: string | null;
   dataSourceApiKeyHint: string | null;
@@ -285,6 +286,7 @@ export function ContractActions({
   extensionDays,
   isDemo,
   contractMode,
+  isVerificationOnly = false,
   dataSourceType,
   dataSourceUrl,
   dataSourceApiKeyHint,
@@ -1623,7 +1625,7 @@ export function ContractActions({
     }
 
     // Verification-only contract (no escrow) — just show confirmed badge
-    if (!amountRLUSD || Number(amountRLUSD) === 0) {
+    if (isVerificationOnly || !amountRLUSD || Number(amountRLUSD) === 0) {
       return (
         <div className="flex flex-col gap-3 p-5 rounded-xl" style={{ background: "rgba(74,222,128,0.07)", border: "1px solid rgba(74,222,128,0.2)" }}>
           <div className="flex items-center gap-2">

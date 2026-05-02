@@ -431,8 +431,8 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           isVerificationOnly={Number(contract.amountUSD) <= contract.milestones.length}
         />
 
-        {/* AI Credibility Score — authenticated investor, or demo viewer */}
-        {canViewCredibility && contract.startup && (
+        {/* AI Credibility Score — escrow contracts only, not verification-only */}
+        {canViewCredibility && contract.startup && Number(contract.amountUSD) > contract.milestones.length && (
           <CredibilityPanel
             contractId={contract.id}
             startupName={contract.startup.name ?? contract.startup.companyName ?? null}
@@ -500,6 +500,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           interimAiPositive={activeMilestone?.interimAiPositive ?? null}
           extensionDays={activeMilestone?.extensionDays ?? null}
           contractMode={contract.mode}
+          isVerificationOnly={Number(contract.amountUSD) <= contract.milestones.length}
           dataSourceType={activeMilestone?.dataSourceType ?? null}
           dataSourceUrl={activeMilestone?.dataSourceUrl ?? null}
           dataSourceApiKeyHint={activeMilestone?.dataSourceApiKeyHint ?? null}
