@@ -7,7 +7,6 @@ import Link from "next/link";
 import posthog from "posthog-js";
 import { toast } from "sonner";
 import { Logo } from "@/components/logo";
-import { NodeBackground } from "@/components/node-background";
 import { Turnstile } from "@marsidev/react-turnstile";
 import type { TurnstileInstance } from "@marsidev/react-turnstile";
 
@@ -58,10 +57,10 @@ function RoleCard({
       >
         {icon}
       </div>
-      <p className="text-sm font-semibold" style={{ color: active ? "#EDE6DD" : "#A89B8C" }}>{title}</p>
-      <p className="text-xs leading-snug" style={{ color: "#A89B8C" }}>{desc}</p>
+      <p className="text-sm font-semibold" style={{ color: active ? "hsl(32 35% 92%)" : "hsl(30 10% 62%)" }}>{title}</p>
+      <p className="text-xs leading-snug" style={{ color: "hsl(30 10% 62%)" }}>{desc}</p>
       {active && (
-        <div className="absolute top-3 right-3 w-4 h-4 rounded-full flex items-center justify-center" style={{ background: "#C4704B" }}>
+        <div className="absolute top-3 right-3 w-4 h-4 rounded-full flex items-center justify-center" style={{ background: "hsl(22 55% 54%)" }}>
           <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="20 6 9 17 4 12" />
           </svg>
@@ -175,16 +174,16 @@ function RegisterForm() {
           <div className="flex flex-col gap-2">
             <h1
               className="text-2xl"
-              style={{ fontFamily: "var(--font-libre-franklin)", fontWeight: 300, color: "#EDE6DD" }}
+              style={{ fontFamily: "var(--font-inter-tight)", fontWeight: 300, color: "hsl(32 35% 92%)" }}
             >
               Check your email
             </h1>
-            <p className="text-sm leading-relaxed" style={{ color: "#A89B8C" }}>
+            <p className="text-sm leading-relaxed" style={{ color: "hsl(30 10% 62%)" }}>
               We sent a verification link to{" "}
-              <span style={{ color: "#EDE6DD" }}>{email}</span>.
+              <span style={{ color: "hsl(32 35% 92%)" }}>{email}</span>.
               Click it to activate your account.
             </p>
-            <p className="text-xs" style={{ color: "#A89B8C" }}>
+            <p className="text-xs" style={{ color: "hsl(30 10% 62%)" }}>
               The link expires in 24 hours. Check your spam folder if you don&apos;t see it.
             </p>
           </div>
@@ -198,7 +197,7 @@ function RegisterForm() {
             {resending ? "Sending…" : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend verification email"}
           </button>
 
-          <Link href="/login" className="text-sm" style={{ color: "#C4704B" }}>
+          <Link href="/login" className="text-sm" style={{ color: "hsl(22 55% 54%)" }}>
             Back to sign in
           </Link>
         </div>
@@ -212,7 +211,6 @@ function RegisterForm() {
       className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden"
       style={{ background: "hsl(24 14% 4%)" }}
     >
-      <NodeBackground />
       <div
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full pointer-events-none"
         style={{ background: "radial-gradient(ellipse, rgba(196,112,75,0.05) 0%, transparent 70%)" }}
@@ -230,11 +228,11 @@ function RegisterForm() {
           <div className="flex flex-col gap-1">
             <h1
               className="text-2xl"
-              style={{ fontFamily: "var(--font-libre-franklin)", fontWeight: 300, color: "#EDE6DD" }}
+              style={{ fontFamily: "var(--font-inter-tight)", fontWeight: 300, color: "hsl(32 35% 92%)" }}
             >
               Create your account
             </h1>
-            <p className="text-sm" style={{ color: "#A89B8C" }}>Choose your role to get started</p>
+            <p className="text-sm" style={{ color: "hsl(30 10% 62%)" }}>Choose your role to get started</p>
           </div>
 
           {/* Role selection */}
@@ -247,7 +245,7 @@ function RegisterForm() {
                 title="Grant Giver"
                 desc="I fund projects and lock RLUSD in escrow."
                 icon={
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={role === "INVESTOR" ? "#C4704B" : "#A89B8C"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={role === "INVESTOR" ? "hsl(22 55% 54%)" : "hsl(30 10% 62%)"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
                   </svg>
                 }
@@ -258,7 +256,7 @@ function RegisterForm() {
                 title="Receiver"
                 desc="I deliver milestones and receive funds."
                 icon={
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={role === "STARTUP" ? "#C4704B" : "#A89B8C"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={role === "STARTUP" ? "hsl(22 55% 54%)" : "hsl(30 10% 62%)"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2.22L6.61 2a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17" />
                   </svg>
                 }
@@ -280,7 +278,7 @@ function RegisterForm() {
 
             <div className="flex flex-col gap-1.5">
               <label className="cs-label">
-                Date of birth <span style={{ color: "#A89B8C", fontWeight: 400 }}>(optional — improves sanctions screening accuracy)</span>
+                Date of birth <span style={{ color: "hsl(30 10% 62%)", fontWeight: 400 }}>(optional — improves sanctions screening accuracy)</span>
               </label>
               <input
                 type="date"
@@ -373,7 +371,7 @@ function RegisterForm() {
           {/* Divider */}
           <div className="flex items-center gap-4">
             <div className="flex-1 h-px" style={{ background: "rgba(196,112,75,0.15)" }} />
-            <span className="text-xs" style={{ color: "#A89B8C" }}>or</span>
+            <span className="text-xs" style={{ color: "hsl(30 10% 62%)" }}>or</span>
             <div className="flex-1 h-px" style={{ background: "rgba(196,112,75,0.15)" }} />
           </div>
 
@@ -418,12 +416,12 @@ function RegisterForm() {
 
           </div>
 
-          <p className="text-sm text-center" style={{ color: "#A89B8C" }}>
+          <p className="text-sm text-center" style={{ color: "hsl(30 10% 62%)" }}>
             Already have an account?{" "}
             <Link
               href={callbackUrl ? `/login?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/login"}
               className="font-medium hover:underline"
-              style={{ color: "#C4704B" }}
+              style={{ color: "hsl(22 55% 54%)" }}
             >
               Sign in
             </Link>

@@ -3,7 +3,6 @@ export const dynamic = "force-dynamic";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { NodeBackground } from "@/components/node-background";
 
 export const metadata: Metadata = {
   title: "Platform Stats | cascrow",
@@ -128,8 +127,7 @@ export default async function StatsPage() {
   ];
 
   return (
-    <main className="min-h-screen" style={{ background: "#171311", color: "#EDE6DD" }}>
-      <NodeBackground />
+    <main className="min-h-screen" style={{ background: "hsl(24 14% 4%)", color: "hsl(32 35% 92%)" }}>
 
       {/* Nav */}
       <nav
@@ -143,16 +141,16 @@ export default async function StatsPage() {
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <div style={{ width: 20, height: 3, borderRadius: 2, background: "#C4704B" }} />
-              <div style={{ width: 20, height: 3, borderRadius: 2, background: "#C4704B", opacity: 0.55, marginLeft: 4 }} />
-              <div style={{ width: 20, height: 3, borderRadius: 2, background: "#C4704B", opacity: 0.22, marginLeft: 8 }} />
+              <div style={{ width: 20, height: 3, borderRadius: 2, background: "hsl(22 55% 54%)" }} />
+              <div style={{ width: 20, height: 3, borderRadius: 2, background: "hsl(22 55% 54%)", opacity: 0.55, marginLeft: 4 }} />
+              <div style={{ width: 20, height: 3, borderRadius: 2, background: "hsl(22 55% 54%)", opacity: 0.22, marginLeft: 8 }} />
             </div>
             <span
               style={{
-                fontFamily: "var(--font-libre-franklin), sans-serif",
+                fontFamily: "var(--font-inter-tight), sans-serif",
                 fontWeight: 300,
                 fontSize: 16,
-                color: "#EDE6DD",
+                color: "hsl(32 35% 92%)",
                 letterSpacing: "4px",
               }}
             >
@@ -164,7 +162,7 @@ export default async function StatsPage() {
             style={{
               background: "rgba(196,112,75,0.1)",
               border: "1px solid rgba(196,112,75,0.25)",
-              color: "#C4704B",
+              color: "hsl(22 55% 54%)",
             }}
           >
             Stats
@@ -178,22 +176,22 @@ export default async function StatsPage() {
           <Link
             href="/"
             className="text-xs uppercase tracking-widest font-medium"
-            style={{ color: "#C4704B" }}
+            style={{ color: "hsl(22 55% 54%)" }}
           >
             ← Home
           </Link>
           <h1
             className="mt-2 tracking-tight"
             style={{
-              fontFamily: "var(--font-libre-franklin), sans-serif",
+              fontFamily: "var(--font-inter-tight), sans-serif",
               fontWeight: 300,
               fontSize: "clamp(28px, 5vw, 40px)",
-              color: "#EDE6DD",
+              color: "hsl(32 35% 92%)",
             }}
           >
             Platform Transparency
           </h1>
-          <p className="text-sm" style={{ color: "#A89B8C" }}>
+          <p className="text-sm" style={{ color: "hsl(30 10% 62%)" }}>
             Live stats from the cascrow platform — updated on every page load.
           </p>
         </div>
@@ -216,16 +214,16 @@ export default async function StatsPage() {
             >
               <span
                 className="text-xs uppercase tracking-widest font-medium"
-                style={{ color: s.accent ? "#C4704B" : "#A89B8C" }}
+                style={{ color: s.accent ? "hsl(22 55% 54%)" : "hsl(30 10% 62%)" }}
               >
                 {s.label}
               </span>
               <span
                 style={{
-                  fontFamily: "var(--font-libre-franklin), sans-serif",
+                  fontFamily: "var(--font-inter-tight), sans-serif",
                   fontWeight: 300,
                   fontSize: "clamp(28px, 5vw, 36px)",
-                  color: "#EDE6DD",
+                  color: "hsl(32 35% 92%)",
                   lineHeight: 1.1,
                 }}
               >

@@ -4,7 +4,6 @@ import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { NodeBackground } from "@/components/node-background";
 
 function EyeIcon({ open }: { open: boolean }) {
   return open ? (
@@ -35,7 +34,7 @@ function ResetPasswordForm() {
     return (
       <div className="flex flex-col gap-4 text-center">
         <p className="text-sm" style={{ color: "#ef4444" }}>Invalid reset link — no token found.</p>
-        <Link href="/forgot-password" style={{ color: "#C4704B" }} className="text-sm hover:underline">
+        <Link href="/forgot-password" style={{ color: "hsl(22 55% 54%)" }} className="text-sm hover:underline">
           Request a new one →
         </Link>
       </div>
@@ -78,11 +77,11 @@ function ResetPasswordForm() {
         <div style={{ fontSize: 32 }}>✓</div>
         <h1
           className="text-xl"
-          style={{ fontFamily: "var(--font-libre-franklin)", fontWeight: 300, color: "#EDE6DD" }}
+          style={{ fontFamily: "var(--font-inter-tight)", fontWeight: 300, color: "hsl(32 35% 92%)" }}
         >
           Password updated!
         </h1>
-        <p className="text-sm" style={{ color: "#A89B8C" }}>Redirecting to sign in…</p>
+        <p className="text-sm" style={{ color: "hsl(30 10% 62%)" }}>Redirecting to sign in…</p>
       </div>
     );
   }
@@ -92,11 +91,11 @@ function ResetPasswordForm() {
       <div>
         <h1
           className="text-2xl mb-1"
-          style={{ fontFamily: "var(--font-libre-franklin)", fontWeight: 300, color: "#EDE6DD" }}
+          style={{ fontFamily: "var(--font-inter-tight)", fontWeight: 300, color: "hsl(32 35% 92%)" }}
         >
           Set new password
         </h1>
-        <p className="text-sm" style={{ color: "#A89B8C" }}>
+        <p className="text-sm" style={{ color: "hsl(30 10% 62%)" }}>
           Choose a new password for your account.
         </p>
       </div>
@@ -120,7 +119,7 @@ function ResetPasswordForm() {
               type="button"
               onClick={() => setShowPw(!showPw)}
               className="absolute right-3 top-1/2 -translate-y-1/2"
-              style={{ color: "#A89B8C" }}
+              style={{ color: "hsl(30 10% 62%)" }}
               tabIndex={-1}
             >
               <EyeIcon open={showPw} />
@@ -162,7 +161,6 @@ export default function ResetPasswordPage() {
       className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
       style={{ background: "hsl(24 14% 4%)" }}
     >
-      <NodeBackground />
       <div className="relative z-10 w-full max-w-md flex flex-col gap-8">
         <div className="flex flex-col items-center gap-2">
           <Logo variant="full" />

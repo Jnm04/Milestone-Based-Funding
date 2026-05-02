@@ -13,7 +13,6 @@ import type { ProofGuidanceData } from "@/components/proof-guidance";
 import { CredibilityPanel, type CredibilityScoreData } from "@/components/credibility-panel";
 import { MilestoneTimeline } from "./milestone-timeline";
 import { ContractPoller } from "./contract-poller";
-import { NodeBackground } from "@/components/node-background";
 import { NftSection } from "@/components/nft-section";
 import { IS_MAINNET } from "@/lib/config";
 import { CalendarButton } from "@/components/calendar-button";
@@ -138,8 +137,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
     : -1;
 
   return (
-    <main className="min-h-screen" style={{ background: "#171311", color: "#EDE6DD" }}>
-      <NodeBackground />
+    <main className="min-h-screen" style={{ background: "hsl(24 14% 4%)", color: "hsl(32 35% 92%)" }}>
       <ContractPoller
         contractId={contract.id}
         currentStatus={contract.status}
@@ -162,15 +160,15 @@ export default async function ContractPage({ params, searchParams }: ContractPag
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <div style={{ width: 20, height: 3, borderRadius: 2, background: "#C4704B" }} />
-              <div style={{ width: 20, height: 3, borderRadius: 2, background: "#C4704B", opacity: 0.55, marginLeft: 4 }} />
-              <div style={{ width: 20, height: 3, borderRadius: 2, background: "#C4704B", opacity: 0.22, marginLeft: 8 }} />
+              <div style={{ width: 20, height: 3, borderRadius: 2, background: "hsl(22 55% 54%)" }} />
+              <div style={{ width: 20, height: 3, borderRadius: 2, background: "hsl(22 55% 54%)", opacity: 0.55, marginLeft: 4 }} />
+              <div style={{ width: 20, height: 3, borderRadius: 2, background: "hsl(22 55% 54%)", opacity: 0.22, marginLeft: 8 }} />
             </div>
-            <span style={{ fontFamily: "var(--font-libre-franklin), sans-serif", fontWeight: 300, fontSize: 16, color: "#EDE6DD", letterSpacing: "4px" }}>cascrow</span>
+            <span style={{ fontFamily: "var(--font-inter-tight), sans-serif", fontWeight: 300, fontSize: 16, color: "hsl(32 35% 92%)", letterSpacing: "4px" }}>cascrow</span>
           </Link>
           <span
             className="px-3 py-1 rounded-full text-xs font-medium uppercase tracking-widest"
-            style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.25)", color: "#C4704B" }}
+            style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.25)", color: "hsl(22 55% 54%)" }}
           >
             Contract
           </span>
@@ -180,11 +178,11 @@ export default async function ContractPage({ params, searchParams }: ContractPag
       {IS_EVM_TESTNET && (
         <div
           className="w-full flex items-center justify-center gap-2 py-2 px-4 text-xs font-medium"
-          style={{ background: "rgba(196,112,75,0.12)", borderBottom: "1px solid rgba(196,112,75,0.2)", color: "#C4704B" }}
+          style={{ background: "rgba(196,112,75,0.12)", borderBottom: "1px solid rgba(196,112,75,0.2)", color: "hsl(22 55% 54%)" }}
         >
           <span
             className="inline-block w-1.5 h-1.5 rounded-full animate-pulse"
-            style={{ background: "#C4704B" }}
+            style={{ background: "hsl(22 55% 54%)" }}
           />
           XRPL EVM Testnet — funds use test RLUSD only, not real money
         </div>
@@ -196,18 +194,18 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           <Link
             href={dashboardHref}
             className="text-xs uppercase tracking-widest font-medium"
-            style={{ color: "#C4704B" }}
+            style={{ color: "hsl(22 55% 54%)" }}
           >
             ← Dashboard
           </Link>
           <h1
             className="mt-2 tracking-tight"
-            style={{ fontFamily: "var(--font-libre-franklin), sans-serif", fontWeight: 300, fontSize: "clamp(24px, 4vw, 32px)", color: "#EDE6DD" }}
+            style={{ fontFamily: "var(--font-inter-tight), sans-serif", fontWeight: 300, fontSize: "clamp(24px, 4vw, 32px)", color: "hsl(32 35% 92%)" }}
           >
             Contract
           </h1>
           <span className="flex items-center gap-1.5">
-            <code className="text-xs font-mono" style={{ color: "#A89B8C" }}>{contract.id}</code>
+            <code className="text-xs font-mono" style={{ color: "hsl(30 10% 62%)" }}>{contract.id}</code>
             <CopyButton text={contract.id} />
           </span>
         </div>
@@ -222,11 +220,11 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           }}
         >
           <div className="flex items-start justify-between gap-3">
-            <span className="text-xs uppercase tracking-widest font-medium" style={{ color: "#C4704B" }}>Project</span>
+            <span className="text-xs uppercase tracking-widest font-medium" style={{ color: "hsl(22 55% 54%)" }}>Project</span>
             <CalendarButton contractId={contract.id} />
           </div>
-          <p className="text-sm leading-relaxed" style={{ color: "#EDE6DD" }}>{contract.milestone}</p>
-          <div className="flex items-center gap-4 pt-1 text-sm" style={{ color: "#A89B8C" }}>
+          <p className="text-sm leading-relaxed" style={{ color: "hsl(32 35% 92%)" }}>{contract.milestone}</p>
+          <div className="flex items-center gap-4 pt-1 text-sm" style={{ color: "hsl(30 10% 62%)" }}>
             <span>
               Total:{" "}
               <strong style={{ color: "#D4B896" }}>
@@ -279,10 +277,10 @@ export default async function ContractPage({ params, searchParams }: ContractPag
               >
                 AI
               </span>
-              <span style={{ fontSize: "13px", fontWeight: 500, color: "#EDE6DD", flex: 1 }}>
+              <span style={{ fontSize: "13px", fontWeight: 500, color: "hsl(32 35% 92%)", flex: 1 }}>
                 Contract Risk Review
               </span>
-              <span style={{ fontSize: "12px", color: "#A89B8C" }}>
+              <span style={{ fontSize: "12px", color: "hsl(30 10% 62%)" }}>
                 {(contract.riskFlags as Array<{ severity: string }>).filter((f) => f.severity === "WARNING").length > 0
                   ? `${(contract.riskFlags as Array<{ severity: string }>).filter((f) => f.severity === "WARNING").length} warning${(contract.riskFlags as Array<{ severity: string }>).filter((f) => f.severity === "WARNING").length !== 1 ? "s" : ""}`
                   : "advisory notes"}
@@ -307,7 +305,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
                   <span style={{ flexShrink: 0, marginTop: "1px", fontSize: "13px" }}>
                     {flag.severity === "WARNING" ? "⚠" : "ℹ"}
                   </span>
-                  <span style={{ fontSize: "13px", color: "#EDE6DD", lineHeight: 1.5 }}>{flag.text}</span>
+                  <span style={{ fontSize: "13px", color: "hsl(32 35% 92%)", lineHeight: 1.5 }}>{flag.text}</span>
                 </div>
               ))}
             </div>
@@ -362,18 +360,18 @@ export default async function ContractPage({ params, searchParams }: ContractPag
             className="p-4 rounded-2xl flex flex-col gap-1.5"
             style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.12)" }}
           >
-            <span className="text-xs uppercase tracking-widest font-medium" style={{ color: "#A89B8C" }}>Grant Giver</span>
-            <code className="text-xs font-mono break-all" style={{ color: "#EDE6DD" }}>{contract.investor.walletAddress}</code>
+            <span className="text-xs uppercase tracking-widest font-medium" style={{ color: "hsl(30 10% 62%)" }}>Grant Giver</span>
+            <code className="text-xs font-mono break-all" style={{ color: "hsl(32 35% 92%)" }}>{contract.investor.walletAddress}</code>
           </div>
           <div
             className="p-4 rounded-2xl flex flex-col gap-1.5"
             style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(196,112,75,0.12)" }}
           >
-            <span className="text-xs uppercase tracking-widest font-medium" style={{ color: "#A89B8C" }}>Receiver</span>
+            <span className="text-xs uppercase tracking-widest font-medium" style={{ color: "hsl(30 10% 62%)" }}>Receiver</span>
             {contract.startup ? (
-              <code className="text-xs font-mono break-all" style={{ color: "#EDE6DD" }}>{contract.startup.walletAddress}</code>
+              <code className="text-xs font-mono break-all" style={{ color: "hsl(32 35% 92%)" }}>{contract.startup.walletAddress}</code>
             ) : (
-              <span className="text-xs italic" style={{ color: "#A89B8C" }}>Awaiting acceptance</span>
+              <span className="text-xs italic" style={{ color: "hsl(30 10% 62%)" }}>Awaiting acceptance</span>
             )}
           </div>
         </div>
@@ -409,7 +407,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
               <span className="text-sm font-medium" style={{ color: "#D4B896" }}>Share with receiver</span>
               <CopyButton text={inviteUrl} />
             </div>
-            <code className="text-xs font-mono break-all" style={{ color: "#A89B8C" }}>{inviteUrl}</code>
+            <code className="text-xs font-mono break-all" style={{ color: "hsl(30 10% 62%)" }}>{inviteUrl}</code>
           </div>
         )}
 

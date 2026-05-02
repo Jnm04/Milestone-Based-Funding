@@ -4,7 +4,6 @@ import { useState, useRef } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Logo } from "@/components/logo";
-import { NodeBackground } from "@/components/node-background";
 import { Turnstile } from "@marsidev/react-turnstile";
 import type { TurnstileInstance } from "@marsidev/react-turnstile";
 
@@ -45,7 +44,6 @@ export default function ForgotPasswordPage() {
       className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
       style={{ background: "hsl(24 14% 4%)" }}
     >
-      <NodeBackground />
       <div className="relative z-10 w-full max-w-md flex flex-col gap-8">
         <div className="flex flex-col items-center gap-2">
           <Logo variant="full" />
@@ -60,14 +58,14 @@ export default function ForgotPasswordPage() {
               <div style={{ fontSize: 32 }}>✉️</div>
               <h1
                 className="text-2xl"
-                style={{ fontFamily: "var(--font-libre-franklin)", fontWeight: 300, color: "#EDE6DD" }}
+                style={{ fontFamily: "var(--font-inter-tight)", fontWeight: 300, color: "hsl(32 35% 92%)" }}
               >
                 Check your inbox
               </h1>
-              <p className="text-sm" style={{ color: "#A89B8C", lineHeight: 1.7 }}>
-                If an account with <strong style={{ color: "#EDE6DD" }}>{email}</strong> exists, we&apos;ve sent a reset link. It expires in 1 hour.
+              <p className="text-sm" style={{ color: "hsl(30 10% 62%)", lineHeight: 1.7 }}>
+                If an account with <strong style={{ color: "hsl(32 35% 92%)" }}>{email}</strong> exists, we&apos;ve sent a reset link. It expires in 1 hour.
               </p>
-              <Link href="/login" className="text-sm hover:underline" style={{ color: "#C4704B" }}>
+              <Link href="/login" className="text-sm hover:underline" style={{ color: "hsl(22 55% 54%)" }}>
                 Back to sign in →
               </Link>
             </>
@@ -76,11 +74,11 @@ export default function ForgotPasswordPage() {
               <div>
                 <h1
                   className="text-2xl mb-1"
-                  style={{ fontFamily: "var(--font-libre-franklin)", fontWeight: 300, color: "#EDE6DD" }}
+                  style={{ fontFamily: "var(--font-inter-tight)", fontWeight: 300, color: "hsl(32 35% 92%)" }}
                 >
                   Forgot password?
                 </h1>
-                <p className="text-sm" style={{ color: "#A89B8C" }}>
+                <p className="text-sm" style={{ color: "hsl(30 10% 62%)" }}>
                   Enter your email and we&apos;ll send you a reset link.
                 </p>
               </div>
@@ -114,7 +112,7 @@ export default function ForgotPasswordPage() {
                 </button>
               </form>
 
-              <Link href="/login" className="text-sm hover:underline" style={{ color: "#A89B8C" }}>
+              <Link href="/login" className="text-sm hover:underline" style={{ color: "hsl(30 10% 62%)" }}>
                 Back to sign in
               </Link>
             </>

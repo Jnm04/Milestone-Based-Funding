@@ -7,7 +7,6 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { BuyRlusdModal } from "@/components/buy-rlusd-modal";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
-import { NodeBackground } from "@/components/node-background";
 import { CopyButton } from "@/components/copy-button";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -529,7 +528,6 @@ export default function InvestorDashboard() {
 
   return (
     <div className="flex min-h-screen" style={{ background: "hsl(24 14% 4%)" }}>
-      <NodeBackground />
       <DashboardSidebar role="investor" />
       {showReportModal && <TransparencyReportModal onClose={() => setShowReportModal(false)} />}
 

@@ -5,7 +5,6 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
-import { NodeBackground } from "@/components/node-background";
 
 interface Notification {
   id: string;
@@ -91,8 +90,7 @@ export default function NotificationsPage() {
   if (status === "loading") return null;
 
   return (
-    <div className="min-h-screen flex" style={{ background: "#171311", color: "#EDE6DD" }}>
-      <NodeBackground />
+    <div className="min-h-screen flex" style={{ background: "hsl(24 14% 4%)", color: "hsl(32 35% 92%)" }}>
       <DashboardSidebar role={role === "INVESTOR" ? "investor" : "startup"} />
 
       <main className="flex-1 min-w-0">
@@ -101,10 +99,10 @@ export default function NotificationsPage() {
           className="sticky top-0 z-30 px-6 py-4 flex items-center justify-between border-b"
           style={{ background: "rgba(23,19,17,0.92)", backdropFilter: "blur(20px)", borderBottomColor: "rgba(196,112,75,0.12)" }}
         >
-          <div className="flex items-center gap-2 text-sm" style={{ color: "#A89B8C" }}>
+          <div className="flex items-center gap-2 text-sm" style={{ color: "hsl(30 10% 62%)" }}>
             <Link href={dashboardHref} className="transition-colors hover:text-[#EDE6DD]">Dashboard</Link>
             <span>/</span>
-            <span style={{ color: "#EDE6DD" }}>Notifications</span>
+            <span style={{ color: "hsl(32 35% 92%)" }}>Notifications</span>
           </div>
         </div>
 
@@ -113,9 +111,9 @@ export default function NotificationsPage() {
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-light mb-1" style={{ color: "#EDE6DD" }}>Notifications</h1>
+              <h1 className="text-2xl font-light mb-1" style={{ color: "hsl(32 35% 92%)" }}>Notifications</h1>
               {unread > 0 && (
-                <p className="text-sm" style={{ color: "#A89B8C" }}>{unread} unread</p>
+                <p className="text-sm" style={{ color: "hsl(30 10% 62%)" }}>{unread} unread</p>
               )}
             </div>
             {unread > 0 && (
@@ -123,7 +121,7 @@ export default function NotificationsPage() {
                 onClick={markAllRead}
                 disabled={markingAll}
                 className="text-sm px-4 py-2 rounded-lg transition-colors"
-                style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.2)", color: "#C4704B", cursor: markingAll ? "not-allowed" : "pointer" }}
+                style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.2)", color: "hsl(22 55% 54%)", cursor: markingAll ? "not-allowed" : "pointer" }}
               >
                 {markingAll ? "Marking…" : "Mark all read"}
               </button>
@@ -138,7 +136,7 @@ export default function NotificationsPage() {
                 onClick={() => handleFilterChange(f)}
                 className="px-4 py-2 text-sm font-medium capitalize transition-colors"
                 style={{
-                  color: filter === f ? "#EDE6DD" : "#A89B8C",
+                  color: filter === f ? "hsl(32 35% 92%)" : "hsl(30 10% 62%)",
                   background: "none",
                   border: "none",
                   borderBottom: filter === f ? "2px solid #C4704B" : "2px solid transparent",
@@ -168,15 +166,15 @@ export default function NotificationsPage() {
             ) : notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4" style={{ background: "rgba(196,112,75,0.1)" }}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C4704B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="hsl(22 55% 54%)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                     <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                   </svg>
                 </div>
-                <p className="text-sm font-medium mb-1" style={{ color: "#EDE6DD" }}>
+                <p className="text-sm font-medium mb-1" style={{ color: "hsl(32 35% 92%)" }}>
                   {filter === "unread" ? "No unread notifications" : "No notifications yet"}
                 </p>
-                <p className="text-xs" style={{ color: "#A89B8C" }}>
+                <p className="text-xs" style={{ color: "hsl(30 10% 62%)" }}>
                   {filter === "unread" ? "You're all caught up." : "Activity on your contracts will appear here."}
                 </p>
               </div>
@@ -196,10 +194,10 @@ export default function NotificationsPage() {
                     onMouseOver={e => { if (!n.read) (e.currentTarget as HTMLDivElement).style.background = "rgba(196,112,75,0.08)"; }}
                     onMouseOut={e => { (e.currentTarget as HTMLDivElement).style.background = n.read ? "transparent" : "rgba(196,112,75,0.04)"; }}
                   >
-                    <div className="mt-1.5 shrink-0" style={{ width: 7, height: 7, borderRadius: "50%", background: n.read ? "transparent" : "#C4704B" }} />
+                    <div className="mt-1.5 shrink-0" style={{ width: 7, height: 7, borderRadius: "50%", background: n.read ? "transparent" : "hsl(22 55% 54%)" }} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold mb-0.5" style={{ color: "#EDE6DD" }}>{n.title}</p>
-                      <p className="text-xs leading-relaxed mb-1" style={{ color: "#A89B8C" }}>{n.body}</p>
+                      <p className="text-sm font-semibold mb-0.5" style={{ color: "hsl(32 35% 92%)" }}>{n.title}</p>
+                      <p className="text-xs leading-relaxed mb-1" style={{ color: "hsl(30 10% 62%)" }}>{n.body}</p>
                       <p className="text-xs" style={{ color: "#6B5E54" }}>{timeAgo(n.createdAt)}</p>
                     </div>
                   </div>
@@ -216,7 +214,7 @@ export default function NotificationsPage() {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-4 pt-4" style={{ borderTop: "1px solid rgba(196,112,75,0.1)" }}>
-              <span className="text-xs" style={{ color: "#A89B8C" }}>
+              <span className="text-xs" style={{ color: "hsl(30 10% 62%)" }}>
                 Page {page} of {totalPages} · {total} total
               </span>
               <div className="flex gap-2">
@@ -224,7 +222,7 @@ export default function NotificationsPage() {
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
                   className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(196,112,75,0.12)", color: page === 1 ? "#6B5E54" : "#A89B8C", cursor: page === 1 ? "not-allowed" : "pointer" }}
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(196,112,75,0.12)", color: page === 1 ? "#6B5E54" : "hsl(30 10% 62%)", cursor: page === 1 ? "not-allowed" : "pointer" }}
                 >
                   Previous
                 </button>
@@ -232,7 +230,7 @@ export default function NotificationsPage() {
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(196,112,75,0.12)", color: page === totalPages ? "#6B5E54" : "#A89B8C", cursor: page === totalPages ? "not-allowed" : "pointer" }}
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(196,112,75,0.12)", color: page === totalPages ? "#6B5E54" : "hsl(30 10% 62%)", cursor: page === totalPages ? "not-allowed" : "pointer" }}
                 >
                   Next
                 </button>

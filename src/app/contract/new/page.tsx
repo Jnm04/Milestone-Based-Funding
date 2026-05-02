@@ -5,23 +5,22 @@ import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { ContractForm } from "@/components/contract-form";
-import { NodeBackground } from "@/components/node-background";
 
 /* ── Inline logo mark ───────────────────────────────────────── */
 function LogoMark() {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        <div style={{ width: 20, height: 3, borderRadius: 2, background: "#C4704B" }} />
-        <div style={{ width: 20, height: 3, borderRadius: 2, background: "#C4704B", opacity: 0.55, marginLeft: 4 }} />
-        <div style={{ width: 20, height: 3, borderRadius: 2, background: "#C4704B", opacity: 0.22, marginLeft: 8 }} />
+        <div style={{ width: 20, height: 3, borderRadius: 2, background: "hsl(22 55% 54%)" }} />
+        <div style={{ width: 20, height: 3, borderRadius: 2, background: "hsl(22 55% 54%)", opacity: 0.55, marginLeft: 4 }} />
+        <div style={{ width: 20, height: 3, borderRadius: 2, background: "hsl(22 55% 54%)", opacity: 0.22, marginLeft: 8 }} />
       </div>
       <span
         style={{
-          fontFamily: "var(--font-libre-franklin), sans-serif",
+          fontFamily: "var(--font-inter-tight), sans-serif",
           fontWeight: 300,
           fontSize: 16,
-          color: "#EDE6DD",
+          color: "hsl(32 35% 92%)",
           letterSpacing: "4px",
         }}
       >
@@ -44,15 +43,15 @@ function NewContractContent() {
           className="w-16 h-16 rounded-full flex items-center justify-center mb-2"
           style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.2)" }}
         >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C4704B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="hsl(22 55% 54%)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="11" width="18" height="11" rx="2" />
             <path d="M7 11V7a5 5 0 0 1 10 0v4" />
           </svg>
         </div>
-        <p style={{ color: "#EDE6DD", fontFamily: "var(--font-libre-franklin)", fontWeight: 300, fontSize: 20 }}>
+        <p style={{ color: "hsl(32 35% 92%)", fontFamily: "var(--font-inter-tight)", fontWeight: 300, fontSize: 20 }}>
           No wallet connected
         </p>
-        <p style={{ color: "#A89B8C", fontSize: 14 }}>You need to connect a wallet before creating a contract.</p>
+        <p style={{ color: "hsl(30 10% 62%)", fontSize: 14 }}>You need to connect a wallet before creating a contract.</p>
         <Link href="/dashboard/investor" className="cs-btn-primary cs-btn-sm mt-2">
           ← Back to Dashboard
         </Link>
@@ -68,22 +67,22 @@ function NewContractContent() {
         <Link
           href="/dashboard/investor"
           className="text-xs uppercase tracking-widest font-medium transition-colors"
-          style={{ color: "#C4704B" }}
+          style={{ color: "hsl(22 55% 54%)" }}
         >
           ← Dashboard
         </Link>
         <h1
           className="mt-2 tracking-tight"
           style={{
-            fontFamily: "var(--font-libre-franklin), sans-serif",
+            fontFamily: "var(--font-inter-tight), sans-serif",
             fontWeight: 300,
             fontSize: "clamp(28px, 5vw, 38px)",
-            color: "#EDE6DD",
+            color: "hsl(32 35% 92%)",
           }}
         >
           New Contract
         </h1>
-        <p className="text-sm mt-1" style={{ color: "#A89B8C" }}>
+        <p className="text-sm mt-1" style={{ color: "hsl(30 10% 62%)" }}>
           Define the milestone criteria and lock RLUSD in escrow for the Receiver.
         </p>
       </div>
@@ -100,7 +99,7 @@ function NewContractContent() {
           className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
           style={{ background: "rgba(196,112,75,0.15)" }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C4704B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="hsl(22 55% 54%)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 12V22H4V12" />
             <path d="M22 7H2v5h20V7z" />
             <path d="M12 22V7" />
@@ -109,8 +108,8 @@ function NewContractContent() {
           </svg>
         </div>
         <div className="flex flex-col min-w-0">
-          <span className="text-xs uppercase tracking-widest" style={{ color: "#A89B8C" }}>Grant Giver Wallet</span>
-          <code className="text-xs font-mono mt-0.5 truncate" style={{ color: "#EDE6DD" }}>{investorAddress}</code>
+          <span className="text-xs uppercase tracking-widest" style={{ color: "hsl(30 10% 62%)" }}>Grant Giver Wallet</span>
+          <code className="text-xs font-mono mt-0.5 truncate" style={{ color: "hsl(32 35% 92%)" }}>{investorAddress}</code>
         </div>
       </div>
 
@@ -131,8 +130,7 @@ function NewContractContent() {
 
 export default function NewContractPage() {
   return (
-    <main className="min-h-screen" style={{ background: "#171311", color: "#EDE6DD" }}>
-      <NodeBackground />
+    <main className="min-h-screen" style={{ background: "hsl(24 14% 4%)", color: "hsl(32 35% 92%)" }}>
 
       {/* Nav */}
       <nav
@@ -153,7 +151,7 @@ export default function NewContractPage() {
               style={{
                 background: "rgba(196,112,75,0.1)",
                 border: "1px solid rgba(196,112,75,0.3)",
-                color: "#C4704B",
+                color: "hsl(22 55% 54%)",
               }}
             >
               Grant Giver

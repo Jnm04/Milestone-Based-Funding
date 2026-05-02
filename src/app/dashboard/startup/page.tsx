@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Suspense } from "react";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
-import { NodeBackground } from "@/components/node-background";
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT:            "Draft",
@@ -358,7 +357,6 @@ function StartupDashboardContent() {
 
   return (
     <div className="flex min-h-screen" style={{ background: "hsl(24 14% 4%)" }}>
-      <NodeBackground />
       <DashboardSidebar role="startup" />
 
       <main className="flex-1 flex flex-col min-h-screen overflow-x-hidden pb-20 md:pb-0">

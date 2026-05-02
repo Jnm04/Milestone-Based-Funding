@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { NodeBackground } from "@/components/node-background";
 import { REPUTATION_CATEGORIES, type ReputationCategory } from "@/services/ai/reputation.service";
 
 interface ProfilePageProps {
@@ -39,7 +38,7 @@ const CATEGORY_COLORS: Record<ReputationCategory, { bg: string; text: string; bo
   PARTNERSHIP: { bg: "rgba(167,139,250,0.12)", text: "#C4ADFA",  border: "rgba(167,139,250,0.3)" },
   GITHUB:      { bg: "rgba(96,165,250,0.12)",  text: "#7DB8F7",  border: "rgba(96,165,250,0.3)"  },
   BETA:        { bg: "rgba(212,160,60,0.12)",  text: "#D4A03C",  border: "rgba(212,160,60,0.3)"  },
-  OTHER:       { bg: "rgba(168,155,140,0.1)",  text: "#A89B8C",  border: "rgba(168,155,140,0.2)" },
+  OTHER:       { bg: "rgba(168,155,140,0.1)",  text: "hsl(30 10% 62%)",  border: "rgba(168,155,140,0.2)" },
 };
 
 export default async function StartupProfilePage({ params }: ProfilePageProps) {
@@ -86,7 +85,7 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
   else if (total >= 1) tier = "rising";
 
   const TIER_CONFIG = {
-    new:         { label: "New",         bg: "rgba(168,155,140,0.1)",  text: "#A89B8C",  border: "rgba(168,155,140,0.25)" },
+    new:         { label: "New",         bg: "rgba(168,155,140,0.1)",  text: "hsl(30 10% 62%)",  border: "rgba(168,155,140,0.25)" },
     rising:      { label: "Rising",      bg: "rgba(196,112,75,0.12)",  text: "#E8935A",  border: "rgba(196,112,75,0.35)"  },
     established: { label: "Established", bg: "rgba(167,139,250,0.12)", text: "#C4ADFA",  border: "rgba(167,139,250,0.35)" },
     trusted:     { label: "Trusted",     bg: "rgba(74,222,128,0.12)",  text: "#6EE09A",  border: "rgba(74,222,128,0.35)"  },
@@ -94,8 +93,7 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
   const tierCfg = TIER_CONFIG[tier];
 
   return (
-    <main className="min-h-screen" style={{ background: "#171311", color: "#EDE6DD" }}>
-      <NodeBackground />
+    <main className="min-h-screen" style={{ background: "hsl(24 14% 4%)", color: "hsl(32 35% 92%)" }}>
 
       {/* Nav */}
       <nav
@@ -109,15 +107,15 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <div style={{ width: 20, height: 3, borderRadius: 2, background: "#C4704B" }} />
-              <div style={{ width: 20, height: 3, borderRadius: 2, background: "#C4704B", opacity: 0.55, marginLeft: 4 }} />
-              <div style={{ width: 20, height: 3, borderRadius: 2, background: "#C4704B", opacity: 0.22, marginLeft: 8 }} />
+              <div style={{ width: 20, height: 3, borderRadius: 2, background: "hsl(22 55% 54%)" }} />
+              <div style={{ width: 20, height: 3, borderRadius: 2, background: "hsl(22 55% 54%)", opacity: 0.55, marginLeft: 4 }} />
+              <div style={{ width: 20, height: 3, borderRadius: 2, background: "hsl(22 55% 54%)", opacity: 0.22, marginLeft: 8 }} />
             </div>
-            <span style={{ fontFamily: "var(--font-libre-franklin), sans-serif", fontWeight: 300, fontSize: 16, color: "#EDE6DD", letterSpacing: "4px" }}>cascrow</span>
+            <span style={{ fontFamily: "var(--font-inter-tight), sans-serif", fontWeight: 300, fontSize: 16, color: "hsl(32 35% 92%)", letterSpacing: "4px" }}>cascrow</span>
           </Link>
           <span
             className="px-3 py-1 rounded-full text-xs font-medium uppercase tracking-widest"
-            style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.25)", color: "#C4704B" }}
+            style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.25)", color: "hsl(22 55% 54%)" }}
           >
             Reputation Profile
           </span>
@@ -134,8 +132,8 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
             style={{
               background: "rgba(196,112,75,0.15)",
               border: "1px solid rgba(196,112,75,0.3)",
-              color: "#C4704B",
-              fontFamily: "var(--font-libre-franklin)",
+              color: "hsl(22 55% 54%)",
+              fontFamily: "var(--font-inter-tight)",
             }}
           >
             {displayName.slice(0, 2).toUpperCase()}
@@ -145,10 +143,10 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
             <div className="flex flex-wrap items-center gap-3">
               <h1
                 style={{
-                  fontFamily: "var(--font-libre-franklin), sans-serif",
+                  fontFamily: "var(--font-inter-tight), sans-serif",
                   fontWeight: 300,
                   fontSize: "clamp(22px, 4vw, 30px)",
-                  color: "#EDE6DD",
+                  color: "hsl(32 35% 92%)",
                   lineHeight: 1.2,
                 }}
               >
@@ -164,7 +162,7 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
             </div>
 
             {user.bio && (
-              <p className="text-sm leading-relaxed max-w-xl" style={{ color: "#A89B8C" }}>
+              <p className="text-sm leading-relaxed max-w-xl" style={{ color: "hsl(30 10% 62%)" }}>
                 {user.bio}
               </p>
             )}
@@ -198,7 +196,7 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
               sub: "completed before deadline",
               color: onTimeRate !== null
                 ? onTimeRate >= 0.8 ? "#6EE09A" : onTimeRate >= 0.5 ? "#D4A03C" : "#F87171"
-                : "#A89B8C",
+                : "hsl(30 10% 62%)",
             },
             {
               label: "Avg AI Confidence",
@@ -206,7 +204,7 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
               sub: "across approved proofs",
               color: avgConf !== null
                 ? avgConf >= 80 ? "#6EE09A" : avgConf >= 60 ? "#D4A03C" : "#F87171"
-                : "#A89B8C",
+                : "hsl(30 10% 62%)",
             },
             {
               label: "Avg Resubmissions",
@@ -214,7 +212,7 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
               sub: "before approval",
               color: avgResub !== null
                 ? avgResub <= 1 ? "#6EE09A" : avgResub <= 2 ? "#D4A03C" : "#F87171"
-                : "#A89B8C",
+                : "hsl(30 10% 62%)",
             },
           ].map((stat) => (
             <div
@@ -226,12 +224,12 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
                 borderTop: "1px solid rgba(196,112,75,0.3)",
               }}
             >
-              <span className="text-xs uppercase tracking-widest font-medium" style={{ color: "#A89B8C" }}>
+              <span className="text-xs uppercase tracking-widest font-medium" style={{ color: "hsl(30 10% 62%)" }}>
                 {stat.label}
               </span>
               <span
                 className="text-2xl font-bold"
-                style={{ color: stat.color, fontFamily: "var(--font-libre-franklin)" }}
+                style={{ color: stat.color, fontFamily: "var(--font-inter-tight)" }}
               >
                 {stat.value}
               </span>
@@ -249,7 +247,7 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
               border: "1px solid rgba(196,112,75,0.12)",
             }}
           >
-            <h2 className="text-xs uppercase tracking-widest font-semibold" style={{ color: "#C4704B" }}>
+            <h2 className="text-xs uppercase tracking-widest font-semibold" style={{ color: "hsl(22 55% 54%)" }}>
               Milestone Categories
             </h2>
             <div className="flex flex-wrap gap-2">
@@ -280,7 +278,7 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
         {/* Public milestone cards */}
         {publicMilestones.length > 0 ? (
           <div className="flex flex-col gap-3">
-            <h2 className="text-xs uppercase tracking-widest font-semibold" style={{ color: "#C4704B" }}>
+            <h2 className="text-xs uppercase tracking-widest font-semibold" style={{ color: "hsl(22 55% 54%)" }}>
               Verified Achievements
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -316,7 +314,7 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
                     </div>
 
                     {/* Summary */}
-                    <p className="text-sm leading-relaxed" style={{ color: "#EDE6DD" }}>
+                    <p className="text-sm leading-relaxed" style={{ color: "hsl(32 35% 92%)" }}>
                       {ms.reputationSummary}
                     </p>
 
@@ -340,7 +338,7 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
               border: "1px solid rgba(196,112,75,0.1)",
             }}
           >
-            <p className="text-sm" style={{ color: "#A89B8C" }}>
+            <p className="text-sm" style={{ color: "hsl(30 10% 62%)" }}>
               No public milestone cards yet — the startup has not opted in to share achievements publicly.
             </p>
           </div>
@@ -356,13 +354,13 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
               className="w-12 h-12 rounded-2xl flex items-center justify-center"
               style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.2)" }}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C4704B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="hsl(22 55% 54%)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="8" r="4" />
                 <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
               </svg>
             </div>
-            <p className="text-sm font-medium" style={{ color: "#EDE6DD" }}>No milestones completed yet</p>
-            <p className="text-xs max-w-xs" style={{ color: "#A89B8C" }}>
+            <p className="text-sm font-medium" style={{ color: "hsl(32 35% 92%)" }}>No milestones completed yet</p>
+            <p className="text-xs max-w-xs" style={{ color: "hsl(30 10% 62%)" }}>
               This startup&apos;s on-chain track record will appear here as milestones are verified and completed.
             </p>
           </div>
@@ -376,7 +374,7 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
           <Link
             href="/"
             className="text-xs font-medium tracking-widest"
-            style={{ color: "#C4704B" }}
+            style={{ color: "hsl(22 55% 54%)" }}
           >
             cascrow
           </Link>
