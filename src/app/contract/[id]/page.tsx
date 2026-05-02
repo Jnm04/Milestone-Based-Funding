@@ -425,7 +425,11 @@ export default async function ContractPage({ params, searchParams }: ContractPag
         />
 
         {/* On-chain audit trail */}
-        <AuditTrail logs={auditLogs} />
+        <AuditTrail
+          logs={auditLogs}
+          milestones={contract.milestones.map((m) => ({ id: m.id, title: m.title, order: m.order }))}
+          isVerificationOnly={Number(contract.amountUSD) <= contract.milestones.length}
+        />
 
         {/* AI Credibility Score — authenticated investor, or demo viewer */}
         {canViewCredibility && contract.startup && (
