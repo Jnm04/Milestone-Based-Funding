@@ -23,6 +23,7 @@ import os
 import sys
 import time
 import json
+import webbrowser
 import requests
 import sseclient
 
@@ -34,6 +35,7 @@ GREEN = "\033[32m"
 CYAN  = "\033[36m"
 AMBER = "\033[33m"
 RED   = "\033[31m"
+DIM   = "\033[2m"
 RESET = "\033[0m"
 
 def step(n, label):
@@ -45,6 +47,9 @@ def ok(msg):
 def info(msg):
     print(f"  {CYAN}→{RESET} {msg}")
 
+def dim(msg):
+    print(f"  {DIM}{msg}{RESET}")
+
 def fail(msg, resp=None):
     print(f"\n{RED}✗ {msg}{RESET}")
     if resp is not None:
@@ -55,14 +60,22 @@ def fail(msg, resp=None):
             print(f"  Body:   {resp.text[:300]}")
     sys.exit(1)
 
-def headers():
+def pause(seconds, reason=""):
+    if reason:
+        dim(f"Waiting {seconds}s — {reason}")
+    for _ in range(seconds):
+        time.sleep(1)
+        print(f"  {DIM}.{RESET}", end="", flush=True)
+    print()
+
+def api_headers():
     return {
         "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json",
     }
 
 def post(path, payload):
-    r = requests.post(f"{BASE_URL}{path}", json=payload, headers=headers(), timeout=30)
+    r = requests.post(f"{BASE_URL}{path}", json=payload, headers=api_headers(), timeout=30)
     return r
 
 def check(r, label):
@@ -79,7 +92,6 @@ print("─" * 50)
 if not API_KEY:
     fail("Set CASCROW_API_KEY=csk_... before running")
 
-# Verify the API key works
 r = requests.get(f"{BASE_URL}/api/health", timeout=10)
 if not r.ok:
     fail("Health check failed — is the server running?", r)
@@ -89,6 +101,8 @@ ok("Server reachable")
 # ─── Step 1: Create contract ──────────────────────────────────────────────────
 
 step(1, "Agent creates escrow contract")
+dim("Defining milestone: landing page — $200 — 7 day deadline")
+time.sleep(1)
 
 deadline = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() + 7 * 86400))
 
@@ -104,57 +118,67 @@ payload = {
 
 data = check(post("/api/contracts", payload), "Create contract failed")
 contract_id = data["contractId"]
-invite_link  = data.get("inviteLink")
+contract_url = f"{BASE_URL}/contract/{contract_id}"
 
 ok(f"Contract created  →  {contract_id}")
-info(f"View: {BASE_URL}/contract/{contract_id}")
-if invite_link:
-    info(f"Invite: {BASE_URL}/dashboard/startup?invite={invite_link}")
+info(f"Opening in browser…")
+
+# Open browser so viewer can watch the UI update live
+webbrowser.open(contract_url)
+time.sleep(2)
 
 
 # ─── Step 2: Accept contract ─────────────────────────────────────────────────
 
 step(2, "Startup agent accepts contract")
-ok("Contract auto-accepted — agent acts as both sides in demo")
+ok("Auto-accepted — agent acts as both investor and startup in this demo")
+time.sleep(1)
 
 
-# ─── Step 3: Fund milestone (agent escrow — no MetaMask) ─────────────────────
+# ─── Step 3: Fund milestone ───────────────────────────────────────────────────
 
 step(3, "Investor agent funds escrow (simulated on-chain)")
+dim("Signing transaction… locking $200 RLUSD in smart contract")
+time.sleep(2)
 
 r3 = post("/api/agent/fund-milestone", {"contractId": contract_id})
 data3 = check(r3, "Fund milestone failed")
-
-ok(f"Milestone funded  →  {data3['status']}")
-info(f"Simulated tx hash: {data3['txHash'][:18]}…")
 milestone_id = data3["milestoneId"]
+
+ok(f"Escrow funded  →  {data3['status']}")
+info(f"Tx hash: {data3['txHash'][:22]}…")
+
+pause(4, "browser is showing FUNDED status")
 
 
 # ─── Step 4: Submit proof ─────────────────────────────────────────────────────
 
 step(4, "Startup agent submits proof of work")
+dim("Generating completion report…")
+time.sleep(2)
 
 proof_content = f"""MILESTONE COMPLETION REPORT
 ===========================
-Contract: {contract_id}
-Milestone: Build and deploy landing page
+Contract:  {contract_id}
+Milestone: Build and deploy landing page with hero, features, and contact form
+Submitted: {time.strftime("%Y-%m-%d %H:%M UTC")}
 
 DELIVERABLES COMPLETED
 1. Live landing page deployed at https://demo-startup.vercel.app
-2. Hero section with product value proposition and CTA
-3. Features section with 6 product highlights
-4. Contact form with email validation (powered by Resend)
-5. Responsive design — tested on mobile, tablet, desktop
-6. Lighthouse score: Performance 94, Accessibility 100, SEO 100
+2. Hero section with product value proposition and CTA button
+3. Features section with 6 product highlights and icons
+4. Contact form with email validation (Resend integration)
+5. Fully responsive — tested on mobile, tablet, desktop
+6. Lighthouse: Performance 94 / Accessibility 100 / SEO 100
 
 EVIDENCE
-- GitHub repo: github.com/demo-startup/landing (public, 47 commits)
-- Deployment: Vercel dashboard screenshot attached
-- Live URL screenshot (pages 2-3)
-- Lighthouse report export (page 4)
+- GitHub: github.com/demo-startup/landing — 47 commits, public repo
+- Vercel deployment dashboard screenshot (page 2)
+- Live URL screenshot showing all 3 sections (page 3)
+- Lighthouse report PDF export (page 4)
+- Contact form test submission confirmation (page 5)
 
-All deliverables meet the acceptance criteria defined in the contract.
-Submitted: {time.strftime("%Y-%m-%d %H:%M UTC")}
+All deliverables directly address the milestone criteria in the contract.
 """
 
 proof_bytes = proof_content.encode("utf-8")
@@ -162,19 +186,25 @@ files = {
     "file": ("completion-report.txt", proof_bytes, "text/plain"),
     "milestoneId": (None, milestone_id),
 }
-auth_header = {"Authorization": f"Bearer {API_KEY}"}
-r4 = requests.post(f"{BASE_URL}/api/proof/upload", files=files, headers=auth_header, timeout=30)
+r4 = requests.post(
+    f"{BASE_URL}/api/proof/upload",
+    files=files,
+    headers={"Authorization": f"Bearer {API_KEY}"},
+    timeout=30,
+)
 data4 = check(r4, "Proof upload failed")
-
 proof_id = data4["proofId"]
+
 ok(f"Proof submitted  →  {proof_id}")
+pause(3, "browser is showing PROOF_SUBMITTED status")
 
 
 # ─── Step 5: AI verification (live SSE stream) ────────────────────────────────
 
 step(5, "AI verification — 5-model majority vote (live)")
-
+dim("Querying Claude, GPT-4o, Gemini, Mistral, Cerebras in parallel…")
 print()
+
 verify_url = f"{BASE_URL}/api/verify"
 stream_headers = {
     "Authorization": f"Bearer {API_KEY}",
@@ -206,17 +236,17 @@ with requests.post(
         t = msg.get("type")
 
         if t == "attempt":
-            print(f"  {CYAN}○{RESET} Attempt {msg['n']}/{msg['total']} — querying 5 AI models…")
+            print(f"  {CYAN}○{RESET} Attempt {msg['n']}/{msg['total']} — 5 models voting…")
 
         elif t == "retrying":
             wait = msg.get("waitSeconds", 0)
             print(f"  {AMBER}↻{RESET} {msg.get('message', 'Retrying…')}")
-            print(f"  {AMBER}  Waiting {wait}s before next attempt…{RESET}")
+            dim(f"  Waiting {wait}s…")
 
         elif t == "complete":
             final = msg
-            decision  = msg.get("decision", "?")
-            action    = msg.get("action", "?")
+            decision   = msg.get("decision", "?")
+            action     = msg.get("action", "?")
             confidence = msg.get("confidence", 0)
             reasoning  = msg.get("reasoning", "")
 
@@ -225,7 +255,7 @@ with requests.post(
             print(f"  Action:   {BOLD}{action}{RESET}")
             print()
 
-            # Wrap reasoning at 72 chars
+            # Word-wrap reasoning at 72 chars
             words = reasoning.split()
             line = "  "
             for w in words:
@@ -238,7 +268,7 @@ with requests.post(
                 print(f"{CYAN}{line}{RESET}")
 
             if msg.get("txHash"):
-                print(f"\n  {GREEN}✓{RESET} Funds released  →  tx: {msg['txHash'][:18]}…")
+                print(f"\n  {GREEN}✓{RESET} Funds released  →  tx: {msg['txHash'][:22]}…")
             break
 
         elif t == "error":
@@ -249,17 +279,21 @@ with requests.post(
 
 print(f"\n{'─' * 50}")
 print(f"{BOLD}{GREEN}Demo complete!{RESET}")
-print(f"\n  Contract:  {BASE_URL}/contract/{contract_id}")
+print(f"\n  {BOLD}Contract:{RESET}  {contract_url}")
 print()
 
 if final and final.get("action") in ("VERIFIED", "COMPLETED"):
-    print(f"  {GREEN}✓ Milestone verified — funds released automatically{RESET}")
-    print(f"  {GREEN}✓ NFT certificate minted on XRP Ledger{RESET}")
+    print(f"  {GREEN}✓{RESET} Milestone verified — funds released automatically")
+    print(f"  {GREEN}✓{RESET} NFT certificate minted on XRP Ledger")
 elif final and final.get("action") == "REJECTED":
-    print(f"  {RED}✗ Milestone rejected — funds held in escrow{RESET}")
+    print(f"  {RED}✗{RESET} Milestone rejected — funds held in escrow")
 elif final and final.get("action") == "PENDING_REVIEW":
-    print(f"  {AMBER}⚠ Manual review required — low confidence{RESET}")
+    print(f"  {AMBER}⚠{RESET} Manual review required — low AI confidence")
 else:
     print(f"  Status: {final}")
 
 print()
+
+# Re-open browser to show final completed state
+info("Opening completed contract in browser…")
+webbrowser.open(contract_url)
