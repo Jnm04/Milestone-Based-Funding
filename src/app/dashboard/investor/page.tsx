@@ -9,6 +9,7 @@ import { BuyRlusdModal } from "@/components/buy-rlusd-modal";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { CopyButton } from "@/components/copy-button";
 import { PageLoader } from "@/components/page-loader";
+import { LoaderDotMatrix } from "@/components/elements/loader-dot-matrix";
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT:            "Draft",
@@ -779,9 +780,8 @@ export default function InvestorDashboard() {
               </div>
 
               {loadingContracts && (
-                <div className="flex items-center gap-3 py-8 justify-center">
-                  <div className="w-5 h-5 rounded-full border-2 animate-spin" style={{ borderColor: "rgba(196,112,75,0.3)", borderTopColor: "#C4704B" }} />
-                  <p className="text-sm" style={{ color: "#A89B8C" }}>Loading…</p>
+                <div className="flex justify-center py-10">
+                  <LoaderDotMatrix rows={3} cols={5} pattern="ripple" dotSize={3} />
                 </div>
               )}
 
