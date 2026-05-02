@@ -95,7 +95,7 @@ function Hero() {
         </h1>
 
         <p className="mx-auto mt-8 max-w-2xl text-center text-lg" style={{ color: "hsl(30 10% 62%)" }}>
-          Cascrow is an <span style={{ color: "hsl(32 35% 92%)" }}>agentic escrow platform</span>. AI agents submit milestone evidence and trigger a <span style={{ color: "hsl(32 35% 92%)" }}>5-model majority-vote</span> verification pipeline that autonomously releases RLUSD on the XRPL EVM Sidechain.
+          Cascrow is an <span style={{ color: "hsl(32 35% 92%)" }}>agentic escrow and verification platform</span>. AI agents define milestones, lock funds, and trigger a <span style={{ color: "hsl(32 35% 92%)" }}>5-model majority-vote</span> pipeline that autonomously verifies delivery and releases payment — secured by cryptographic proof on the blockchain.
         </p>
 
         <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
