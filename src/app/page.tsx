@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Terminal, Lock, Upload, Sparkles, ShieldOff, Clock, Scale, Bot, Coins, Network, Cpu, Github } from "lucide-react";
+import { ArrowRight, Terminal, Lock, Upload, Sparkles, ShieldOff, Clock, Scale, Bot, Coins, Network, Cpu, Github, Check, Zap } from "lucide-react";
 
 /* ─── Reveal animation helper ─── */
 function Reveal({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
@@ -59,7 +59,7 @@ function Nav() {
             <span className="text-sm font-semibold tracking-tight" style={{ color: "hsl(32 35% 92%)" }}>cascrow</span>
           </Link>
           <div className="hidden md:flex items-center gap-7">
-            {[{ href: "#problem", label: "Problem" }, { href: "#how", label: "How it works" }, { href: "/security", label: "Security" }, { href: "/guide", label: "Guide" }].map(l => (
+            {[{ href: "#problem", label: "Problem" }, { href: "#how", label: "How it works" }, { href: "#agents", label: "For Agents" }, { href: "/guide", label: "Guide" }].map(l => (
               <Link key={l.href} href={l.href} className="text-sm transition-colors hover:text-foreground" style={{ color: "hsl(30 10% 62%)" }}>{l.label}</Link>
             ))}
           </div>
@@ -75,6 +75,12 @@ function Nav() {
 
 /* ─── Hero ─── */
 function Hero() {
+  const [stats, setStats] = useState<{ contracts: number; verifications: number } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/stats").then(r => r.json()).then(setStats).catch(() => {});
+  }, []);
+
   return (
     <section className="relative overflow-hidden pt-36 pb-28 noise">
       <div className="absolute inset-0 -z-10 bg-aurora animate-aurora" aria-hidden />
@@ -86,7 +92,12 @@ function Hero() {
             <span className="absolute inset-0 animate-pulse-dot rounded-full" style={{ background: "hsl(22 55% 54%)" }} />
             <span className="relative inline-block h-2 w-2 rounded-full" style={{ background: "hsl(22 55% 54%)" }} />
           </span>
-          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, textTransform: "uppercase" as const, letterSpacing: "0.2em", color: "hsl(30 10% 62%)" }}>v0.1 · Live · XRPL EVM · RLUSD</span>
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, textTransform: "uppercase" as const, letterSpacing: "0.2em", color: "hsl(30 10% 62%)" }}>
+            Live · XRPL EVM · RLUSD
+            {stats && stats.contracts > 0 && (
+              <span style={{ color: "hsl(22 55% 54%)" }}> · {stats.contracts} contracts · {stats.verifications} verifications</span>
+            )}
+          </span>
         </div>
 
         <h1 className="mx-auto max-w-5xl text-center font-semibold leading-[1.02] tracking-[-0.03em]" style={{ fontSize: "clamp(48px, 8vw, 88px)" }}>
@@ -102,13 +113,13 @@ function Hero() {
           <Link href="/register" className="group inline-flex items-center gap-2 rounded-full bg-gradient-copper px-7 py-3.5 text-sm font-medium glow-on-hover" style={{ color: "hsl(24 14% 6%)" }}>
             Start building <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Link>
-          <a href="https://github.com/Jnm04/Milestone-Based-Funding" target="_blank" rel="noopener noreferrer"
+          <a href="#agents"
             className="group inline-flex items-center gap-2 rounded-full border px-7 py-3.5"
             style={{ borderColor: "hsl(22 55% 54% / 0.35)", background: "hsl(24 12% 6% / 0.4)", backdropFilter: "blur(12px)", color: "hsl(32 35% 92%)", fontFamily: "'JetBrains Mono', monospace", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.18em", transition: "border-color 0.2s, background 0.2s" }}
             onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = "hsl(22 55% 54% / 0.7)"; (e.currentTarget as HTMLAnchorElement).style.background = "hsl(22 55% 54% / 0.08)"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = "hsl(22 55% 54% / 0.35)"; (e.currentTarget as HTMLAnchorElement).style.background = "hsl(24 12% 6% / 0.4)"; }}
           >
-            <Terminal className="h-3.5 w-3.5" /> View source
+            <Bot className="h-3.5 w-3.5" /> For agents
           </a>
         </div>
 
@@ -148,7 +159,7 @@ function Hero() {
 
 /* ─── Marquee ─── */
 function Marquee() {
-  const items = ["Built on XRPL EVM Sidechain","Powered by RLUSD","AI Verification · Claude · Gemini · OpenAI · Mistral · Qwen","Secured by MetaMask","Zero middlemen","Instant settlement","On-chain transparency","100% automated"];
+  const items = ["Built on XRPL EVM Sidechain","Powered by RLUSD","AI Verification · Claude · Gemini · OpenAI · Mistral · Qwen","MCP-native · Claude Desktop","Zero middlemen","Instant settlement","On-chain transparency","100% automated"];
   return (
     <section className="relative overflow-hidden border-y py-6" style={{ borderColor: "hsl(28 18% 14% / 0.6)", background: "hsl(24 14% 4% / 0.4)" }}>
       <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-32" style={{ background: "linear-gradient(to right, hsl(24 14% 4%), transparent)" }} />
@@ -263,6 +274,316 @@ function HowItWorks() {
   );
 }
 
+/* ─── Live Demo ─── */
+const DEMO_STEPS = [
+  {
+    id: "create",
+    label: "Create contract",
+    tool: "cascrow_create_contract",
+    input: `{\n  "milestones": [\n    { "title": "Landing page — hero, CTA, responsive", "deadlineDays": 7 },\n    { "title": "Integration tests — 100% coverage on core flows", "deadlineDays": 14 }\n  ]\n}`,
+    output: `{\n  "contractId": "cm_abc123",\n  "contractUrl": "https://cascrow.com/contract/cm_abc123",\n  "message": "Contract created with 2 milestones."\n}`,
+  },
+  {
+    id: "fund",
+    label: "Fund milestone 1",
+    tool: "cascrow_fund_milestone",
+    input: `{\n  "contractId": "cm_abc123"\n}`,
+    output: `{\n  "milestoneId": "ms_m1xyz",\n  "status": "FUNDED",\n  "message": "Milestone funded and active."\n}`,
+  },
+  {
+    id: "proof",
+    label: "Submit proof",
+    tool: "cascrow_submit_proof",
+    input: `{\n  "milestoneId": "ms_m1xyz",\n  "proof": "Hero section built with Next.js App Router.\\nLive at https://example.com — responsive down to 320px.\\nCore Web Vitals: LCP 1.2s, CLS 0.00."\n}`,
+    output: `{\n  "proofId": "prf_9kl2mn",\n  "message": "Proof submitted. Use cascrow_verify with proofId: prf_9kl2mn"\n}`,
+  },
+  {
+    id: "verify",
+    label: "AI verification",
+    tool: "cascrow_verify",
+    input: `{\n  "proofId": "prf_9kl2mn"\n}`,
+    output: `{\n  "decision": "YES",\n  "confidence": 94,\n  "passed": true,\n  "models": [\n    { "model": "claude",  "vote": "YES" },\n    { "model": "gemini",  "vote": "YES" },\n    { "model": "gpt-4o",  "vote": "YES" },\n    { "model": "mistral", "vote": "YES" },\n    { "model": "qwen3",   "vote": "NO"  }\n  ],\n  "message": "✅ VERIFIED (94% confidence)"\n}`,
+  },
+  {
+    id: "done",
+    label: "Milestone 1 complete",
+    tool: null,
+    input: null,
+    output: `Milestone 1 verified on-chain.\nAudit trail written to XRPL + EVM.\nNon-transferable NFT minted.\n\nMilestone 2 ready to fund.`,
+  },
+];
+
+function LiveDemo() {
+  const [active, setActive] = useState(0);
+  const [running, setRunning] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const advance = () => {
+    setActive(prev => {
+      if (prev >= DEMO_STEPS.length - 1) { setRunning(false); return prev; }
+      return prev + 1;
+    });
+  };
+
+  const start = () => {
+    setActive(0);
+    setRunning(true);
+  };
+
+  useEffect(() => {
+    if (!running) return;
+    timerRef.current = setTimeout(advance, active === 3 ? 2200 : 1400);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [running, active]);
+
+  const step = DEMO_STEPS[active];
+  const done = active === DEMO_STEPS.length - 1;
+
+  return (
+    <section id="agents" className="relative py-32">
+      <div className="absolute inset-x-0 top-0 -z-10 h-px" style={{ background: "linear-gradient(to right, transparent, hsl(28 18% 14%), transparent)" }} />
+      <div className="container-tight">
+        <div className="mb-14 flex flex-col gap-5">
+          <SectionLabel>Live demo</SectionLabel>
+          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <Reveal>
+              <h2 className="max-w-2xl text-4xl font-semibold tracking-[-0.02em] text-gradient md:text-5xl">An agent verifies two milestones. No humans.</h2>
+            </Reveal>
+            <Reveal delay={100}>
+              <p className="max-w-sm" style={{ color: "hsl(30 10% 62%)" }}>
+                Claude uses the cascrow MCP server to create a contract, fund it, submit proof, and trigger AI verification — all autonomously.
+              </p>
+            </Reveal>
+          </div>
+        </div>
+
+        <Reveal delay={150}>
+          <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+            {/* Step list */}
+            <div className="flex flex-col gap-2">
+              {DEMO_STEPS.map((s, i) => {
+                const isPast = i < active;
+                const isCurrent = i === active;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => { setRunning(false); setActive(i); }}
+                    className="flex items-center gap-3 rounded-xl px-4 py-3 text-left transition-all"
+                    style={{
+                      background: isCurrent ? "hsl(22 55% 54% / 0.12)" : "transparent",
+                      border: `1px solid ${isCurrent ? "hsl(22 55% 54% / 0.35)" : "hsl(28 18% 14%)"}`,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+                      style={{
+                        background: isPast ? "hsl(22 55% 54%)" : isCurrent ? "hsl(22 55% 54% / 0.2)" : "hsl(28 18% 14%)",
+                        color: isPast ? "hsl(24 14% 6%)" : "hsl(22 55% 54%)",
+                        border: isCurrent ? "1px solid hsl(22 55% 54% / 0.5)" : "none",
+                      }}
+                    >
+                      {isPast ? <Check className="h-3 w-3" /> : i + 1}
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-sm font-medium" style={{ color: isCurrent ? "hsl(32 35% 92%)" : isPast ? "hsl(30 10% 62%)" : "hsl(30 10% 50%)" }}>{s.label}</span>
+                      {s.tool && (
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "hsl(22 55% 54% / 0.7)" }}>{s.tool}</span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+
+              <button
+                onClick={start}
+                className="mt-2 flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition-all"
+                style={{
+                  background: running ? "hsl(22 55% 54% / 0.08)" : "hsl(22 55% 54%)",
+                  color: running ? "hsl(22 55% 54%)" : "hsl(24 14% 6%)",
+                  border: running ? "1px solid hsl(22 55% 54% / 0.3)" : "none",
+                  cursor: "pointer",
+                }}
+              >
+                <Zap className="h-4 w-4" />
+                {running ? "Running…" : done ? "Replay demo" : "Run demo"}
+              </button>
+            </div>
+
+            {/* Code panel */}
+            <div className="gradient-border overflow-hidden rounded-2xl" style={{ background: "hsl(24 12% 6% / 0.8)", backdropFilter: "blur(20px)", minHeight: 360 }}>
+              <div className="flex items-center gap-2 border-b px-4 py-3" style={{ borderColor: "hsl(28 18% 14%)", background: "hsl(24 14% 4% / 0.4)" }}>
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: "hsl(0 70% 55% / 0.7)" }} />
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: "hsl(28 75% 70% / 0.7)" }} />
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: "hsl(22 55% 54% / 0.7)" }} />
+                <span className="ml-3 flex-1" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "hsl(30 10% 62%)" }}>
+                  {step.tool ? `mcp › ${step.tool}` : "cascrow › milestone 1 complete"}
+                </span>
+                {running && !done && (
+                  <span className="flex items-center gap-1.5" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "hsl(22 55% 54%)" }}>
+                    <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: "hsl(22 55% 54%)" }} />
+                    running
+                  </span>
+                )}
+              </div>
+
+              <div className="grid divide-y md:grid-cols-2 md:divide-x md:divide-y-0" style={{ borderColor: "hsl(28 18% 14%)" }}>
+                {step.input !== null ? (
+                  <>
+                    <div className="p-5">
+                      <div className="mb-3" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, textTransform: "uppercase" as const, letterSpacing: "0.2em", color: "hsl(30 10% 50%)" }}>Input</div>
+                      <pre className="overflow-x-auto text-xs leading-relaxed whitespace-pre-wrap" style={{ fontFamily: "'JetBrains Mono', monospace", color: "hsl(32 35% 85%)" }}>{step.input}</pre>
+                    </div>
+                    <div className="p-5">
+                      <div className="mb-3" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, textTransform: "uppercase" as const, letterSpacing: "0.2em", color: "hsl(30 10% 50%)" }}>Output</div>
+                      <pre className="overflow-x-auto text-xs leading-relaxed whitespace-pre-wrap" style={{ fontFamily: "'JetBrains Mono', monospace", color: step.id === "verify" ? "hsl(22 55% 64%)" : "hsl(32 35% 85%)" }}>{step.output}</pre>
+                    </div>
+                  </>
+                ) : (
+                  <div className="col-span-2 flex flex-col items-center justify-center gap-5 p-10 text-center">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full" style={{ background: "hsl(22 55% 54% / 0.15)", border: "1px solid hsl(22 55% 54% / 0.3)" }}>
+                      <Check className="h-8 w-8" style={{ color: "hsl(22 55% 54%)" }} />
+                    </div>
+                    <pre className="text-sm leading-relaxed whitespace-pre-wrap" style={{ fontFamily: "'JetBrains Mono', monospace", color: "hsl(32 35% 85%)" }}>{step.output}</pre>
+                    <div className="flex gap-3 text-xs" style={{ fontFamily: "'JetBrains Mono', monospace", color: "hsl(30 10% 50%)" }}>
+                      <span>· XRPL audit memo written</span>
+                      <span>· EVM tx confirmed</span>
+                      <span>· NFT minted</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+/* ─── Agent Integration ─── */
+const MCP_CONFIG = `// ~/Library/Application Support/Claude/claude_desktop_config.json
+{
+  "mcpServers": {
+    "cascrow": {
+      "command": "node",
+      "args": ["/path/to/cascrow-mcp/index.js"],
+      "env": {
+        "CASCROW_API_KEY": "csk_your_key_here"
+      }
+    }
+  }
+}`;
+
+const API_EXAMPLE = `// Any agent · any language
+const res = await fetch("https://cascrow.com/api/contracts", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer csk_your_key_here",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    milestones: [
+      { title: "Deploy API", amountUSD: 500, cancelAfter: "2026-06-01" },
+      { title: "Pass load test", amountUSD: 500, cancelAfter: "2026-06-15" },
+    ],
+  }),
+});
+const { contractId } = await res.json();`;
+
+function AgentIntegration() {
+  const [tab, setTab] = useState<"mcp" | "api">("mcp");
+
+  return (
+    <section className="relative py-32">
+      <div className="absolute inset-x-0 top-0 -z-10 h-px" style={{ background: "linear-gradient(to right, transparent, hsl(28 18% 14%), transparent)" }} />
+      <div className="container-tight">
+        <div className="mb-14 flex flex-col gap-5">
+          <SectionLabel>Agent integration</SectionLabel>
+          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <Reveal>
+              <h2 className="max-w-xl text-4xl font-semibold tracking-[-0.02em] text-gradient md:text-5xl">Two lines to connect any agent.</h2>
+            </Reveal>
+            <Reveal delay={100}>
+              <p className="max-w-sm" style={{ color: "hsl(30 10% 62%)" }}>
+                Native MCP server for Claude Desktop. REST API for everything else. One API key, full access.
+              </p>
+            </Reveal>
+          </div>
+        </div>
+
+        <Reveal delay={150}>
+          <div className="grid gap-8 lg:grid-cols-[1fr_1.6fr] lg:items-start">
+            {/* Features */}
+            <div className="flex flex-col gap-4">
+              {[
+                { icon: Bot, title: "MCP-native", body: "Claude, Cursor, and any MCP-compatible agent gets cascrow tools natively. No SDK, no boilerplate." },
+                { icon: Zap, title: "REST API", body: "Standard Bearer token auth. Create contracts, fund milestones, submit proof, trigger verification — all via HTTP." },
+                { icon: Lock, title: "$0.10 per verification", body: "Agents pay per verification, not per month. Verification-only mode — no escrow required." },
+                { icon: Check, title: "5-model quorum", body: "Claude · Gemini · GPT-4o · Mistral · Qwen3. Majority vote prevents single-model manipulation." },
+              ].map((f, i) => (
+                <Reveal key={f.title} delay={i * 80}>
+                  <div className="flex gap-4 rounded-2xl p-5" style={{ background: "hsl(24 12% 6% / 0.4)", border: "1px solid hsl(28 18% 14%)" }}>
+                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: "hsl(22 55% 54% / 0.1)", border: "1px solid hsl(22 55% 54% / 0.2)" }}>
+                      <f.icon className="h-4 w-4" style={{ color: "hsl(22 55% 54%)" }} />
+                    </div>
+                    <div>
+                      <div className="mb-1 text-sm font-semibold" style={{ color: "hsl(32 35% 92%)" }}>{f.title}</div>
+                      <div className="text-sm" style={{ color: "hsl(30 10% 62%)" }}>{f.body}</div>
+                    </div>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+
+            {/* Code */}
+            <div className="gradient-border overflow-hidden rounded-2xl" style={{ background: "hsl(24 12% 6% / 0.8)", backdropFilter: "blur(20px)" }}>
+              <div className="flex items-center gap-1 border-b px-4 py-3" style={{ borderColor: "hsl(28 18% 14%)", background: "hsl(24 14% 4% / 0.4)" }}>
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: "hsl(0 70% 55% / 0.7)" }} />
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: "hsl(28 75% 70% / 0.7)" }} />
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: "hsl(22 55% 54% / 0.7)" }} />
+                <div className="ml-4 flex gap-1">
+                  {(["mcp", "api"] as const).map(t => (
+                    <button
+                      key={t}
+                      onClick={() => setTab(t)}
+                      className="rounded-md px-3 py-1 text-xs transition-all"
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        letterSpacing: "0.1em",
+                        textTransform: "uppercase" as const,
+                        background: tab === t ? "hsl(22 55% 54% / 0.15)" : "transparent",
+                        color: tab === t ? "hsl(22 55% 54%)" : "hsl(30 10% 50%)",
+                        border: tab === t ? "1px solid hsl(22 55% 54% / 0.3)" : "1px solid transparent",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {t === "mcp" ? "Claude MCP" : "REST API"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="p-6">
+                <pre className="overflow-x-auto text-xs leading-relaxed" style={{ fontFamily: "'JetBrains Mono', monospace", color: "hsl(32 35% 85%)" }}>
+                  {tab === "mcp" ? MCP_CONFIG : API_EXAMPLE}
+                </pre>
+              </div>
+              <div className="flex items-center justify-between border-t px-6 py-4" style={{ borderColor: "hsl(28 18% 14%)" }}>
+                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "hsl(30 10% 50%)" }}>
+                  {tab === "mcp" ? "npm install @modelcontextprotocol/sdk" : "No SDK required · plain HTTP"}
+                </span>
+                <Link href="/register" className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-medium" style={{ background: "hsl(22 55% 54%)", color: "hsl(24 14% 6%)" }}>
+                  Get API key <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
 /* ─── Why Now ─── */
 function WhyNow() {
   const reasons = [
@@ -337,7 +658,7 @@ function Market() {
 
 /* ─── Stack ─── */
 function Stack() {
-  const items = ["Next.js","TypeScript","Tailwind","XRPL EVM","RLUSD","MetaMask","XRP Ledger","NFTokenMint","Solidity","Anthropic Claude","Google Gemini","OpenAI GPT","Mistral","Cerebras Qwen","PostgreSQL","Prisma","Vercel","Upstash Redis","Resend","Sentry"];
+  const items = ["Next.js","TypeScript","Tailwind","XRPL EVM","RLUSD","MetaMask","XRP Ledger","NFTokenMint","Solidity","Anthropic Claude","Google Gemini","OpenAI GPT","Mistral","Cerebras Qwen","PostgreSQL","Prisma","Vercel","Upstash Redis","Resend","Sentry","MCP SDK"];
   return (
     <section className="relative py-32">
       <div className="container-tight">
@@ -406,7 +727,7 @@ function Footer() {
               <span className="grid h-7 w-7 place-items-center rounded-md bg-gradient-copper font-bold" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: "hsl(24 14% 6%)" }}>c</span>
               <span className="text-sm font-semibold tracking-tight">cascrow</span>
             </Link>
-            <p className="mt-4 max-w-sm text-sm" style={{ color: "hsl(30 10% 62%)" }}>Trust-free funding on the XRP Ledger. Lock RLUSD in escrow, prove your milestone, get paid instantly.</p>
+            <p className="mt-4 max-w-sm text-sm" style={{ color: "hsl(30 10% 62%)" }}>Agentic escrow and verification on the XRP Ledger. Lock RLUSD in escrow, prove your milestone, get paid instantly.</p>
             <div className="mt-5 flex items-center gap-2" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, textTransform: "uppercase" as const, letterSpacing: "0.18em", color: "hsl(30 10% 62%)" }}>
               <span className="relative flex h-2 w-2">
                 <span className="absolute inset-0 animate-pulse-dot rounded-full" style={{ background: "hsl(22 55% 54%)" }} />
@@ -418,7 +739,7 @@ function Footer() {
           <div>
             <div className="mb-4" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, textTransform: "uppercase" as const, letterSpacing: "0.12em", color: "hsl(30 10% 62%)" }}>Product</div>
             <ul className="space-y-2 text-sm">
-              {[{ href: "/guide", label: "Guide" },{ href: "/security", label: "Security" },{ href: "/guide#agentic", label: "Agent Docs" },{ href: "/mcp-manifest.json", label: "MCP Manifest" }].map(l => (
+              {[{ href: "/guide", label: "Guide" },{ href: "/security", label: "Security" },{ href: "#agents", label: "For Agents" },{ href: "/mcp-manifest.json", label: "MCP Manifest" }].map(l => (
                 <li key={l.href}><Link href={l.href} className="transition-colors hover:text-foreground" style={{ color: "hsl(30 10% 62%)" }}>{l.label}</Link></li>
               ))}
             </ul>
@@ -459,6 +780,8 @@ export default function Home() {
         <Manifesto />
         <Problem />
         <HowItWorks />
+        <LiveDemo />
+        <AgentIntegration />
         <WhyNow />
         <Market />
         <Stack />
