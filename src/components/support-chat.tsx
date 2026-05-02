@@ -83,7 +83,7 @@ function inlineMarkdown(text: string): ReactNode[] {
     if (part.startsWith("**") && part.endsWith("**"))
       return <strong key={i}>{part.slice(2, -2)}</strong>;
     if (part.startsWith("`") && part.endsWith("`"))
-      return <code key={i} style={{ background: "rgba(255,255,255,0.08)", borderRadius: 3, padding: "1px 4px", fontFamily: "monospace", fontSize: "0.9em" }}>{part.slice(1, -1)}</code>;
+      return <code key={i} style={{ background: "hsl(28 18% 14%)", borderRadius: 3, padding: "1px 4px", fontFamily: "'JetBrains Mono', monospace", fontSize: "0.9em" }}>{part.slice(1, -1)}</code>;
     return part;
   });
 }
@@ -105,7 +105,6 @@ export function SupportChat() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Persist messages and ticketId to localStorage (exclude transient system messages)
   useEffect(() => {
     try {
       localStorage.setItem(LS_MESSAGES, JSON.stringify(messages.filter((m) => m.role !== "system")));
@@ -119,7 +118,6 @@ export function SupportChat() {
     } catch {}
   }, [ticketId]);
 
-  // Listen for open-support-chat event
   useEffect(() => {
     const handler = () => setOpen(true);
     window.addEventListener("open-support-chat", handler);
@@ -157,7 +155,6 @@ export function SupportChat() {
     } catch {}
   }
 
-  // Poll for admin replies
   const pollAdminReplies = useCallback(async () => {
     if (!ticketId || !session?.user?.id) return;
     try {
@@ -219,7 +216,6 @@ export function SupportChat() {
       });
       if (data.cantHelp) setCantHelp(true);
       if (!open) setUnread(true);
-      // data.systemChecked intentionally not used in UI
     } catch {
       setMessages((prev) => {
         const filtered = prev.filter((m) => m.role !== "system");
@@ -272,6 +268,7 @@ export function SupportChat() {
   }
 
   const showQuickReplies = messages.length === 1 && messages[0].role === "assistant" && !ticketId && !loading;
+  const canSend = !!input.trim() && !loading;
 
   return (
     <>
@@ -287,24 +284,30 @@ export function SupportChat() {
           width: 52,
           height: 52,
           borderRadius: "50%",
-          background: "#C4704B",
+          background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)",
           border: "none",
           cursor: "pointer",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
-          transition: "transform 0.15s ease",
+          boxShadow: "0 4px 24px hsl(22 55% 54% / 0.35)",
+          transition: "transform 0.15s ease, box-shadow 0.15s ease",
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.08)")}
-        onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = "scale(1.08)";
+          e.currentTarget.style.boxShadow = "0 6px 32px hsl(22 55% 54% / 0.5)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = "scale(1)";
+          e.currentTarget.style.boxShadow = "0 4px 24px hsl(22 55% 54% / 0.35)";
+        }}
       >
         {open ? (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EDE6DD" strokeWidth="2.5" strokeLinecap="round">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="hsl(24 14% 6%)" strokeWidth="2.5" strokeLinecap="round">
             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         ) : (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDE6DD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="hsl(24 14% 6%)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
         )}
@@ -312,7 +315,8 @@ export function SupportChat() {
           <span style={{
             position: "absolute", top: 2, right: 2,
             width: 10, height: 10, borderRadius: "50%",
-            background: "#ef4444", border: "2px solid #171311",
+            background: "hsl(0 72% 51%)",
+            border: "2px solid hsl(24 14% 4%)",
           }} />
         )}
       </button>
@@ -328,10 +332,10 @@ export function SupportChat() {
             width: 360,
             maxWidth: "calc(100vw - 48px)",
             maxHeight: 520,
-            borderRadius: 16,
-            background: "#1a1511",
-            border: "1px solid rgba(196,112,75,0.25)",
-            boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+            borderRadius: 20,
+            background: "hsl(24 12% 6%)",
+            border: "1px solid hsl(28 18% 14%)",
+            boxShadow: "0 24px 64px hsl(0 0% 0% / 0.6), 0 0 0 1px hsl(22 55% 54% / 0.08)",
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
@@ -340,26 +344,26 @@ export function SupportChat() {
           {/* Header */}
           <div style={{
             padding: "14px 16px",
-            borderBottom: "1px solid rgba(196,112,75,0.15)",
+            borderBottom: "1px solid hsl(28 18% 14%)",
             display: "flex",
             alignItems: "center",
             gap: 10,
-            background: "rgba(196,112,75,0.08)",
+            background: "hsl(22 55% 54% / 0.06)",
           }}>
             <div style={{
               width: 32, height: 32, borderRadius: "50%",
-              background: "rgba(196,112,75,0.2)",
+              background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)",
               display: "flex", alignItems: "center", justifyContent: "center",
               flexShrink: 0,
             }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C4704B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="hsl(24 14% 6%)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#EDE6DD" }}>cascrow support</div>
-              <div style={{ fontSize: 11, color: "#A89B8C" }}>
-                {ticketId ? `Ticket #${ticketId.slice(-8)} · waiting for reply` : "AI + human support"}
+              <div style={{ fontSize: 13, fontWeight: 600, color: "hsl(32 35% 92%)" }}>cascrow support</div>
+              <div style={{ fontSize: 11, color: "hsl(30 10% 62%)", fontFamily: "'JetBrains Mono', monospace" }}>
+                {ticketId ? `#${ticketId.slice(-8)} · waiting for reply` : "AI + human support"}
               </div>
             </div>
             {messages.length > 1 && (
@@ -368,12 +372,12 @@ export function SupportChat() {
                 title="Clear chat"
                 style={{
                   background: "none", border: "none", cursor: "pointer",
-                  color: "#A89B8C", padding: 4, borderRadius: 4,
+                  color: "hsl(30 10% 62%)", padding: 4, borderRadius: 6,
                   display: "flex", alignItems: "center",
                   transition: "color 0.15s",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#EDE6DD")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "#A89B8C")}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "hsl(32 35% 92%)")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "hsl(30 10% 62%)")}
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="3 6 5 6 21 6" />
@@ -393,7 +397,7 @@ export function SupportChat() {
               return (
                 <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: msg.role === "user" ? "flex-end" : "flex-start" }}>
                   {isAdmin && (
-                    <div style={{ fontSize: 10, color: "#C4704B", fontWeight: 700, marginBottom: 3, textTransform: "uppercase" }}>
+                    <div style={{ fontSize: 10, color: "hsl(22 55% 54%)", fontWeight: 700, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: "'JetBrains Mono', monospace" }}>
                       cascrow team
                     </div>
                   )}
@@ -403,16 +407,22 @@ export function SupportChat() {
                       padding: isSystem ? "6px 12px" : "9px 13px",
                       borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
                       background: msg.role === "user"
-                        ? "#C4704B"
+                        ? "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)"
                         : isAdmin
-                        ? "rgba(196,112,75,0.12)"
+                        ? "hsl(22 55% 54% / 0.1)"
                         : isSystem
                         ? "transparent"
-                        : "rgba(255,255,255,0.06)",
-                      border: isAdmin ? "1px solid rgba(196,112,75,0.25)" : isSystem ? "none" : undefined,
+                        : "hsl(28 18% 14% / 0.8)",
+                      border: isAdmin
+                        ? "1px solid hsl(22 55% 54% / 0.25)"
+                        : isSystem
+                        ? "none"
+                        : msg.role === "user"
+                        ? "none"
+                        : "1px solid hsl(28 18% 18%)",
                       fontSize: isSystem ? 11 : 13,
                       lineHeight: 1.55,
-                      color: msg.role === "user" ? "#fff" : isSystem ? "#A89B8C" : "#EDE6DD",
+                      color: msg.role === "user" ? "hsl(24 14% 6%)" : isSystem ? "hsl(30 10% 62%)" : "hsl(32 35% 92%)",
                       fontStyle: isSystem ? "italic" : "normal",
                       display: isSystem ? "flex" : undefined,
                       alignItems: isSystem ? "center" : undefined,
@@ -420,7 +430,7 @@ export function SupportChat() {
                     }}
                   >
                     {isSystem && (
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#A89B8C" strokeWidth="2.5" strokeLinecap="round">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="hsl(30 10% 62%)" strokeWidth="2.5" strokeLinecap="round">
                         <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
                       </svg>
                     )}
@@ -434,7 +444,7 @@ export function SupportChat() {
               );
             })}
 
-            {/* Quick-reply chips — only on the initial greeting */}
+            {/* Quick-reply chips */}
             {showQuickReplies && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, paddingLeft: 2 }}>
                 {QUICK_REPLIES.map((chip) => (
@@ -443,16 +453,23 @@ export function SupportChat() {
                     onClick={() => send(chip)}
                     style={{
                       padding: "5px 11px",
-                      borderRadius: 12,
-                      border: "1px solid rgba(196,112,75,0.35)",
-                      background: "rgba(196,112,75,0.08)",
-                      color: "#C4704B",
+                      borderRadius: 99,
+                      border: "1px solid hsl(22 55% 54% / 0.3)",
+                      background: "hsl(22 55% 54% / 0.07)",
+                      color: "hsl(22 55% 54%)",
                       fontSize: 11,
                       cursor: "pointer",
-                      transition: "background 0.15s",
+                      transition: "background 0.15s, border-color 0.15s",
+                      fontFamily: "'JetBrains Mono', monospace",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(196,112,75,0.18)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(196,112,75,0.08)")}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "hsl(22 55% 54% / 0.15)";
+                      e.currentTarget.style.borderColor = "hsl(22 55% 54% / 0.5)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "hsl(22 55% 54% / 0.07)";
+                      e.currentTarget.style.borderColor = "hsl(22 55% 54% / 0.3)";
+                    }}
                   >
                     {chip}
                   </button>
@@ -463,15 +480,16 @@ export function SupportChat() {
             {loading && (
               <div style={{
                 alignSelf: "flex-start",
-                padding: "9px 13px",
+                padding: "10px 14px",
                 borderRadius: "14px 14px 14px 4px",
-                background: "rgba(255,255,255,0.06)",
-                display: "flex", gap: 4, alignItems: "center",
+                background: "hsl(28 18% 14% / 0.8)",
+                border: "1px solid hsl(28 18% 18%)",
+                display: "flex", gap: 5, alignItems: "center",
               }}>
                 {[0, 1, 2].map((i) => (
                   <span key={i} style={{
-                    width: 6, height: 6, borderRadius: "50%", background: "#A89B8C",
-                    animation: "pulse 1.2s ease-in-out infinite",
+                    width: 6, height: 6, borderRadius: "50%", background: "hsl(30 10% 62%)",
+                    animation: "cs-pulse 1.2s ease-in-out infinite",
                     animationDelay: `${i * 0.2}s`,
                   }} />
                 ))}
@@ -482,22 +500,22 @@ export function SupportChat() {
             {cantHelp && !ticketId && !showTicketForm && (
               <div style={{
                 alignSelf: "flex-start", width: "100%",
-                padding: "10px 12px",
-                borderRadius: 10,
-                background: "rgba(196,112,75,0.08)",
-                border: "1px solid rgba(196,112,75,0.2)",
-                fontSize: 12, color: "#A89B8C",
+                padding: "12px 14px",
+                borderRadius: 12,
+                background: "hsl(22 55% 54% / 0.06)",
+                border: "1px solid hsl(22 55% 54% / 0.2)",
+                fontSize: 12, color: "hsl(30 10% 62%)",
               }}>
-                Want to escalate this to a human? I'll create a ticket and our team will reply here in the chat.
+                Want to escalate this to a human? I&apos;ll create a ticket and our team will reply here.
                 <button
                   onClick={() => setShowTicketForm(true)}
                   style={{
-                    display: "block", marginTop: 8,
-                    padding: "6px 14px",
-                    borderRadius: 6,
-                    background: "#C4704B",
+                    display: "block", marginTop: 10,
+                    padding: "7px 16px",
+                    borderRadius: 99,
+                    background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)",
                     border: "none", cursor: "pointer",
-                    fontSize: 12, color: "#fff", fontWeight: 600,
+                    fontSize: 12, color: "hsl(24 14% 6%)", fontWeight: 600,
                   }}
                 >
                   Create support ticket
@@ -509,22 +527,22 @@ export function SupportChat() {
             {showTicketForm && !ticketId && (
               <div style={{
                 alignSelf: "flex-start", width: "100%",
-                padding: "10px 12px",
-                borderRadius: 10,
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(196,112,75,0.2)",
+                padding: "12px 14px",
+                borderRadius: 12,
+                background: "hsl(24 12% 6% / 0.8)",
+                border: "1px solid hsl(28 18% 18%)",
                 fontSize: 12,
               }}>
-                <div style={{ color: "#EDE6DD", marginBottom: 8, fontWeight: 500 }}>Describe your issue</div>
+                <div style={{ color: "hsl(32 35% 92%)", marginBottom: 8, fontWeight: 500 }}>Describe your issue</div>
                 <input
                   value={ticketSubject}
                   onChange={(e) => setTicketSubject(e.target.value)}
                   placeholder="Short summary of the issue"
                   style={{
-                    width: "100%", padding: "7px 10px",
-                    borderRadius: 6, border: "1px solid rgba(196,112,75,0.25)",
-                    background: "rgba(255,255,255,0.05)",
-                    color: "#EDE6DD", fontSize: 12,
+                    width: "100%", padding: "8px 11px",
+                    borderRadius: 8, border: "1px solid hsl(28 18% 18%)",
+                    background: "hsl(28 18% 10%)",
+                    color: "hsl(32 35% 92%)", fontSize: 12,
                     outline: "none", boxSizing: "border-box",
                     marginBottom: 8,
                   }}
@@ -535,9 +553,10 @@ export function SupportChat() {
                     disabled={loading}
                     style={{
                       flex: 1, padding: "7px 0",
-                      borderRadius: 6, background: "#C4704B",
+                      borderRadius: 99,
+                      background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)",
                       border: "none", cursor: "pointer",
-                      fontSize: 12, color: "#fff", fontWeight: 600,
+                      fontSize: 12, color: "hsl(24 14% 6%)", fontWeight: 600,
                     }}
                   >
                     {loading ? "Creating…" : "Submit ticket"}
@@ -546,9 +565,10 @@ export function SupportChat() {
                     onClick={() => setShowTicketForm(false)}
                     style={{
                       padding: "7px 12px",
-                      borderRadius: 6, background: "transparent",
-                      border: "1px solid rgba(196,112,75,0.3)",
-                      cursor: "pointer", fontSize: 12, color: "#A89B8C",
+                      borderRadius: 99,
+                      background: "transparent",
+                      border: "1px solid hsl(28 18% 18%)",
+                      cursor: "pointer", fontSize: 12, color: "hsl(30 10% 62%)",
                     }}
                   >
                     Cancel
@@ -563,9 +583,9 @@ export function SupportChat() {
           {/* Input */}
           <div style={{
             padding: "10px 12px",
-            borderTop: "1px solid rgba(196,112,75,0.12)",
+            borderTop: "1px solid hsl(28 18% 14%)",
             display: "flex", gap: 8, alignItems: "flex-end",
-            background: "rgba(0,0,0,0.2)",
+            background: "hsl(24 14% 4% / 0.6)",
           }}>
             <textarea
               ref={inputRef}
@@ -580,39 +600,46 @@ export function SupportChat() {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   send();
-                  if (inputRef.current) {
-                    inputRef.current.style.height = "auto";
-                  }
+                  if (inputRef.current) inputRef.current.style.height = "auto";
                 }
               }}
               placeholder={ticketId ? "Continue the conversation…" : "Ask a question…"}
               disabled={loading}
               style={{
-                flex: 1, padding: "8px 12px",
+                flex: 1, padding: "9px 13px",
                 borderRadius: 14,
-                border: "1px solid rgba(196,112,75,0.2)",
-                background: "rgba(255,255,255,0.05)",
-                color: "#EDE6DD", fontSize: 13,
+                border: "1px solid hsl(28 18% 18%)",
+                background: "hsl(28 18% 10%)",
+                color: "hsl(32 35% 92%)", fontSize: 13,
                 outline: "none",
                 resize: "none",
                 overflowY: "auto",
                 lineHeight: 1.5,
                 fontFamily: "inherit",
+                transition: "border-color 0.15s",
               }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = "hsl(22 55% 54% / 0.5)")}
+              onBlur={(e) => (e.currentTarget.style.borderColor = "hsl(28 18% 18%)")}
             />
             <button
               onClick={() => send()}
-              disabled={!input.trim() || loading}
+              disabled={!canSend}
               style={{
-                width: 34, height: 34,
+                width: 36, height: 36,
                 borderRadius: "50%",
-                background: input.trim() && !loading ? "#C4704B" : "rgba(196,112,75,0.2)",
-                border: "none", cursor: input.trim() && !loading ? "pointer" : "default",
+                background: canSend
+                  ? "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)"
+                  : "hsl(28 18% 14%)",
+                border: "none",
+                cursor: canSend ? "pointer" : "default",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                flexShrink: 0, transition: "background 0.15s",
+                flexShrink: 0,
+                transition: "background 0.15s, transform 0.1s",
               }}
+              onMouseEnter={(e) => { if (canSend) e.currentTarget.style.transform = "scale(1.08)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#EDE6DD" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={canSend ? "hsl(24 14% 6%)" : "hsl(30 10% 62%)"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
               </svg>
             </button>
@@ -621,7 +648,7 @@ export function SupportChat() {
       )}
 
       <style>{`
-        @keyframes pulse {
+        @keyframes cs-pulse {
           0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
           40% { opacity: 1; transform: scale(1); }
         }
