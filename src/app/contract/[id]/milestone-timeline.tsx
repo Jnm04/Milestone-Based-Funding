@@ -193,10 +193,31 @@ export function MilestoneTimeline({ milestones, activeMilestoneId, viewerRole, c
                       {STATUS_LABELS[ms.status] ?? ms.status}
                     </span>
                   </div>
-                  <div style={{ display: "flex", gap: "16px", marginTop: "4px", fontSize: "12px", color: "#A89B8C" }}>
-                    <span>
-                      <strong style={{ color: "#D4B896" }}>${Number(ms.amountUSD).toLocaleString()}</strong>{" "}RLUSD
-                    </span>
+                  <div style={{ display: "flex", gap: "16px", marginTop: "4px", fontSize: "12px", color: "#A89B8C", flexWrap: "wrap", alignItems: "center" }}>
+                    {Number(ms.amountUSD) <= 1 ? (
+                      <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span
+                          style={{
+                            background: ["VERIFIED", "COMPLETED"].includes(ms.status)
+                              ? "hsl(22 55% 54% / 0.15)"
+                              : "hsl(28 18% 14% / 0.8)",
+                            border: `1px solid ${["VERIFIED", "COMPLETED"].includes(ms.status) ? "hsl(22 55% 54% / 0.4)" : "hsl(28 18% 18%)"}`,
+                            color: ["VERIFIED", "COMPLETED"].includes(ms.status) ? "hsl(22 55% 64%)" : "hsl(30 10% 55%)",
+                            borderRadius: "6px",
+                            padding: "1px 7px",
+                            fontSize: "11px",
+                            fontFamily: "'JetBrains Mono', monospace",
+                            letterSpacing: "0.02em",
+                          }}
+                        >
+                          {["VERIFIED", "COMPLETED"].includes(ms.status) ? "✓ $0.10 charged" : "Verification · $0.10"}
+                        </span>
+                      </span>
+                    ) : (
+                      <span>
+                        <strong style={{ color: "#D4B896" }}>${Number(ms.amountUSD).toLocaleString()}</strong>{" "}RLUSD
+                      </span>
+                    )}
                     <span>
                       Due:{" "}
                       <strong style={{ color: "#D4B896" }}>

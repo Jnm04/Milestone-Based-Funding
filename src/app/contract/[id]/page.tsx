@@ -221,12 +221,21 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           </div>
           <p className="text-sm leading-relaxed" style={{ color: "hsl(32 35% 92%)" }}>{contract.milestone}</p>
           <div className="flex items-center gap-4 pt-1 text-sm" style={{ color: "hsl(30 10% 62%)" }}>
-            <span>
-              Total:{" "}
-              <strong style={{ color: "#D4B896" }}>
-                ${Number(contract.amountUSD).toLocaleString()} RLUSD
-              </strong>
-            </span>
+            {Number(contract.amountUSD) <= contract.milestones.length ? (
+              <span>
+                Verification-only ·{" "}
+                <strong style={{ color: "#D4B896" }}>
+                  $0.10 / milestone
+                </strong>
+              </span>
+            ) : (
+              <span>
+                Total:{" "}
+                <strong style={{ color: "#D4B896" }}>
+                  ${Number(contract.amountUSD).toLocaleString()} RLUSD
+                </strong>
+              </span>
+            )}
             {contract.milestones.length > 0 && (
               <span>
                 {contract.milestones.length} milestone{contract.milestones.length !== 1 ? "s" : ""}

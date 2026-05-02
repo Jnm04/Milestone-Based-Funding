@@ -230,7 +230,7 @@ async function handleCreateContract({ milestones }) {
   const payload = {
     milestones: milestones.map((m) => ({
       title: `${m.title} — ${m.description}`,
-      amountUSD: 1, // nominal amount for verification-only flow
+      amountUSD: 0, // verification-only — $0.10 charged per verification trigger
       cancelAfter: deadline(m.deadlineDays ?? 7),
     })),
   };
