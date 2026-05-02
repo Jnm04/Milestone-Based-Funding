@@ -341,7 +341,7 @@ function LoginForm() {
               &ldquo;Cascrow turns three weeks of back-and-forth into a single API call.&rdquo;
             </blockquote>
             <div>
-              <p className="text-sm font-medium" style={{ color: "hsl(32 35% 92%)" }}>— Jan-Niklas Möller</p>
+              <p className="text-sm font-medium" style={{ color: "hsl(32 35% 92%)" }}>Jan-Niklas Möller</p>
               <p className="text-xs mt-0.5" style={{ color: "hsl(30 10% 62%)" }}>Co-Founder of Cascrow</p>
             </div>
             <div className="flex flex-col gap-4 pt-4 text-left">
