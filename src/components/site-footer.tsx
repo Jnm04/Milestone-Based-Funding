@@ -68,7 +68,7 @@ export function SiteFooter() {
 
         <div className="mt-14 flex flex-col items-start justify-between gap-4 border-t pt-6 sm:flex-row sm:items-center" style={{ borderColor: border }}>
           <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: dim }}>© 2026 Cascrow</span>
-          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: dim }}>moeller@cascrow.com</span>
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: dim }}>hello@cascrow.com</span>
         </div>
       </div>
     </footer>
