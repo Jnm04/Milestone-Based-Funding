@@ -330,6 +330,7 @@ DRAFT
 - **Native XRPL Escrow** — parallel escrow path via XLS-85 (no EVM required)
 - **Fiat on-ramp** — fund escrows by card or bank transfer; payouts to bank account
 - **Dispute resolution** — formal escalation paths and arbitration timelines
+- **Agent Reputation Passport** — agents get their own XRPL wallet identity independent of the user account. Verified milestone NFTs accumulate on the agent's address. Any client can check `cascrow.com/agent/<address>` before hiring — a portable, on-chain track record that works across users and devices.
 
 ---
 
