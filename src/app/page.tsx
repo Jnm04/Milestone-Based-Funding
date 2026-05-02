@@ -94,10 +94,15 @@ function Hero() {
           </span>
           <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, textTransform: "uppercase" as const, letterSpacing: "0.2em", color: "hsl(30 10% 62%)" }}>
             Live · XRPL EVM · RLUSD
-            {stats && stats.contracts > 0 && (
-              <span style={{ color: "hsl(22 55% 54%)" }}> · {stats.contracts} contracts · {stats.verifications} verifications</span>
-            )}
           </span>
+          {stats && stats.contracts > 0 && (
+            <>
+              <span className="h-px w-3 shrink-0" style={{ background: "hsl(22 55% 54% / 0.4)" }} />
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, textTransform: "uppercase" as const, letterSpacing: "0.2em", color: "hsl(22 55% 54%)" }}>
+                {stats.contracts} contracts · {stats.verifications} verifications
+              </span>
+            </>
+          )}
         </div>
 
         <h1 className="mx-auto max-w-5xl text-center font-semibold leading-[1.02] tracking-[-0.03em]" style={{ fontSize: "clamp(48px, 8vw, 88px)" }}>
