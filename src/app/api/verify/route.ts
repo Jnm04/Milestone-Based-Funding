@@ -14,6 +14,7 @@ import { fireWebhook } from "@/services/webhook/webhook.service";
 import { createNotification } from "@/services/notifications/inapp.service";
 import { getPostHogClient } from "@/lib/posthog-server";
 import { isValidCronSecret } from "@/lib/cron-auth";
+import { resolveApiKey } from "@/lib/api-key-auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { mintCompletionNFT } from "@/services/xrpl/nft.service";
 import { writeAuditLog as writeAuditLogNft } from "@/services/evm/audit.service";
@@ -116,17 +117,20 @@ export async function POST(request: NextRequest) {
     }
   } else {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    const apiKeyCtx = !session ? await resolveApiKey(request.headers.get("authorization")) : null;
+    const userId = session?.user?.id ?? apiKeyCtx?.userId ?? null;
+
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const withinLimit = await checkVerifyRateLimit(session.user.id);
+    const withinLimit = await checkVerifyRateLimit(userId);
     if (!withinLimit) {
       return NextResponse.json(
         { error: "Too many verification requests. Please wait 10 minutes.", code: "RATE_LIMITED" },
         { status: 429, headers: { "Retry-After": "600" } }
       );
     }
-    sessionUserId = session.user.id;
+    sessionUserId = userId;
   }
 
   let body: { proofId?: string };

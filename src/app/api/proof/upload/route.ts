@@ -13,6 +13,7 @@ import { createNotification } from "@/services/notifications/inapp.service";
 import { generateAndStoreProofSummary } from "@/services/ai/proof-summary.service";
 import { generateAndStoreResubmissionDiff } from "@/services/ai/resubmission-diff.service";
 import { getPostHogClient } from "@/lib/posthog-server";
+import { resolveApiKey } from "@/lib/api-key-auth";
 
 async function triggerVerification(proofId: string) {
   try {
@@ -89,7 +90,10 @@ const ALLOWED_MIME_TYPES = new Set([
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    const apiKeyCtx = !session ? await resolveApiKey(request.headers.get("authorization")) : null;
+    const userId = session?.user?.id ?? apiKeyCtx?.userId ?? null;
+
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -98,7 +102,7 @@ export async function POST(request: NextRequest) {
     const recentUploadCount = await prisma.proof.count({
       where: {
         createdAt: { gte: oneHourAgo },
-        contract: { startupId: session.user.id },
+        contract: { OR: [{ startupId: userId }, { investorId: userId }] },
       },
     });
     if (recentUploadCount >= 20) {
@@ -182,7 +186,7 @@ export async function POST(request: NextRequest) {
       if (!milestone) {
         return NextResponse.json({ error: "Milestone not found" }, { status: 404 });
       }
-      if (milestone.contract.startupId !== session.user.id) {
+      if (milestone.contract.startupId !== userId && milestone.contract.investorId !== userId) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
       if (!["FUNDED", "PROOF_SUBMITTED", "PENDING_REVIEW"].includes(milestone.status)) {
@@ -236,7 +240,7 @@ export async function POST(request: NextRequest) {
         contractId: milestone.contractId,
         milestoneId,
         event: "PROOF_SUBMITTED",
-        actor: session.user.id,
+        actor: userId,
         metadata: { proofId: proof.id, fileName, fileHash },
       });
 
@@ -257,7 +261,7 @@ export async function POST(request: NextRequest) {
       ).catch(() => {});
 
       getPostHogClient().capture({
-        distinctId: session.user.id,
+        distinctId: userId,
         event: "proof_submitted",
         properties: {
           contract_id: milestone.contractId,
@@ -308,7 +312,7 @@ export async function POST(request: NextRequest) {
         include: { investor: true, startup: true },
       });
       if (!contract) return NextResponse.json({ error: "Contract not found" }, { status: 404 });
-      if (contract.startupId !== session.user.id) {
+      if (contract.startupId !== userId && contract.investorId !== userId) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
       if (!["FUNDED", "PROOF_SUBMITTED", "PENDING_REVIEW"].includes(contract.status)) {
@@ -353,7 +357,7 @@ export async function POST(request: NextRequest) {
       await writeAuditLog({
         contractId: resolvedContractId,
         event: "PROOF_SUBMITTED",
-        actor: session.user.id,
+        actor: userId,
         metadata: { proofId: proof.id, fileName, fileHash },
       });
 

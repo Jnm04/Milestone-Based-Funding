@@ -11,6 +11,7 @@ import { getPostHogClient } from "@/lib/posthog-server";
 import Anthropic from "@anthropic-ai/sdk";
 import { encryptGoal, hashGoal } from "@/lib/confidential";
 import { encryptApiKey } from "@/lib/encrypt";
+import { resolveApiKey } from "@/lib/api-key-auth";
 
 // ─── Lazy Anthropic client ────────────────────────────────────────────────────
 let _anthropic: Anthropic | null = null;
@@ -92,12 +93,15 @@ Rules:
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    const apiKeyCtx = !session ? await resolveApiKey(request.headers.get("authorization")) : null;
+    const userId = session?.user?.id ?? apiKeyCtx?.userId ?? null;
+
+    if (!userId) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
     // 20 contract creations per user per hour — prevents DB/webhook spam
-    if (!(await checkRateLimit(`create-contract:${session.user.id}`, 20, 60 * 60 * 1000))) {
+    if (!(await checkRateLimit(`create-contract:${userId}`, 20, 60 * 60 * 1000))) {
       return NextResponse.json(
         { error: "Too many contracts created. Please wait before trying again." },
         { status: 429, headers: { "Retry-After": "3600" } }
@@ -128,14 +132,15 @@ export async function POST(request: NextRequest) {
     const isAttestation = mode === "ATTESTATION";
 
     // ATTESTATION mode: no wallet required — no financial flows
-    if (!isAttestation && !session.user.walletAddress) {
+    // API key callers (agents) skip wallet check — escrow funding is handled separately
+    if (!isAttestation && !apiKeyCtx && !session?.user.walletAddress) {
       return NextResponse.json(
         { error: "Connect your XRPL wallet before creating a contract" },
         { status: 422 }
       );
     }
 
-    const investor = await prisma.user.findUnique({ where: { id: session.user.id } });
+    const investor = await prisma.user.findUnique({ where: { id: userId } });
     if (!investor) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
     if (isAttestation && !investor.isEnterprise) {
@@ -231,12 +236,12 @@ export async function POST(request: NextRequest) {
       await writeAuditLog({
         contractId: result.id,
         event: "ATTESTATION_CONTRACT_CREATED",
-        actor: session.user.id,
+        actor: userId,
         metadata: { milestoneCount: atMs.length, mode: "ATTESTATION" },
       });
 
       getPostHogClient().capture({
-        distinctId: session.user.id,
+        distinctId: userId,
         event: "attestation_contract_created",
         properties: { contract_id: result.id, milestone_count: atMs.length },
       });
@@ -321,7 +326,7 @@ export async function POST(request: NextRequest) {
     await writeAuditLog({
       contractId: result.id,
       event: "CONTRACT_CREATED",
-      actor: session.user.id,
+      actor: userId,
       metadata: { milestoneCount: result.id ? 1 : 0 },
     });
 
@@ -338,7 +343,7 @@ export async function POST(request: NextRequest) {
     }).catch((err) => console.error("[webhook] contract.created failed:", err));
 
     getPostHogClient().capture({
-      distinctId: session.user.id,
+      distinctId: userId,
       event: "contract_created",
       properties: {
         contract_id: result.id,
