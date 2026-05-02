@@ -73,6 +73,31 @@ function Nav() {
   );
 }
 
+/* ─── System Status (footer) ─── */
+function SystemStatus() {
+  const [ok, setOk] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetch("/api/stats")
+      .then(r => { setOk(r.ok); })
+      .catch(() => setOk(false));
+  }, []);
+
+  const degraded = ok === false;
+  const dotColor = degraded ? "hsl(38 90% 55%)" : "hsl(22 55% 54%)";
+  const label = degraded ? "Degraded performance" : "All systems operational";
+
+  return (
+    <div className="mt-5 flex items-center gap-2" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, textTransform: "uppercase" as const, letterSpacing: "0.18em", color: "hsl(30 10% 62%)" }}>
+      <span className="relative flex h-2.5 w-2.5 shrink-0">
+        <span className="absolute inset-0 animate-ping rounded-full opacity-60" style={{ background: dotColor }} />
+        <span className="relative inline-block h-2.5 w-2.5 rounded-full" style={{ background: dotColor }} />
+      </span>
+      {label}
+    </div>
+  );
+}
+
 /* ─── Hero ─── */
 function Hero() {
   const [stats, setStats] = useState<{ contracts: number; verifications: number } | null>(null);
@@ -730,13 +755,7 @@ function Footer() {
               <span className="text-sm font-semibold tracking-tight">cascrow</span>
             </Link>
             <p className="mt-4 max-w-sm text-sm" style={{ color: "hsl(30 10% 62%)" }}>Agentic escrow and verification on the XRP Ledger. Lock RLUSD in escrow, prove your milestone, get paid instantly.</p>
-            <div className="mt-5 flex items-center gap-2" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, textTransform: "uppercase" as const, letterSpacing: "0.18em", color: "hsl(30 10% 62%)" }}>
-              <span className="relative flex h-2.5 w-2.5 shrink-0">
-                <span className="absolute inset-0 animate-ping rounded-full opacity-60" style={{ background: "hsl(22 55% 54%)" }} />
-                <span className="relative inline-block h-2.5 w-2.5 rounded-full" style={{ background: "hsl(22 55% 54%)" }} />
-              </span>
-              All systems operational
-            </div>
+            <SystemStatus />
           </div>
           <div>
             <div className="mb-4" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, textTransform: "uppercase" as const, letterSpacing: "0.12em", color: "hsl(30 10% 62%)" }}>Product</div>
