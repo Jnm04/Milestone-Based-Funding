@@ -316,21 +316,21 @@
   align-items:     center;
   justify-content: center;
   gap:             8px;
-  background:      #EDE6DD;
-  color:           #171311;
+  background:      linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%);
+  color:           hsl(24 14% 6%);
   border-radius:   50px;
-  padding:         14px 32px;
+  padding:         12px 28px;
   font-weight:     500;
-  font-size:       16px;
+  font-size:       14px;
   border:          none;
   cursor:          pointer;
-  transition:      transform 0.2s ease, box-shadow 0.2s ease;
+  transition:      transform 0.2s ease, box-shadow 0.4s cubic-bezier(0.16,1,0.3,1);
   text-decoration: none;
   white-space:     nowrap;
 }
 .cs-btn-primary:hover {
-  transform:  scale(1.02);
-  box-shadow: 0 8px 32px rgba(237,230,221,0.12);
+  transform:  translateY(-2px);
+  box-shadow: 0 0 60px -10px hsl(22 75% 55% / 0.45);
 }
 .cs-btn-primary:disabled {
   opacity: 0.5;
@@ -387,51 +387,59 @@
 
 /* ── Input Fields ────────────────────────────────────────────── */
 .cs-input {
-  background:    rgba(255,255,255,0.04);
-  border:        1px solid rgba(196,112,75,0.15);
-  border-radius: 8px;
+  background:    hsl(24 12% 6% / 0.6);
+  border:        1px solid hsl(28 18% 14%);
+  border-radius: 10px;
   padding:       12px 16px;
-  color:         #EDE6DD;
-  font-size:     15px;
+  color:         hsl(32 35% 92%);
+  font-size:     14px;
   width:         100%;
   transition:    border-color 0.2s ease, box-shadow 0.2s ease;
   outline:       none;
+  backdrop-filter: blur(12px);
 }
-.cs-input::placeholder { color: rgba(168,155,140,0.5); }
+.cs-input::placeholder { color: hsl(30 10% 62% / 0.5); }
 .cs-input:focus {
-  border-color: #C4704B;
-  box-shadow:   0 0 0 3px rgba(196,112,75,0.1);
+  border-color: hsl(22 55% 54%);
+  box-shadow:   0 0 0 3px hsl(22 55% 54% / 0.1);
 }
 .cs-label {
-  color:        #A89B8C;
-  font-size:    13px;
-  font-weight:  400;
-  margin-bottom: 6px;
-  display:      block;
+  color:          hsl(30 10% 62%);
+  font-family:    var(--font-jetbrains-mono), 'JetBrains Mono', monospace;
+  font-size:      10px;
+  font-weight:    500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom:  6px;
+  display:        block;
 }
 
 
 /* ── Status badges ───────────────────────────────────────────── */
 .cs-badge {
-  display:       inline-flex;
-  align-items:   center;
-  gap:           5px;
-  padding:       4px 10px;
-  border-radius: 50px;
-  font-size:     12px;
-  font-weight:   500;
-  white-space:   nowrap;
+  display:        inline-flex;
+  align-items:    center;
+  gap:            5px;
+  padding:        3px 10px;
+  border-radius:  50px;
+  font-family:    var(--font-jetbrains-mono), 'JetBrains Mono', monospace;
+  font-size:      10px;
+  font-weight:    500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space:    nowrap;
+  border:         1px solid transparent;
 }
-.cs-badge-draft       { background: rgba(168,155,140,0.12); color: #A89B8C; }
-.cs-badge-awaiting    { background: rgba(234,179,8,0.12);   color: #eab308; }
-.cs-badge-funded      { background: rgba(59,130,246,0.12);  color: #60a5fa; }
-.cs-badge-proof       { background: rgba(196,112,75,0.15);  color: #C4704B; }
-.cs-badge-review      { background: rgba(251,191,36,0.12);  color: #fbbf24; }
-.cs-badge-verified    { background: rgba(168,85,247,0.12);  color: #c084fc; }
-.cs-badge-rejected    { background: rgba(248,113,113,0.12); color: #f87171; }
-.cs-badge-completed   { background: rgba(52,211,153,0.12);  color: #34d399; }
-.cs-badge-investor    { background: rgba(196,112,75,0.12);  color: #C4704B; }
-.cs-badge-startup     { background: rgba(212,184,150,0.12); color: #D4B896; }
+.cs-badge-draft       { background: rgba(168,155,140,0.08); color: hsl(30 10% 62%);  border-color: rgba(168,155,140,0.2); }
+.cs-badge-awaiting    { background: rgba(234,179,8,0.08);   color: #eab308;             border-color: rgba(234,179,8,0.25);   }
+.cs-badge-funded      { background: rgba(59,130,246,0.08);  color: #60a5fa;             border-color: rgba(59,130,246,0.25);  }
+.cs-badge-proof       { background: hsl(22 55% 54% / 0.1);  color: hsl(22 55% 54%);     border-color: hsl(22 55% 54% / 0.3);  }
+.cs-badge-review      { background: rgba(251,191,36,0.08);  color: #fbbf24;             border-color: rgba(251,191,36,0.25);  }
+.cs-badge-verified    { background: rgba(168,85,247,0.08);  color: #c084fc;             border-color: rgba(168,85,247,0.25);  }
+.cs-badge-rejected    { background: rgba(248,113,113,0.08); color: #f87171;             border-color: rgba(248,113,113,0.25); }
+.cs-badge-completed   { background: rgba(52,211,153,0.08);  color: #34d399;             border-color: rgba(52,211,153,0.25);  }
+.cs-badge-investor    { background: hsl(22 55% 54% / 0.08); color: hsl(22 55% 54%);     border-color: hsl(22 55% 54% / 0.25); }
+.cs-badge-startup     { background: hsl(28 75% 70% / 0.08); color: hsl(28 75% 70%);     border-color: hsl(28 75% 70% / 0.25); }
 
 /* ── Toggle switch ───────────────────────────────────────────── */
 .cs-toggle {

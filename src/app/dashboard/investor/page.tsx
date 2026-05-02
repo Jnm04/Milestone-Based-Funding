@@ -77,15 +77,14 @@ const HEALTH_CONFIG: Record<DealHealth, { color: string; label: string; bg: stri
 
 function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
-    <div
-      className="flex flex-col gap-2 p-5 rounded-xl"
-      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(196,112,75,0.12)" }}
-    >
-      <p className="text-xs uppercase tracking-wide" style={{ color: "#A89B8C" }}>{label}</p>
-      <p className="text-3xl font-semibold" style={{ color: "#EDE6DD", fontFamily: "var(--font-libre-franklin)", fontWeight: 300 }}>
-        {value}
-      </p>
-      {sub && <p className="text-xs" style={{ color: "#A89B8C" }}>{sub}</p>}
+    <div className="flex flex-col gap-2 p-5" style={{ background: "hsl(24 12% 6% / 0.7)", backdropFilter: "blur(12px)" }}>
+      <p className="font-mono text-[10px] uppercase tracking-[0.22em]" style={{ color: "hsl(30 10% 62%)" }}>{label}</p>
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-3xl font-semibold tracking-tight" style={{ background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>
+          {value}
+        </span>
+      </div>
+      {sub && <p className="font-mono text-[10px] uppercase tracking-[0.18em]" style={{ color: "hsl(30 10% 62%)" }}>{sub}</p>}
     </div>
   );
 }
@@ -152,7 +151,7 @@ function HealthDot({ contract }: { contract: Contract }) {
         <div
           className="absolute z-50 top-full left-0 mt-2 p-3 rounded-xl text-xs max-w-xs pointer-events-none"
           style={{
-            background: "#1F1A18",
+            background: "hsl(24 12% 6%)",
             border: `1px solid ${cfg.border}`,
             color: "#EDE6DD",
             width: "220px",
@@ -273,7 +272,7 @@ function TransparencyReportModal({ onClose }: { onClose: () => void }) {
       <div
         className="relative w-full max-w-md rounded-2xl overflow-hidden flex flex-col"
         style={{
-          background: "#1F1A18",
+          background: "hsl(24 12% 6%)",
           border: "1px solid rgba(196,112,75,0.25)",
           boxShadow: "0 24px 80px rgba(0,0,0,0.6)",
         }}
@@ -286,7 +285,7 @@ function TransparencyReportModal({ onClose }: { onClose: () => void }) {
           <div className="flex flex-col gap-0.5">
             <h2
               className="text-base font-semibold"
-              style={{ color: "#EDE6DD", fontFamily: "var(--font-libre-franklin)", fontWeight: 400 }}
+              style={{ color: "#EDE6DD", fontWeight: 400 }}
             >
               Stakeholder Transparency Report
             </h2>
@@ -508,7 +507,7 @@ export default function InvestorDashboard() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#171311" }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "hsl(24 14% 4%)" }}>
         <div className="flex flex-col items-center gap-3">
           <div className="w-6 h-6 rounded-full border-2 animate-spin" style={{ borderColor: "rgba(196,112,75,0.3)", borderTopColor: "#C4704B" }} />
           <p className="text-sm" style={{ color: "#A89B8C" }}>Loading…</p>
@@ -529,7 +528,7 @@ export default function InvestorDashboard() {
     .reduce((s, c) => s + Number(c.amountUSD), 0);
 
   return (
-    <div className="flex min-h-screen" style={{ background: "#171311" }}>
+    <div className="flex min-h-screen" style={{ background: "hsl(24 14% 4%)" }}>
       <NodeBackground />
       <DashboardSidebar role="investor" />
       {showReportModal && <TransparencyReportModal onClose={() => setShowReportModal(false)} />}
@@ -544,7 +543,7 @@ export default function InvestorDashboard() {
           <div className="flex-1">
             <h1
               className="text-3xl"
-              style={{ fontFamily: "var(--font-libre-franklin)", fontWeight: 300, color: "#EDE6DD" }}
+              style={{ fontWeight: 300, color: "hsl(32 35% 92%)" }}
             >
               Dashboard
             </h1>
@@ -714,7 +713,7 @@ export default function InvestorDashboard() {
               </div>
 
               {/* Stats row */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-px overflow-hidden rounded-2xl border" style={{ background: "hsl(28 18% 14%)", borderColor: "hsl(28 18% 14%)" }}>
                 <StatCard label="Total Locked"          value={totalLocked > 0 ? `$${totalLocked.toLocaleString()}` : "—"} sub="RLUSD in active escrow" />
                 <StatCard label="Active Contracts"      value={active} />
                 <StatCard label="Milestones Completed"  value={completed} />
