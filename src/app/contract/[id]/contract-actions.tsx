@@ -841,7 +841,7 @@ export function ContractActions({
       if (data.action === "already_closed") {
         toast.success("Escrow already settled. Contract marked as expired.");
       } else {
-        toast.success("Escrow cancelled. Funds returned to Grant Giver.");
+        toast.success("Escrow cancelled. Funds returned to Requester.");
       }
       setTimeout(() => window.location.reload(), 1200);
     } catch (err) {
@@ -866,8 +866,8 @@ export function ContractActions({
       }
       toast.success(
         decision === "APPROVE"
-          ? "Approved! Receiver can now withdraw funds."
-          : "Rejected. Receiver can resubmit."
+          ? "Approved! Builder can now withdraw funds."
+          : "Rejected. Builder can resubmit."
       );
       setTimeout(() => window.location.reload(), 1200);
     } catch (err) {
@@ -892,7 +892,7 @@ export function ContractActions({
       }
       const data = await res.json() as { ok: boolean; status?: string; escalated?: boolean };
       if (data.escalated) {
-        toast.info("Too many AI rejections — your case has been escalated to manual review by the Grant Giver.");
+        toast.info("Too many AI rejections — your case has been escalated to manual review by the Requester.");
       } else {
         toast.success("Contract reset — you can now upload a new proof.");
       }
@@ -920,7 +920,7 @@ export function ContractActions({
       }
       const data = (await res.json()) as { decision: string; reasoning: string };
       if (data.decision === "OVERTURNED") {
-        toast.success("Appeal accepted — escalated to Grant Giver for review.");
+        toast.success("Appeal accepted — escalated to Requester for review.");
       } else {
         toast.error("Appeal dismissed. You can still resubmit a new proof.");
       }
@@ -946,7 +946,7 @@ export function ContractActions({
         const err = (await res.json()) as { error?: string };
         throw new Error(err.error ?? "Request failed");
       }
-      toast.success("Extension request submitted — the Grant Giver will review it shortly.");
+      toast.success("Extension request submitted — the Requester will review it shortly.");
       setTimeout(() => window.location.reload(), 1200);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Request failed.");
@@ -996,7 +996,7 @@ export function ContractActions({
         const err = (await res.json()) as { error?: string };
         throw new Error(err.error ?? "Request failed");
       }
-      toast.success("Progress update shared with the Grant Giver.");
+      toast.success("Progress update shared with the Requester.");
       setProgressUpdateText("");
       setTimeout(() => window.location.reload(), 1200);
     } catch (err) {
@@ -1038,7 +1038,7 @@ export function ContractActions({
       return (
         <div className="flex flex-col gap-3 p-5 rounded-xl" style={{ background: "rgba(196,112,75,0.08)", border: "1px solid rgba(196,112,75,0.25)" }}>
           <p className="text-sm font-medium" style={{ color: "#E8935A" }}>
-            Waiting for the Grant Giver to fund the escrow.
+            Waiting for the Requester to fund the escrow.
           </p>
         </div>
       );
@@ -1162,7 +1162,7 @@ export function ContractActions({
       return (
         <div className="flex flex-col gap-3 p-5 rounded-xl" style={{ background: "rgba(96,165,250,0.07)", border: "1px solid rgba(96,165,250,0.2)" }}>
           <p className="text-sm font-medium" style={{ color: "#7DB8F7" }}>
-            Waiting for the Receiver to upload milestone proof.
+            Waiting for the Builder to upload milestone proof.
           </p>
           {/* Progress updates list (investor view) */}
           {progressUpdates.length > 0 && (
@@ -1197,7 +1197,7 @@ export function ContractActions({
               style={{ background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.35)" }}
             >
               <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#7DB8F7" }}>
-                Demo: What happens on the Receiver side
+                Demo: What happens on the Builder side
               </p>
               <p className="text-sm leading-relaxed" style={{ color: "#A8C8F7" }}>{demoOverlayText}</p>
               <p className="text-xs" style={{ color: "#6B8AAA" }}>Uploading demo proof…</p>
@@ -1211,11 +1211,11 @@ export function ContractActions({
               Demo Mode
             </span>
             <p className="text-sm font-medium" style={{ color: "#7DB8F7" }}>
-              Escrow funded — Receiver uploads milestone proof.
+              Escrow funded — Builder uploads milestone proof.
             </p>
           </div>
           <p className="text-xs" style={{ color: "#A89B8C" }}>
-            In the real app the Receiver uploads a PDF or links a GitHub repo. For this demo we use a
+            In the real app the Builder uploads a PDF or links a GitHub repo. For this demo we use a
             pre-built proof from <strong style={{ color: "#D4B896" }}>Acme AI Labs</strong> with MVP metrics,
             signed LOIs, and GitHub activity.
           </p>
@@ -1223,7 +1223,7 @@ export function ContractActions({
             onClick={() =>
               advanceDemo(
                 "submit_proof",
-                "The Receiver (Acme AI Labs) uploads their milestone proof PDF.\n\nFile: acme-ai-labs-milestone-proof.pdf — 11 pages with screenshots, signed LOIs, and GitHub activity report.\n\nProof submitted and logged on XRPL audit trail."
+                "The Builder (Acme AI Labs) uploads their milestone proof PDF.\n\nFile: acme-ai-labs-milestone-proof.pdf — 11 pages with screenshots, signed LOIs, and GitHub activity report.\n\nProof submitted and logged on XRPL audit trail."
               )
             }
             disabled={demoStep !== "idle"}
@@ -1262,7 +1262,7 @@ export function ContractActions({
               )}
             </div>
             <p className="text-xs" style={{ color: "rgba(168,155,140,0.7)" }}>
-              Optional — keep the Grant Giver informed of your progress before submitting proof.
+              Optional — keep the Requester informed of your progress before submitting proof.
             </p>
             {progressUpdates.length > 0 && (
               <div className="flex flex-col gap-1.5 mb-1">
@@ -1380,7 +1380,7 @@ export function ContractActions({
     return (
       <div className="flex flex-col gap-3 p-5 rounded-xl" style={{ background: "rgba(96,165,250,0.07)", border: "1px solid rgba(96,165,250,0.2)" }}>
         <p className="text-sm" style={{ color: "#7DB8F7" }}>
-          {isStartup ? "Proof uploaded. Ready for AI verification." : "The Receiver has submitted proof. AI verification is pending."}
+          {isStartup ? "Proof uploaded. Ready for AI verification." : "The Builder has submitted proof. AI verification is pending."}
         </p>
         {latestProofFileUrl && isStartup && (
           <a
@@ -1554,7 +1554,7 @@ export function ContractActions({
           </div>
         ) : (
           <p className="text-sm" style={{ color: "#A89B8C" }}>
-            The Grant Giver is reviewing your proof. You will be notified once a decision has been made.
+            The Requester is reviewing your proof. You will be notified once a decision has been made.
           </p>
         )}
       </div>
@@ -1567,7 +1567,7 @@ export function ContractActions({
       return (
         <div className="flex flex-col gap-3 p-5 rounded-xl" style={{ background: "rgba(74,222,128,0.07)", border: "1px solid rgba(74,222,128,0.2)" }}>
           <p className="text-sm font-medium" style={{ color: "#6EE09A" }}>
-            Milestone approved. The Receiver can now withdraw the funds.
+            Milestone approved. The Builder can now withdraw the funds.
           </p>
         </div>
       );
@@ -1595,19 +1595,19 @@ export function ContractActions({
               Demo Mode
             </span>
             <p className="text-sm font-medium" style={{ color: "#6EE09A" }}>
-              AI approved! Release the funds to the Receiver.
+              AI approved! Release the funds to the Builder.
             </p>
           </div>
           <p className="text-xs" style={{ color: "#A89B8C" }}>
             The platform wallet calls <code style={{ color: "#D4B896" }}>releaseMilestone()</code> on the XRPL EVM
-            smart contract — no MetaMask required. RLUSD is transferred to the Receiver. An NFT certificate is
+            smart contract — no MetaMask required. RLUSD is transferred to the Builder. An NFT certificate is
             minted on XRPL Mainnet.
           </p>
           <button
             onClick={() =>
               advanceDemo(
                 "release",
-                "Platform calls releaseMilestone() on XRPL EVM Sidechain — 15,000 RLUSD sent to Receiver wallet.\n\nNFT certificate minted on XRPL Mainnet via NFTokenMint transaction.\n\nMilestone marked COMPLETED. Reputation score updated."
+                "Platform calls releaseMilestone() on XRPL EVM Sidechain — 15,000 RLUSD sent to Builder wallet.\n\nNFT certificate minted on XRPL Mainnet via NFTokenMint transaction.\n\nMilestone marked COMPLETED. Reputation score updated."
               )
             }
             disabled={demoStep !== "idle"}
@@ -1806,7 +1806,7 @@ export function ContractActions({
           </>
         ) : (
           <p className="text-xs" style={{ color: "#F87171", opacity: 0.8 }}>
-            The proof was rejected. The Receiver will need to resubmit a new proof.
+            The proof was rejected. The Builder will need to resubmit a new proof.
           </p>
         )}
       </div>
@@ -1847,7 +1847,7 @@ export function ContractActions({
         </div>
 
         <p className="text-xs" style={{ color: "#A89B8C" }}>
-          The milestone deadline has passed. The Receiver has a limited window to submit a progress update and request an extension.
+          The milestone deadline has passed. The Builder has a limited window to submit a progress update and request an extension.
         </p>
 
         {/* ── Startup: submit progress update ────────────────────────────── */}
@@ -1918,7 +1918,7 @@ export function ContractActions({
               Extension request submitted
             </p>
             <p className="text-xs" style={{ color: "#A89B8C" }}>
-              The Grant Giver is reviewing your request. You will be notified once a decision has been made.
+              The Requester is reviewing your request. You will be notified once a decision has been made.
             </p>
             {interimAiAssessment && (
               <p className="text-xs leading-relaxed mt-1" style={{ color: "#A89B8C" }}>
@@ -1940,7 +1940,7 @@ export function ContractActions({
         {isInvestor && !extensionRequested && (
           <div className="flex flex-col gap-2">
             <p className="text-xs" style={{ color: "#A89B8C" }}>
-              Waiting for the Receiver to submit a progress update.
+              Waiting for the Builder to submit a progress update.
               {windowClosed
                 ? " The window has closed — the escrow will be automatically cancelled."
                 : ""}

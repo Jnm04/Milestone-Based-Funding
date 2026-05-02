@@ -349,7 +349,7 @@ function LiveDemo() {
           <SectionLabel>Live demo</SectionLabel>
           <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <Reveal>
-              <h2 className="max-w-2xl text-4xl font-semibold tracking-[-0.02em] text-gradient md:text-5xl">An agent verifies two milestones. No humans.</h2>
+              <h2 className="max-w-2xl text-4xl font-semibold tracking-[-0.02em] text-gradient md:text-5xl">An agent verifies milestones. No humans.</h2>
             </Reveal>
             <Reveal delay={100}>
               <p className="max-w-sm" style={{ color: "hsl(30 10% 62%)" }}>
