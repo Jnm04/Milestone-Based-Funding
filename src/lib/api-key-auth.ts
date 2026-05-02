@@ -18,9 +18,11 @@ export interface AuthContext {
  * Updates lastUsedAt asynchronously on success.
  */
 export async function resolveApiKey(authHeader: string | null): Promise<ApiKeyContext | null> {
-  if (!authHeader?.startsWith("Bearer csk_")) return null;
+  if (!authHeader?.startsWith("Bearer ")) return null;
 
   const rawKey = authHeader.slice(7); // strip "Bearer "
+
+  // Always hash and query — avoids leaking whether a prefix is valid via timing
   const keyHash = crypto.createHash("sha256").update(rawKey).digest("hex");
 
   const key = await prisma.apiKey.findUnique({

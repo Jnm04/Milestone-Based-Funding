@@ -313,8 +313,9 @@ export async function POST(request: NextRequest) {
             order: i,
             status: milestoneStatus,
             dependsOnMilestoneId: depId ?? null,
-            agentGithubRepo: m.agentGithubRepo?.trim() || null,
-            agentStripeKeyEnc: m.agentStripeKey?.trim() ? encryptApiKey(m.agentStripeKey.trim()) : null,
+            // Agent fields only stored when caller is an API key (programmatic agent)
+            agentGithubRepo: apiKeyCtx ? (m.agentGithubRepo?.trim() || null) : null,
+            agentStripeKeyEnc: apiKeyCtx && m.agentStripeKey?.trim() ? encryptApiKey(m.agentStripeKey.trim()) : null,
           },
         });
         createdMilestoneIds.push(ms.id);
