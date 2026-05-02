@@ -88,20 +88,17 @@ function Hero() {
 
       <div className="container-tight relative">
         <div className="mx-auto mb-10 flex w-fit items-center gap-3 rounded-full border px-4 py-1.5" style={{ borderColor: "hsl(28 18% 14%)", background: "hsl(24 12% 6% / 0.5)", backdropFilter: "blur(12px)" }}>
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inset-0 animate-pulse-dot rounded-full" style={{ background: "hsl(22 55% 54%)" }} />
-            <span className="relative inline-block h-2 w-2 rounded-full" style={{ background: "hsl(22 55% 54%)" }} />
+          <span className="relative flex h-2.5 w-2.5 shrink-0">
+            <span className="absolute inset-0 animate-ping rounded-full opacity-60" style={{ background: "hsl(22 55% 54%)" }} />
+            <span className="relative inline-block h-2.5 w-2.5 rounded-full" style={{ background: "hsl(22 55% 54%)" }} />
           </span>
           <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, textTransform: "uppercase" as const, letterSpacing: "0.2em", color: "hsl(30 10% 62%)" }}>
             Live · XRPL EVM · RLUSD
           </span>
           {stats && stats.contracts > 0 && (
-            <>
-              <span className="h-px w-3 shrink-0" style={{ background: "hsl(22 55% 54% / 0.4)" }} />
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, textTransform: "uppercase" as const, letterSpacing: "0.2em", color: "hsl(22 55% 54%)" }}>
-                {stats.contracts} contracts · {stats.verifications} verifications
-              </span>
-            </>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, textTransform: "uppercase" as const, letterSpacing: "0.2em", color: "hsl(22 55% 54%)" }}>
+              · {stats.contracts} contracts · {stats.verifications} verifications
+            </span>
           )}
         </div>
 
@@ -734,9 +731,9 @@ function Footer() {
             </Link>
             <p className="mt-4 max-w-sm text-sm" style={{ color: "hsl(30 10% 62%)" }}>Agentic escrow and verification on the XRP Ledger. Lock RLUSD in escrow, prove your milestone, get paid instantly.</p>
             <div className="mt-5 flex items-center gap-2" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, textTransform: "uppercase" as const, letterSpacing: "0.18em", color: "hsl(30 10% 62%)" }}>
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inset-0 animate-pulse-dot rounded-full" style={{ background: "hsl(22 55% 54%)" }} />
-                <span className="relative inline-block h-2 w-2 rounded-full" style={{ background: "hsl(22 55% 54%)" }} />
+              <span className="relative flex h-2.5 w-2.5 shrink-0">
+                <span className="absolute inset-0 animate-ping rounded-full opacity-60" style={{ background: "hsl(22 55% 54%)" }} />
+                <span className="relative inline-block h-2.5 w-2.5 rounded-full" style={{ background: "hsl(22 55% 54%)" }} />
               </span>
               All systems operational
             </div>
