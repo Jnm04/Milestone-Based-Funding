@@ -8,6 +8,7 @@ import {
   generateFulfillment,
 } from "@/services/evm/escrow.service";
 import { encryptFulfillment, decryptFulfillment } from "@/lib/crypto";
+import { resolveApiKey } from "@/lib/api-key-auth";
 
 const ESCROW_CONTRACT = process.env.NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS!;
 const RLUSD_CONTRACT = process.env.NEXT_PUBLIC_RLUSD_CONTRACT_ADDRESS!;
@@ -24,7 +25,11 @@ const RLUSD_CONTRACT = process.env.NEXT_PUBLIC_RLUSD_CONTRACT_ADDRESS!;
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    const apiKeyCtx = !session ? await resolveApiKey(request.headers.get("authorization")) : null;
+    const userId = session?.user?.id ?? apiKeyCtx?.userId ?? null;
+    const isAgentCall = !!apiKeyCtx && !session;
+
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -43,20 +48,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Contract not found" }, { status: 404 });
     }
 
-    if (contract.investorId !== session.user.id) {
+    if (contract.investorId !== userId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    if (contract.status !== "AWAITING_ESCROW") {
+    // Agent calls may be in DRAFT (not yet joined) — that's fine for calldata preview
+    if (!isAgentCall && contract.status !== "AWAITING_ESCROW") {
       return NextResponse.json(
         { error: `Expected AWAITING_ESCROW, got ${contract.status}` },
         { status: 409 }
       );
     }
 
-    if (!contract.startup?.walletAddress) {
+    // Agent calls use a placeholder wallet address for calldata generation
+    if (!isAgentCall && !contract.startup?.walletAddress) {
       return NextResponse.json({ error: "No startup has joined yet" }, { status: 409 });
     }
+    const startupWallet = contract.startup?.walletAddress ?? "0x0000000000000000000000000000000000000001";
 
     let amountUSD: string;
     let deadline: Date;
@@ -133,7 +141,7 @@ export async function POST(request: NextRequest) {
     const fundCalldata = buildFundMilestoneCalldata({
       contractId,
       milestoneOrder,
-      startupAddress: contract.startup.walletAddress,
+      startupAddress: startupWallet,
       amountUSD,
       deadline,
       condition,

@@ -137,16 +137,35 @@ time.sleep(1)
 
 # ─── Step 3: Fund milestone ───────────────────────────────────────────────────
 
-step(3, "Investor agent funds escrow (simulated on-chain)")
-dim("Signing transaction… locking $200 RLUSD in smart contract")
+step(3, "Investor agent funds escrow (on-chain)")
+dim("Fetching EVM calldata from cascrow…")
+time.sleep(1)
+
+# Get real EVM calldata — same bytes MetaMask would sign in production
+r3a = post("/api/escrow/create", {"contractId": contract_id})
+data3a = check(r3a, "Escrow calldata failed")
+
+print()
+print(f"  {BOLD}Transaction 1 — RLUSD.approve(){RESET}  {DIM}(ERC-20 spending approval){RESET}")
+print(f"  {DIM}Contract : {data3a['rlusdAddress']}{RESET}")
+print(f"  {DIM}Calldata : {data3a['approveCalldata'][:42]}…{RESET}")
+print()
+print(f"  {BOLD}Transaction 2 — escrow.fundMilestone(){RESET}  {DIM}(locks RLUSD in smart contract){RESET}")
+print(f"  {DIM}Contract : {data3a['escrowContractAddress']}{RESET}")
+print(f"  {DIM}Calldata : {data3a['fundCalldata'][:42]}…{RESET}")
+print(f"  {DIM}Amount   : ${data3a['amountUSD']} RLUSD{RESET}")
+print()
+dim("→ In production these two calldata payloads trigger MetaMask popups.")
+dim("→ Agent signs autonomously — no human needed.")
 time.sleep(2)
 
-r3 = post("/api/agent/fund-milestone", {"contractId": contract_id})
-data3 = check(r3, "Fund milestone failed")
-milestone_id = data3["milestoneId"]
+# Simulate the on-chain confirmation
+r3b = post("/api/agent/fund-milestone", {"contractId": contract_id})
+data3b = check(r3b, "Fund milestone failed")
+milestone_id = data3b["milestoneId"]
 
-ok(f"Escrow funded  →  {data3['status']}")
-info(f"Tx hash: {data3['txHash'][:22]}…")
+ok(f"Escrow funded  →  {data3b['status']}")
+info(f"Simulated tx: {data3b['txHash'][:22]}…")
 
 pause(4, "browser is showing FUNDED status")
 
