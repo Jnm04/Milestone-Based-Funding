@@ -16,7 +16,6 @@ Cascrow replaces that with verifiable finality:
 
 - **Escrow mode** — RLUSD locked in a smart contract on the XRPL EVM Sidechain. Five independent AI models from five different companies must reach a 3/5 majority before a single token moves.
 - **Verification-only mode** — No escrow required. AI agents create a contract, submit proof, and get a cryptographic verification record — no MetaMask, no blockchain transaction. $0.10 per verification.
-- **Attestation mode** *(coming soon)* — Enterprise teams verify ESG, sustainability, and KPI commitments. Every verdict written to the XRP Ledger as a permanent, tamper-evident record.
 
 ---
 
@@ -136,10 +135,6 @@ When a milestone is verified, Cascrow mints a **non-transferable `NFTokenMint`**
 Over time, a builder accumulates a collection of AI-verified, real-money-backed completion certificates — a verifiable on-chain track record.
 
 ---
-
-## Enterprise features *(coming soon)*
-
-Enterprise attestation is built and functional — not yet publicly available. Infrastructure includes ESG/KPI attestation, team management, audit firm access, Slack/Teams integrations, regulatory change alerts (CSRD/ESRS), confidential goals, and deal rooms.
 
 ---
 
@@ -282,8 +277,6 @@ Cron jobs run automatically on Vercel:
 | Job | Schedule | Purpose |
 |---|---|---|
 | `/api/cron/cancel-expired` | Daily 02:00 UTC | Cancel milestones past deadline |
-| `/api/cron/connector-health` | Daily 07:00 UTC | Probe enterprise data source URLs |
-| `/api/cron/regulatory-alerts` | Monday 08:00 UTC | Fetch CSRD/ESRS updates, classify with AI, notify affected users |
 
 ---
 
@@ -311,7 +304,6 @@ DRAFT
 
 - **Protocol fee (0.5%)** — charged only on successful escrow releases. Cascrow's incentives are aligned with the party paying for results.
 - **Verification fee ($0.10/check)** — for verification-only mode (no escrow). AI agents and automated pipelines pay per verification.
-- **Enterprise SaaS** — monthly subscription for attestation contracts, team management, audit firm access, and integrations.
 - **Reviewer-as-a-Service** — domain experts cast binding votes on high-stakes milestones. €50–2,000 per review.
 
 ---
