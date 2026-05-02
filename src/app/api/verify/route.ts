@@ -247,11 +247,15 @@ export async function POST(request: NextRequest) {
           mimeType = mimeMap[ext] ?? "image/jpeg";
         }
 
+        const onVote = (vote: { model: string; decision: string; confidence: number; reasoning: string }) => {
+          send({ type: "model_vote", model: vote.model, decision: vote.decision, confidence: vote.confidence, reasoning: vote.reasoning });
+        };
+
         const runVerify = async () => {
           if (!hasApiKey) return mockVerifyMilestone({ milestone: milestoneTitle, extractedText });
           if (category === "image" && imageBuffer) {
             try {
-              return await verifyMilestoneImage({ milestone: milestoneTitle, imageBuffer, mimeType, enrichmentContext: enrichmentContext + fraudContext });
+              return await verifyMilestoneImage({ milestone: milestoneTitle, imageBuffer, mimeType, enrichmentContext: enrichmentContext + fraudContext, onVote });
             } catch (imgErr) {
               console.warn("[verify] Image verification failed, falling back to Claude-only:", imgErr);
               const { callClaudeImageOnly } = await import("@/services/ai/verifier.service");
@@ -263,6 +267,7 @@ export async function POST(request: NextRequest) {
             extractedText: extractedText || "(No text could be extracted from this document.)",
             enrichmentContext: enrichmentContext + fraudContext,
             verificationCriteria,
+            onVote,
           });
         };
 

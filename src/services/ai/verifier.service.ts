@@ -405,6 +405,8 @@ export async function verifyMilestone(params: {
   enrichmentContext?: string;
   /** Optional custom rubric provided by the enterprise customer to override the default criteria. */
   verificationCriteria?: string | null;
+  /** Called as each model returns its vote — used for live streaming to clients. */
+  onVote?: (vote: ModelVote) => void;
 }): Promise<AIVerificationResultWithVotes> {
   const { content, truncated } = truncateText(params.extractedText);
   const truncationNote = truncated
@@ -421,12 +423,15 @@ export async function verifyMilestone(params: {
     customCriteriaBlock +
     (params.enrichmentContext ?? "");
 
+  const withVoteCallback = (p: Promise<{ model: string; result: AIVerificationResult } | null>) =>
+    p.then((r) => { if (r && params.onVote) params.onVote({ model: r.model, decision: r.result.decision, confidence: r.result.confidence, reasoning: r.result.reasoning }); return r; });
+
   const raw = await Promise.all([
-    safeCall(() => callClaude([{ role: "user", content: userMessage }], VERIFICATION_SYSTEM_PROMPT), "Claude"),
-    safeCall(() => callGeminiText(userMessage), "Gemini"),
-    safeCall(() => callOpenAIText(userMessage), "OpenAI"),
-    safeCall(() => callMistralText(userMessage), "Mistral"),
-    safeCall(() => callCerebrasText(userMessage), "Cerebras/Qwen3"),
+    withVoteCallback(safeCall(() => callClaude([{ role: "user", content: userMessage }], VERIFICATION_SYSTEM_PROMPT), "Claude")),
+    withVoteCallback(safeCall(() => callGeminiText(userMessage), "Gemini")),
+    withVoteCallback(safeCall(() => callOpenAIText(userMessage), "OpenAI")),
+    withVoteCallback(safeCall(() => callMistralText(userMessage), "Mistral")),
+    withVoteCallback(safeCall(() => callCerebrasText(userMessage), "Cerebras/Qwen3")),
   ]);
 
   const results = raw.filter((r): r is { model: string; result: AIVerificationResult } => r !== null);
@@ -450,6 +455,8 @@ export async function verifyMilestoneImage(params: {
   mimeType: "image/jpeg" | "image/png" | "image/gif" | "image/webp";
   /** Optional enrichment context from proof-enrichment.service (URL checks, GitHub, duplicates). */
   enrichmentContext?: string;
+  /** Called as each model returns its vote — used for live streaming to clients. */
+  onVote?: (vote: ModelVote) => void;
 }): Promise<AIVerificationResultWithVotes> {
   const base64 = params.imageBuffer.toString("base64");
   const userMessage =
@@ -457,8 +464,11 @@ export async function verifyMilestoneImage(params: {
     `Milestone:\n[MILESTONE START]\n${params.milestone}\n[MILESTONE END]` +
     (params.enrichmentContext ?? "");
 
+  const withVoteCallback = (p: Promise<{ model: string; result: AIVerificationResult } | null>) =>
+    p.then((r) => { if (r && params.onVote) params.onVote({ model: r.model, decision: r.result.decision, confidence: r.result.confidence, reasoning: r.result.reasoning }); return r; });
+
   const raw = await Promise.all([
-    safeCall(
+    withVoteCallback(safeCall(
       () => callClaude(
         [{
           role: "user",
@@ -470,11 +480,11 @@ export async function verifyMilestoneImage(params: {
         VERIFICATION_SYSTEM_PROMPT
       ),
       "Claude"
-    ),
-    safeCall(() => callGeminiImage(base64, params.mimeType, userMessage), "Gemini"),
-    safeCall(() => callOpenAIImage(base64, params.mimeType, userMessage), "OpenAI"),
-    safeCall(() => callMistralImage(base64, params.mimeType, userMessage), "Mistral"),
-    safeCall(() => callCerebrasImage(base64, params.mimeType, userMessage), "Cerebras/Qwen3"),
+    )),
+    withVoteCallback(safeCall(() => callGeminiImage(base64, params.mimeType, userMessage), "Gemini")),
+    withVoteCallback(safeCall(() => callOpenAIImage(base64, params.mimeType, userMessage), "OpenAI")),
+    withVoteCallback(safeCall(() => callMistralImage(base64, params.mimeType, userMessage), "Mistral")),
+    withVoteCallback(safeCall(() => callCerebrasImage(base64, params.mimeType, userMessage), "Cerebras/Qwen3")),
   ]);
 
   const results = raw.filter((r): r is { model: string; result: AIVerificationResult } => r !== null);
