@@ -768,7 +768,7 @@ function Footer() {
           <div>
             <div className="mb-4" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, textTransform: "uppercase" as const, letterSpacing: "0.12em", color: "hsl(30 10% 62%)" }}>Legal</div>
             <ul className="space-y-2 text-sm">
-              {[{ href: "/datenschutz", label: "Datenschutz" },{ href: "/terms", label: "Terms" },{ href: "/impressum", label: "Impressum" }].map(l => (
+              {[{ href: "/datenschutz", label: "Privacy Policy" },{ href: "/terms", label: "Terms" },{ href: "/impressum", label: "Legal Notice" }].map(l => (
                 <li key={l.href}><Link href={l.href} className="transition-colors hover:text-foreground" style={{ color: "hsl(30 10% 62%)" }}>{l.label}</Link></li>
               ))}
               <li><a href="https://github.com/Jnm04/Milestone-Based-Funding" className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground" style={{ color: "hsl(30 10% 62%)" }}><Github className="h-3.5 w-3.5" /> GitHub</a></li>
