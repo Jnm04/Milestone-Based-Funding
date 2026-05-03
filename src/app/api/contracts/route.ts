@@ -265,7 +265,7 @@ export async function POST(request: NextRequest) {
 
     for (const m of msData) {
       const amt = Number(m.amountUSD);
-      if (!Number.isFinite(amt) || amt <= 0 || amt > 999_999_999) {
+      if (!Number.isFinite(amt) || amt < 0 || amt > 999_999_999) {
         return NextResponse.json({ error: "Invalid amount: must be between 0 and 999,999,999" }, { status: 400 });
       }
     }
