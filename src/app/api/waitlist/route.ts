@@ -37,7 +37,8 @@ export async function POST(request: NextRequest) {
   const emailResult = await resend.emails.send({
     from: FROM,
     to: email,
-    subject: "You're on the Cascrow waitlist",
+    replyTo: "hello@cascrow.com",
+    subject: "Cascrow early access — you are on the list",
     html: `
       <div style="background:#161210;color:#ede6dd;font-family:'Inter',sans-serif;max-width:520px;margin:0 auto;padding:48px 40px;border-radius:16px;">
         <p style="font-family:monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.2em;color:#c4704b;margin:0 0 32px;">cascrow — early access</p>
