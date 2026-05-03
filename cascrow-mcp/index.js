@@ -304,12 +304,17 @@ async function handleVerify({ proofId }) {
 
   const passed = decision === "YES" && confidence >= 85;
 
-  const voteSummary = votes.length > 0
-    ? votes.map((v) => `  ${v.decision === "YES" ? "✅" : "❌"} ${v.model}: ${v.decision} (${v.confidence}%)`).join("\n")
-    : null;
-
+  const TOTAL_MODELS = 5;
   const yesCount = votes.filter((v) => v.decision === "YES").length;
-  const voteHeader = votes.length > 0 ? `${yesCount}/${votes.length} models approved:\n${voteSummary}\n\n` : "";
+  const failedCount = TOTAL_MODELS - votes.length;
+
+  const voteSummary = votes
+    .map((v) => `  ${v.decision === "YES" ? "✅" : "❌"} ${v.model}: ${v.decision} (${v.confidence}%)`)
+    .join("\n");
+  const failedNote = failedCount > 0 ? `\n  ⚠️ ${failedCount} model(s) failed to respond` : "";
+  const voteHeader = votes.length > 0
+    ? `${yesCount}/${TOTAL_MODELS} models approved (${failedCount > 0 ? `${failedCount} failed` : "all responded"}):\n${voteSummary}${failedNote}\n\n`
+    : "";
 
   return {
     decision,
@@ -317,6 +322,9 @@ async function handleVerify({ proofId }) {
     action,
     reasoning,
     passed,
+    totalModels: TOTAL_MODELS,
+    modelsResponded: votes.length,
+    modelsFailed: failedCount,
     txHash: result.txHash ?? null,
     modelVotes: votes.map((v) => ({ model: v.model, decision: v.decision, confidence: v.confidence })),
     message: passed
