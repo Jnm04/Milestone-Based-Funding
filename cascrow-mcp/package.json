@@ -1,11 +1,11 @@
 {
   "name": "cascrow-mcp",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "MCP server for Cascrow — agentic escrow and verification",
   "type": "module",
   "main": "index.js",
   "bin": {
-    "cascrow-mcp": "./index.js"
+    "cascrow-mcp": "index.js"
   },
   "scripts": {
     "start": "node index.js"
