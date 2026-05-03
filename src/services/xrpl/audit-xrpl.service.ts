@@ -11,10 +11,10 @@ const XRPL_HTTP =
     ? "https://s.altnet.rippletest.net:51234"
     : "https://s1.ripple.com:51234");
 
-// Serialize XRPL writes within a serverless instance to avoid sequence conflicts
-// when multiple audit events fire in rapid succession (e.g. AI_DECISION + NFT_MINTED).
+// Serialize all XRPL writes within a serverless instance to avoid sequence conflicts.
+// Shared by audit-xrpl.service and nft.service — both use the same platform wallet.
 let _xrplQueue: Promise<unknown> = Promise.resolve();
-function enqueueXrplWrite<T>(fn: () => Promise<T>): Promise<T> {
+export function enqueueXrplWrite<T>(fn: () => Promise<T>): Promise<T> {
   const next = _xrplQueue.then(() => fn(), () => fn());
   _xrplQueue = next.catch(() => {});
   return next;

@@ -1,5 +1,6 @@
 import * as xrpl from "xrpl";
 import { uploadCertificateAssets } from "./cert-image.service";
+import { enqueueXrplWrite } from "./audit-xrpl.service";
 
 function getXrplConfig() {
   // Default to mainnet — only use testnet if explicitly set
@@ -37,7 +38,17 @@ async function rpc(url: string, method: string, params: Record<string, unknown>)
  * After submit we poll account_nfts to find the new token ID.
  * Requires XRPL_PLATFORM_SEED in environment.
  */
-export async function mintCompletionNFT(params: {
+export function mintCompletionNFT(params: {
+  contractId: string;
+  milestoneTitle: string;
+  amountUSD: string;
+  completedAt: Date;
+  evmTxHash?: string | null;
+}): Promise<MintResult> {
+  return enqueueXrplWrite(() => _mintCompletionNFT(params));
+}
+
+async function _mintCompletionNFT(params: {
   contractId: string;
   milestoneTitle: string;
   amountUSD: string;
