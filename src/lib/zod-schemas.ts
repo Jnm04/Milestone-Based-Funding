@@ -36,7 +36,7 @@ const milestoneItemSchema = z.object({
 
   amountUSD: z.coerce
     .number({ invalid_type_error: "amountUSD must be a number" })
-    .positive("amountUSD must be positive")
+    .nonnegative("amountUSD must be non-negative")
     .max(999_999_999, "amountUSD exceeds maximum")
     .refine((v) => Math.round(v * 100) === v * 100, { message: "amountUSD must have at most 2 decimal places" }),
 
@@ -97,7 +97,7 @@ export const createContractSchema = z
   .object({
     // Single-milestone shorthand
     milestone: z.string().max(200, "Milestone title too long").trim().optional(),
-    amountUSD: z.coerce.number().positive().max(999_999_999).optional(),
+    amountUSD: z.coerce.number().nonnegative().max(999_999_999).optional(),
     cancelAfter: z.string().optional(),
 
     // Multi-milestone array (max 10 milestones per contract)
