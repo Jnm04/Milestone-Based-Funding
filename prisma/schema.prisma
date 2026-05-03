@@ -1165,6 +1165,14 @@ model ModelFeedbackWeight {
   @@index([modelKey])
 }
 
+// ── Waitlist ──────────────────────────────────────────────────────────────────
+
+model WaitlistEntry {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
 // ── Feature AC: Agentic Proof Collector — Stripe Revenue Cache ────────────────
 
 /// Cached Stripe revenue data fetched by the Agentic Proof Collector.
