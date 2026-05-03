@@ -374,15 +374,28 @@ async function safeCall(
   fn: () => Promise<AIVerificationResult>,
   model: string
 ): Promise<{ model: string; result: AIVerificationResult } | null> {
-  try {
+  const attempt = async () => {
     const timeout = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error(`Timed out after ${MODEL_TIMEOUT_MS / 1000}s`)), MODEL_TIMEOUT_MS)
     );
-    const result = await Promise.race([fn(), timeout]);
+    return Promise.race([fn(), timeout]);
+  };
+
+  try {
+    const result = await attempt();
     return { model, result };
-  } catch (err) {
-    console.warn(`[verify] ${model} failed:`, err instanceof Error ? err.message : err);
-    return null;
+  } catch (firstErr) {
+    console.warn(`[verify] ${model} failed (retrying):`, firstErr instanceof Error ? firstErr.message : firstErr);
+    // Wait 2s then retry once — gives flaky APIs (Gemini, Cerebras) time to recover
+    await new Promise((r) => setTimeout(r, 2000));
+    try {
+      const result = await attempt();
+      console.log(`[verify] ${model} succeeded on retry`);
+      return { model, result };
+    } catch (err) {
+      console.warn(`[verify] ${model} failed after retry:`, err instanceof Error ? err.message : err);
+      return null;
+    }
   }
 }
 
