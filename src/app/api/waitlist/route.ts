@@ -4,7 +4,7 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = process.env.EMAIL_FROM ?? "Cascrow <noreply@cascrow.com>";
+const FROM = process.env.EMAIL_FROM ?? "Cascrow <noreply@cascrow.xyz>";
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request) ?? "unknown";
