@@ -8,6 +8,7 @@ const NAV_LINKS = [
   { href: "/#how",     label: "How it works" },
   { href: "/security", label: "Security" },
   { href: "/guide",    label: "Guide" },
+  { href: "/waitlist", label: "Waitlist" },
 ];
 
 const primary = "hsl(22 55% 54%)";
