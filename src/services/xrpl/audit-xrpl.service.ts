@@ -102,13 +102,15 @@ export async function writeXrplAuditMemo(
     // Await the submit so Vercel doesn't kill it before completion.
     // Retry once with a fresh sequence if we hit a sequence conflict
     // (happens when two audit events fire within the same ledger interval ~3s).
-    const submit = async (blob: string) => {
+    type SubmitResult = { result?: { engine_result?: string; tx_json?: { hash?: string } } };
+
+    const submit = async (blob: string): Promise<SubmitResult> => {
       const res = await fetch(XRPL_HTTP, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ method: "submit", params: [{ tx_blob: blob }] }),
       });
-      return res.json() as Promise<{ result?: { engine_result?: string } }>;
+      return res.json() as Promise<SubmitResult>;
     };
 
     let result = await submit(signed.tx_blob).catch((err) => {
@@ -119,7 +121,6 @@ export async function writeXrplAuditMemo(
 
     const SEQ_ERRORS = new Set(["tefPAST_SEQ", "terPRE_SEQ", "tefMAX_LEDGER"]);
     if (result.result?.engine_result && SEQ_ERRORS.has(result.result.engine_result)) {
-      // Fetch fresh sequence and retry once
       console.warn("[xrpl-audit] sequence conflict, retrying with fresh sequence");
       const freshInfo = await rpc("account_info", { account: wallet.address, ledger_index: "current" });
       const freshSeq = (freshInfo.result as { account_data: { Sequence: number } }).account_data.Sequence;
@@ -134,7 +135,7 @@ export async function writeXrplAuditMemo(
         console.error("[xrpl-audit] retry rejected:", result.result.engine_result);
         return null;
       }
-      return retrySigned.hash;
+      return result.result?.tx_json?.hash ?? retrySigned.hash;
     }
 
     if (result.result?.engine_result && result.result.engine_result !== "tesSUCCESS") {
@@ -142,7 +143,7 @@ export async function writeXrplAuditMemo(
       return null;
     }
 
-    return signed.hash;
+    return result.result?.tx_json?.hash ?? signed.hash;
   } catch (err) {
     console.error("[xrpl-audit] write failed:", err);
     return null;
