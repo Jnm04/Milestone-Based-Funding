@@ -1,0 +1,18 @@
+{
+  "name": "cascrow-cli",
+  "version": "1.0.0",
+  "description": "CLI for Cascrow — agentic escrow and verification",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "cascrow": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": ["cascrow", "escrow", "ai-verification", "agents", "xrpl"],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
+}
