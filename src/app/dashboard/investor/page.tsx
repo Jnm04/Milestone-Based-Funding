@@ -497,15 +497,23 @@ export default function InvestorDashboard() {
   useEffect(() => {
     if (status !== "authenticated") return;
     setLoadingContracts(true);
-    fetch(`/api/contracts?page=${page}&limit=${PAGE_SIZE}`)
-      .then((r) => r.json())
-      .then((data) => {
-        setContracts(data.contracts ?? []);
-        setTotalPages(data.pages ?? 1);
-        setTotalContracts(data.total ?? 0);
-      })
-      .catch(() => toast.error("Could not load contracts."))
-      .finally(() => setLoadingContracts(false));
+
+    const load = (showSpinner: boolean) => {
+      if (showSpinner) setLoadingContracts(true);
+      fetch(`/api/contracts?page=${page}&limit=${PAGE_SIZE}`)
+        .then((r) => r.json())
+        .then((data) => {
+          setContracts(data.contracts ?? []);
+          setTotalPages(data.pages ?? 1);
+          setTotalContracts(data.total ?? 0);
+        })
+        .catch(() => {})
+        .finally(() => { if (showSpinner) setLoadingContracts(false); });
+    };
+
+    load(true);
+    const interval = setInterval(() => load(false), 5000);
+    return () => clearInterval(interval);
   }, [status, page]);
 
   if (status === "loading") {
