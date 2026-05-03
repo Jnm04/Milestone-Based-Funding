@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
       data: {
         startupId: userId,
         status: "AWAITING_ESCROW",
+        startupApiKeyId: isApiKey ? apiKeyCtx!.keyId : null,
       },
     });
 

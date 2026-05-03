@@ -294,6 +294,7 @@ export async function POST(request: NextRequest) {
           cancelAfter: new Date(latestDeadline),
           inviteLink: directLink,
           status: contractStatus,
+          investorApiKeyId: apiKeyCtx?.keyId ?? null,
         },
       });
 

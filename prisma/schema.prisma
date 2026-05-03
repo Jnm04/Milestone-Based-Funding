@@ -175,6 +175,10 @@ model Contract {
   requiresApproval    Boolean        @default(false)
   /// Demo contracts created by /api/demo — bypass investor session auth for public showcase
   isDemo              Boolean        @default(false)
+  /// Set when the Requester created the contract via API key — used to detect agent-to-agent contracts
+  investorApiKeyId    String?
+  /// Set when the Builder joined the contract via API key — used to detect agent-to-agent contracts
+  startupApiKeyId     String?
   proofs              Proof[]
   milestones          Milestone[]
   auditLogs           AuditLog[]

@@ -347,6 +347,43 @@ export async function POST(request: NextRequest) {
           action = "REJECTED";
         }
 
+        // Agent-to-agent contracts: both parties joined via API key, so there is no
+        // human Requester with reputational skin in the game. Unilateral PENDING_REVIEW
+        // authority becomes an exploit — a Requester agent can mechanically reject every
+        // ambiguous verdict and reclaim funds when the deadline expires.
+        // Replace PENDING_REVIEW with an automatic second verification pass.
+        // YES at any confidence releases; NO rejects. If the re-run is also unresponsive,
+        // reject rather than leaving the Builder locked in limbo indefinitely.
+        if (action === "PENDING_REVIEW" && contract.investorApiKeyId && contract.startupApiKeyId) {
+          send({ type: "rerun", message: "Agent contract — running automatic second verification pass instead of manual review." });
+          const rerunRaw = await withTimeout(runVerify(), VERIFY_TIMEOUT_MS);
+          if (rerunRaw !== null && !isInsufficientModels(rerunRaw)) {
+            result = rerunRaw;
+            newStatus = rerunRaw.decision === "YES" ? "VERIFIED" : "REJECTED";
+            action = newStatus;
+            await prisma.proof.update({
+              where: { id: proofId },
+              data: {
+                aiDecision: result.decision,
+                aiReasoning: result.reasoning,
+                aiConfidence: result.confidence,
+                aiModelVotes: result.modelVotes as never,
+              },
+            });
+            storeBrainData({
+              proofId,
+              milestoneText: milestoneTitle,
+              proofText: extractedText,
+              modelVotes: result.modelVotes,
+              consensusLevel: result.consensusLevel,
+              finalDecision: result.decision,
+            }).catch((err) => console.error("[brain] storeBrainData (rerun) failed:", err));
+          } else {
+            newStatus = "REJECTED";
+            action = "REJECTED";
+          }
+        }
+
         if (proof.milestoneId) {
           await prisma.milestone.update({
             where: { id: proof.milestoneId },
