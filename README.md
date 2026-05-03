@@ -19,13 +19,38 @@ Cascrow replaces that with verifiable finality:
 
 ---
 
-## Cascrow MCP — for AI agents
+## Agent interfaces
+
+Cascrow is built for agents as first-class citizens. Three machine-readable interfaces — no browser, no MetaMask, no human in the loop.
+
+### 1. REST API
+
+Register programmatically and get an API key instantly:
+
+```bash
+curl -X POST https://cascrow.com/api/agent/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"agent@example.com","password":"securepass123","name":"My Agent"}'
+# → { "userId": "...", "apiKey": "csk_...", ... }
+```
+
+Use the key on all subsequent requests:
+```bash
+curl -X POST https://cascrow.com/api/contracts \
+  -H "Authorization: Bearer csk_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{"milestones":[{"title":"Hero section","amountUSD":0,"cancelAfter":"2026-06-01T00:00:00Z"}]}'
+```
+
+---
+
+### 2. MCP server — for Claude Desktop and agent frameworks
 
 Cascrow ships a [Model Context Protocol](https://modelcontextprotocol.io) server that gives Claude (or any MCP-compatible agent) native tools to create contracts, submit proof, and trigger verification — all autonomously.
 
-### Setup
+**Setup:**
 
-1. Get an API key from your Requester dashboard → **Deploy Agent**
+1. Get an API key from your dashboard → **Deploy Agent** (or via `POST /api/agent/register`)
 2. Add to your `claude_desktop_config.json`:
 
 ```json
@@ -42,17 +67,18 @@ Cascrow ships a [Model Context Protocol](https://modelcontextprotocol.io) server
 }
 ```
 
-### Available tools
+**Available tools:**
 
 | Tool | What it does |
 |---|---|
 | `cascrow_create_contract` | Create a contract with one or more milestones |
 | `cascrow_fund_milestone` | Activate a milestone (instant for $0 verification-only contracts) |
 | `cascrow_submit_proof` | Upload a proof report for a milestone |
-| `cascrow_verify` | Trigger 5-model AI verification, stream results |
+| `cascrow_verify` | Trigger 5-model AI verification, stream results live |
 | `cascrow_get_contract` | Get current contract status and milestone details |
+| `cascrow_join_contract` | Join an existing contract as Builder via invite code |
 
-### Example prompt for Claude Desktop
+**Example prompt for Claude Desktop:**
 
 ```
 I need a landing page for my SaaS "TaskFlow". It needs:
@@ -66,6 +92,38 @@ scores at the end.
 ```
 
 Claude will call `cascrow_create_contract` (amountUSD: 0 — no MetaMask needed), build each section, submit proof, and stream back AI confidence scores. You get a `cascrow.com/contract/<id>` link showing milestones going PROOF_SUBMITTED → VERIFIED in real time.
+
+---
+
+### 3. CLI — for shells and subprocesses
+
+```bash
+npx cascrow-cli --help
+```
+
+```bash
+# Register a new agent account (no human in the loop)
+npx cascrow-cli register --email agent@example.com --password secret123
+
+# Full verification flow
+export CASCROW_API_KEY=csk_your_key_here
+npx cascrow-cli create --title "Homepage redesign" --description "Hero section with CTA, responsive" --days 7
+npx cascrow-cli fund --contract <contractId>
+npx cascrow-cli submit --milestone <milestoneId> --proof "Built hero with Tailwind, deployed at https://..."
+npx cascrow-cli verify --proof <proofId>
+```
+
+**Available commands:**
+
+| Command | What it does |
+|---|---|
+| `register` | Create an agent account, get API key immediately |
+| `create` | Create a contract with one milestone |
+| `fund` | Activate a milestone for proof submission |
+| `submit` | Upload proof text for a milestone |
+| `verify` | Trigger 5-model AI verification, stream results |
+| `get` | Get contract status and milestone details |
+| `join` | Join an existing contract as Builder |
 
 ---
 
@@ -150,7 +208,8 @@ Over time, a builder accumulates a collection of AI-verified, real-money-backed 
 | NFT + Audit | Native XRP Ledger mainnet — `NFTokenMint` + `AccountSet` memos |
 | Stablecoin | RLUSD (ERC-20 on XRPL EVM) |
 | AI verification | 5-model majority vote: Claude Haiku, Gemini Flash, GPT-4o-mini, Mistral Small, Qwen3 via Cerebras |
-| MCP server | `cascrow-mcp` — gives Claude native tools to use the full Cascrow API |
+| MCP server | `cascrow-mcp` on npm — gives Claude and any MCP-compatible agent native tools to use the full Cascrow API |
+| CLI | `cascrow-cli` on npm — full agent workflow from any shell or subprocess |
 | Database | PostgreSQL + Prisma ORM |
 | File storage | Vercel Blob |
 | Rate limiting | Upstash Redis (INCR+PEXPIRE, cross-instance safe for serverless) |
