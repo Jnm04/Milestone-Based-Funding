@@ -11,6 +11,15 @@ const XRPL_HTTP =
     ? "https://s.altnet.rippletest.net:51234"
     : "https://s1.ripple.com:51234");
 
+// Serialize XRPL writes within a serverless instance to avoid sequence conflicts
+// when multiple audit events fire in rapid succession (e.g. AI_DECISION + NFT_MINTED).
+let _xrplQueue: Promise<unknown> = Promise.resolve();
+function enqueueXrplWrite<T>(fn: () => Promise<T>): Promise<T> {
+  const next = _xrplQueue.then(() => fn(), () => fn());
+  _xrplQueue = next.catch(() => {});
+  return next;
+}
+
 interface XrplAuditParams {
   event: string;
   contractId: string;
@@ -40,7 +49,13 @@ async function rpc(method: string, params: Record<string, unknown>) {
  *
  * Never throws — returns null on failure.
  */
-export async function writeXrplAuditMemo(
+export function writeXrplAuditMemo(
+  params: XrplAuditParams
+): Promise<string | null> {
+  return enqueueXrplWrite(() => _writeXrplAuditMemo(params));
+}
+
+async function _writeXrplAuditMemo(
   params: XrplAuditParams
 ): Promise<string | null> {
   const seed = process.env.XRPL_PLATFORM_SEED;
