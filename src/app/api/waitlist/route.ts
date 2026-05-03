@@ -4,7 +4,7 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = process.env.EMAIL_FROM ?? "Cascrow <noreply@cascrow.xyz>";
+const FROM = "Cascrow <noreply@cascrow.com>";
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request) ?? "unknown";
@@ -56,7 +56,8 @@ export async function POST(request: NextRequest) {
         <p style="font-size:13px;color:#6b5f56;margin:0;">cascrow.com · AI-verified escrow on XRPL</p>
       </div>
     `,
-  }).catch((err) => console.error("Waitlist email error:", err));
+  }).then((result) => console.log("Waitlist email result:", JSON.stringify(result)))
+    .catch((err) => console.error("Waitlist email error:", err));
 
   return NextResponse.json({ success: true });
 }
