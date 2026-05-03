@@ -8,6 +8,7 @@ interface ContractPollerProps {
   currentStatus: string;
   milestoneStatuses: string[];
   hasNft?: boolean;
+  auditLogCount?: number;
 }
 
 const INTERVAL_MS = 1500;
@@ -17,15 +18,18 @@ export function ContractPoller({
   currentStatus,
   milestoneStatuses,
   hasNft = false,
+  auditLogCount = 0,
 }: ContractPollerProps) {
   const router = useRouter();
   const statusRef = useRef(currentStatus);
   const msStatusesRef = useRef(milestoneStatuses.join(","));
+  const auditCountRef = useRef(auditLogCount);
 
   useEffect(() => {
     statusRef.current = currentStatus;
     msStatusesRef.current = milestoneStatuses.join(",");
-  }, [currentStatus, milestoneStatuses]);
+    auditCountRef.current = auditLogCount;
+  }, [currentStatus, milestoneStatuses, auditLogCount]);
 
   useEffect(() => {
     // Keep polling even on COMPLETED until NFT appears
@@ -42,11 +46,13 @@ export function ContractPoller({
         const newMsStatuses = (data.milestones ?? []).map((m: { status: string }) => m.status).join(",");
         const newHasNft = data.nftTokenId ||
           (data.milestones ?? []).some((m: { nftTokenId?: string }) => m.nftTokenId);
+        const newAuditCount = (data.auditLogs ?? []).length;
 
         if (
           data.status !== statusRef.current ||
           newMsStatuses !== msStatusesRef.current ||
-          (newHasNft && !hasNft)
+          (newHasNft && !hasNft) ||
+          newAuditCount > auditCountRef.current
         ) {
           router.refresh();
         }

@@ -146,6 +146,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           contract.nftTokenId ||
           contract.milestones.some((m) => m.nftTokenId)
         )}
+        auditLogCount={auditLogs.length}
       />
 
       {/* Nav */}

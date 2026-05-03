@@ -13,15 +13,19 @@ export async function GET(
 
   const { id } = await params;
 
-  const contract = await prisma.contract.findUnique({
-    where: { id },
-    select: {
-      investorId: true,
-      startupId: true,
-      status: true,
-      milestones: { select: { id: true, status: true }, orderBy: { order: "asc" } },
-    },
-  });
+  const [contract, auditCount] = await Promise.all([
+    prisma.contract.findUnique({
+      where: { id },
+      select: {
+        investorId: true,
+        startupId: true,
+        status: true,
+        nftTokenId: true,
+        milestones: { select: { id: true, status: true, nftTokenId: true }, orderBy: { order: "asc" } },
+      },
+    }),
+    prisma.auditLog.count({ where: { contractId: id } }),
+  ]);
 
   if (!contract) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -30,7 +34,7 @@ export async function GET(
   }
 
   const { investorId: _i, startupId: _s, ...contractData } = contract;
-  return NextResponse.json(contractData);
+  return NextResponse.json({ ...contractData, auditLogs: Array(auditCount) });
 }
 
 const patchContractSchema = z.object({

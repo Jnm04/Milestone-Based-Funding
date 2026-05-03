@@ -176,6 +176,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Prevent duplicate verification — if this proof already has a decision, return it directly
+  if (proof.aiDecision) {
+    return NextResponse.json(
+      { error: "This proof has already been verified.", decision: proof.aiDecision, confidence: proof.aiConfidence },
+      { status: 409 }
+    );
+  }
+
   // ── Phase 2: SSE stream — AI verification with retry logic ──────────────────
   const milestoneTitle = proof.milestone?.title ?? contract.milestone;
   const verificationCriteria = proof.milestone?.verificationCriteria ?? null;
