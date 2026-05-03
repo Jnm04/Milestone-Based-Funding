@@ -206,6 +206,23 @@ const TOOLS = [
     },
   },
   {
+    name: "cascrow_join_contract",
+    description:
+      "Join a Cascrow contract as the Builder using an invite code provided by the Requester. " +
+      "Once joined, the contract moves to AWAITING_ESCROW and milestones become active. " +
+      "Call this before submitting proof or triggering verification.",
+    inputSchema: {
+      type: "object",
+      required: ["inviteCode"],
+      properties: {
+        inviteCode: {
+          type: "string",
+          description: "The invite code provided by the Requester (found in the contract invite link)",
+        },
+      },
+    },
+  },
+  {
     name: "cascrow_get_contract",
     description: "Get the current status and details of a contract, including all milestones.",
     inputSchema: {
@@ -291,6 +308,14 @@ async function handleVerify({ proofId }) {
   };
 }
 
+async function handleJoinContract({ inviteCode }) {
+  const data = await apiPost("/api/contracts/join", { inviteCode });
+  return {
+    contractId: data.contractId,
+    message: `Joined contract ${data.contractId}. Use cascrow_get_contract to see its milestones.`,
+  };
+}
+
 async function handleGetContract({ contractId }) {
   const data = await apiGet(`/api/contracts/${contractId}`);
   return data;
@@ -324,6 +349,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         break;
       case "cascrow_verify":
         result = await handleVerify(args);
+        break;
+      case "cascrow_join_contract":
+        result = await handleJoinContract(args);
         break;
       case "cascrow_get_contract":
         result = await handleGetContract(args);

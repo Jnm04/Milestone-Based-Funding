@@ -4,24 +4,35 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { getPostHogClient } from "@/lib/posthog-server";
+import { resolveApiKey } from "@/lib/api-key-auth";
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    const apiKeyCtx = session ? null : await resolveApiKey(request.headers.get("authorization"));
+
+    if (!session && !apiKeyCtx) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    // 10 join attempts per user per hour — prevents invite-code brute-forcing
+    const userId = session ? session.user.id : apiKeyCtx!.userId;
+    const isApiKey = !session;
+
+    // 10 join attempts per user per hour — prevents invite-code brute-forcing.
+    // API key callers omit IP: serverless agents rotate NAT IPs per invocation so
+    // the composite key would give them 10×(pool size) effective attempts, not 10.
+    // The API key itself is the stable, cryptographically-bound identity.
     const ip = getClientIp(request) ?? "unknown";
-    if (!(await checkRateLimit(`join-contract:${session.user.id}:${ip}`, 10, 60 * 60 * 1000))) {
+    const rateLimitKey = isApiKey ? `join-contract:${userId}` : `join-contract:${userId}:${ip}`;
+    if (!(await checkRateLimit(rateLimitKey, 10, 60 * 60 * 1000))) {
       return NextResponse.json(
         { error: "Too many attempts. Please wait before trying again." },
         { status: 429, headers: { "Retry-After": "3600" } }
       );
     }
 
-    if (session.user.role !== "STARTUP") {
+    // API key callers are builders by default — no role DB lookup needed
+    if (!isApiKey && session!.user.role !== "STARTUP") {
       return NextResponse.json({ error: "Only startups can join contracts" }, { status: 403 });
     }
 
@@ -37,7 +48,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "inviteCode is required" }, { status: 400 });
     }
 
-    if (!session.user.walletAddress) {
+    // Wallet check only applies to browser sessions — agents never have MetaMask
+    if (!isApiKey && !session!.user.walletAddress) {
       return NextResponse.json(
         { error: "Connect your XRPL wallet before joining a contract" },
         { status: 422 }
@@ -52,7 +64,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid invite code" }, { status: 404 });
     }
 
-    if (contract.investorId === session.user.id) {
+    if (contract.investorId === userId) {
       return NextResponse.json({ error: "You cannot join your own contract" }, { status: 403 });
     }
 
@@ -66,7 +78,7 @@ export async function POST(request: NextRequest) {
     const updated = await prisma.contract.update({
       where: { id: contract.id },
       data: {
-        startupId: session.user.id,
+        startupId: userId,
         status: "AWAITING_ESCROW",
       },
     });
@@ -78,7 +90,7 @@ export async function POST(request: NextRequest) {
     });
 
     getPostHogClient().capture({
-      distinctId: session.user.id,
+      distinctId: userId,
       event: "contract_joined",
       properties: { contract_id: updated.id },
     });

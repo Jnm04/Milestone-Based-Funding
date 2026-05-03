@@ -372,13 +372,15 @@ const MODEL_TIMEOUT_MS = 30_000;
 
 async function safeCall(
   fn: () => Promise<AIVerificationResult>,
-  model: string
+  model: string,
+  onVote?: (vote: ModelVote) => void
 ): Promise<{ model: string; result: AIVerificationResult } | null> {
   try {
     const timeout = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error(`Timed out after ${MODEL_TIMEOUT_MS / 1000}s`)), MODEL_TIMEOUT_MS)
     );
     const result = await Promise.race([fn(), timeout]);
+    onVote?.({ model, decision: result.decision, confidence: result.confidence, reasoning: result.reasoning });
     return { model, result };
   } catch (err) {
     console.warn(`[verify] ${model} failed:`, err instanceof Error ? err.message : err);
@@ -405,6 +407,8 @@ export async function verifyMilestone(params: {
   enrichmentContext?: string;
   /** Optional custom rubric provided by the enterprise customer to override the default criteria. */
   verificationCriteria?: string | null;
+  /** Called as each model vote arrives — used by the SSE route to stream votes live. */
+  onVote?: (vote: ModelVote) => void;
 }): Promise<AIVerificationResultWithVotes> {
   const { content, truncated } = truncateText(params.extractedText);
   const truncationNote = truncated
@@ -422,11 +426,11 @@ export async function verifyMilestone(params: {
     (params.enrichmentContext ?? "");
 
   const raw = await Promise.all([
-    safeCall(() => callClaude([{ role: "user", content: userMessage }], VERIFICATION_SYSTEM_PROMPT), "Claude"),
-    safeCall(() => callGeminiText(userMessage), "Gemini"),
-    safeCall(() => callOpenAIText(userMessage), "OpenAI"),
-    safeCall(() => callMistralText(userMessage), "Mistral"),
-    safeCall(() => callCerebrasText(userMessage), "Cerebras/Qwen3"),
+    safeCall(() => callClaude([{ role: "user", content: userMessage }], VERIFICATION_SYSTEM_PROMPT), "Claude", params.onVote),
+    safeCall(() => callGeminiText(userMessage), "Gemini", params.onVote),
+    safeCall(() => callOpenAIText(userMessage), "OpenAI", params.onVote),
+    safeCall(() => callMistralText(userMessage), "Mistral", params.onVote),
+    safeCall(() => callCerebrasText(userMessage), "Cerebras/Qwen3", params.onVote),
   ]);
 
   const results = raw.filter((r): r is { model: string; result: AIVerificationResult } => r !== null);
@@ -450,6 +454,8 @@ export async function verifyMilestoneImage(params: {
   mimeType: "image/jpeg" | "image/png" | "image/gif" | "image/webp";
   /** Optional enrichment context from proof-enrichment.service (URL checks, GitHub, duplicates). */
   enrichmentContext?: string;
+  /** Called as each model vote arrives — used by the SSE route to stream votes live. */
+  onVote?: (vote: ModelVote) => void;
 }): Promise<AIVerificationResultWithVotes> {
   const base64 = params.imageBuffer.toString("base64");
   const userMessage =
@@ -469,12 +475,13 @@ export async function verifyMilestoneImage(params: {
         }],
         VERIFICATION_SYSTEM_PROMPT
       ),
-      "Claude"
+      "Claude",
+      params.onVote
     ),
-    safeCall(() => callGeminiImage(base64, params.mimeType, userMessage), "Gemini"),
-    safeCall(() => callOpenAIImage(base64, params.mimeType, userMessage), "OpenAI"),
-    safeCall(() => callMistralImage(base64, params.mimeType, userMessage), "Mistral"),
-    safeCall(() => callCerebrasImage(base64, params.mimeType, userMessage), "Cerebras/Qwen3"),
+    safeCall(() => callGeminiImage(base64, params.mimeType, userMessage), "Gemini", params.onVote),
+    safeCall(() => callOpenAIImage(base64, params.mimeType, userMessage), "OpenAI", params.onVote),
+    safeCall(() => callMistralImage(base64, params.mimeType, userMessage), "Mistral", params.onVote),
+    safeCall(() => callCerebrasImage(base64, params.mimeType, userMessage), "Cerebras/Qwen3", params.onVote),
   ]);
 
   const results = raw.filter((r): r is { model: string; result: AIVerificationResult } => r !== null);

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
-import { verifyMilestone, verifyMilestoneImage, mockVerifyMilestone, categorizeFile, VERIFICATION_PROMPT_HASH, isInsufficientModels, generateRejectionObjections, runFraudPreScreen, buildFraudContext } from "@/services/ai/verifier.service";
+import { verifyMilestone, verifyMilestoneImage, mockVerifyMilestone, categorizeFile, VERIFICATION_PROMPT_HASH, isInsufficientModels, generateRejectionObjections, runFraudPreScreen, buildFraudContext, ModelVote } from "@/services/ai/verifier.service";
 import { storeBrainData } from "@/services/brain/training.service";
 import { buildEnrichmentContext } from "@/services/brain/proof-enrichment.service";
 import { releaseMilestone } from "@/services/evm/escrow.service";
@@ -247,11 +247,14 @@ export async function POST(request: NextRequest) {
           mimeType = mimeMap[ext] ?? "image/jpeg";
         }
 
+        const onVote = (vote: ModelVote) =>
+          send({ type: "vote", model: vote.model, decision: vote.decision, confidence: vote.confidence, reasoning: vote.reasoning });
+
         const runVerify = async () => {
           if (!hasApiKey) return mockVerifyMilestone({ milestone: milestoneTitle, extractedText });
           if (category === "image" && imageBuffer) {
             try {
-              return await verifyMilestoneImage({ milestone: milestoneTitle, imageBuffer, mimeType, enrichmentContext: enrichmentContext + fraudContext });
+              return await verifyMilestoneImage({ milestone: milestoneTitle, imageBuffer, mimeType, enrichmentContext: enrichmentContext + fraudContext, onVote });
             } catch (imgErr) {
               console.warn("[verify] Image verification failed, falling back to Claude-only:", imgErr);
               const { callClaudeImageOnly } = await import("@/services/ai/verifier.service");
@@ -263,6 +266,7 @@ export async function POST(request: NextRequest) {
             extractedText: extractedText || "(No text could be extracted from this document.)",
             enrichmentContext: enrichmentContext + fraudContext,
             verificationCriteria,
+            onVote,
           });
         };
 
