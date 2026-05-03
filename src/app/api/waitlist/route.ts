@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
   }
 
-  resend.emails.send({
+  const emailResult = await resend.emails.send({
     from: FROM,
     to: email,
     subject: "You're on the Cascrow waitlist",
@@ -56,8 +56,8 @@ export async function POST(request: NextRequest) {
         <p style="font-size:13px;color:#6b5f56;margin:0;">cascrow.com · AI-verified escrow on XRPL</p>
       </div>
     `,
-  }).then((result) => console.log("Waitlist email result:", JSON.stringify(result)))
-    .catch((err) => console.error("Waitlist email error:", err));
+  });
+  console.log("Waitlist email result:", JSON.stringify(emailResult));
 
   return NextResponse.json({ success: true });
 }
