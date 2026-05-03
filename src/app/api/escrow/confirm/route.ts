@@ -60,6 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     let fundedMilestoneTitle = contract.milestone;
+    let fundedMilestoneDescription = "";
     let fundedAmountUSD = contract.amountUSD.toString();
 
     if (milestoneId) {
@@ -98,6 +99,7 @@ export async function POST(request: NextRequest) {
       });
 
       fundedMilestoneTitle = result.title;
+      fundedMilestoneDescription = result.description ?? "";
       fundedAmountUSD = result.amountUSD.toString();
     } else {
       await prisma.contract.update({
@@ -106,15 +108,19 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // keccak256 of the milestone title — anyone can verify the agreed criteria on-chain
-    const milestoneHash = ethers.keccak256(ethers.toUtf8Bytes(fundedMilestoneTitle));
+    // keccak256(title + "\n" + description) — locks the acceptance bar on-chain at
+    // fund time. Anyone can recompute from the known title and description to verify
+    // the Requester has not disputed what the criteria was after the fact.
+    const criteriaHash = ethers.keccak256(
+      ethers.toUtf8Bytes(`${fundedMilestoneTitle}\n${fundedMilestoneDescription}`)
+    );
 
     await writeAuditLog({
       contractId,
       milestoneId: milestoneId ?? undefined,
       event: "ESCROW_FUNDED",
       actor: session.user.walletAddress ?? session.user.id,
-      metadata: { txHash, amountUSD: fundedAmountUSD, milestoneHash },
+      metadata: { txHash, amountUSD: fundedAmountUSD, criteriaHash },
     });
 
     getPostHogClient().capture({
