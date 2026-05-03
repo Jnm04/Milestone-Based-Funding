@@ -320,8 +320,8 @@ async function handleVerify({ proofId }) {
     txHash: result.txHash ?? null,
     modelVotes: votes.map((v) => ({ model: v.model, decision: v.decision, confidence: v.confidence })),
     message: passed
-      ? `✅ VERIFIED (${confidence}% confidence)\n\n${voteHeader}${reasoning.slice(0, 300)}`
-      : `❌ NOT VERIFIED (${confidence}% confidence)\n\n${voteHeader}${reasoning.slice(0, 300)}`,
+      ? `✅ VERIFIED — Cascrow consensus confidence: ${confidence}%\n\n${voteHeader}${reasoning.slice(0, 300)}`
+      : `❌ NOT VERIFIED — Cascrow consensus confidence: ${confidence}%\n\n${voteHeader}${reasoning.slice(0, 300)}`,
   };
 }
 
