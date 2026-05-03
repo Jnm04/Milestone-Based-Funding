@@ -1626,12 +1626,15 @@ export function ContractActions({
 
     // Verification-only contract (no escrow) — just show confirmed badge
     if (isVerificationOnly || !amountRLUSD || Number(amountRLUSD) === 0) {
+      const confidenceLabel = latestProofConfidence ? ` · ${latestProofConfidence}% confidence` : "";
       return (
         <div className="flex flex-col gap-3 p-5 rounded-xl" style={{ background: "rgba(74,222,128,0.07)", border: "1px solid rgba(74,222,128,0.2)" }}>
           <div className="flex items-center gap-2">
-            <span style={{ fontSize: "18px" }}>✅</span>
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#6EE09A" strokeWidth={2.5} style={{ flexShrink: 0 }}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
             <p className="text-sm font-medium" style={{ color: "#6EE09A" }}>
-              Milestone verified by 5 AI models
+              Milestone verified by AI majority vote{confidenceLabel}
             </p>
           </div>
           <p className="text-xs" style={{ color: "#A89B8C" }}>
