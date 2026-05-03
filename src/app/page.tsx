@@ -59,7 +59,7 @@ function Nav() {
             <span className="text-sm font-semibold tracking-tight" style={{ color: "hsl(32 35% 92%)" }}>cascrow</span>
           </Link>
           <div className="hidden md:flex items-center gap-7">
-            {[{ href: "#problem", label: "Problem" }, { href: "#how", label: "How it works" }, { href: "#agents", label: "For Agents" }, { href: "/guide", label: "Guide" }].map(l => (
+            {[{ href: "#problem", label: "Problem" }, { href: "#how", label: "How it works" }, { href: "#agents", label: "For Agents" }, { href: "/guide", label: "Guide" }, { href: "/waitlist", label: "Waitlist" }].map(l => (
               <Link key={l.href} href={l.href} className="text-sm transition-colors hover:text-foreground" style={{ color: "hsl(30 10% 62%)" }}>{l.label}</Link>
             ))}
           </div>
