@@ -11,7 +11,7 @@ import {
 } from "@/services/telegram/telegram.service";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = process.env.EMAIL_FROM ?? "Cascrow <onboarding@resend.dev>";
+const FROM = process.env.EMAIL_FROM ?? "Cascrow <noreply@cascrow.com>";
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 
 // ── Feature M: AI-Personalized Email Copy ────────────────────────────────────
