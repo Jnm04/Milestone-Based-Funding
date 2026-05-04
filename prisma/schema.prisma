@@ -175,6 +175,8 @@ model Contract {
   requiresApproval    Boolean        @default(false)
   /// Demo contracts created by /api/demo — bypass investor session auth for public showcase
   isDemo              Boolean        @default(false)
+  /// Contract created by an agent via API key (not via browser session)
+  isAgentContract     Boolean        @default(false)
   deletedAt           DateTime?
   proofs              Proof[]
   milestones          Milestone[]

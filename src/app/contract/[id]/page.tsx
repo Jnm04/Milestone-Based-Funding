@@ -217,7 +217,17 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           }}
         >
           <div className="flex items-start justify-between gap-3">
-            <span className="text-xs uppercase tracking-widest font-medium" style={{ color: "hsl(22 55% 54%)" }}>Project</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs uppercase tracking-widest font-medium" style={{ color: "hsl(22 55% 54%)" }}>Project</span>
+              {contract.isAgentContract && (
+                <span
+                  className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                  style={{ background: "rgba(196,112,75,0.15)", border: "1px solid rgba(196,112,75,0.3)", color: "#C4704B" }}
+                >
+                  Agent Contract
+                </span>
+              )}
+            </div>
             <CalendarButton contractId={contract.id} />
           </div>
           <p className="text-sm leading-relaxed" style={{ color: "hsl(32 35% 92%)" }}>{contract.milestone}</p>
