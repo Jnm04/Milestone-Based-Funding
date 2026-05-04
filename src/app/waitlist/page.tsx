@@ -57,9 +57,20 @@ export default function WaitlistPage() {
               agents.
             </span>
           </h1>
-          <p className="text-base leading-relaxed" style={{ color: "hsl(30 10% 62%)" }}>
-            Cascrow launches publicly soon. Join the waitlist to be first in — early access, priority onboarding, and founding-user pricing.
-          </p>
+
+          {/* Waitlist full banner */}
+          <div
+            className="flex items-start gap-3 rounded-lg px-4 py-3 text-left mb-2"
+            style={{ background: "hsl(22 55% 54% / 0.08)", border: "1px solid hsl(22 55% 54% / 0.25)" }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(22 55% 64%)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-0.5">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <p className="text-sm leading-relaxed" style={{ color: "hsl(30 10% 72%)" }}>
+              <span style={{ color: "hsl(22 55% 64%)", fontWeight: 600 }}>All waitlist spots are currently full.</span>{" "}
+              Leave your email and we'll notify you as soon as a spot opens up.
+            </p>
+          </div>
         </div>
 
         {/* Features */}
@@ -98,7 +109,7 @@ export default function WaitlistPage() {
               <div>
                 <p className="font-semibold" style={{ color: "hsl(32 35% 92%)" }}>You're on the list.</p>
                 <p className="mt-1 text-sm" style={{ color: "hsl(30 10% 62%)" }}>
-                  We'll reach out when early access opens.
+                  We'll notify you as soon as a spot opens up.
                 </p>
               </div>
               <Link
@@ -153,12 +164,12 @@ export default function WaitlistPage() {
                   fontFamily: "'Inter Tight', sans-serif",
                 }}
               >
-                {state === "loading" ? "Joining..." : "Join the waitlist"}
+                {state === "loading" ? "Submitting..." : "Notify me when a spot opens"}
                 {state !== "loading" && <ArrowRight size={15} />}
               </button>
 
               <p className="text-center text-xs" style={{ color: "hsl(30 10% 45%)" }}>
-                No spam. We email once when access opens.
+                No spam. One email when your spot opens.
               </p>
             </form>
           )}
