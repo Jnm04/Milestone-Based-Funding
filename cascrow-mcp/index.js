@@ -155,6 +155,10 @@ const TOOLS = [
                 type: "number",
                 description: "Days from now until deadline (e.g. 7)",
               },
+              amountUSD: {
+                type: "number",
+                description: "Optional RLUSD amount to lock in escrow (e.g. 1.0). Omit or set to 0 for verification-only.",
+              },
             },
           },
         },
@@ -309,7 +313,7 @@ async function handleCreateContract({ milestones }) {
   const payload = {
     milestones: milestones.map((m) => ({
       title: `${m.title} — ${m.description}`,
-      amountUSD: 0, // verification-only — $0.10 charged per verification trigger
+      amountUSD: m.amountUSD ?? 0,
       cancelAfter: deadline(m.deadlineDays ?? 7),
     })),
   };
