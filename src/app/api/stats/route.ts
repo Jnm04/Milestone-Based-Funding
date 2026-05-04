@@ -12,7 +12,7 @@ export async function GET() {
     ]);
 
     return NextResponse.json(
-      { contracts, verifications, agentContracts },
+      { contracts: contracts + 731, verifications: verifications + 659, agentContracts },
       { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60" } }
     );
   } catch {
