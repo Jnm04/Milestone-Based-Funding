@@ -187,6 +187,17 @@ function IconEyeOff() {
   );
 }
 
+function IconTrash() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6"/>
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+      <path d="M10 11v6M14 11v6"/>
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+    </svg>
+  );
+}
+
 // ── Transparency Report Modal ────────────────────────────────────────────────
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -487,6 +498,22 @@ export default function InvestorDashboard() {
       localStorage.setItem(LS_KEY, JSON.stringify([...next]));
       return next;
     });
+  }
+
+  async function deleteContract(id: string, milestone: string) {
+    if (!confirm(`Permanently delete "${milestone}"? This cannot be undone.`)) return;
+    try {
+      const res = await fetch(`/api/contracts/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        toast.error(d.error ?? "Failed to delete contract");
+        return;
+      }
+      setContracts((prev) => prev.filter((c) => c.id !== id));
+      toast.success("Contract deleted");
+    } catch {
+      toast.error("Failed to delete contract");
+    }
   }
 
   useEffect(() => {
@@ -899,6 +926,15 @@ export default function InvestorDashboard() {
                               >
                                 <IconEyeOff />
                               </button>
+                              {["DRAFT","EXPIRED","DECLINED","COMPLETED","REJECTED"].includes(c.status) && (
+                                <button
+                                  onClick={() => deleteContract(c.id, c.milestone)}
+                                  title="Delete contract"
+                                  style={{ color: "#6B5E52", lineHeight: 1 }}
+                                >
+                                  <IconTrash />
+                                </button>
+                              )}
                             </div>
                           </div>
                           <div className="flex items-center gap-4 text-xs" style={{ color: "#A89B8C" }}>
@@ -978,15 +1014,28 @@ export default function InvestorDashboard() {
                           ) : (
                             <span />
                           )}
-                          <button
-                            onClick={() => isHidden ? unhideContract(c.id) : hideContract(c.id)}
-                            title={isHidden ? "Unhide" : "Hide from list"}
-                            style={{ color: "#6B5E52", lineHeight: 1, transition: "color 0.15s" }}
-                            onMouseOver={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#A89B8C"; }}
-                            onMouseOut={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#6B5E52"; }}
-                          >
-                            <IconEyeOff />
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => isHidden ? unhideContract(c.id) : hideContract(c.id)}
+                              title={isHidden ? "Unhide" : "Hide from list"}
+                              style={{ color: "#6B5E52", lineHeight: 1, transition: "color 0.15s" }}
+                              onMouseOver={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#A89B8C"; }}
+                              onMouseOut={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#6B5E52"; }}
+                            >
+                              <IconEyeOff />
+                            </button>
+                            {["DRAFT","EXPIRED","DECLINED","COMPLETED","REJECTED"].includes(c.status) && (
+                              <button
+                                onClick={() => deleteContract(c.id, c.milestone)}
+                                title="Delete contract"
+                                style={{ color: "#6B5E52", lineHeight: 1, transition: "color 0.15s" }}
+                                onMouseOver={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#f87171"; }}
+                                onMouseOut={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#6B5E52"; }}
+                              >
+                                <IconTrash />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );

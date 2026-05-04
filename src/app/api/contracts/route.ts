@@ -392,6 +392,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search")?.trim() || undefined;
 
     const where = {
+      deletedAt: null,
       ...(session.user.role === "INVESTOR"
         ? { investorId: session.user.id }
         : { startupId: session.user.id }),

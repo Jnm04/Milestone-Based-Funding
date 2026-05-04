@@ -112,3 +112,43 @@ export async function PATCH(
 
   return NextResponse.json({ ok: true, contract: updated });
 }
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
+  }
+
+  const { id } = await params;
+
+  const contract = await prisma.contract.findUnique({
+    where: { id },
+    select: { investorId: true, status: true, deletedAt: true },
+  });
+
+  if (!contract || contract.deletedAt) {
+    return NextResponse.json({ error: "Not found", code: "NOT_FOUND" }, { status: 404 });
+  }
+
+  if (contract.investorId !== session.user.id) {
+    return NextResponse.json({ error: "Forbidden", code: "FORBIDDEN" }, { status: 403 });
+  }
+
+  const deletableStatuses = ["DRAFT", "EXPIRED", "DECLINED", "COMPLETED", "REJECTED"];
+  if (!deletableStatuses.includes(contract.status)) {
+    return NextResponse.json(
+      { error: "Only contracts that are not actively funded can be deleted", code: "WRONG_STATUS" },
+      { status: 409 }
+    );
+  }
+
+  await prisma.contract.update({
+    where: { id },
+    data: { deletedAt: new Date() },
+  });
+
+  return NextResponse.json({ ok: true });
+}
