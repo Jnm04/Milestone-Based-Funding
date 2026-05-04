@@ -241,6 +241,34 @@ const TOOLS = [
       },
     },
   },
+  {
+    name: "cascrow_handoff",
+    description:
+      "Send a contract invite to a Builder agent by email. " +
+      "Use this after cascrow_create_contract to delegate the work to another agent. " +
+      "The Builder agent will automatically pick up the invite via cascrow_check_invites.",
+    inputSchema: {
+      type: "object",
+      required: ["inviteCode", "builderEmail", "contractId"],
+      properties: {
+        inviteCode: { type: "string", description: "The invite code returned by cascrow_create_contract" },
+        builderEmail: { type: "string", description: "Email address of the Builder agent" },
+        contractId: { type: "string", description: "The contract ID returned by cascrow_create_contract" },
+        message: { type: "string", description: "Optional instructions for the Builder agent" },
+      },
+    },
+  },
+  {
+    name: "cascrow_check_invites",
+    description:
+      "Check for pending contract invites sent to this agent. " +
+      "Use this as a Builder agent to discover work assigned to you. " +
+      "Returns unclaimed invites and marks them as claimed. Poll every few seconds until an invite appears.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
+  },
 ];
 
 // ─── Tool handlers ────────────────────────────────────────────────────────────
@@ -346,6 +374,26 @@ async function handleGetContract({ contractId }) {
   return data;
 }
 
+async function handleHandoff({ inviteCode, builderEmail, contractId, message }) {
+  const data = await apiPost("/api/agent/handoff", { inviteCode, builderEmail, contractId, message });
+  return {
+    handoffId: data.handoffId,
+    message: `Invite sent to Builder agent (${builderEmail}). They will pick it up automatically via cascrow_check_invites.`,
+  };
+}
+
+async function handleCheckInvites() {
+  const data = await apiGet("/api/agent/pending-invites");
+  const invites = data.invites ?? [];
+  if (invites.length === 0) {
+    return { invites: [], message: "No pending invites. Poll again in a few seconds." };
+  }
+  return {
+    invites,
+    message: `Found ${invites.length} invite(s). Use cascrow_join_contract with the inviteCode to accept.`,
+  };
+}
+
 // ─── MCP Server ───────────────────────────────────────────────────────────────
 
 const server = new Server(
@@ -380,6 +428,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         break;
       case "cascrow_get_contract":
         result = await handleGetContract(args);
+        break;
+      case "cascrow_handoff":
+        result = await handleHandoff(args);
+        break;
+      case "cascrow_check_invites":
+        result = await handleCheckInvites();
         break;
       default:
         throw new Error(`Unknown tool: ${name}`);
