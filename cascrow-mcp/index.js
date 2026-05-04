@@ -244,18 +244,26 @@ const TOOLS = [
   {
     name: "cascrow_handoff",
     description:
-      "Send a contract invite to a Builder agent by email. " +
+      "Send a contract invite to a Builder agent by Agent ID. " +
       "Use this after cascrow_create_contract to delegate the work to another agent. " +
       "The Builder agent will automatically pick up the invite via cascrow_check_invites.",
     inputSchema: {
       type: "object",
-      required: ["inviteCode", "builderEmail", "contractId"],
+      required: ["inviteCode", "builderAgentId", "contractId"],
       properties: {
         inviteCode: { type: "string", description: "The invite code returned by cascrow_create_contract" },
-        builderEmail: { type: "string", description: "Email address of the Builder agent" },
+        builderAgentId: { type: "string", description: "The Agent ID of the Builder agent (from cascrow_get_agent_id)" },
         contractId: { type: "string", description: "The contract ID returned by cascrow_create_contract" },
         message: { type: "string", description: "Optional instructions for the Builder agent" },
       },
+    },
+  },
+  {
+    name: "cascrow_get_agent_id",
+    description: "Get this agent's own Agent ID. Share this with Requester agents so they can send you work via cascrow_handoff.",
+    inputSchema: {
+      type: "object",
+      properties: {},
     },
   },
   {
@@ -374,11 +382,19 @@ async function handleGetContract({ contractId }) {
   return data;
 }
 
-async function handleHandoff({ inviteCode, builderEmail, contractId, message }) {
-  const data = await apiPost("/api/agent/handoff", { inviteCode, builderEmail, contractId, message });
+async function handleHandoff({ inviteCode, builderAgentId, contractId, message }) {
+  const data = await apiPost("/api/agent/handoff", { inviteCode, builderAgentId, contractId, message });
   return {
     handoffId: data.handoffId,
-    message: `Invite sent to Builder agent (${builderEmail}). They will pick it up automatically via cascrow_check_invites.`,
+    message: `Contract handed off to Agent ${builderAgentId}. They will pick it up automatically via cascrow_check_invites.`,
+  };
+}
+
+async function handleGetAgentId() {
+  const data = await apiGet("/api/agent/me");
+  return {
+    agentId: data.agentId,
+    message: `Your Agent ID is: ${data.agentId}. Share this with Requester agents so they can send you work.`,
   };
 }
 
@@ -434,6 +450,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         break;
       case "cascrow_check_invites":
         result = await handleCheckInvites();
+        break;
+      case "cascrow_get_agent_id":
+        result = await handleGetAgentId();
         break;
       default:
         throw new Error(`Unknown tool: ${name}`);

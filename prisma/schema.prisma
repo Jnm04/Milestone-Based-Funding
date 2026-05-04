@@ -1190,13 +1190,13 @@ model WaitlistEntry {
 /// Requester agent sends an invite code to a Builder agent's email.
 /// Builder agent polls /api/agent/pending-invites to pick it up automatically.
 model AgentHandoff {
-  id           String    @id @default(cuid())
-  inviteCode   String
-  builderEmail String
-  contractId   String
-  message      String?
-  claimedAt    DateTime?
-  createdAt    DateTime  @default(now())
+  id             String    @id @default(cuid())
+  inviteCode     String
+  builderAgentId String
+  contractId     String
+  message        String?
+  claimedAt      DateTime?
+  createdAt      DateTime  @default(now())
 
-  @@index([builderEmail, claimedAt])
+  @@index([builderAgentId, claimedAt])
 }

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { resolveApiKey } from "@/lib/api-key-auth";
 
 // GET /api/agent/pending-invites
-// Builder agent polls this to find unclaimed invite codes sent to its account email.
+// Builder agent polls this to find unclaimed invites addressed to its Agent ID.
 // Returns all unclaimed handoffs and marks them as claimed atomically.
 export async function GET(request: Request) {
   const authHeader = (request as { headers: Headers }).headers.get("authorization");
@@ -12,17 +12,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "API key required" }, { status: 401 });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: apiKeyCtx.userId },
-    select: { email: true },
-  });
-  if (!user) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
-  }
-
-  // Fetch and claim all pending invites for this email atomically
   const pending = await prisma.agentHandoff.findMany({
-    where: { builderEmail: user.email, claimedAt: null },
+    where: { builderAgentId: apiKeyCtx.userId, claimedAt: null },
     orderBy: { createdAt: "asc" },
   });
 
