@@ -176,6 +176,24 @@ const TOOLS = [
     },
   },
   {
+    name: "cascrow_escrow_fund",
+    description:
+      "Fund a milestone with REAL on-chain RLUSD escrow using the agent's own EVM private key. " +
+      "This does a real approve + fundMilestone transaction on the XRPL EVM Sidechain — " +
+      "funds are locked in the smart contract and released automatically after AI verification. " +
+      "Use this instead of cascrow_fund_milestone when you want real escrow (not just verification).",
+    inputSchema: {
+      type: "object",
+      required: ["contractId", "agentPrivateKey", "amountUSD"],
+      properties: {
+        contractId: { type: "string", description: "The contract ID to fund" },
+        agentPrivateKey: { type: "string", description: "The agent's EVM private key (hex, 0x-prefixed). The agent's wallet must hold enough RLUSD." },
+        amountUSD: { type: "number", description: "Amount in USD to lock in escrow (e.g. 1.0)" },
+        milestoneId: { type: "string", description: "Optional specific milestone ID. If omitted, funds the first available milestone." },
+      },
+    },
+  },
+  {
     name: "cascrow_submit_proof",
     description:
       "Submit proof of completion for a milestone. " +
@@ -301,6 +319,7 @@ async function handleCreateContract({ milestones }) {
 
   return {
     contractId: data.contractId,
+    inviteCode: data.inviteLink,
     contractUrl,
     milestoneCount: milestones.length,
     message: `Contract created with ${milestones.length} milestone(s). View it here: ${contractUrl}`,
@@ -315,6 +334,18 @@ async function handleFundMilestone({ contractId, milestoneId }) {
     contractId: data.contractId,
     status: data.status,
     message: `Milestone funded and active. Ready to receive proof.`,
+  };
+}
+
+async function handleEscrowFund({ contractId, agentPrivateKey, amountUSD, milestoneId }) {
+  const data = await apiPost("/api/agent/escrow-fund", { contractId, agentPrivateKey, amountUSD, milestoneId });
+  return {
+    milestoneId: data.milestoneId,
+    contractId: data.contractId,
+    txHash: data.txHash,
+    amountUSD: data.amountUSD,
+    status: data.status,
+    message: `✅ Real escrow funded on-chain. ${data.amountUSD} RLUSD locked in smart contract. TX: ${data.txHash}`,
   };
 }
 
@@ -432,6 +463,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         break;
       case "cascrow_fund_milestone":
         result = await handleFundMilestone(args);
+        break;
+      case "cascrow_escrow_fund":
+        result = await handleEscrowFund(args);
         break;
       case "cascrow_submit_proof":
         result = await handleSubmitProof(args);
