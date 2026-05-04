@@ -2,14 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { resolveApiKey } from "@/lib/api-key-auth";
 import { z } from "zod";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const apiKeyCtx = !session ? await resolveApiKey(req.headers.get("authorization")) : null;
+  const userId = session?.user?.id ?? apiKeyCtx?.userId ?? null;
+
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
 
@@ -29,7 +33,7 @@ export async function GET(
 
   if (!contract) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  if (contract.investorId !== session.user.id && contract.startupId !== session.user.id) {
+  if (contract.investorId !== userId && contract.startupId !== userId) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
