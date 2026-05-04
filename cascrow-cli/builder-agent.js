@@ -7,6 +7,7 @@
 
 const BASE_URL = process.env.CASCROW_BASE_URL ?? "https://cascrow.com";
 const API_KEY  = process.env.CASCROW_API_KEY ?? "";
+const AGENT_EVM_WALLET = process.env.AGENT_EVM_WALLET ?? "";
 const POLL_INTERVAL_MS = 3000;
 
 if (!API_KEY) {
@@ -203,6 +204,16 @@ async function main() {
   console.log(`   Agent ID: ${agentId}`);
   console.log(`   Share this ID with the Requester agent`);
   console.log(`   Polling for work every ${POLL_INTERVAL_MS / 1000}s...\n`);
+
+  // Register EVM wallet address so Requester can fund real escrow to this agent
+  if (AGENT_EVM_WALLET) {
+    try {
+      await apiPost("/api/user/wallet", { walletAddress: AGENT_EVM_WALLET });
+      console.log(`   💳 EVM wallet registered: ${AGENT_EVM_WALLET}\n`);
+    } catch (e) {
+      console.warn(`   ⚠️  Could not register wallet: ${e.message}`);
+    }
+  }
 
   while (true) {
     try {
