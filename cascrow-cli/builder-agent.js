@@ -169,14 +169,16 @@ VERIFICATION CRITERIA MET:
   try {
     result = await streamVerify(proofData.proofId);
   } catch (streamErr) {
-    // Stream disconnected before complete event (e.g. Vercel 150s timeout) —
-    // poll the contract until AI decision lands
-    console.log(`   ⚠️  Stream ended early (${streamErr.message}), polling for result...`);
-    for (let i = 0; i < 40; i++) {
+    // Stream disconnected before complete event (e.g. Vercel 150s timeout).
+    // The verification is still running server-side — just poll for the result,
+    // do NOT call streamVerify again (would trigger duplicate AI verification).
+    console.log(`   ⚠️  Stream ended early, polling for result...`);
+    for (let i = 0; i < 60; i++) {
       await new Promise((r) => setTimeout(r, 5000));
       const contract = await apiGet(`/api/contracts/${joined.contractId}`);
       if (["VERIFIED", "COMPLETED", "REJECTED", "PENDING_REVIEW"].includes(contract.status)) {
-        result = { decision: contract.status === "REJECTED" ? "NO" : "YES", confidence: 0, action: contract.status };
+        const decision = ["VERIFIED", "COMPLETED"].includes(contract.status) ? "YES" : "NO";
+        result = { decision, confidence: 0, action: contract.status };
         console.log(`   ✓ Got result via polling: ${contract.status}`);
         break;
       }
