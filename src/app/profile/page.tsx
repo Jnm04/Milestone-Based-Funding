@@ -70,6 +70,9 @@ interface ProfileData {
   isEnterprise: boolean;
   // Avatar
   avatarUrl: string | null;
+  // AI training consent
+  trainingConsent: boolean;
+  trainingConsentAt: string | null;
 }
 
 /* ── Password eye icon ────────────────────────────────────── */
@@ -225,6 +228,8 @@ export default function ProfilePage() {
   const [notifyRejected, setNotifyRejected] = useState(true);
   const [notifyDigest, setNotifyDigest] = useState(false);
   const [savingNotify, setSavingNotify] = useState(false);
+  const [trainingConsent, setTrainingConsent] = useState(false);
+  const [savingTrainingConsent, setSavingTrainingConsent] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -356,6 +361,7 @@ export default function ProfilePage() {
         setNotifyVerified(user.notifyVerified);
         setNotifyRejected(user.notifyRejected);
         setNotifyDigest(user.notifyDigest ?? false);
+        setTrainingConsent(user.trainingConsent ?? false);
         setDateOfBirth(user.dateOfBirth ? user.dateOfBirth.split("T")[0] : "");
         setPublicProfile(user.publicProfile ?? false);
         setPublicUsername(user.publicUsername ?? "");
@@ -655,6 +661,24 @@ export default function ProfilePage() {
       toast.error(err instanceof Error ? err.message : "Error saving settings.");
     } finally {
       setSavingNotify(false);
+    }
+  }
+
+  async function handleSaveTrainingConsent(value: boolean) {
+    setSavingTrainingConsent(true);
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trainingConsent: value }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setTrainingConsent(value);
+      toast.success(value ? "Training consent enabled." : "Training consent withdrawn.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error saving setting.");
+    } finally {
+      setSavingTrainingConsent(false);
     }
   }
 
@@ -1171,6 +1195,55 @@ export default function ProfilePage() {
               <button onClick={handleSaveNotifications} disabled={savingNotify} className="cs-btn-ghost cs-btn-sm">
                 {savingNotify ? "Saving…" : "Save Settings"}
               </button>
+            </div>
+          </SectionCard>
+
+          {/* ══ AI Training Consent ══════════════════════════════════════════════ */}
+          <SectionCard title="AI Training Consent">
+            <div className="flex flex-col gap-4">
+              <p className="text-sm leading-relaxed" style={{ color: "hsl(30 10% 62%)" }}>
+                Cascrow can use anonymised data from your contracts and verifications to improve its own AI verification model. This is strictly opt-in — your data is never used without your explicit consent.
+              </p>
+              <div className="p-4 rounded-xl flex flex-col gap-3" style={{ background: "hsl(24 12% 6% / 0.5)", border: "1px solid hsl(22 55% 54% / 0.12)" }}>
+                <p className="text-xs font-medium" style={{ color: "hsl(32 35% 92%)" }}>What is stored (anonymised):</p>
+                <ul className="text-xs flex flex-col gap-1.5" style={{ color: "hsl(30 10% 62%)" }}>
+                  <li>• Milestone title and acceptance criteria</li>
+                  <li>• Submitted proof text</li>
+                  <li>• The votes and reasoning of all 5 AI models</li>
+                  <li>• The final verdict (APPROVED / REJECTED)</li>
+                </ul>
+                <p className="text-xs" style={{ color: "hsl(30 10% 50%)" }}>
+                  Your name, email, wallet address, and contract ID are <strong style={{ color: "hsl(32 35% 80%)" }}>never</strong> stored in training data. You can withdraw consent at any time — this does not affect data already stored.
+                </p>
+              </div>
+              <div className="flex items-center justify-between gap-4 pt-1">
+                <div className="flex flex-col gap-0.5">
+                  <p className="text-sm font-medium" style={{ color: "hsl(32 35% 92%)" }}>
+                    {trainingConsent ? "Consent given" : "Consent not given"}
+                  </p>
+                  <p className="text-xs" style={{ color: "hsl(30 10% 55%)" }}>
+                    {trainingConsent
+                      ? "Your anonymised verification data may be used to train the Cascrow AI model."
+                      : "Your data will not be used for AI training."}
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleSaveTrainingConsent(!trainingConsent)}
+                  disabled={savingTrainingConsent}
+                  className="flex-shrink-0 relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50"
+                  style={{ background: trainingConsent ? "hsl(22 65% 58%)" : "hsl(28 18% 20%)" }}
+                  aria-pressed={trainingConsent}
+                >
+                  <span
+                    className="inline-block h-4 w-4 rounded-full bg-white transition-transform"
+                    style={{ transform: trainingConsent ? "translateX(1.375rem)" : "translateX(0.25rem)" }}
+                  />
+                </button>
+              </div>
+              <p className="text-xs" style={{ color: "hsl(30 10% 45%)" }}>
+                Legal basis: Art. 6 Abs. 1 lit. a DSGVO (consent). You may withdraw at any time via this toggle.{" "}
+                <a href="/datenschutz" target="_blank" style={{ color: "hsl(22 55% 54%)" }} className="underline">Privacy Policy</a>
+              </p>
             </div>
           </SectionCard>
 

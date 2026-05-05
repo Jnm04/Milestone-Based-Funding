@@ -65,18 +65,38 @@ async function notifyReviewQueue(entry: {
 /**
  * Called after every AI verification (fire-and-forget).
  * Stores training data and embeddings invisibly in the background.
+ * Only stores if the submitting user has given trainingConsent.
  * Never throws — all errors are logged only.
  */
 export async function storeBrainData(params: StoreBrainDataParams): Promise<void> {
   try {
     const { proofId, milestoneText, proofText, modelVotes, consensusLevel, finalDecision } = params;
+
+    // Check consent: look up the user who submitted this proof via Proof → Milestone → Contract
+    const proof = await prisma.proof.findUnique({
+      where: { id: proofId },
+      select: {
+        milestone: {
+          select: {
+            contract: {
+              select: {
+                startup: { select: { id: true, trainingConsent: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+    const submitter = proof?.milestone?.contract?.startup;
+    if (!submitter?.trainingConsent) return; // no consent → skip silently
+
     const yesCount = modelVotes.filter((v) => v.decision === "YES").length;
     const source = getLabelSource(yesCount);
 
     if (source === "HUMAN_QUEUE") {
       // Look up the original file URL so reviewers can open the actual document
-      const proof = await prisma.proof.findUnique({ where: { id: proofId }, select: { fileUrl: true } });
-      const fileUrl = proof?.fileUrl ?? null;
+      const proofMeta = await prisma.proof.findUnique({ where: { id: proofId }, select: { fileUrl: true } });
+      const fileUrl = proofMeta?.fileUrl ?? null;
 
       const isNew = !(await prisma.humanReviewQueue.findUnique({ where: { proofId }, select: { id: true } }));
 

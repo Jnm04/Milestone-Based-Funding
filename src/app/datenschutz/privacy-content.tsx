@@ -169,8 +169,8 @@ export function PrivacyContent() {
             <Li>
               <strong>{de ? "Einwilligung (Art. 6 Abs. 1 lit. a DSGVO):" : "Consent (Art. 6(1)(a) GDPR):"}</strong>{" "}
               {de
-                ? "Optionale E-Mail-Benachrichtigungen (einzeln abschaltbar in den Profileinstellungen), Telegram-Benachrichtigungen (nur bei aktiver Verknüpfung)"
-                : "Optional email notifications (individually disableable in profile settings), Telegram notifications (only if actively linked)"}
+                ? "Optionale E-Mail-Benachrichtigungen (einzeln abschaltbar in den Profileinstellungen), Telegram-Benachrichtigungen (nur bei aktiver Verknüpfung), optionale Nutzung anonymisierter Vertragsdaten für das Training des Cascrow-KI-Modells (separat opt-in in den Profileinstellungen)"
+                : "Optional email notifications (individually disableable in profile settings), Telegram notifications (only if actively linked), optional use of anonymised contract data for training the Cascrow AI model (separate opt-in in profile settings)"}
             </Li>
           </ul>
         </Section>
@@ -270,6 +270,45 @@ export function PrivacyContent() {
             {de
               ? "SCCs = EU-Standardvertragsklauseln (Art. 46 Abs. 2 lit. c DSGVO) · EU-US DPF = EU-US Data Privacy Framework (Angemessenheitsbeschluss)"
               : "SCCs = EU Standard Contractual Clauses (Art. 46(2)(c) GDPR) · EU-US DPF = EU-US Data Privacy Framework (adequacy decision)"}
+          </p>
+        </Section>
+
+        {/* Section 5a — AI Training */}
+        <Section title={de ? "5a. KI-Modell-Training (opt-in)" : "5a. AI Model Training (opt-in)"}>
+          <p>
+            {de
+              ? "Cascrow entwickelt ein eigenes KI-Verifikationsmodell (\"Cascrow Brain\"). Dazu können anonymisierte Daten aus abgeschlossenen Verifikationen verwendet werden — ausschließlich mit deiner ausdrücklichen Einwilligung (Art. 6 Abs. 1 lit. a DSGVO)."
+              : "Cascrow is developing its own AI verification model (\"Cascrow Brain\"). For this purpose, anonymised data from completed verifications may be used — exclusively with your explicit consent (Art. 6(1)(a) GDPR)."}
+          </p>
+          <p className="mt-3 font-medium" style={{ color: "#EDE6DD" }}>
+            {de ? "Was gespeichert wird (anonymisiert):" : "What is stored (anonymised):"}
+          </p>
+          <ul className="mt-1 flex flex-col gap-1">
+            {[
+              de ? "Meilenstein-Titel und Abnahmekriterien" : "Milestone title and acceptance criteria",
+              de ? "Eingereichte Nachweistexte (Proof Text)" : "Submitted proof texts",
+              de ? "Abstimmung und Begründung aller 5 KI-Modelle" : "Votes and reasoning of all 5 AI models",
+              de ? "Finales Ergebnis (APPROVED / REJECTED)" : "Final verdict (APPROVED / REJECTED)",
+            ].map((item) => (
+              <li key={item} className="text-sm flex gap-2" style={{ color: "#A89B8C" }}>
+                <span style={{ color: "#C4704B" }}>•</span> {item}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3">
+            {de
+              ? "Nicht gespeichert werden: Name, E-Mail-Adresse, Wallet-Adresse, Vertrags-ID oder sonstige direkt identifizierenden Merkmale."
+              : "Not stored: name, email address, wallet address, contract ID, or any other directly identifying attributes."}
+          </p>
+          <p className="mt-3">
+            {de
+              ? "Die Einwilligung ist freiwillig und kann jederzeit in den Profileinstellungen (\"AI Training Consent\") widerrufen werden. Ein Widerruf wirkt für die Zukunft — bereits gespeicherte Trainingseinträge werden bei Widerruf auf Anfrage gelöscht (Art. 17 DSGVO)."
+              : "Consent is voluntary and can be withdrawn at any time in profile settings (\"AI Training Consent\"). Withdrawal takes effect for the future — already stored training entries will be deleted upon request (Art. 17 GDPR)."}
+          </p>
+          <p className="mt-3">
+            {de
+              ? "Standardmäßig ist diese Option deaktiviert. Es werden keine Trainingsdaten gespeichert, solange du nicht aktiv zustimmst."
+              : "This option is disabled by default. No training data is stored unless you actively consent."}
           </p>
         </Section>
 

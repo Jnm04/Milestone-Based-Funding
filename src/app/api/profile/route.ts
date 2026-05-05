@@ -30,6 +30,8 @@ export async function GET() {
       companyWebsite: true,
       linkedinUrl: true,
       verifiedBadgeNftId: true,
+      trainingConsent: true,
+      trainingConsentAt: true,
     },
   });
 
@@ -53,6 +55,8 @@ export async function PUT(request: NextRequest) {
     dateOfBirth,
     // Feature 7: public profile
     publicProfile, publicUsername, companyBio, companyWebsite, linkedinUrl,
+    // AI training consent
+    trainingConsent,
   } = body;
 
   // Input validation — max lengths and strip HTML tags
@@ -120,6 +124,10 @@ export async function PUT(request: NextRequest) {
         linkedinUrl: typeof linkedinUrl === "string" && /^https?:\/\/(www\.)?linkedin\.com\//.test(linkedinUrl.trim())
           ? linkedinUrl.trim().slice(0, 200) : null,
       }),
+      ...(trainingConsent !== undefined && {
+        trainingConsent: Boolean(trainingConsent),
+        trainingConsentAt: new Date(),
+      }),
     },
     select: {
       id: true, email: true, name: true, role: true, walletAddress: true,
@@ -128,6 +136,7 @@ export async function PUT(request: NextRequest) {
       notifyFunded: true, notifyVerified: true, notifyRejected: true, notifyDigest: true,
       dateOfBirth: true,
       publicProfile: true, publicUsername: true, companyBio: true, companyWebsite: true, linkedinUrl: true, verifiedBadgeNftId: true,
+      trainingConsent: true, trainingConsentAt: true,
     },
   });
 

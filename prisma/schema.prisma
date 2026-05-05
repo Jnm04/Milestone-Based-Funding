@@ -41,6 +41,11 @@ model User {
   notifyRejected           Boolean @default(true) // Startup: proof rejected by AI
   notifyDigest             Boolean @default(false) // true = batch into daily digest instead of instant emails
 
+  // AI training consent — opt-in only, DSGVO Art. 6 Abs. 1 lit. a
+  // When true, anonymised (milestoneText + proofText + modelVotes) may be stored in TrainingEntry
+  trainingConsent          Boolean @default(false)
+  trainingConsentAt        DateTime? // timestamp of last consent change
+
   // Brute-force protection
   loginAttempts Int       @default(0)
   lockoutUntil  DateTime?
