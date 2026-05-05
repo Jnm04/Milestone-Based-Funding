@@ -443,7 +443,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
         />
 
         {/* AI Credibility Score — escrow contracts only, not verification-only */}
-        {canViewCredibility && contract.startup && contract.mode !== "ATTESTATION" && (
+        {canViewCredibility && contract.startup && contract.mode !== "ATTESTATION" && !["FUNDED", "VERIFIED", "COMPLETED"].includes(contract.status) && (
           <CredibilityPanel
             contractId={contract.id}
             startupName={contract.startup.name ?? contract.startup.companyName ?? null}
