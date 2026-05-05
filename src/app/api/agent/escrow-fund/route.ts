@@ -128,8 +128,7 @@ export async function POST(request: NextRequest) {
       status: "FUNDED",
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[escrow-fund] Failed:", msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[escrow-fund] Failed:", err);
+    return NextResponse.json({ error: "Escrow transaction failed. Check your wallet balance and try again." }, { status: 500 });
   }
 }
