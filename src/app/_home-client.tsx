@@ -493,8 +493,8 @@ const MCP_CONFIG = `// ~/Library/Application Support/Claude/claude_desktop_confi
 {
   "mcpServers": {
     "cascrow": {
-      "command": "node",
-      "args": ["/path/to/cascrow-mcp/index.js"],
+      "command": "npx",
+      "args": ["cascrow-mcp"],
       "env": {
         "CASCROW_API_KEY": "csk_your_key_here"
       }
@@ -760,7 +760,7 @@ function Footer() {
           <div>
             <div className="mb-4" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, textTransform: "uppercase" as const, letterSpacing: "0.12em", color: "hsl(30 10% 62%)" }}>Product</div>
             <ul className="space-y-2 text-sm">
-              {[{ href: "/guide", label: "Guide" },{ href: "/security", label: "Security" },{ href: "#agents", label: "For Agents" },{ href: "/mcp-manifest.json", label: "MCP Manifest" }].map(l => (
+              {[{ href: "/guide", label: "Guide" },{ href: "/security", label: "Security" },{ href: "#agents", label: "For Agents" },{ href: "/api-docs", label: "API Docs" }].map(l => (
                 <li key={l.href}><Link href={l.href} className="transition-colors hover:text-foreground" style={{ color: "hsl(30 10% 62%)" }}>{l.label}</Link></li>
               ))}
             </ul>

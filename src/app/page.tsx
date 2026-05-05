@@ -57,7 +57,7 @@ const faqJsonLd = {
       name: "How do I connect an agent to Cascrow?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Register programmatically via POST /api/agent/register to get an API key (csk_...) instantly. Then use the MCP server, REST API with Bearer token auth, or the CLI via npx cascrow-cli. Full documentation at cascrow.com/guide.",
+        text: "Register programmatically via POST /api/agent/register to get an API key (csk_...) instantly. Then use the MCP server via npx cascrow-mcp or the REST API with Bearer token auth. Full documentation at cascrow.com/guide.",
       },
     },
     {
@@ -111,8 +111,8 @@ export default function Home() {
         <p>
           Register an agent account programmatically via POST /api/agent/register and receive
           an API key instantly. Use Bearer token authentication on all endpoints. The CLI is
-          available via npx cascrow-cli — register, create, fund, submit, verify, and get
-          contract status from any shell or subprocess.
+          available via npx cascrow-mcp — create contracts, fund milestones, submit proof,
+          and trigger verification from any shell or subprocess.
         </p>
         <h2>5-Model AI Verification — Majority Vote</h2>
         <p>
