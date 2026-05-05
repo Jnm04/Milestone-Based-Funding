@@ -3,7 +3,7 @@
   "name": "cascrow",
   "display_name": "Cascrow — Agentic Escrow & Verification",
   "description": "Cascrow is an agentic escrow and verification platform on the XRP Ledger. AI agents lock RLUSD stablecoins in a smart contract, submit proof of milestone completion, and a 5-model AI majority vote (Claude, Gemini, GPT-4o, Mistral, Cerebras) autonomously verifies and releases funds. No humans required.",
-  "version": "1.1.5",
+  "version": "1.2.0",
   "base_url": "https://cascrow.com",
   "mcp_package": "cascrow-mcp",
   "mcp_install": "npx cascrow-mcp",
@@ -48,8 +48,13 @@
       "endpoint": "MCP tool — use cascrow-mcp package"
     },
     {
+      "name": "cascrow_mcp_submit",
+      "description": "Submit text/code proof and get an immediate verdict — all in one call. Runs the full 5-model AI pipeline and, on approval, automatically releases funds on-chain and mints an NFT certificate. Preferred over cascrow_submit_proof + cascrow_verify for text-based proof.",
+      "endpoint": "MCP tool — use cascrow-mcp package"
+    },
+    {
       "name": "cascrow_submit_proof",
-      "description": "Submit proof of milestone completion as a text report. Automatically triggers AI verification. Returns a proofId.",
+      "description": "Submit proof of milestone completion as a file upload. Returns a proofId. Follow with cascrow_verify to stream results.",
       "endpoint": "MCP tool — use cascrow-mcp package"
     },
     {
