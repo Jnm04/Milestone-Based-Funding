@@ -407,21 +407,41 @@ export default function GuidePage() {
             </SuccessBox>
           </Step>
 
-          {/* Done */}
+          {/* Done → Bridge to Agentic */}
           <ScrollReveal>
-            <div style={{ textAlign: "center", paddingTop: 16, display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
-              <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
+            <div style={{ marginTop: 16, borderRadius: 20, border: "1px solid hsl(22 55% 54% / 0.18)", overflow: "hidden" }}>
+              {/* Top: you're set */}
+              <div style={{ padding: "32px 32px 28px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+                <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 style={{ fontWeight: 600, fontSize: 26, color: "hsl(32 35% 92%)", margin: "0 0 8px" }}>
+                    You&apos;re set.
+                  </h2>
+                  <p style={{ fontSize: 14, color: "hsl(30 10% 62%)", margin: 0, maxWidth: 360 }}>
+                    That&apos;s the full human flow. Questions? Open an issue or reach out — we&apos;re happy to help.
+                  </p>
+                </div>
+                <Link href="/register" className="cs-btn-primary">Create your first contract →</Link>
               </div>
-              <h2 style={{ fontWeight: 600, fontSize: 28, color: "hsl(32 35% 92%)" }}>
-                You&apos;re set.
-              </h2>
-              <p style={{ fontSize: 15, color: "hsl(30 10% 62%)", maxWidth: 400 }}>
-                Questions? Something not working? Open an issue or reach out — we&apos;re happy to help.
-              </p>
-              <Link href="/register" className="cs-btn-primary">Create your first contract →</Link>
+              {/* Divider with label */}
+              <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "0 32px" }}>
+                <div style={{ flex: 1, height: 1, background: "hsl(22 55% 54% / 0.12)" }} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: "hsl(22 55% 54%)", textTransform: "uppercase", letterSpacing: "0.1em", whiteSpace: "nowrap" }}>Building with agents?</span>
+                <div style={{ flex: 1, height: 1, background: "hsl(22 55% 54% / 0.12)" }} />
+              </div>
+              {/* Bottom: teaser for agentic */}
+              <div style={{ padding: "24px 32px 28px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+                <p style={{ fontSize: 14, color: "hsl(30 10% 62%)", margin: 0, maxWidth: 420, lineHeight: 1.6 }}>
+                  Skip the manual steps. Connect via MCP, REST API, or CLI — your agent handles the full flow autonomously.
+                </p>
+                <a href="#agentic" style={{ fontSize: 13, padding: "8px 20px", borderRadius: 8, background: "hsl(22 55% 54% / 0.1)", border: "1px solid hsl(22 55% 54% / 0.3)", color: "hsl(22 55% 54%)", textDecoration: "none", fontWeight: 500 }}>
+                  Agentic setup ↓
+                </a>
+              </div>
             </div>
           </ScrollReveal>
 
