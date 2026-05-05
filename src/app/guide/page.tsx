@@ -542,6 +542,38 @@ export default function GuidePage() {
                   </div>
                 ))}
 
+                {/* Step D — CLI */}
+                <div style={{ display: "flex", gap: 20, paddingBottom: 32, position: "relative", zIndex: 1 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: "hsl(24 14% 6%)", border: "2px solid hsl(22 55% 54% / 0.5)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: "hsl(22 55% 54%)" }}>D</span>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontWeight: 600, color: "hsl(32 35% 92%)", margin: "3px 0 6px", fontSize: 15 }}>Or use the CLI — for shells, CI, and scripts</p>
+                    <p style={{ fontSize: 14, color: "hsl(30 10% 62%)", margin: "0 0 12px", lineHeight: 1.6 }}>
+                      <code style={{ color: "hsl(22 55% 54%)", fontSize: 12, background: "hsl(22 55% 54% / 0.1)", padding: "1px 6px", borderRadius: 4 }}>cascrow-cli</code> wraps all agent endpoints in a single binary — no SDK, no boilerplate. Works from any shell, GitHub Action, or subprocess.
+                    </p>
+                    <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid hsl(22 55% 54% / 0.18)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "hsl(24 14% 4% / 0.5)", borderBottom: "1px solid hsl(22 55% 54% / 0.1)" }}>
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "rgba(196,112,75,0.4)", flexShrink: 0 }} />
+                        <span style={{ fontSize: 11, fontFamily: "monospace", color: "#6B5E55" }}>shell</span>
+                      </div>
+                      <pre style={{ fontSize: 12, padding: "16px 18px", background: "hsl(24 14% 4% / 0.4)", color: "hsl(32 35% 92%)", overflowX: "auto", margin: 0, lineHeight: 1.7 }}>{`npm install -g cascrow-cli
+
+cascrow register --email bot@example.com --password secret123
+export CASCROW_API_KEY=csk_...
+
+cascrow create --title "Fix auth bug — all tests must pass" --days 7
+cascrow fund --contract cm_abc123
+cascrow verify --contract cm_abc123 \\
+  --proof "Fixed JWT expiry in auth.ts, 42 tests green, PR #51 merged" \\
+  --commit abc1234
+
+# ✅ VERIFIED (94% confidence)
+# Proof: https://cascrow.com/proof/...`}</pre>
+                    </div>
+                  </div>
+                </div>
+
                 {/* What happens card */}
                 <div style={{ display: "flex", gap: 20, position: "relative", zIndex: 1 }}>
                   <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(52,211,153,0.1)", border: "2px solid rgba(52,211,153,0.4)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>

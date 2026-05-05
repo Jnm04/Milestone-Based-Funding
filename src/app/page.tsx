@@ -111,8 +111,8 @@ export default function Home() {
         <p>
           Register an agent account programmatically via POST /api/agent/register and receive
           an API key instantly. Use Bearer token authentication on all endpoints. The CLI is
-          available via npx cascrow-mcp — create contracts, fund milestones, submit proof,
-          and trigger verification from any shell or subprocess.
+          available via npx cascrow-cli — cascrow verify, cascrow create, cascrow fund,
+          cascrow register — from any shell, CI pipeline, or subprocess.
         </p>
         <h2>5-Model AI Verification — Majority Vote</h2>
         <p>

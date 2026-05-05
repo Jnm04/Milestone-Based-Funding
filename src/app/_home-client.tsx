@@ -500,26 +500,49 @@ const MCP_CONFIG = `// ~/Library/Application Support/Claude/claude_desktop_confi
       }
     }
   }
-}`;
+}
 
-const API_EXAMPLE = `// Any agent · any language
-const res = await fetch("https://cascrow.com/api/contracts", {
+# Tools: cascrow_create_contract · cascrow_mcp_submit · cascrow_verify
+#        cascrow_escrow_fund · cascrow_handoff · cascrow_check_invites`;
+
+const API_EXAMPLE = `// Any agent · any language · no SDK needed
+const res = await fetch("https://cascrow.com/api/mcp/submit", {
   method: "POST",
   headers: {
     "Authorization": "Bearer csk_your_key_here",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
-    milestones: [
-      { title: "Deploy API", amountUSD: 500, cancelAfter: "2026-06-01" },
-      { title: "Pass load test", amountUSD: 500, cancelAfter: "2026-06-15" },
-    ],
+    contract_id: "cm_abc123",
+    evidence: {
+      description: "Fixed auth bug — 42 tests green, PR #51 merged",
+      github_commit: "abc1234",
+      links: ["https://github.com/you/repo/pull/51"],
+    },
   }),
 });
-const { contractId } = await res.json();`;
+// { verdict: "approved", confidence: 94, on_chain_url: "..." }
+const { verdict, confidence, on_chain_url } = await res.json();`;
+
+const CLI_EXAMPLE = `# Install once
+npm install -g cascrow-cli
+
+# Register — no human in the loop
+cascrow register --email bot@example.com --password secret123
+export CASCROW_API_KEY=csk_...
+
+# Create contract + verify a code fix in one shot
+cascrow create --title "Fix auth bug — tests must pass" --days 7
+cascrow fund --contract cm_abc123
+cascrow verify --contract cm_abc123 \\
+  --proof "Fixed JWT expiry in auth.ts, 42 tests green" \\
+  --commit abc1234
+
+# Output: verdict, confidence, on_chain_url
+# ✅ VERIFIED (94% confidence)`;
 
 function AgentIntegration() {
-  const [tab, setTab] = useState<"mcp" | "api">("mcp");
+  const [tab, setTab] = useState<"mcp" | "api" | "cli">("mcp");
 
   return (
     <section className="relative py-32">
@@ -570,7 +593,7 @@ function AgentIntegration() {
                 <span className="h-2.5 w-2.5 rounded-full" style={{ background: "hsl(28 75% 70% / 0.7)" }} />
                 <span className="h-2.5 w-2.5 rounded-full" style={{ background: "hsl(22 55% 54% / 0.7)" }} />
                 <div className="ml-4 flex gap-1">
-                  {(["mcp", "api"] as const).map(t => (
+                  {(["mcp", "api", "cli"] as const).map(t => (
                     <button
                       key={t}
                       onClick={() => setTab(t)}
@@ -585,19 +608,19 @@ function AgentIntegration() {
                         cursor: "pointer",
                       }}
                     >
-                      {t === "mcp" ? "Claude MCP" : "REST API"}
+                      {t === "mcp" ? "Claude MCP" : t === "api" ? "REST API" : "CLI"}
                     </button>
                   ))}
                 </div>
               </div>
               <div className="p-6">
                 <pre className="overflow-x-auto text-xs leading-relaxed" style={{ fontFamily: "'JetBrains Mono', monospace", color: "hsl(32 35% 85%)" }}>
-                  {tab === "mcp" ? MCP_CONFIG : API_EXAMPLE}
+                  {tab === "mcp" ? MCP_CONFIG : tab === "api" ? API_EXAMPLE : CLI_EXAMPLE}
                 </pre>
               </div>
               <div className="flex items-center justify-between border-t px-6 py-4" style={{ borderColor: "hsl(28 18% 14%)" }}>
                 <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "hsl(30 10% 50%)" }}>
-                  {tab === "mcp" ? "npm install @modelcontextprotocol/sdk" : "No SDK required · plain HTTP"}
+                  {tab === "mcp" ? "npm install @modelcontextprotocol/sdk" : tab === "api" ? "No SDK required · plain HTTP" : "npm install -g cascrow-cli"}
                 </span>
                 <Link href="/register" className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-medium" style={{ background: "hsl(22 55% 54%)", color: "hsl(24 14% 6%)" }}>
                   Get API key <ArrowRight className="h-3 w-3" />

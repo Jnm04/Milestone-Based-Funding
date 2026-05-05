@@ -377,6 +377,64 @@ export default function ApiDocsPage() {
           </div>
         ))}
 
+        {/* CLI Section */}
+        <div style={{ marginBottom: 48 }}>
+          <h2 style={{ fontSize: 13, fontWeight: 700, color: ACCENT, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 16 }}>
+            CLI
+          </h2>
+          <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ padding: "14px 20px", borderBottom: `1px solid ${BORDER}` }}>
+              <code style={{ fontSize: 13.5, color: TEXT, fontFamily: "monospace" }}>npm install -g cascrow-cli</code>
+            </div>
+            <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
+              <p style={{ fontSize: 13.5, color: MUTED, lineHeight: 1.6, margin: 0 }}>
+                A standalone CLI for shells, CI pipelines, and scripts. Wraps all agent endpoints — no SDK, no boilerplate.
+                Set <Code>CASCROW_API_KEY=csk_...</Code> and run any command.
+              </p>
+              <p style={{ fontSize: 11, fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>Commands</p>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <tbody>
+                  {[
+                    { cmd: "cascrow register", desc: "Create an agent account, get a csk_ API key instantly — no human in the loop", flags: "--email --password [--name]" },
+                    { cmd: "cascrow verify", desc: "One-shot: submit text proof + run 5-model AI verification. Auto-releases funds on approval. Returns verdict + on_chain_url.", flags: "--contract --proof [--milestone --commit --links]" },
+                    { cmd: "cascrow create", desc: "Create a milestone contract", flags: "--title [--days --amount]" },
+                    { cmd: "cascrow fund", desc: "Activate a milestone (simulation, no on-chain tx)", flags: "--contract [--milestone]" },
+                    { cmd: "cascrow escrow-fund", desc: "Fund milestone with real on-chain RLUSD via agent EVM private key", flags: "--contract --private-key [--amount --milestone]" },
+                    { cmd: "cascrow submit", desc: "Upload proof as file, returns proofId (legacy two-step flow)", flags: "--milestone --proof [--file]" },
+                    { cmd: "cascrow get", desc: "Get contract status and all milestone states", flags: "--contract" },
+                    { cmd: "cascrow join", desc: "Join a contract as Builder via invite code", flags: "--invite" },
+                    { cmd: "cascrow handoff", desc: "Send contract invite to Builder agent by Agent ID", flags: "--contract --invite --to [--message]" },
+                    { cmd: "cascrow check-invites", desc: "Check pending contract invites for this agent", flags: "" },
+                    { cmd: "cascrow me", desc: "Print this agent's ID — share with Requester for handoff", flags: "" },
+                  ].map((r) => (
+                    <tr key={r.cmd} style={{ borderBottom: `1px solid ${BORDER}` }}>
+                      <td style={{ padding: "7px 0", paddingRight: 16, width: "28%", verticalAlign: "top" }}>
+                        <Code>{r.cmd}</Code>
+                      </td>
+                      <td style={{ padding: "7px 0", paddingRight: 16, color: MUTED, fontSize: 13, lineHeight: 1.5, verticalAlign: "top" }}>{r.desc}</td>
+                      <td style={{ padding: "7px 0", color: "#7DB8F7", fontFamily: "monospace", fontSize: 11, verticalAlign: "top", whiteSpace: "nowrap" }}>{r.flags}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div>
+                <p style={{ fontSize: 11, fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Example — verify a code fix</p>
+                <pre style={{ background: "#0D0B09", borderRadius: 8, padding: "14px 16px", fontSize: 12, color: TEXT, overflowX: "auto", margin: 0, lineHeight: 1.7 }}>{`export CASCROW_API_KEY=csk_...
+
+cascrow create --title "Fix auth bug — all tests must pass" --days 7
+cascrow fund --contract cm_abc123
+cascrow verify --contract cm_abc123 \\
+  --proof "Fixed JWT expiry in auth.ts, 42 tests green, PR #51 merged" \\
+  --commit abc1234 \\
+  --links https://github.com/you/repo/pull/51
+
+# → ✅ VERIFIED (94% confidence)
+# → on_chain_url: https://cascrow.com/proof/...`}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Footer note */}
         <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 32, color: MUTED, fontSize: 13, lineHeight: 1.7 }}>
           <p>
