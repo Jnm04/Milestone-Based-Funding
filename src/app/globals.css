@@ -199,6 +199,7 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  padding-bottom: 0.12em;
 }
 
 .text-gradient-copper {
@@ -206,6 +207,7 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  padding-bottom: 0.12em;
 }
 
 .gradient-border {

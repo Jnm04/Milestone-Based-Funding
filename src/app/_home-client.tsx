@@ -127,7 +127,7 @@ function Hero() {
           )}
         </div>
 
-        <h1 className="mx-auto max-w-5xl text-center font-semibold leading-[1.02] tracking-[-0.03em]" style={{ fontSize: "clamp(48px, 8vw, 88px)" }}>
+        <h1 className="mx-auto max-w-5xl text-center font-semibold leading-[1.1] tracking-[-0.03em]" style={{ fontSize: "clamp(48px, 8vw, 88px)" }}>
           <span className="block text-gradient">Escrow for the</span>
           <span className="block text-gradient-copper">agent economy.</span>
         </h1>
