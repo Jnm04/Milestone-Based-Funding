@@ -232,7 +232,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           </div>
           <p className="text-sm leading-relaxed" style={{ color: "hsl(32 35% 92%)" }}>{contract.milestone}</p>
           <div className="flex items-center gap-4 pt-1 text-sm" style={{ color: "hsl(30 10% 62%)" }}>
-            {Number(contract.amountUSD) <= contract.milestones.length ? (
+            {contract.mode === "ATTESTATION" ? (
               <span>
                 Verification-only ·{" "}
                 <strong style={{ color: "#D4B896" }}>
@@ -241,7 +241,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
               </span>
             ) : (
               <span>
-                Total:{" "}
+                Escrow &amp; Verification ·{" "}
                 <strong style={{ color: "#D4B896" }}>
                   ${Number(contract.amountUSD).toLocaleString()} RLUSD
                 </strong>
