@@ -439,11 +439,11 @@ export default async function ContractPage({ params, searchParams }: ContractPag
         <AuditTrail
           logs={auditLogs}
           milestones={contract.milestones.map((m) => ({ id: m.id, title: m.title, order: m.order }))}
-          isVerificationOnly={Number(contract.amountUSD) <= contract.milestones.length}
+          isVerificationOnly={contract.mode === "ATTESTATION"}
         />
 
         {/* AI Credibility Score — escrow contracts only, not verification-only */}
-        {canViewCredibility && contract.startup && Number(contract.amountUSD) > contract.milestones.length && (
+        {canViewCredibility && contract.startup && contract.mode !== "ATTESTATION" && (
           <CredibilityPanel
             contractId={contract.id}
             startupName={contract.startup.name ?? contract.startup.companyName ?? null}
@@ -511,7 +511,7 @@ export default async function ContractPage({ params, searchParams }: ContractPag
           interimAiPositive={activeMilestone?.interimAiPositive ?? null}
           extensionDays={activeMilestone?.extensionDays ?? null}
           contractMode={contract.mode}
-          isVerificationOnly={Number(contract.amountUSD) <= contract.milestones.length}
+          isVerificationOnly={contract.mode === "ATTESTATION"}
           dataSourceType={activeMilestone?.dataSourceType ?? null}
           dataSourceUrl={activeMilestone?.dataSourceUrl ?? null}
           dataSourceApiKeyHint={activeMilestone?.dataSourceApiKeyHint ?? null}
