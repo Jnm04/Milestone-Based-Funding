@@ -397,6 +397,42 @@ const TOOLS = [
     },
   },
   {
+    name: "cascrow_list_my_contracts",
+    description:
+      "List all active cascrow contracts for this agent — both as Requester (you created the contract) " +
+      "and as Builder (you were hired). Returns contract IDs, statuses, and milestone details. " +
+      "Use this after a restart to rediscover in-flight work, or to poll overall state without " +
+      "knowing specific contract IDs. Filter by role='requester' or role='builder' if needed.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        role: {
+          type: "string",
+          enum: ["requester", "builder"],
+          description: "Optional: 'requester' to see contracts you created, 'builder' to see contracts you joined. Omit to see both.",
+        },
+      },
+    },
+  },
+  {
+    name: "cascrow_get_proof_status",
+    description:
+      "Check the AI verification result for a submitted proof. Returns the decision (YES/NO), " +
+      "confidence score, reasoning, and current milestone/contract status. " +
+      "Use this to poll after cascrow_submit_proof or cascrow_mcp_submit — if pending=true, " +
+      "the AI is still processing; poll again in a few seconds.",
+    inputSchema: {
+      type: "object",
+      required: ["proofId"],
+      properties: {
+        proofId: {
+          type: "string",
+          description: "The proof ID returned by cascrow_submit_proof or cascrow_mcp_submit",
+        },
+      },
+    },
+  },
+  {
     name: "cascrow_mcp_submit",
     description:
       "Submit text-based proof and get an immediate verdict — all in one call. " +
@@ -684,6 +720,56 @@ async function handleSetDiscoverable({ discoverable, skills, callbackUrl } = {})
   };
 }
 
+async function handleListMyContracts({ role } = {}) {
+  const qs = role ? `?role=${encodeURIComponent(role)}` : "";
+  const data = await apiGet(`/api/agent/my-contracts${qs}`);
+  const contracts = data.contracts ?? [];
+
+  if (contracts.length === 0) {
+    return { contracts: [], total: 0, message: "No active contracts found. Create one with cascrow_create_contract or wait for invites via cascrow_check_invites." };
+  }
+
+  const lines = contracts.map((c) => {
+    const roleLabel = c.role === "requester" ? "Requester" : "Builder";
+    const activeMilestone = c.milestones.find((m) => ["FUNDED", "PROOF_SUBMITTED", "PENDING_REVIEW"].includes(m.status))
+      ?? c.milestones[0];
+    const msLine = activeMilestone
+      ? ` — milestone: "${activeMilestone.title}" [${activeMilestone.status}]`
+      : "";
+    return `  - ${c.contractId} [${c.status}] (${roleLabel})${msLine}`;
+  }).join("\n");
+
+  return {
+    ...data,
+    message: `Found ${data.total} contract(s):\n${lines}\n\nUse cascrow_get_contract with a contractId for full details.`,
+  };
+}
+
+async function handleGetProofStatus({ proofId }) {
+  const data = await apiGet(`/api/agent/proof-status/${encodeURIComponent(proofId)}`);
+
+  if (data.pending) {
+    return {
+      ...data,
+      message: `Proof ${proofId} is still being processed by the AI. Poll again in a few seconds.`,
+    };
+  }
+
+  const decision = data.decision === "YES" ? "✅ APPROVED" : "❌ REJECTED";
+  const conf = data.confidence !== null ? ` (confidence: ${data.confidence}%)` : "";
+  const parts = [
+    `Proof ${proofId}: ${decision}${conf}`,
+    `Contract status: ${data.contractStatus}`,
+    data.milestoneTitle ? `Milestone: "${data.milestoneTitle}" [${data.milestoneStatus}]` : null,
+    data.reasoning ? `Reasoning: ${data.reasoning.slice(0, 200)}${data.reasoning.length > 200 ? "…" : ""}` : null,
+  ].filter(Boolean);
+
+  return {
+    ...data,
+    message: parts.join("\n"),
+  };
+}
+
 async function handleMcpSubmit({ contract_id, milestone_id, evidence }) {
   const data = await apiPost("/api/mcp/submit", { contract_id, milestone_id, evidence });
 
@@ -721,7 +807,7 @@ async function handleMcpSubmit({ contract_id, milestone_id, evidence }) {
 // ─── MCP Server ───────────────────────────────────────────────────────────────
 
 const server = new Server(
-  { name: "cascrow", version: "1.3.0" },
+  { name: "cascrow", version: "1.4.0" },
   { capabilities: { tools: {} } }
 );
 
@@ -747,8 +833,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "cascrow_get_agent_id":     result = await handleGetAgentId();               break;
       case "cascrow_get_reputation":   result = await handleGetReputation(args);        break;
       case "cascrow_discover_agents":  result = await handleDiscoverAgents(args);       break;
-      case "cascrow_set_discoverable": result = await handleSetDiscoverable(args);      break;
-      case "cascrow_mcp_submit":       result = await handleMcpSubmit(args);            break;
+      case "cascrow_set_discoverable":  result = await handleSetDiscoverable(args);      break;
+      case "cascrow_list_my_contracts": result = await handleListMyContracts(args);      break;
+      case "cascrow_get_proof_status":  result = await handleGetProofStatus(args);       break;
+      case "cascrow_mcp_submit":        result = await handleMcpSubmit(args);            break;
       default:
         throw new Error(`Unknown tool: ${name}`);
     }
