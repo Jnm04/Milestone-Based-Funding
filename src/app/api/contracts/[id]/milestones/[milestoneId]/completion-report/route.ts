@@ -172,7 +172,7 @@ function buildReportHtml(p: ReportParams): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Completion Report — ${esc(p.milestoneTitle)}</title>
+  <title>Milestone Report — ${esc(p.milestoneTitle)}</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -440,7 +440,7 @@ function buildReportHtml(p: ReportParams): string {
     <div class="header">
       <div class="header-brand">
         <span class="brand-name">CASCROW</span>
-        <span class="brand-sub">Milestone Completion Report</span>
+        <span class="brand-sub">Milestone Report</span>
       </div>
       <span class="verified-badge">✓ AI Verified</span>
     </div>

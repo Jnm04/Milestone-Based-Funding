@@ -513,7 +513,7 @@ export function MilestoneTimeline({ milestones, activeMilestoneId, viewerRole, c
                     >
                       <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
                         <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "#6EE09A" }}>
-                          Completion Report
+                          Milestone Report
                         </span>
                         <p style={{ fontSize: "11px", color: "#A89B8C", margin: 0 }}>
                           AI-verified proof-of-delivery document
