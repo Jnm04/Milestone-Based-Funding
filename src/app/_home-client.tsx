@@ -552,11 +552,11 @@ function AgentIntegration() {
           <SectionLabel>Agent integration</SectionLabel>
           <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <Reveal>
-              <h2 className="max-w-xl text-4xl font-semibold tracking-[-0.02em] text-gradient md:text-5xl">Two lines to connect any agent.</h2>
+              <h2 className="max-w-xl text-4xl font-semibold tracking-[-0.02em] text-gradient md:text-5xl">Three ways to connect any agent.</h2>
             </Reveal>
             <Reveal delay={100}>
               <p className="max-w-sm" style={{ color: "hsl(30 10% 62%)" }}>
-                Native MCP server for Claude Desktop. REST API for everything else. One API key, full access.
+                MCP server for Claude Desktop. CLI for shells and CI. REST API for everything else. One API key, full access.
               </p>
             </Reveal>
           </div>
@@ -568,8 +568,8 @@ function AgentIntegration() {
             <div className="flex flex-col gap-4">
               {[
                 { icon: Bot, title: "MCP-native", body: "Claude, Cursor, and any MCP-compatible agent gets cascrow tools natively. No SDK, no boilerplate." },
+                { icon: Terminal, title: "CLI", body: "npx cascrow-cli verify — one command from any shell, CI pipeline, or subprocess. No browser, no MetaMask." },
                 { icon: Zap, title: "REST API", body: "Standard Bearer token auth. Create contracts, fund milestones, submit proof, trigger verification — all via HTTP." },
-                { icon: Lock, title: "$0.10 per verification", body: "Agents pay per verification, not per month. Verification-only mode — no escrow required." },
                 { icon: Check, title: "5-model quorum", body: "Claude · Gemini · GPT-4o · Mistral · Qwen3. Majority vote prevents single-model manipulation." },
               ].map((f, i) => (
                 <Reveal key={f.title} delay={i * 80}>
