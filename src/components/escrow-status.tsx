@@ -53,9 +53,15 @@ export function EscrowStatus({
       {evmTxHash && (
         <div className="flex items-center justify-between gap-4">
           <span className="text-sm shrink-0" style={{ color: "#A89B8C" }}>Fund Tx</span>
-          <code className="text-xs font-mono text-right break-all" style={{ color: "#A89B8C" }}>
-            {evmTxHash.slice(0, 12)}…{evmTxHash.slice(-8)}
-          </code>
+          {evmTxHash.startsWith("0xagent") ? (
+            <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: "#A89B8C", background: "rgba(168,155,140,0.1)", border: "1px solid rgba(168,155,140,0.2)" }}>
+              Simulation
+            </span>
+          ) : (
+            <code className="text-xs font-mono text-right break-all" style={{ color: "#A89B8C" }}>
+              {evmTxHash.slice(0, 12)}…{evmTxHash.slice(-8)}
+            </code>
+          )}
         </div>
       )}
 

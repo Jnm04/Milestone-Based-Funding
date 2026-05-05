@@ -463,7 +463,7 @@ export default function GuidePage() {
                   {
                     svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="hsl(22 55% 54%)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>,
                     title: "MCP protocol",
-                    body: "Native Claude Code tool. Add the manifest and call cascrow_verify_milestone from any session.",
+                    body: "Native Claude Code tool. Run npx cascrow-mcp and call cascrow_mcp_submit from any session.",
                   },
                   {
                     svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="hsl(22 55% 54%)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
@@ -591,15 +591,30 @@ export default function GuidePage() {
               </div>
 
               {/* Bottom CTA bar */}
-              <div style={{ marginTop: 32, padding: "16px 20px", borderRadius: 12, background: "hsl(22 55% 54% / 0.06)", border: "1px solid hsl(22 55% 54% / 0.18)", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                <div>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: "hsl(32 35% 92%)", margin: "0 0 2px" }}>Claude Code users</p>
+              <div style={{ marginTop: 32, padding: "16px 20px", borderRadius: 12, background: "hsl(22 55% 54% / 0.06)", border: "1px solid hsl(22 55% 54% / 0.18)", display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: "hsl(32 35% 92%)", margin: 0 }}>Claude Desktop / Claude Code</p>
                   <p style={{ fontSize: 12, color: "hsl(30 10% 62%)", margin: 0 }}>
-                    Add the MCP manifest: <code style={{ color: "hsl(28 45% 72%)", fontSize: 11 }}>https://cascrow.com/mcp-manifest.json</code> · Tool: <code style={{ color: "hsl(28 45% 72%)", fontSize: 11 }}>cascrow_verify_milestone</code>
+                    Install via npm — then add to your MCP config:
+                  </p>
+                  <pre style={{ fontSize: 11, margin: 0, padding: "10px 14px", borderRadius: 8, background: "hsl(24 14% 4% / 0.6)", border: "1px solid hsl(22 55% 54% / 0.12)", color: "hsl(32 35% 92%)", overflowX: "auto", lineHeight: 1.6 }}>{`npx cascrow-mcp
+
+# claude_desktop_config.json:
+{
+  "mcpServers": {
+    "cascrow": {
+      "command": "npx",
+      "args": ["cascrow-mcp"],
+      "env": { "CASCROW_API_KEY": "csk_..." }
+    }
+  }
+}`}</pre>
+                  <p style={{ fontSize: 11, color: "hsl(30 10% 50%)", margin: 0 }}>
+                    Tools: <code style={{ color: "hsl(28 45% 72%)", fontSize: 11 }}>cascrow_create_contract</code> · <code style={{ color: "hsl(28 45% 72%)", fontSize: 11 }}>cascrow_mcp_submit</code> · <code style={{ color: "hsl(28 45% 72%)", fontSize: 11 }}>cascrow_verify</code>
                   </p>
                 </div>
-                <div style={{ display: "flex", gap: 10 }}>
-                  <a href="/mcp-manifest.json" target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, padding: "8px 16px", borderRadius: 8, background: "hsl(22 55% 54% / 0.1)", border: "1px solid hsl(22 55% 54% / 0.3)", color: "hsl(22 55% 54%)", textDecoration: "none", fontWeight: 500 }}>MCP manifest ↗</a>
+                <div style={{ display: "flex", gap: 10, flexShrink: 0 }}>
+                  <a href="/api-docs#agent-api" style={{ fontSize: 13, padding: "8px 16px", borderRadius: 8, background: "hsl(22 55% 54% / 0.1)", border: "1px solid hsl(22 55% 54% / 0.3)", color: "hsl(22 55% 54%)", textDecoration: "none", fontWeight: 500 }}>API Docs ↗</a>
                   <Link href="/register" style={{ fontSize: 13, padding: "8px 16px", borderRadius: 8, background: "hsl(22 55% 54%)", color: "hsl(24 14% 6%)", textDecoration: "none", fontWeight: 600 }}>Get started →</Link>
                 </div>
               </div>

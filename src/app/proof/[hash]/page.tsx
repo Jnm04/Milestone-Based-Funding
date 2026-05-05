@@ -43,6 +43,7 @@ export default async function PublicProofPage({ params }: Props) {
           aiConfidence: true,
           aiModelVotes: true,
           createdAt: true,
+          proofType: true,
         },
       },
     },
@@ -69,6 +70,11 @@ export default async function PublicProofPage({ params }: Props) {
   const modelVotes = Array.isArray(latestProof.aiModelVotes)
     ? (latestProof.aiModelVotes as ModelVote[])
     : [];
+
+  const proofTypeLabel =
+    latestProof.proofType === "mcp_agent" ? "Agent Submission" :
+    latestProof.proofType === "github_url" ? "GitHub Connector" :
+    null;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start py-12 px-4" style={{ background: "#1A1512" }}>
@@ -139,6 +145,14 @@ export default async function PublicProofPage({ params }: Props) {
             <span>Verification hash</span>
             <span className="font-mono text-xs truncate max-w-48" style={{ color: "#EDE6DD" }}>{hash.slice(0, 16)}…</span>
           </div>
+          {proofTypeLabel && (
+            <div className="flex justify-between">
+              <span>Submitted via</span>
+              <span className="px-2 py-0.5 rounded-full text-xs" style={{ background: "rgba(168,155,140,0.1)", color: "#A89B8C", border: "1px solid rgba(168,155,140,0.2)" }}>
+                {proofTypeLabel}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Share buttons */}

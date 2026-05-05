@@ -67,16 +67,26 @@ async function uploadProof(milestoneId, filename, content) {
   return data;
 }
 
+// Stream verify with 180s timeout to handle slow AI quorums
 async function streamVerify(proofId) {
-  const res = await fetch(`${BASE_URL}/api/verify`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-      "Accept": "text/event-stream",
-    },
-    body: JSON.stringify({ proofId }),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 180_000);
+
+  let res;
+  try {
+    res = await fetch(`${BASE_URL}/api/verify`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${API_KEY}`,
+        "Content-Type": "application/json",
+        "Accept": "text/event-stream",
+      },
+      body: JSON.stringify({ proofId }),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
@@ -88,36 +98,40 @@ async function streamVerify(proofId) {
   const decoder = new TextDecoder();
   let buffer = "";
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
 
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
 
-    for (const line of lines) {
-      if (!line.startsWith("data:")) continue;
-      const raw = line.slice(5).trim();
-      if (!raw) continue;
-      try {
-        const msg = JSON.parse(raw);
-        if (msg.type === "model_vote") {
-          votes.push(msg);
-          // Log each vote to stderr so Claude Desktop can show live progress
-          const icon = msg.decision === "YES" ? "✅" : "❌";
-          process.stderr.write(`[cascrow] ${icon} ${msg.model}: ${msg.decision} (${msg.confidence}%)\n`);
-        } else if (msg.type === "complete") {
-          return { ...msg, votes };
-        } else if (msg.type === "error") {
-          throw new Error(msg.message);
+      for (const line of lines) {
+        if (!line.startsWith("data:")) continue;
+        const raw = line.slice(5).trim();
+        if (!raw) continue;
+        try {
+          const msg = JSON.parse(raw);
+          if (msg.type === "model_vote") {
+            votes.push(msg);
+            const icon = msg.decision === "YES" ? "✅" : "❌";
+            process.stderr.write(`[cascrow] ${icon} ${msg.model}: ${msg.decision} (${msg.confidence}%)\n`);
+          } else if (msg.type === "complete") {
+            return { ...msg, votes };
+          } else if (msg.type === "error") {
+            throw new Error(msg.message);
+          }
+        } catch (e) {
+          if (e instanceof SyntaxError) continue;
+          throw e;
         }
-      } catch (e) {
-        if (e instanceof SyntaxError) continue;
-        throw e;
       }
     }
+  } finally {
+    reader.cancel().catch(() => {});
   }
+
   throw new Error("Stream ended without a complete event");
 }
 
@@ -141,15 +155,11 @@ const TOOLS = [
           description: "List of milestones to verify",
           items: {
             type: "object",
-            required: ["title", "description", "deadlineDays"],
+            required: ["title", "deadlineDays"],
             properties: {
               title: {
                 type: "string",
-                description: "Short milestone title, e.g. 'Hero section with CTA'",
-              },
-              description: {
-                type: "string",
-                description: "Detailed acceptance criteria — what exactly must be true for this milestone to pass AI verification",
+                description: "Milestone title including acceptance criteria, e.g. 'Hero section with CTA — must be responsive down to 320px, LCP < 2s'",
               },
               deadlineDays: {
                 type: "number",
@@ -203,7 +213,9 @@ const TOOLS = [
       "Submit proof of completion for a milestone. " +
       "Write a detailed, specific proof report describing exactly what was built, " +
       "with verifiable evidence (URLs, metrics, specific implementation details). " +
-      "The more specific and verifiable the proof, the higher the AI confidence score.",
+      "The more specific and verifiable the proof, the higher the AI confidence score. " +
+      "NOTE: After submitting, the backend automatically triggers AI verification. " +
+      "You can call cascrow_verify afterwards to stream the live results.",
     inputSchema: {
       type: "object",
       required: ["milestoneId", "proof"],
@@ -223,15 +235,27 @@ const TOOLS = [
   {
     name: "cascrow_verify",
     description:
-      "Trigger AI verification for a submitted proof and wait for the result. " +
+      "Stream live AI verification results for a submitted proof. " +
       "5 AI models vote in parallel (Claude, GPT-4o, Gemini, Mistral, Cerebras). " +
-      "Returns decision (YES/NO), confidence score, reasoning, and action taken. " +
-      "Call this after cascrow_submit_proof.",
+      "Returns decision, confidence score, action (VERIFIED/PENDING_REVIEW/REJECTED), and per-model votes. " +
+      "Call this after cascrow_submit_proof to get live results. " +
+      "Confidence > 85 + YES = VERIFIED. Confidence 60–85 = PENDING_REVIEW (manual review needed). Confidence < 60 = REJECTED.",
     inputSchema: {
       type: "object",
       required: ["proofId"],
       properties: {
         proofId: { type: "string", description: "The proof ID returned by cascrow_submit_proof" },
+      },
+    },
+  },
+  {
+    name: "cascrow_get_contract",
+    description: "Get the current status and details of a contract, including all milestones and their statuses.",
+    inputSchema: {
+      type: "object",
+      required: ["contractId"],
+      properties: {
+        contractId: { type: "string" },
       },
     },
   },
@@ -249,17 +273,6 @@ const TOOLS = [
           type: "string",
           description: "The invite code or invite link token shared by the Requester agent.",
         },
-      },
-    },
-  },
-  {
-    name: "cascrow_get_contract",
-    description: "Get the current status and details of a contract, including all milestones.",
-    inputSchema: {
-      type: "object",
-      required: ["contractId"],
-      properties: {
-        contractId: { type: "string" },
       },
     },
   },
@@ -299,6 +312,50 @@ const TOOLS = [
       properties: {},
     },
   },
+  {
+    name: "cascrow_mcp_submit",
+    description:
+      "Submit text-based proof and get an immediate verdict — all in one call. " +
+      "Runs the full 5-model AI verification pipeline and, on approval, automatically releases funds on-chain and mints an NFT certificate. " +
+      "Use this instead of cascrow_submit_proof + cascrow_verify when your proof is text/code (no file upload needed). " +
+      "Returns verdict ('approved' | 'rejected' | 'pending_review'), confidence score, and on-chain proof URL.",
+    inputSchema: {
+      type: "object",
+      required: ["contract_id", "evidence"],
+      properties: {
+        contract_id: { type: "string", description: "The contract ID" },
+        milestone_id: { type: "string", description: "Optional specific milestone ID. If omitted, targets the first active milestone." },
+        evidence: {
+          type: "object",
+          required: ["description"],
+          description: "Proof of milestone completion",
+          properties: {
+            description: {
+              type: "string",
+              description: "Full description of what was completed. Include specifics: what was built, test results, metrics, URLs, how each acceptance criterion was met.",
+            },
+            links: {
+              type: "array",
+              items: { type: "string" },
+              description: "Optional URLs (live demo, GitHub PR, deployed app, etc.)",
+            },
+            github_commit: {
+              type: "string",
+              description: "Optional Git commit SHA or PR URL",
+            },
+            revenue_amount: {
+              type: "number",
+              description: "Optional revenue figure in USD (for revenue milestones)",
+            },
+            custom_fields: {
+              type: "object",
+              description: "Optional key-value pairs for additional context",
+            },
+          },
+        },
+      },
+    },
+  },
 ];
 
 // ─── Tool handlers ────────────────────────────────────────────────────────────
@@ -306,24 +363,28 @@ const TOOLS = [
 async function handleCreateContract({ milestones }) {
   const deadline = (days) => {
     const d = new Date();
-    d.setDate(d.getDate() + days);
+    d.setDate(d.getDate() + (days ?? 7));
     return d.toISOString();
   };
 
   const payload = {
     milestones: milestones.map((m) => ({
-      title: `${m.title} — ${m.description}`,
+      title: m.title,
       amountUSD: m.amountUSD ?? 0,
-      cancelAfter: deadline(m.deadlineDays ?? 7),
+      cancelAfter: deadline(m.deadlineDays),
     })),
   };
 
   const data = await apiPost("/api/contracts", payload);
   const contractUrl = `${BASE_URL}/contract/${data.contractId}`;
 
+  // API returns inviteLink — expose as both keys so callers can use either
+  const inviteCode = data.inviteLink ?? null;
+
   return {
     contractId: data.contractId,
-    inviteCode: data.inviteLink,
+    inviteCode,
+    inviteLink: inviteCode,
     contractUrl,
     milestoneCount: milestones.length,
     message: `Contract created with ${milestones.length} milestone(s). View it here: ${contractUrl}`,
@@ -361,7 +422,7 @@ async function handleSubmitProof({ milestoneId, proof, filename }) {
   );
   return {
     proofId: data.proofId,
-    message: `Proof submitted. Use cascrow_verify with proofId: ${data.proofId}`,
+    message: `Proof submitted (proofId: ${data.proofId}). AI verification has been triggered automatically. Call cascrow_verify with this proofId to stream the live results.`,
   };
 }
 
@@ -373,7 +434,10 @@ async function handleVerify({ proofId }) {
   const reasoning  = result.reasoning ?? "";
   const votes      = result.votes ?? [];
 
-  const passed = decision === "YES" && confidence >= 85;
+  // Mirror backend three-tier logic exactly:
+  // > 85 + YES = VERIFIED, 60–85 = PENDING_REVIEW, < 60 = REJECTED
+  const passed = action === "VERIFIED";
+  const pendingReview = action === "PENDING_REVIEW";
 
   const TOTAL_MODELS = 5;
   const yesCount = votes.filter((v) => v.decision === "YES").length;
@@ -384,24 +448,37 @@ async function handleVerify({ proofId }) {
     .join("\n");
   const failedNote = failedCount > 0 ? `\n  ⚠️ ${failedCount} model(s) failed to respond` : "";
   const voteHeader = votes.length > 0
-    ? `${yesCount}/${TOTAL_MODELS} models approved (${failedCount > 0 ? `${failedCount} failed` : "all responded"}):\n${voteSummary}${failedNote}\n\n`
+    ? `${yesCount}/${TOTAL_MODELS} models approved:\n${voteSummary}${failedNote}\n\n`
     : "";
+
+  let statusLine;
+  if (passed) {
+    statusLine = `✅ VERIFIED (${confidence}% confidence)`;
+  } else if (pendingReview) {
+    statusLine = `⏳ PENDING_REVIEW (${confidence}% confidence) — manual review required. Resubmit stronger proof or contact hello@cascrow.com.`;
+  } else {
+    statusLine = `❌ REJECTED (${confidence}% confidence) — resubmit with stronger proof.`;
+  }
 
   return {
     decision,
     confidence,
     action,
-    reasoning,
     passed,
+    pendingReview,
+    reasoning,
     totalModels: TOTAL_MODELS,
     modelsResponded: votes.length,
     modelsFailed: failedCount,
     txHash: result.txHash ?? null,
     modelVotes: votes.map((v) => ({ model: v.model, decision: v.decision, confidence: v.confidence })),
-    message: passed
-      ? `✅ VERIFIED — Cascrow consensus confidence: ${confidence}%\n\n${voteHeader}${reasoning.slice(0, 300)}`
-      : `❌ NOT VERIFIED — Cascrow consensus confidence: ${confidence}%\n\n${voteHeader}${reasoning.slice(0, 300)}`,
+    message: `${statusLine}\n\n${voteHeader}${reasoning.slice(0, 400)}`,
   };
+}
+
+async function handleGetContract({ contractId }) {
+  const data = await apiGet(`/api/contracts/${contractId}`);
+  return data;
 }
 
 async function handleJoinContract({ inviteCode }) {
@@ -410,11 +487,6 @@ async function handleJoinContract({ inviteCode }) {
     contractId: data.contractId,
     message: `Joined contract as Builder. Contract is now AWAITING_ESCROW — ready to receive proof once funded.`,
   };
-}
-
-async function handleGetContract({ contractId }) {
-  const data = await apiGet(`/api/contracts/${contractId}`);
-  return data;
 }
 
 async function handleHandoff({ inviteCode, builderAgentId, contractId, message }) {
@@ -445,10 +517,44 @@ async function handleCheckInvites() {
   };
 }
 
+async function handleMcpSubmit({ contract_id, milestone_id, evidence }) {
+  const data = await apiPost("/api/mcp/submit", { contract_id, milestone_id, evidence });
+
+  const verdict = data.verdict ?? "unknown";
+  const confidence = data.confidence ?? 0;
+  const onChainUrl = data.on_chain_url ?? null;
+  const proofId = data.proof_id ?? null;
+
+  let statusLine;
+  if (verdict === "approved") {
+    statusLine = `✅ APPROVED (${confidence}% confidence)${onChainUrl ? ` — proof: ${onChainUrl}` : ""}`;
+  } else if (verdict === "pending_review") {
+    statusLine = `⏳ PENDING_REVIEW (${confidence}% confidence) — manual review triggered.`;
+  } else {
+    statusLine = `❌ REJECTED (${confidence}% confidence) — resubmit with stronger evidence.`;
+  }
+
+  const votes = Array.isArray(data.model_votes) ? data.model_votes : [];
+  const voteSummary = votes
+    .map((v) => `  ${v.decision === "YES" ? "✅" : "❌"} ${v.model}: ${v.decision} (${v.confidence}%)`)
+    .join("\n");
+
+  return {
+    verdict,
+    confidence,
+    reasoning: data.reasoning ?? "",
+    model_votes: votes,
+    on_chain_url: onChainUrl,
+    proof_id: proofId,
+    signed_at: data.signed_at ?? null,
+    message: `${statusLine}${voteSummary ? `\n\n${voteSummary}` : ""}${data.reasoning ? `\n\n${data.reasoning.slice(0, 400)}` : ""}`,
+  };
+}
+
 // ─── MCP Server ───────────────────────────────────────────────────────────────
 
 const server = new Server(
-  { name: "cascrow", version: "1.0.0" },
+  { name: "cascrow", version: "1.2.0" },
   { capabilities: { tools: {} } }
 );
 
@@ -462,36 +568,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     let result;
     switch (name) {
-      case "cascrow_create_contract":
-        result = await handleCreateContract(args);
-        break;
-      case "cascrow_fund_milestone":
-        result = await handleFundMilestone(args);
-        break;
-      case "cascrow_escrow_fund":
-        result = await handleEscrowFund(args);
-        break;
-      case "cascrow_submit_proof":
-        result = await handleSubmitProof(args);
-        break;
-      case "cascrow_verify":
-        result = await handleVerify(args);
-        break;
-      case "cascrow_join_contract":
-        result = await handleJoinContract(args);
-        break;
-      case "cascrow_get_contract":
-        result = await handleGetContract(args);
-        break;
-      case "cascrow_handoff":
-        result = await handleHandoff(args);
-        break;
-      case "cascrow_check_invites":
-        result = await handleCheckInvites();
-        break;
-      case "cascrow_get_agent_id":
-        result = await handleGetAgentId();
-        break;
+      case "cascrow_create_contract":  result = await handleCreateContract(args);  break;
+      case "cascrow_fund_milestone":   result = await handleFundMilestone(args);   break;
+      case "cascrow_escrow_fund":      result = await handleEscrowFund(args);      break;
+      case "cascrow_submit_proof":     result = await handleSubmitProof(args);     break;
+      case "cascrow_verify":           result = await handleVerify(args);          break;
+      case "cascrow_get_contract":     result = await handleGetContract(args);     break;
+      case "cascrow_join_contract":    result = await handleJoinContract(args);    break;
+      case "cascrow_handoff":          result = await handleHandoff(args);         break;
+      case "cascrow_check_invites":    result = await handleCheckInvites();        break;
+      case "cascrow_get_agent_id":     result = await handleGetAgentId();          break;
+      case "cascrow_mcp_submit":       result = await handleMcpSubmit(args);       break;
       default:
         throw new Error(`Unknown tool: ${name}`);
     }
