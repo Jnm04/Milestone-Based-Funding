@@ -21,6 +21,8 @@ export const registerSchema = z.object({
   // Optional fields — coerce undefined/null to undefined so they're truly optional
   name: z.string().max(200, "Name too long").optional(),
   dateOfBirth: z.string().optional(),
+
+  termsAccepted: z.literal(true, { errorMap: () => ({ message: "You must accept the Terms of Use to register." }) }),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;

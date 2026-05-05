@@ -84,6 +84,7 @@ function RegisterForm() {
   const [resending, setResending] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const turnstileRef = useRef<TurnstileInstance>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const strength = pwStrength(password);
 
@@ -102,7 +103,7 @@ function RegisterForm() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, name, role, dateOfBirth: dateOfBirth || undefined, turnstileToken }),
+        body: JSON.stringify({ email, password, name, role, dateOfBirth: dateOfBirth || undefined, turnstileToken, termsAccepted: true }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -346,9 +347,42 @@ function RegisterForm() {
               options={{ theme: "dark" }}
             />
 
+            <label className="flex items-start gap-3 cursor-pointer select-none">
+              <div className="relative mt-0.5 flex-shrink-0">
+                <input
+                  type="checkbox"
+                  className="sr-only"
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                />
+                <div
+                  className="w-4 h-4 rounded flex items-center justify-center transition-colors"
+                  style={{
+                    background: termsAccepted ? "hsl(22 65% 58%)" : "transparent",
+                    border: `1.5px solid ${termsAccepted ? "hsl(22 65% 58%)" : "hsl(28 18% 28%)"}`,
+                  }}
+                >
+                  {termsAccepted && (
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="hsl(24 14% 6%)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </div>
+              </div>
+              <span className="text-xs leading-relaxed" style={{ color: "hsl(30 10% 62%)" }}>
+                I have read and agree to the{" "}
+                <Link href="/terms" target="_blank" className="underline hover:opacity-80" style={{ color: "hsl(22 55% 54%)" }}>Terms of Use</Link>
+                {", "}
+                <Link href="/datenschutz" target="_blank" className="underline hover:opacity-80" style={{ color: "hsl(22 55% 54%)" }}>Privacy Policy</Link>
+                {", and "}
+                <Link href="/widerruf" target="_blank" className="underline hover:opacity-80" style={{ color: "hsl(22 55% 54%)" }}>Right of Withdrawal</Link>
+                {". I understand that proof submitted for verification will be processed by external AI services (Claude, Gemini, GPT-4o, Mistral, Cerebras)."}
+              </span>
+            </label>
+
             <button
               type="submit"
-              disabled={loading || !turnstileToken}
+              disabled={loading || !turnstileToken || !termsAccepted}
               className="w-full rounded-full py-3 text-sm font-medium mt-1 disabled:opacity-50"
               style={{ background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)", color: "hsl(24 14% 6%)" }}
             >
