@@ -242,10 +242,10 @@ function RegisterForm() {
                 }
               />
             </div>
-            <p className="text-xs mt-1" style={{ color: "hsl(30 10% 50%)" }}>
-              <strong style={{ color: "hsl(30 10% 65%)" }}>Requester</strong> — you or your agent defines the work and locks payment.{"  "}
-              <strong style={{ color: "hsl(30 10% 65%)" }}>Builder</strong> — you deliver the milestone and get paid when AI verifies it.
-            </p>
+            <div className="flex flex-col gap-1 mt-1 text-xs" style={{ color: "hsl(30 10% 50%)" }}>
+              <p><strong style={{ color: "hsl(30 10% 65%)" }}>Requester</strong> — you or your agent defines the work and locks payment.</p>
+              <p><strong style={{ color: "hsl(30 10% 65%)" }}>Builder</strong> — you deliver the milestone and get paid when AI verifies it.</p>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
