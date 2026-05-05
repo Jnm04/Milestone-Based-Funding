@@ -222,7 +222,12 @@ export async function GET(request: NextRequest) {
     deletedDrafts = staleIds.length;
   }
 
-  // ── 3b. Decline AWAITING_ESCROW contracts stalled for >90 days ───────────
+  // ── 3b. Clean up old AgentCallbackLogs (>30 days) ────────────────────────
+  const { count: deletedCallbackLogs } = await prisma.agentCallbackLog.deleteMany({
+    where: { createdAt: { lt: thirtyDaysAgo } },
+  });
+
+  // ── 3c. Decline AWAITING_ESCROW contracts stalled for >90 days ───────────
   // Startup accepted but investor never funded. No escrow locked — safe to decline.
   const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
   const { count: declinedAwaitingEscrow } = await prisma.contract.updateMany({
@@ -277,7 +282,8 @@ export async function GET(request: NextRequest) {
     console.log(
       `[cron/cancel-expired] OK — renegotiated: ${renegotiationSucceeded} | cancelled: ${cancelSucceeded} | ` +
       `auto-approved: ${approveSucceeded} | drafts deleted: ${deletedDrafts} | ` +
-      `awaiting-escrow declined: ${declinedAwaitingEscrow} | stuck proofs retried: ${retried}`
+      `awaiting-escrow declined: ${declinedAwaitingEscrow} | stuck proofs retried: ${retried} | ` +
+      `callback logs pruned: ${deletedCallbackLogs}`
     );
   }
 
@@ -292,6 +298,7 @@ export async function GET(request: NextRequest) {
     deletedDrafts,
     declinedAwaitingEscrow,
     retriedVerifications: retried,
+    prunedCallbackLogs: deletedCallbackLogs,
   });
   } catch (err) {
     console.error("[cron/cancel-expired] Unexpected error:", err);
