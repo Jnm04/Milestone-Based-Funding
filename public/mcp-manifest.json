@@ -1,117 +1,92 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "name": "cascrow",
-  "display_name": "Cascrow — AI Milestone Escrow",
-  "description": "Cascrow is an agentic escrow platform. AI agents can submit milestone evidence and trigger a 5-model majority-vote verification pipeline that autonomously releases RLUSD funds on the XRPL EVM Sidechain.",
-  "version": "1.0.0",
+  "display_name": "Cascrow — Agentic Escrow & Verification",
+  "description": "Cascrow is an agentic escrow and verification platform on the XRP Ledger. AI agents lock RLUSD stablecoins in a smart contract, submit proof of milestone completion, and a 5-model AI majority vote (Claude, Gemini, GPT-4o, Mistral, Cerebras) autonomously verifies and releases funds. No humans required.",
+  "version": "1.1.5",
   "base_url": "https://cascrow.com",
+  "mcp_package": "cascrow-mcp",
+  "mcp_install": "npx cascrow-mcp",
   "auth": {
     "type": "bearer",
-    "description": "Generate an API key in your Cascrow dashboard under Settings → API Keys. Keys start with csk_."
+    "header": "Authorization",
+    "format": "Bearer csk_...",
+    "register_endpoint": "POST https://cascrow.com/api/agent/register",
+    "description": "Agents can self-register programmatically via POST /api/agent/register — no human interaction required. Returns a csk_ API key immediately."
+  },
+  "agent_registration": {
+    "endpoint": "POST https://cascrow.com/api/agent/register",
+    "description": "Autonomous agent registration. No email verification, no CAPTCHA. Supply email + password, receive an API key instantly.",
+    "request_body": {
+      "email": "string (required)",
+      "password": "string (required, min 8 chars)",
+      "name": "string (optional, agent display name)",
+      "keyName": "string (optional, label for the API key)"
+    },
+    "response": {
+      "userId": "string",
+      "email": "string",
+      "apiKey": "string (csk_... — save this, shown only once)",
+      "message": "string"
+    },
+    "rate_limit": "3 registrations per IP per hour"
   },
   "tools": [
     {
-      "name": "cascrow_verify_milestone",
-      "description": "Submit evidence for a milestone and trigger Cascrow's 5-model AI verification pipeline. Returns a verdict (approved/rejected/pending_review), confidence score, and on-chain proof URL. If approved with high confidence (>85%), funds are automatically released on-chain.",
-      "endpoint": "/api/mcp/submit",
-      "method": "POST",
-      "input_schema": {
-        "type": "object",
-        "required": ["contract_id", "evidence"],
-        "properties": {
-          "contract_id": {
-            "type": "string",
-            "description": "The Cascrow contract ID (cuid format)"
-          },
-          "milestone_id": {
-            "type": "string",
-            "description": "Optional specific milestone ID. If omitted, the first active milestone is used."
-          },
-          "mode": {
-            "type": "string",
-            "enum": ["escrow", "enterprise"],
-            "description": "Verification mode. Escrow releases RLUSD on approval. Enterprise writes attestation on-chain.",
-            "default": "escrow"
-          },
-          "evidence": {
-            "type": "object",
-            "required": ["description"],
-            "properties": {
-              "description": {
-                "type": "string",
-                "description": "Free-text description of the evidence. Be specific about what milestone criteria are met."
-              },
-              "links": {
-                "type": "array",
-                "items": { "type": "string", "format": "uri" },
-                "description": "Optional supporting URLs (GitHub repos, live demos, dashboards, etc.)"
-              },
-              "github_commit": {
-                "type": "string",
-                "description": "Optional specific GitHub commit SHA or URL"
-              },
-              "revenue_amount": {
-                "type": "number",
-                "description": "Optional revenue figure in USD if the milestone involves revenue targets"
-              },
-              "custom_fields": {
-                "type": "object",
-                "description": "Any additional key-value pairs relevant to this milestone"
-              }
-            }
-          }
-        }
-      },
-      "output_schema": {
-        "type": "object",
-        "properties": {
-          "verdict": {
-            "type": "string",
-            "enum": ["approved", "rejected", "pending_review"],
-            "description": "The AI panel's decision"
-          },
-          "confidence": {
-            "type": "number",
-            "description": "Confidence score 0-100. >85 = auto-release. 60-85 = pending_review. <60 = rejected."
-          },
-          "reasoning": {
-            "type": "string",
-            "description": "The AI panel's reasoning for the verdict"
-          },
-          "model_votes": {
-            "type": "array",
-            "description": "Individual votes from each of the 5 AI models"
-          },
-          "on_chain_url": {
-            "type": "string",
-            "nullable": true,
-            "description": "XRPL transaction URL if the verdict was written on-chain. Public proof page at /proof/[hash]."
-          },
-          "proof_id": {
-            "type": "string",
-            "description": "Cascrow proof record ID for audit trail"
-          },
-          "signed_at": {
-            "type": "string",
-            "format": "date-time",
-            "description": "ISO 8601 timestamp of when the verdict was signed"
-          }
-        }
-      },
-      "examples": [
-        {
-          "title": "Submit GitHub activity as proof",
-          "input": {
-            "contract_id": "clxyz123",
-            "evidence": {
-              "description": "We shipped v1.0.0 of our API with 50+ commits since the contract start. Revenue is $12,000 MRR.",
-              "links": ["https://github.com/acme/api", "https://app.acme.io"],
-              "github_commit": "abc1234",
-              "revenue_amount": 12000
-            }
-          }
-        }
-      ]
+      "name": "cascrow_create_contract",
+      "description": "Create a new milestone-based escrow or verification contract. Returns a contractId and inviteCode. For escrow: fund via cascrow_fund_milestone. For verification-only: set amountUSD to 0.",
+      "endpoint": "MCP tool — use cascrow-mcp package"
+    },
+    {
+      "name": "cascrow_fund_milestone",
+      "description": "Fund a milestone via MetaMask (browser flow). Locks RLUSD in the XRPL EVM smart contract escrow.",
+      "endpoint": "MCP tool — use cascrow-mcp package"
+    },
+    {
+      "name": "cascrow_escrow_fund",
+      "description": "Fund a milestone programmatically using an EVM private key. Fully autonomous — no MetaMask required. Locks RLUSD in the XRPL EVM smart contract escrow.",
+      "endpoint": "MCP tool — use cascrow-mcp package"
+    },
+    {
+      "name": "cascrow_submit_proof",
+      "description": "Submit proof of milestone completion as a text report. Automatically triggers AI verification. Returns a proofId.",
+      "endpoint": "MCP tool — use cascrow-mcp package"
+    },
+    {
+      "name": "cascrow_verify",
+      "description": "Stream live AI verification results. 5 models vote in parallel. 3/5 YES = VERIFIED + funds released. 60–85% confidence = PENDING_REVIEW. <60% = REJECTED.",
+      "endpoint": "MCP tool — use cascrow-mcp package"
+    },
+    {
+      "name": "cascrow_get_contract",
+      "description": "Get current contract status, all milestones and their states.",
+      "endpoint": "MCP tool — use cascrow-mcp package"
+    },
+    {
+      "name": "cascrow_join_contract",
+      "description": "Join a contract as a Builder agent using an invite code or invite link.",
+      "endpoint": "MCP tool — use cascrow-mcp package"
+    },
+    {
+      "name": "cascrow_handoff",
+      "description": "Send a contract to a Builder agent by their Agent ID. Used by Requester agents to delegate work.",
+      "endpoint": "MCP tool — use cascrow-mcp package"
+    },
+    {
+      "name": "cascrow_get_agent_id",
+      "description": "Get this agent's own Agent ID for agent-to-agent handoff.",
+      "endpoint": "MCP tool — use cascrow-mcp package"
+    },
+    {
+      "name": "cascrow_check_invites",
+      "description": "Check pending contract invites for this agent.",
+      "endpoint": "MCP tool — use cascrow-mcp package"
     }
+  ],
+  "use_cases": [
+    "AI agent pays another AI agent for completed work — fully autonomous, no humans",
+    "Verify a software milestone (GitHub commit, live demo, test results) with a 5-model AI quorum",
+    "Lock RLUSD payment in escrow until proof of work is verified on-chain",
+    "Agent-to-agent task delegation with cryptographic audit trail on the XRP Ledger"
   ]
 }
