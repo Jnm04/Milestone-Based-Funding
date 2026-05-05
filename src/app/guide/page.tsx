@@ -1,588 +1,370 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
-import { ScrollReveal } from "@/components/scroll-reveal";
+import { motion } from "framer-motion";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Copy,
+  ExternalLink,
+  Terminal,
+  Zap,
+  GitBranch,
+  CreditCard,
+  Webhook,
+  KeyRound,
+  Sparkles,
+} from "lucide-react";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { EscrowFlowDiagram } from "@/components/guide/EscrowFlowDiagram";
+import { DualChainDiagram } from "@/components/guide/DualChainDiagram";
+import { AgenticPipelineDiagram } from "@/components/guide/AgenticPipelineDiagram";
 
-const RLUSD_ADDRESS = "0xF717cC3a7ae4a8839e7d964B64A622Dae523a348";
-const ESCROW_ADDRESS = "0x7d0B1119c3b2b6e9aAc025ae6A051C67eF40d8c4";
-const CHAIN_ID = "1449000";
-const RPC_URL = "https://rpc.testnet.xrplevm.org";
-const EXPLORER_URL = "https://explorer.testnet.xrplevm.org";
-const FAUCET_URL = "https://faucet.xrplevm.org";
-
-
-function CopyButton({ text }: { text: string }) {
+/* ---------------------------------------------------------------------------
+   CopyField
+--------------------------------------------------------------------------- */
+const CopyField = ({ label, value }: { label: string; value: string }) => {
+  const [copied, setCopied] = useState(false);
+  const onCopy = async () => {
+    await navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1400);
+  };
   return (
-    <button
-      type="button"
-      onClick={() => navigator.clipboard.writeText(text)}
-      style={{
-        fontSize: "11px",
-        padding: "3px 10px",
-        borderRadius: "6px",
-        background: "hsl(22 55% 54% / 0.1)",
-        border: "1px solid hsl(22 55% 54% / 0.25)",
-        color: "hsl(22 55% 54%)",
-        cursor: "pointer",
-        flexShrink: 0,
-        transition: "background 0.15s",
-      }}
-      onMouseOver={(e) => (e.currentTarget.style.background = "rgba(196,112,75,0.2)")}
-      onMouseOut={(e) => (e.currentTarget.style.background = "hsl(22 55% 54% / 0.1)")}
-    >
-      Copy
-    </button>
-  );
-}
-
-function CodeRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", padding: "10px 14px", borderRadius: "10px", background: "hsl(24 14% 4% / 0.4)" }}>
-      <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0 }}>
-        <span style={{ fontSize: "10px", color: "#71717a", textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</span>
-        <code style={{ fontSize: "13px", color: "hsl(32 35% 92%)", fontFamily: "monospace", wordBreak: "break-all" }}>{value}</code>
+    <div className="flex flex-col gap-1.5 bg-card/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{label}</span>
+      <div className="flex items-center gap-2">
+        <code className="font-mono text-[12px] text-foreground break-all">{value}</code>
+        <button
+          onClick={onCopy}
+          aria-label={`Copy ${label}`}
+          className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-border bg-background/40 text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
+        >
+          {copied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
+        </button>
       </div>
-      <CopyButton text={value} />
     </div>
   );
-}
+};
 
-function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
-  const num = String(n).padStart(2, "0");
+/* ---------------------------------------------------------------------------
+   CodeBlock
+--------------------------------------------------------------------------- */
+const CodeBlock = ({ language, code }: { language: string; code: string }) => {
+  const [copied, setCopied] = useState(false);
+  const onCopy = async () => {
+    await navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1400);
+  };
   return (
-    <ScrollReveal delay={(n - 1) * 40}>
-      <div style={{
-        display: "flex",
-        gap: "24px",
-        marginBottom: 16,
-        padding: "24px 28px",
-        borderRadius: 18,
-        background: "hsl(24 12% 6% / 0.6)",
-        border: "1px solid hsl(22 55% 54% / 0.18)",
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
-      }}>
-        <div style={{
-          fontFamily: "monospace",
-          fontSize: 32,
-          fontWeight: 700,
-          lineHeight: 1,
-          flexShrink: 0,
-          paddingTop: 2,
-          background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-          backgroundClip: "text",
-        }}>{num}</div>
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
-          <h3 style={{ fontWeight: 600, fontSize: 19, color: "hsl(32 35% 92%)", margin: 0, lineHeight: 1.2 }}>{title}</h3>
-          {children}
+    <div className="my-5 overflow-hidden rounded-xl border border-border bg-[hsl(24_14%_3%)]">
+      <div className="flex items-center justify-between border-b border-border bg-card/60 px-4 py-2">
+        <div className="flex items-center gap-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-[hsl(0_60%_55%)]/70" />
+          <span className="h-2.5 w-2.5 rounded-full bg-[hsl(45_70%_55%)]/70" />
+          <span className="h-2.5 w-2.5 rounded-full bg-[hsl(140_50%_55%)]/70" />
+          <span className="ml-3 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{language}</span>
+        </div>
+        <button
+          onClick={onCopy}
+          className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
+        >
+          {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      <pre className="overflow-x-auto px-5 py-4 font-mono text-[12.5px] leading-relaxed text-foreground/90">
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
+};
+
+/* ---------------------------------------------------------------------------
+   Network params
+--------------------------------------------------------------------------- */
+const network: { label: string; value: string }[] = [
+  { label: "Network name", value: "XRPL EVM Testnet" },
+  { label: "RPC URL", value: "https://rpc.testnet.xrplevm.org" },
+  { label: "Chain ID", value: "1449000" },
+  { label: "Currency symbol", value: "XRP" },
+  { label: "Block explorer", value: "https://explorer.testnet.xrplevm.org" },
+];
+
+/* ---------------------------------------------------------------------------
+   Step types & StepCard
+--------------------------------------------------------------------------- */
+type Step = { num: string; title: string; body: React.ReactNode };
+
+const StepCard = ({ step, i }: { step: Step; i: number }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 16 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true, margin: "-80px" }}
+    transition={{ duration: 0.55, delay: Math.min(i * 0.04, 0.25) }}
+    className="gradient-border group rounded-2xl bg-card/60 p-7 backdrop-blur-md"
+  >
+    <div className="flex items-start gap-5">
+      <div className="flex flex-col items-center">
+        <div className="font-mono text-3xl font-semibold text-gradient-copper">{step.num}</div>
+        <div className="mt-2 h-full w-px bg-gradient-to-b from-primary/30 to-transparent" />
+      </div>
+      <div className="flex-1 pb-1">
+        <h3 className="text-xl font-semibold tracking-tight text-foreground">{step.title}</h3>
+        <div className="mt-3 text-sm text-muted-foreground leading-relaxed [&_p]:mb-3 [&_p:last-child]:mb-0 [&_ol]:my-4 [&_ol]:space-y-1 [&_ol]:pl-0 [&_li]:text-sm [&_li]:text-muted-foreground [&_a]:text-primary [&_a:hover]:underline [&_code]:text-primary [&_code]:text-[12px] [&_code]:bg-primary/10 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded">
+          {step.body}
         </div>
       </div>
-    </ScrollReveal>
-  );
-}
-
-function InfoBox({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ padding: "12px 16px", borderRadius: "10px", background: "hsl(22 55% 54% / 0.06)", border: "1px solid hsl(22 55% 54% / 0.18)", fontSize: "13px", color: "hsl(30 10% 62%)", lineHeight: 1.6 }}>
-      {children}
     </div>
-  );
-}
+  </motion.div>
+);
 
-function SuccessBox({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ padding: "12px 16px", borderRadius: "10px", background: "rgba(52,211,153,0.06)", border: "1px solid rgba(52,211,153,0.18)", fontSize: "13px", color: "hsl(30 10% 62%)", lineHeight: 1.6 }}>
-      {children}
-    </div>
-  );
-}
-
-function P({ children }: { children: React.ReactNode }) {
-  return <p style={{ fontSize: "14px", color: "hsl(30 10% 62%)", lineHeight: 1.75 }}>{children}</p>;
-}
-
-function Ol({ items }: { items: string[] }) {
-  return (
-    <ol style={{ display: "flex", flexDirection: "column", gap: 8, paddingLeft: 20 }}>
-      {items.map((item, i) => (
-        <li key={i} style={{ fontSize: "14px", color: "hsl(30 10% 62%)", lineHeight: 1.7, listStyleType: "decimal" }}>{item}</li>
-      ))}
-    </ol>
-  );
-}
-
-export default function GuidePage() {
-  return (
-    <main style={{ minHeight: "100vh", background: "hsl(24 14% 4%)", color: "hsl(32 35% 92%)" }}>
-
-      <SiteNav activePage="Guide" />
-
-      {/* Hero */}
-      <section className="px-6" style={{ position: "relative", zIndex: 1, paddingTop: 144, paddingBottom: 64 }}>
-        {/* Radial copper glow */}
-        <div aria-hidden style={{ pointerEvents: "none", position: "absolute", inset: 0, top: 0, zIndex: 0, height: 600, background: "radial-gradient(ellipse at top, hsl(22 70% 35% / 0.28), transparent 60%)" }} />
-
-        <div className="max-w-3xl mx-auto" style={{ position: "relative", zIndex: 1 }}>
-          <ScrollReveal>
-            {/* Back link */}
-            <Link
-              href="/"
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 8,
-                fontFamily: "monospace", fontSize: 11, textTransform: "uppercase",
-                letterSpacing: "0.2em", color: "hsl(30 10% 52%)", textDecoration: "none",
-                marginBottom: 36, transition: "color 0.15s",
-              }}
-              onMouseOver={(e) => (e.currentTarget.style.color = "hsl(32 35% 92%)")}
-              onMouseOut={(e) => (e.currentTarget.style.color = "hsl(30 10% 52%)")}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-              cd ../
-            </Link>
-
-            {/* Terminal header */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: "monospace", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.18em", marginBottom: 36 }}>
-              <span style={{ color: "hsl(30 10% 52%)" }}>cascrow ~/guide</span>
-              <span style={{ color: "hsl(22 55% 54%)" }}>›</span>
-              <span style={{ color: "hsl(32 35% 92%)" }}>testnet --start</span>
-              <span style={{ display: "inline-block", width: 6, height: 14, background: "hsl(22 55% 54%)", animation: "pulse 1.2s ease-in-out infinite", marginLeft: 2 }} />
-            </div>
-
-            {/* Label */}
-            <p style={{ fontFamily: "monospace", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.22em", color: "hsl(22 55% 54%)", marginBottom: 20 }}>Testnet Guide</p>
-
-            {/* Heading */}
-            <h1 style={{
-              fontWeight: 600,
-              fontSize: "clamp(38px, 6vw, 62px)",
-              lineHeight: 1.05,
-              letterSpacing: "-0.025em",
-              margin: "0 0 28px",
-              background: "linear-gradient(180deg, hsl(32 60% 95%) 0%, hsl(28 50% 78%) 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-            }}>
-              Get started on testnet.
-            </h1>
-
-            <p style={{ fontSize: 18, color: "hsl(30 10% 62%)", lineHeight: 1.65, maxWidth: 560, margin: 0 }}>
-              Everything you need to set up MetaMask, get test tokens, and run your first escrow — step by step.
-            </p>
-          </ScrollReveal>
+/* ---------------------------------------------------------------------------
+   Human steps
+--------------------------------------------------------------------------- */
+const humanSteps: Step[] = [
+  {
+    num: "01",
+    title: "Install MetaMask",
+    body: (
+      <>
+        <p>Install the MetaMask browser extension from the official site.</p>
+        <p>
+          <a href="https://metamask.io/download" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1">
+            Download MetaMask <ExternalLink className="h-3 w-3" />
+          </a>
+        </p>
+        <p>Create a new wallet and store your seed phrase safely — even on testnet, treat it as practice for mainnet habits.</p>
+      </>
+    ),
+  },
+  {
+    num: "02",
+    title: "Add the XRPL EVM Testnet to MetaMask",
+    body: (
+      <>
+        <p>Cascrow runs on the XRPL EVM Sidechain Testnet. Add it as a custom network:</p>
+        <ol className="my-4 space-y-1 pl-6 text-sm text-muted-foreground">
+          <li>1. Open MetaMask → click the network dropdown at the top</li>
+          <li>2. &quot;Add a custom network&quot; → &quot;Add a network manually&quot;</li>
+          <li>3. Fill in the fields below, then click Save</li>
+        </ol>
+        <div className="my-4 grid gap-px overflow-hidden rounded-xl border border-border bg-border">
+          {network.map((n) => <CopyField key={n.label} label={n.label} value={n.value} />)}
         </div>
-      </section>
-
-      {/* Architecture diagram */}
-      <section className="px-6 pb-16" style={{ position: "relative", zIndex: 1 }}>
-        <div className="max-w-3xl mx-auto">
-          <ScrollReveal>
-            <p className="text-xs font-semibold uppercase tracking-widest mb-8" style={{ color: "hsl(22 55% 54%)", fontFamily: "monospace", letterSpacing: "0.18em" }}>How it works</p>
-
-            {/* Flow diagram */}
-            <div style={{ background: "hsl(24 12% 6% / 0.5)", border: "1px solid hsl(22 55% 54% / 0.14)", borderRadius: 16, padding: "32px 24px", marginBottom: 24 }}>
-              <p className="text-sm font-semibold mb-6 text-center" style={{ color: "hsl(30 10% 62%)", letterSpacing: "0.04em", textTransform: "uppercase", fontSize: 11 }}>Escrow Flow</p>
-              <svg viewBox="0 0 700 120" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "auto" }}>
-                {/* Nodes */}
-                {[
-                  { x: 30, label: "Requester", sub: "Creates contract" },
-                  { x: 175, label: "Builder", sub: "Accepts invite" },
-                  { x: 320, label: "Escrow", sub: "RLUSD locked" },
-                  { x: 465, label: "AI Vote", sub: "5-model consensus" },
-                  { x: 610, label: "Settlement", sub: "Funds released" },
-                ].map(({ x, label, sub }, i) => (
-                  <g key={i}>
-                    <rect x={x} y={20} width={90} height={56} rx={10} fill="rgba(196,112,75,0.08)" stroke="hsl(22 55% 54% / 0.3)" strokeWidth={1} />
-                    <text x={x + 45} y={46} textAnchor="middle" fontSize={12} fontWeight={600} fill="hsl(32 35% 92%)" fontFamily="sans-serif">{label}</text>
-                    <text x={x + 45} y={62} textAnchor="middle" fontSize={9} fill="hsl(30 10% 62%)" fontFamily="sans-serif">{sub}</text>
-                  </g>
-                ))}
-                {/* Arrows */}
-                {[120, 265, 410, 555].map((x, i) => (
-                  <g key={i}>
-                    <line x1={x} y1={48} x2={x + 55} y2={48} stroke="rgba(196,112,75,0.4)" strokeWidth={1.5} />
-                    <polygon points={`${x + 55},44 ${x + 63},48 ${x + 55},52`} fill="rgba(196,112,75,0.4)" />
-                  </g>
-                ))}
-                {/* Step labels below arrows */}
-                {[
-                  { x: 120, text: "Invite" },
-                  { x: 265, text: "Fund" },
-                  { x: 410, text: "Proof" },
-                  { x: 555, text: "Verify" },
-                ].map(({ x, text }, i) => (
-                  <text key={i} x={x + 32} y={92} textAnchor="middle" fontSize={9} fill="#6B5E52" fontFamily="sans-serif">{text}</text>
-                ))}
-              </svg>
-            </div>
-
-            {/* Dual-chain architecture */}
-            <div style={{ background: "hsl(24 12% 6% / 0.5)", border: "1px solid hsl(22 55% 54% / 0.14)", borderRadius: 16, padding: "32px 24px" }}>
-              <p className="text-sm font-semibold mb-6 text-center" style={{ color: "hsl(30 10% 62%)", letterSpacing: "0.04em", textTransform: "uppercase", fontSize: 11 }}>Dual-Chain Architecture</p>
-              <svg viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "auto" }}>
-                {/* Center: Cascrow platform */}
-                <rect x={270} y={72} width={160} height={56} rx={12} fill="hsl(22 55% 54% / 0.12)" stroke="rgba(196,112,75,0.45)" strokeWidth={1.5} />
-                <text x={350} y={98} textAnchor="middle" fontSize={13} fontWeight={700} fill="hsl(32 35% 92%)" fontFamily="sans-serif">Cascrow</text>
-                <text x={350} y={115} textAnchor="middle" fontSize={9.5} fill="hsl(30 10% 62%)" fontFamily="sans-serif">AI · Escrow logic · Database</text>
-
-                {/* Left: XRPL EVM Sidechain */}
-                <rect x={28} y={60} width={170} height={80} rx={12} fill="rgba(59,130,246,0.07)" stroke="rgba(59,130,246,0.3)" strokeWidth={1} />
-                <text x={113} y={90} textAnchor="middle" fontSize={11} fontWeight={700} fill="#93C5FD" fontFamily="sans-serif">XRPL EVM Sidechain</text>
-                <text x={113} y={106} textAnchor="middle" fontSize={9} fill="#6B7280" fontFamily="sans-serif">MilestoneFundEscrow.sol</text>
-                <text x={113} y={120} textAnchor="middle" fontSize={9} fill="#6B7280" fontFamily="sans-serif">RLUSD (ERC-20) · MetaMask</text>
-
-                {/* Right: XRPL Mainnet */}
-                <rect x={502} y={60} width={170} height={80} rx={12} fill="rgba(52,211,153,0.07)" stroke="rgba(52,211,153,0.3)" strokeWidth={1} />
-                <text x={587} y={90} textAnchor="middle" fontSize={11} fontWeight={700} fill="#6EE7B7" fontFamily="sans-serif">XRPL Mainnet</text>
-                <text x={587} y={106} textAnchor="middle" fontSize={9} fill="#6B7280" fontFamily="sans-serif">NFTokenMint (non-transferable)</text>
-                <text x={587} y={120} textAnchor="middle" fontSize={9} fill="#6B7280" fontFamily="sans-serif">AccountSet audit memos</text>
-
-                {/* Arrows left */}
-                <line x1={198} y1={100} x2={268} y2={100} stroke="rgba(59,130,246,0.4)" strokeWidth={1.5} strokeDasharray="4 3" />
-                <polygon points="268,96 276,100 268,104" fill="rgba(59,130,246,0.5)" />
-                <text x={233} y={92} textAnchor="middle" fontSize={8.5} fill="#6B7280" fontFamily="sans-serif">fund / release</text>
-
-                {/* Arrows right */}
-                <line x1={430} y1={100} x2={500} y2={100} stroke="rgba(52,211,153,0.4)" strokeWidth={1.5} strokeDasharray="4 3" />
-                <polygon points="500,96 508,100 500,104" fill="rgba(52,211,153,0.5)" />
-                <text x={465} y={92} textAnchor="middle" fontSize={8.5} fill="#6B7280" fontFamily="sans-serif">mint NFT / audit</text>
-
-                {/* Labels bottom */}
-                <text x={113} y={163} textAnchor="middle" fontSize={9} fill="#4B5563" fontFamily="sans-serif">Chain ID 1449000 (testnet)</text>
-                <text x={350} y={163} textAnchor="middle" fontSize={9} fill="#4B5563" fontFamily="sans-serif">Vercel · PostgreSQL · Upstash</text>
-                <text x={587} y={163} textAnchor="middle" fontSize={9} fill="#4B5563" fontFamily="sans-serif">s1.ripple.com · mainnet</text>
-              </svg>
-            </div>
-          </ScrollReveal>
+        <p className="text-primary">✓ MetaMask switches to &quot;XRPL EVM Testnet&quot; and shows your XRP balance.</p>
+      </>
+    ),
+  },
+  {
+    num: "03",
+    title: "Get testnet XRP for gas fees",
+    body: (
+      <>
+        <p>You need a small amount of XRP on the EVM Sidechain to pay for gas:</p>
+        <ol className="my-4 space-y-1 pl-6 text-sm text-muted-foreground">
+          <li>1. Join the XRPL EVM Discord</li>
+          <li>2. Go to the #faucet channel</li>
+          <li>3. Type: <code>!faucet 0x…</code> (your MetaMask address)</li>
+          <li>4. Receive ~90 XRP within 2 minutes — enough for hundreds of tx</li>
+        </ol>
+        <p>
+          <a href="https://discord.gg/xrplevm" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1">
+            Join XRPL EVM Discord <ExternalLink className="h-3 w-3" />
+          </a>
+        </p>
+      </>
+    ),
+  },
+  {
+    num: "04",
+    title: "Add MockRLUSD to MetaMask",
+    body: (
+      <>
+        <p>MockRLUSD is the testnet version of RLUSD — a fake USD-pegged token you can mint freely for testing. Add it as a custom token:</p>
+        <ol className="my-4 space-y-1 pl-6 text-sm text-muted-foreground">
+          <li>1. In MetaMask, scroll down and click &quot;Import tokens&quot;</li>
+          <li>2. Select &quot;Custom token&quot;</li>
+          <li>3. Paste the contract address below</li>
+          <li>4. Symbol (RLUSD) and decimals (6) auto-fill</li>
+          <li>5. Click &quot;Add custom token&quot; → &quot;Import tokens&quot;</li>
+        </ol>
+        <div className="my-4 grid gap-px overflow-hidden rounded-xl border border-border bg-border">
+          <CopyField label="MockRLUSD contract" value="0xF717cC3a7ae4a8839e7d964B64A622Dae523a348" />
+          <CopyField label="Token symbol" value="RLUSD" />
+          <CopyField label="Decimals" value="6" />
         </div>
-      </section>
+        <p className="text-primary">✓ MockRLUSD now shows up with a balance of 0. Next step gives you tokens.</p>
+      </>
+    ),
+  },
+  {
+    num: "05",
+    title: "Mint MockRLUSD tokens",
+    body: (
+      <>
+        <p>The MockRLUSD contract has an open mint function — anyone can call it to get test tokens. Easiest path is via the block explorer:</p>
+        <ol className="my-4 space-y-1 pl-6 text-sm text-muted-foreground">
+          <li>1. Open the MockRLUSD contract on the block explorer</li>
+          <li>2. Click the &quot;Write contract&quot; tab</li>
+          <li>3. Click &quot;Connect wallet&quot; — connect your MetaMask</li>
+          <li>4. Find the <code>mint</code> function</li>
+          <li>5. Enter your address + amount (e.g. <code>10000000000</code> = 10,000 RLUSD)</li>
+          <li>6. Click &quot;Write&quot; and confirm in MetaMask</li>
+        </ol>
+        <p>
+          <a href="https://explorer.testnet.xrplevm.org/address/0xF717cC3a7ae4a8839e7d964B64A622Dae523a348" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1">
+            Open MockRLUSD on Explorer <ExternalLink className="h-3 w-3" />
+          </a>
+        </p>
+        <p className="text-xs text-muted-foreground">6 decimals: <code>1000000</code> = 1 RLUSD · <code>10000000000</code> = 10,000 RLUSD</p>
+      </>
+    ),
+  },
+  {
+    num: "06",
+    title: "Register on Cascrow",
+    body: (
+      <>
+        <p>Both Requester and Builder need a Cascrow account. Takes under a minute:</p>
+        <ol className="my-4 space-y-1 pl-6 text-sm text-muted-foreground">
+          <li>1. Go to <code>cascrow.com/register</code></li>
+          <li>2. Email + password + role (Requester or Builder)</li>
+          <li>3. Verify your email</li>
+          <li>4. Log in</li>
+        </ol>
+        <p>For a full end-to-end test you need two accounts (two emails or two browsers) — one Requester, one Builder.</p>
+      </>
+    ),
+  },
+  {
+    num: "07",
+    title: "Connect your MetaMask wallet",
+    body: (
+      <>
+        <p>After logging in, link your wallet so Cascrow knows which address signs:</p>
+        <ol className="my-4 space-y-1 pl-6 text-sm text-muted-foreground">
+          <li>1. Open your Dashboard</li>
+          <li>2. Click &quot;Connect Wallet&quot; — MetaMask pops up</li>
+          <li>3. Pick the account and confirm</li>
+          <li>4. Your <code>0x…</code> address appears on your profile</li>
+        </ol>
+      </>
+    ),
+  },
+  {
+    num: "08",
+    title: "Create a contract (Requester)",
+    body: (
+      <>
+        <p>As Requester you define the milestone and payout:</p>
+        <ol className="my-4 space-y-1 pl-6 text-sm text-muted-foreground">
+          <li>1. Click &quot;New Contract&quot; on your dashboard</li>
+          <li>2. Title + clear milestone description (the AI verifies against this)</li>
+          <li>3. Set RLUSD amount and deadline in days</li>
+          <li>4. Builder wallet address — or leave blank for a shareable invite</li>
+          <li>5. Click &quot;Create Contract&quot;</li>
+        </ol>
+        <p><strong className="text-foreground">Be specific.</strong> The AI reads the milestone description to decide if proof meets criteria.</p>
+      </>
+    ),
+  },
+  {
+    num: "09",
+    title: "Fund the escrow (Requester)",
+    body: (
+      <>
+        <p>Once both parties are linked, lock the RLUSD on-chain:</p>
+        <ol className="my-4 space-y-1 pl-6 text-sm text-muted-foreground">
+          <li>1. Open the contract detail page</li>
+          <li>2. Click &quot;Fund Escrow&quot; — MetaMask opens with two transactions</li>
+          <li>3. Approve MockRLUSD spending</li>
+          <li>4. <code>fundMilestone()</code> locks the tokens in the escrow contract</li>
+          <li>5. Status flips to &quot;Funded&quot;</li>
+        </ol>
+        <p className="text-primary">✓ RLUSD is locked at <code>0x7d0B1119c3b2b6e9aAc025ae6A051C67eF40d8c4</code>. Neither party can access it without AI approval.</p>
+      </>
+    ),
+  },
+  {
+    num: "10",
+    title: "Submit proof (Builder)",
+    body: (
+      <>
+        <p>As the Builder, upload evidence that the milestone is done:</p>
+        <ol className="my-4 space-y-1 pl-6 text-sm text-muted-foreground">
+          <li>1. Log in with the Builder account, open the contract</li>
+          <li>2. Click &quot;Upload Proof&quot;</li>
+          <li>3. Upload a PDF describing what was delivered</li>
+          <li>4. Submit — AI verification starts automatically</li>
+        </ol>
+        <p>Address the milestone criteria clearly. Vague or unrelated content gets rejected.</p>
+      </>
+    ),
+  },
+  {
+    num: "11",
+    title: "AI verification & settlement",
+    body: (
+      <>
+        <p>Five AI models independently read the proof and vote. Result is immediate:</p>
+        <ol className="my-4 space-y-1 pl-6 text-sm text-muted-foreground">
+          <li>1. Watch contract status — updates in real time</li>
+          <li>2. 3/5 YES + high confidence → funds released to Builder automatically</li>
+          <li>3. Medium confidence (60–85%) → Requester reviews manually</li>
+          <li>4. 3/5 NO → Builder is notified with reason and can resubmit</li>
+          <li>5. Deadline passes → Requester cancels, full refund</li>
+        </ol>
+        <p className="text-primary">✓ On approval, an NFT completion certificate is minted on the XRP Ledger mainnet — visible on testnet.xrpl.org.</p>
+      </>
+    ),
+  },
+];
 
-      {/* Steps */}
-      <section className="px-6 pb-32" style={{ position: "relative", zIndex: 1 }}>
-        <div className="max-w-3xl mx-auto">
+/* ---------------------------------------------------------------------------
+   Agentic
+--------------------------------------------------------------------------- */
+const agenticCaps = [
+  { icon: KeyRound, title: "API Key auth", body: "Generate a csk_… key in your profile. Any HTTP client or agent framework can authenticate." },
+  { icon: GitBranch, title: "GitHub connector", body: "Link a repo per milestone. The proof collector fetches commits 48h before deadline." },
+  { icon: CreditCard, title: "Stripe connector", body: "Link your Stripe key. Revenue data is encrypted, collected, and included in the proof." },
+  { icon: Terminal, title: "MCP protocol", body: "Native Claude Code tool. Run npx cascrow-mcp and call cascrow_mcp_submit." },
+  { icon: Zap, title: "On-chain release", body: "Approved evidence triggers releaseMilestone on XRPL EVM — funds in 3-5s." },
+  { icon: Webhook, title: "Webhook events", body: "Subscribe to funds.released to trigger downstream logic in your treasury." },
+];
 
-          {/* ── Step 1 ── */}
-          <Step n={1} title="Install MetaMask">
-            <P>If you don&apos;t have MetaMask yet, install the browser extension from the official site.</P>
-            <a
-              href="https://metamask.io/download"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="cs-btn-primary cs-btn-sm"
-              style={{ alignSelf: "flex-start" }}
-            >
-              Download MetaMask →
-            </a>
-            <InfoBox>
-              Create a new wallet and store your seed phrase safely — even on testnet, treat it as practice for mainnet habits.
-            </InfoBox>
-          </Step>
-
-          {/* ── Step 2 ── */}
-          <Step n={2} title="Add the XRPL EVM Testnet to MetaMask">
-            <P>Cascrow runs on the XRPL EVM Sidechain Testnet. Add it as a custom network in MetaMask:</P>
-            <Ol items={[
-              'Open MetaMask → click the network dropdown at the top',
-              '"Add a custom network" → "Add a network manually"',
-              'Fill in the fields below, then click Save',
-            ]} />
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "16px", borderRadius: "14px", background: "hsl(24 12% 6% / 0.5)", border: "1px solid hsl(22 55% 54% / 0.14)" }}>
-              <CodeRow label="Network name" value="XRPL EVM Testnet" />
-              <CodeRow label="RPC URL" value={RPC_URL} />
-              <CodeRow label="Chain ID" value={CHAIN_ID} />
-              <CodeRow label="Currency symbol" value="XRP" />
-              <CodeRow label="Block explorer" value={EXPLORER_URL} />
-            </div>
-            <SuccessBox>
-              ✓ After saving, MetaMask will switch to &quot;XRPL EVM Testnet&quot; and show your XRP balance (0 for now).
-            </SuccessBox>
-          </Step>
-
-          {/* ── Step 3 ── */}
-          <Step n={3} title="Get testnet XRP for gas fees">
-            <P>You need a small amount of XRP on the EVM Sidechain to pay for gas. The easiest way is via the XRPL EVM Discord:</P>
-            <Ol items={[
-              'Join the XRPL EVM Discord (link below)',
-              'Go to the #faucet channel',
-              'Type: !faucet 0x… (your MetaMask address)',
-              'You\'ll receive 90 XRP within ~2 minutes — enough for hundreds of transactions',
-            ]} />
-            <a
-              href="https://discord.gg/xrplevm"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="cs-btn-primary cs-btn-sm"
-              style={{ alignSelf: "flex-start" }}
-            >
-              Join XRPL EVM Discord →
-            </a>
-            <InfoBox>
-              This XRP is testnet-only and has no real value — it&apos;s purely for paying gas fees on the XRPL EVM Sidechain.
-            </InfoBox>
-          </Step>
-
-          {/* ── Step 4 ── */}
-          <Step n={4} title="Add MockRLUSD to MetaMask">
-            <P>MockRLUSD is the testnet version of RLUSD — a fake USD-pegged token you can mint freely for testing. Add it as a custom token so it shows up in your MetaMask wallet:</P>
-            <Ol items={[
-              'In MetaMask, scroll down and click "Import tokens"',
-              'Select "Custom token"',
-              'Paste the contract address below',
-              'Token symbol (RLUSD) and decimals (6) fill in automatically',
-              'Click "Add custom token" → "Import tokens"',
-            ]} />
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "16px", borderRadius: "14px", background: "hsl(24 12% 6% / 0.5)", border: "1px solid hsl(22 55% 54% / 0.14)" }}>
-              <CodeRow label="MockRLUSD contract address" value={RLUSD_ADDRESS} />
-              <CodeRow label="Token symbol" value="RLUSD" />
-              <CodeRow label="Decimals" value="6" />
-            </div>
-            <SuccessBox>
-              ✓ MockRLUSD now shows up in your MetaMask with a balance of 0. Next step will give you tokens.
-            </SuccessBox>
-          </Step>
-
-          {/* ── Step 5 ── */}
-          <Step n={5} title="Mint MockRLUSD tokens">
-            <P>The MockRLUSD contract has an open mint function — anyone can call it to get test tokens. The easiest way is via the block explorer:</P>
-            <Ol items={[
-              'Open the MockRLUSD contract on the block explorer (link below)',
-              'Once the page loads, click the "Write contract" tab',
-              'Click "Connect wallet" and connect your MetaMask',
-              'Find the "mint" function in the list',
-              'Enter your wallet address and an amount — e.g. 10000000000 for 10,000 RLUSD (6 decimals)',
-              'Click "Write" and confirm the transaction in MetaMask',
-            ]} />
-            <a
-              href={`${EXPLORER_URL}/address/${RLUSD_ADDRESS}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="cs-btn-primary cs-btn-sm"
-              style={{ alignSelf: "flex-start" }}
-            >
-              Open MockRLUSD on Explorer →
-            </a>
-            <InfoBox>
-              Amount uses 6 decimals: <code style={{ color: "hsl(32 35% 92%)" }}>1000000</code> = 1 RLUSD, <code style={{ color: "hsl(32 35% 92%)" }}>10000000000</code> = 10,000 RLUSD
-            </InfoBox>
-          </Step>
-
-          {/* ── Step 6 ── */}
-          <Step n={6} title="Register on Cascrow">
-            <P>Both the Requester and the Builder need a Cascrow account. Registration takes under a minute:</P>
-            <Ol items={[
-              'Go to cascrow.com/register',
-              'Enter your email, choose a password, and select your role (Requester or Builder)',
-              'Check your email and click the verification link',
-              'Log in — you\'re in',
-            ]} />
-            <InfoBox>
-              For a full test of the flow you need two accounts — one as Requester, one as Builder. Use two different email addresses or two different browsers.
-            </InfoBox>
-          </Step>
-
-          {/* ── Step 7 ── */}
-          <Step n={7} title="Connect your MetaMask wallet">
-            <P>After logging in, connect your wallet so Cascrow knows which address to use for signing transactions:</P>
-            <Ol items={[
-              'Go to your Dashboard',
-              'Click "Connect Wallet" — MetaMask will pop up',
-              'Select your account and confirm the connection',
-              'Your 0x… address now appears on your profile',
-            ]} />
-          </Step>
-
-          {/* ── Step 8 ── */}
-          <Step n={8} title="Create a contract (Requester)">
-            <P>As the Requester, you define the milestone and the payout amount:</P>
-            <Ol items={[
-              'Click "New Contract" on your dashboard',
-              'Enter a project title and describe the milestone clearly — this is what the AI will verify against',
-              'Set the RLUSD amount and the deadline in days',
-              'Optionally enter the Builder\'s wallet address directly, or leave blank to get a shareable invite link',
-              'Click "Create Contract"',
-            ]} />
-            <InfoBox>
-              Be specific in the milestone description — the AI reads this to decide if the uploaded proof meets the criteria.
-            </InfoBox>
-          </Step>
-
-          {/* ── Step 9 ── */}
-          <Step n={9} title="Fund the escrow (Requester)">
-            <P>Once both parties are linked, you lock the RLUSD on-chain:</P>
-            <Ol items={[
-              'Open the contract detail page',
-              'Click "Fund Escrow" — MetaMask opens with two transactions',
-              'First transaction: approve MockRLUSD spending (sign in MetaMask)',
-              'Second transaction: fundMilestone() locks the tokens in the escrow contract (sign in MetaMask)',
-              'Wait for confirmation — status changes to "Funded"',
-            ]} />
-            <SuccessBox>
-              ✓ The RLUSD is now locked in the smart contract at <code style={{ fontSize: 11, wordBreak: "break-all" }}>{ESCROW_ADDRESS}</code>. Neither party can access it without the AI approving the proof.
-            </SuccessBox>
-          </Step>
-
-          {/* ── Step 10 ── */}
-          <Step n={10} title="Submit proof (Builder)">
-            <P>As the Builder, upload evidence that the milestone was completed:</P>
-            <Ol items={[
-              'Log in with the Builder account and open the contract',
-              'Click "Upload Proof"',
-              'Upload a PDF document describing what was delivered',
-              'Click "Submit" — the AI verification starts automatically',
-            ]} />
-            <InfoBox>
-              The document should clearly address the milestone criteria set by the Requester. Vague or unrelated content will likely get rejected.
-            </InfoBox>
-          </Step>
-
-          {/* ── Step 11 ── */}
-          <Step n={11} title="AI verification & settlement">
-            <P>Five AI models independently read the proof and vote. The result is immediate:</P>
-            <Ol items={[
-              'Watch the contract status — it updates in real time',
-              'If 3/5 models vote YES with high confidence → funds are released automatically to the Builder',
-              'If confidence is medium (60–85%) → the Requester is notified to review manually',
-              'If 3/5 models vote NO → the Builder is notified with a rejection reason and can resubmit',
-              'If the deadline passes without a verified proof → the Requester can cancel and get a full refund',
-            ]} />
-            <SuccessBox>
-              ✓ On approval, an NFT completion certificate is minted on the native XRPL Ledger as permanent proof — visible on testnet.xrpl.org.
-            </SuccessBox>
-          </Step>
-
-          {/* Done → Bridge to Agentic */}
-          <ScrollReveal>
-            <div style={{ marginTop: 16, borderRadius: 20, border: "1px solid hsl(22 55% 54% / 0.18)", overflow: "hidden" }}>
-              {/* Top: you're set */}
-              <div style={{ padding: "32px 32px 28px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
-                <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 style={{ fontWeight: 600, fontSize: 26, color: "hsl(32 35% 92%)", margin: "0 0 8px" }}>
-                    You&apos;re set.
-                  </h2>
-                  <p style={{ fontSize: 14, color: "hsl(30 10% 62%)", margin: 0, maxWidth: 360 }}>
-                    That&apos;s the full human flow. Questions? Open an issue or reach out — we&apos;re happy to help.
-                  </p>
-                </div>
-                <Link href="/register" className="cs-btn-primary">Create your first contract →</Link>
-              </div>
-              {/* Divider with label */}
-              <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "0 32px" }}>
-                <div style={{ flex: 1, height: 1, background: "hsl(22 55% 54% / 0.12)" }} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: "hsl(22 55% 54%)", textTransform: "uppercase", letterSpacing: "0.1em", whiteSpace: "nowrap" }}>Building with agents?</span>
-                <div style={{ flex: 1, height: 1, background: "hsl(22 55% 54% / 0.12)" }} />
-              </div>
-              {/* Bottom: teaser for agentic */}
-              <div style={{ padding: "24px 32px 28px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-                <p style={{ fontSize: 14, color: "hsl(30 10% 62%)", margin: 0, maxWidth: 420, lineHeight: 1.6 }}>
-                  Skip the manual steps. Connect via MCP, REST API, or CLI — your agent handles the full flow autonomously.
-                </p>
-                <a href="#agentic" style={{ fontSize: 13, padding: "8px 20px", borderRadius: 8, background: "hsl(22 55% 54% / 0.1)", border: "1px solid hsl(22 55% 54% / 0.3)", color: "hsl(22 55% 54%)", textDecoration: "none", fontWeight: 500 }}>
-                  Agentic setup ↓
-                </a>
-              </div>
-            </div>
-          </ScrollReveal>
-
-          {/* ── Agentic Mode ── */}
-          <ScrollReveal>
-            <div id="agentic" style={{ marginTop: 64, scrollMarginTop: 80 }}>
-              {/* Section header */}
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", marginBottom: 40, gap: 12 }}>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 16px", borderRadius: 100, background: "hsl(22 55% 54% / 0.1)", border: "1px solid hsl(22 55% 54% / 0.3)" }}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "hsl(22 55% 54%)", display: "inline-block" }} />
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "hsl(22 55% 54%)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Live Now · Agentic Mode</span>
-                </div>
-                <h2 style={{ fontWeight: 600, fontSize: "clamp(28px, 5vw, 42px)", color: "hsl(32 35% 92%)", margin: 0, lineHeight: 1.1 }}>
-                  Let agents do the work
-                </h2>
-                <p style={{ fontSize: 16, color: "hsl(30 10% 62%)", maxWidth: 520, margin: 0, lineHeight: 1.6 }}>
-                  Connect any AI agent to Cascrow via MCP. It submits evidence, the 5-model pipeline verifies, and RLUSD is released on-chain — no human in the loop.
-                </p>
-              </div>
-
-              {/* 3-column capability cards */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 40 }}>
-                {[
-                  {
-                    svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="hsl(22 55% 54%)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="2"/><path d="M10 21h7a1 1 0 0 0 .8-1.6l-5.4-6.8A1 1 0 0 1 13 11V3H9v8a1 1 0 0 1-.2.6L3.2 19.4A1 1 0 0 0 4 21h4"/><path d="M10 3h4"/></svg>,
-                    title: "API Key auth",
-                    body: "Generate a csk_… key in your profile. Any HTTP client or agent framework can authenticate.",
-                  },
-                  {
-                    svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="hsl(22 55% 54%)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>,
-                    title: "GitHub connector",
-                    body: "Link a repo per milestone. The proof collector fetches commits automatically 48h before deadline.",
-                  },
-                  {
-                    svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="hsl(22 55% 54%)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
-                    title: "Stripe connector",
-                    body: "Link your Stripe key. Revenue data is encrypted, collected, and included in the proof package.",
-                  },
-                  {
-                    svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="hsl(22 55% 54%)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>,
-                    title: "MCP protocol",
-                    body: "Native Claude Code tool. Run npx cascrow-mcp and call cascrow_mcp_submit from any session.",
-                  },
-                  {
-                    svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="hsl(22 55% 54%)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
-                    title: "On-chain release",
-                    body: "Approved evidence triggers releaseMilestone on XRPL EVM — funds move in 3-5 seconds.",
-                  },
-                  {
-                    svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="hsl(22 55% 54%)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>,
-                    title: "Webhook events",
-                    body: "Subscribe to funds.released to trigger downstream logic in your treasury or DAO.",
-                  },
-                ].map((c) => (
-                  <div key={c.title} style={{ padding: "18px 20px", borderRadius: 14, background: "hsl(24 12% 6% / 0.5)", border: "1px solid hsl(22 55% 54% / 0.12)", display: "flex", flexDirection: "column", gap: 10 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: "hsl(22 55% 54% / 0.1)", border: "1px solid rgba(196,112,75,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      {c.svg}
-                    </div>
-                    <p style={{ fontWeight: 600, color: "hsl(32 35% 92%)", fontSize: 14, margin: 0 }}>{c.title}</p>
-                    <p style={{ fontSize: 13, color: "hsl(30 10% 62%)", margin: 0, lineHeight: 1.5 }}>{c.body}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Steps */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 0, position: "relative" }}>
-                {/* vertical connector line */}
-                <div style={{ position: "absolute", left: 13, top: 28, bottom: 28, width: 1, background: "linear-gradient(to bottom, hsl(22 55% 54% / 0.3), rgba(196,112,75,0.05))", zIndex: 0 }} />
-
-                {[
-                  {
-                    letter: "A",
-                    title: "Generate an API Key",
-                    body: <>Go to <strong style={{ color: "hsl(28 45% 72%)" }}>Profile → Integrations → API Keys</strong> and click &ldquo;Generate API Key&rdquo;. Copy the <code style={{ color: "hsl(22 55% 54%)", fontSize: 12, background: "hsl(22 55% 54% / 0.1)", padding: "1px 6px", borderRadius: 4 }}>csk_…</code> token — it&apos;s shown only once.</>,
-                    extra: null,
-                  },
-                  {
-                    letter: "B",
-                    title: "Connect Agent Connectors on a milestone",
-                    body: <>When creating a contract, open <strong style={{ color: "hsl(28 45% 72%)" }}>Configure Agent Connectors</strong> inside a milestone block. Paste your GitHub repo URL and/or Stripe secret key. 48h before the deadline the collector runs automatically — startup confirms with one click.</>,
-                    extra: null,
-                  },
-                  {
-                    letter: "C",
-                    title: "Call the MCP endpoint from your agent",
-                    body: <>Any AI agent, CI pipeline, or script can submit evidence and trigger full verification with one call:</>,
-                    extra: (
-                      <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid hsl(22 55% 54% / 0.18)", marginTop: 12 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "hsl(24 14% 4% / 0.5)", borderBottom: "1px solid hsl(22 55% 54% / 0.1)" }}>
-                          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "rgba(196,112,75,0.4)", flexShrink: 0 }} />
-                          <span style={{ fontSize: 11, fontFamily: "monospace", color: "#6B5E55" }}>POST https://cascrow.com/api/mcp/submit</span>
-                        </div>
-                        <pre style={{ fontSize: 12, padding: "16px 18px", background: "hsl(24 14% 4% / 0.4)", color: "hsl(32 35% 92%)", overflowX: "auto", margin: 0, lineHeight: 1.7 }}>{`curl -X POST https://cascrow.com/api/mcp/submit \\
+const agenticSteps: Step[] = [
+  {
+    num: "A",
+    title: "Generate an API Key",
+    body: (
+      <p>
+        Go to <strong className="text-foreground">Profile → Integrations → API Keys</strong> and click &quot;Generate API Key&quot;. Copy the <code>csk_…</code> token — shown only once.
+      </p>
+    ),
+  },
+  {
+    num: "B",
+    title: "Connect agent connectors on a milestone",
+    body: (
+      <p>
+        When creating a contract, open <strong className="text-foreground">Configure Agent Connectors</strong> in a milestone block. Paste your GitHub repo URL and/or Stripe secret key. 48h before the deadline the collector runs automatically — Requester confirms with one click.
+      </p>
+    ),
+  },
+  {
+    num: "C",
+    title: "Call the MCP endpoint from your agent",
+    body: (
+      <>
+        <p>Any AI agent, CI pipeline, or script can submit evidence and trigger verification with one call:</p>
+        <CodeBlock
+          language="bash"
+          code={`curl -X POST https://cascrow.com/api/mcp/submit \\
   -H "Authorization: Bearer csk_YOUR_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -593,39 +375,20 @@ export default function GuidePage() {
       "github_commit": "abc1234",
       "revenue_amount": 5000
     }
-  }'`}</pre>
-                      </div>
-                    ),
-                  },
-                ].map((step) => (
-                  <div key={step.letter} style={{ display: "flex", gap: 20, paddingBottom: 32, position: "relative", zIndex: 1 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: "hsl(24 14% 6%)", border: "2px solid hsl(22 55% 54% / 0.5)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
-                      <span style={{ fontSize: 12, fontWeight: 800, color: "hsl(22 55% 54%)" }}>{step.letter}</span>
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontWeight: 600, color: "hsl(32 35% 92%)", margin: "3px 0 6px", fontSize: 15 }}>{step.title}</p>
-                      <p style={{ fontSize: 14, color: "hsl(30 10% 62%)", margin: 0, lineHeight: 1.6 }}>{step.body}</p>
-                      {step.extra}
-                    </div>
-                  </div>
-                ))}
-
-                {/* Step D — CLI */}
-                <div style={{ display: "flex", gap: 20, paddingBottom: 32, position: "relative", zIndex: 1 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: "hsl(24 14% 6%)", border: "2px solid hsl(22 55% 54% / 0.5)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
-                    <span style={{ fontSize: 12, fontWeight: 800, color: "hsl(22 55% 54%)" }}>D</span>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontWeight: 600, color: "hsl(32 35% 92%)", margin: "3px 0 6px", fontSize: 15 }}>Or use the CLI — for shells, CI, and scripts</p>
-                    <p style={{ fontSize: 14, color: "hsl(30 10% 62%)", margin: "0 0 12px", lineHeight: 1.6 }}>
-                      <code style={{ color: "hsl(22 55% 54%)", fontSize: 12, background: "hsl(22 55% 54% / 0.1)", padding: "1px 6px", borderRadius: 4 }}>cascrow-cli</code> wraps all agent endpoints in a single binary — no SDK, no boilerplate. Works from any shell, GitHub Action, or subprocess.
-                    </p>
-                    <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid hsl(22 55% 54% / 0.18)" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "hsl(24 14% 4% / 0.5)", borderBottom: "1px solid hsl(22 55% 54% / 0.1)" }}>
-                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "rgba(196,112,75,0.4)", flexShrink: 0 }} />
-                        <span style={{ fontSize: 11, fontFamily: "monospace", color: "#6B5E55" }}>shell</span>
-                      </div>
-                      <pre style={{ fontSize: 12, padding: "16px 18px", background: "hsl(24 14% 4% / 0.4)", color: "hsl(32 35% 92%)", overflowX: "auto", margin: 0, lineHeight: 1.7 }}>{`npm install -g cascrow-cli
+  }'`}
+        />
+      </>
+    ),
+  },
+  {
+    num: "D",
+    title: "Or use the CLI — for shells, CI, and scripts",
+    body: (
+      <>
+        <p><code>cascrow-cli</code> wraps all agent endpoints in a single binary — no SDK, no boilerplate. Works from any shell, GitHub Action, or subprocess.</p>
+        <CodeBlock
+          language="shell"
+          code={`npm install -g cascrow-cli
 
 cascrow register --email bot@example.com --password secret123
 export CASCROW_API_KEY=csk_...
@@ -637,67 +400,193 @@ cascrow verify --contract cm_abc123 \\
   --commit abc1234
 
 # ✅ VERIFIED (94% confidence)
-# Proof: https://cascrow.com/proof/...`}</pre>
-                    </div>
-                  </div>
-                </div>
+# Proof: https://cascrow.com/proof/...`}
+        />
+      </>
+    ),
+  },
+];
 
-                {/* What happens card */}
-                <div style={{ display: "flex", gap: 20, position: "relative", zIndex: 1 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(52,211,153,0.1)", border: "2px solid rgba(52,211,153,0.4)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontWeight: 600, color: "hsl(32 35% 92%)", margin: "3px 0 10px", fontSize: 15 }}>What happens — fully autonomous</p>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 8 }}>
-                      {[
-                        {
-                          svg: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
-                          text: "5 AI models vote in parallel (Claude, GPT-4o, Gemini, Mistral, Cerebras)",
-                        },
-                        {
-                          svg: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
-                          text: "Confidence >85% + majority YES → RLUSD released on XRPL EVM automatically",
-                        },
-                        {
-                          svg: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 15 11 17 15 13"/></svg>,
-                          text: "NFT certificate minted on XRP Ledger mainnet",
-                        },
-                        {
-                          svg: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>,
-                          text: "funds.released webhook fires to your downstream systems",
-                        },
-                        {
-                          svg: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>,
-                          text: "Public proof page with QR code + LinkedIn share generated",
-                        },
-                        {
-                          svg: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>,
-                          text: "Model weights adjusted weekly via feedback loop cron",
-                        },
-                      ].map((item) => (
-                        <div key={item.text} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px", borderRadius: 10, background: "rgba(52,211,153,0.04)", border: "1px solid rgba(52,211,153,0.1)" }}>
-                          <div style={{ width: 22, height: 22, borderRadius: 6, background: "rgba(52,211,153,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
-                            {item.svg}
-                          </div>
-                          <span style={{ fontSize: 13, color: "hsl(30 10% 62%)", lineHeight: 1.5 }}>{item.text}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
+const autonomousFacts = [
+  "5 AI models vote in parallel (Claude, GPT-4o, Gemini, Mistral, Cerebras)",
+  "Confidence >85% + majority YES → RLUSD released on XRPL EVM automatically",
+  "NFT certificate minted on XRP Ledger mainnet",
+  "funds.released webhook fires to your downstream systems",
+  "Public proof page with QR code + LinkedIn share generated",
+  "Model weights adjusted weekly via feedback loop cron",
+];
 
-              {/* Bottom CTA bar */}
-              <div style={{ marginTop: 32, padding: "16px 20px", borderRadius: 12, background: "hsl(22 55% 54% / 0.06)", border: "1px solid hsl(22 55% 54% / 0.18)", display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: "hsl(32 35% 92%)", margin: 0 }}>Claude Desktop / Claude Code</p>
-                  <p style={{ fontSize: 12, color: "hsl(30 10% 62%)", margin: 0 }}>
-                    Install via npm — then add to your MCP config:
-                  </p>
-                  <pre style={{ fontSize: 11, margin: 0, padding: "10px 14px", borderRadius: 8, background: "hsl(24 14% 4% / 0.6)", border: "1px solid hsl(22 55% 54% / 0.12)", color: "hsl(32 35% 92%)", overflowX: "auto", lineHeight: 1.6 }}>{`npx cascrow-mcp
+/* ---------------------------------------------------------------------------
+   Page
+--------------------------------------------------------------------------- */
+type TabKey = "agent" | "architecture" | "human";
+
+export default function GuidePage() {
+  const [tab, setTab] = useState<TabKey>("agent");
+
+  const tabs: { key: TabKey; label: string }[] = [
+    { key: "agent", label: "Agentic mode" },
+    { key: "architecture", label: "Architecture" },
+    { key: "human", label: "Human flow" },
+  ];
+
+  return (
+    <main className="relative min-h-screen overflow-x-hidden bg-background text-foreground">
+      <SiteNav activePage="Guide" />
+
+      {/* HERO */}
+      <section className="relative pt-36 pb-12">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[700px] opacity-70"
+          style={{ background: "radial-gradient(ellipse at top, hsl(22 70% 35% / 0.35), transparent 60%)" }}
+        />
+
+        <div className="container-tight">
+          <Link
+            href="/"
+            className="group mb-10 inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-1" />
+            cd ../
+          </Link>
+
+          {/* Terminal header */}
+          <div className="mb-10 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em]">
+            <span className="text-muted-foreground">cascrow ~/guide</span>
+            <span className="text-primary">›</span>
+            <span className="text-foreground">testnet --start</span>
+            <span className="ml-1 inline-block h-3 w-1.5 animate-pulse bg-primary" />
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7 }}
+            className="max-w-3xl"
+          >
+            <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-primary">
+              Testnet Guide
+            </div>
+            <h1 className="mt-5 text-5xl font-semibold leading-[1.05] tracking-[-0.025em] text-gradient md:text-7xl">
+              Get started on testnet.
+            </h1>
+            <p className="mt-7 text-lg text-muted-foreground">
+              Everything you need to run your first escrow on Cascrow — pick how deep you want to go: let an agent handle it, dive into the architecture, or do it yourself.
+            </p>
+          </motion.div>
+
+          {/* Tab switcher */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.15 }}
+            className="mt-10 inline-flex flex-wrap items-center gap-1 rounded-full border border-border bg-card/60 p-1 backdrop-blur-md"
+          >
+            {tabs.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`rounded-full px-5 py-2 font-mono text-[11px] uppercase tracking-[0.18em] transition-all ${
+                  tab === t.key
+                    ? "bg-gradient-copper text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* AGENTIC */}
+      <section id="agentic" className={`relative pb-24 scroll-mt-24 ${tab === "agent" ? "" : "hidden"}`}>
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[500px] opacity-50"
+          style={{ background: "radial-gradient(ellipse at center top, hsl(28 70% 35% / 0.3), transparent 70%)" }}
+        />
+        <div className="container-tight max-w-4xl">
+          <div className="mb-2 flex items-center gap-3">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+            </span>
+            <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-primary">Live now · Agentic mode</span>
+          </div>
+          <h2 className="mt-5 max-w-3xl text-4xl font-semibold leading-[1.05] tracking-[-0.02em] text-gradient md:text-5xl">
+            Let agents do the work.
+          </h2>
+          <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
+            Connect any AI agent to Cascrow via MCP. It submits evidence, the 5-model pipeline verifies, and RLUSD is released on-chain — no human in the loop.
+          </p>
+
+          <div className="mt-12">
+            <AgenticPipelineDiagram />
+          </div>
+
+          <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {agenticCaps.map((c, i) => (
+              <motion.div
+                key={c.title}
+                initial={{ opacity: 0, y: 14 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-60px" }}
+                transition={{ duration: 0.5, delay: i * 0.05 }}
+                className="gradient-border rounded-xl bg-card/60 p-5 backdrop-blur-md transition-colors hover:bg-card/80"
+              >
+                <div className="grid h-9 w-9 place-items-center rounded-lg border border-primary/30 bg-primary/10 text-primary">
+                  <c.icon className="h-4 w-4" />
+                </div>
+                <div className="mt-4 text-sm font-semibold text-foreground">{c.title}</div>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">{c.body}</p>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="mt-14 space-y-5">
+            {agenticSteps.map((s, i) => <StepCard key={s.num} step={s} i={i} />)}
+          </div>
+
+          {/* Autonomous facts */}
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="mt-10 gradient-border rounded-2xl bg-card/60 p-7 backdrop-blur-md"
+          >
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-primary">What happens — fully autonomous</span>
+            </div>
+            <ul className="mt-5 grid gap-3 md:grid-cols-2">
+              {autonomousFacts.map((f) => (
+                <li key={f} className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+
+          {/* Claude Desktop / MCP config */}
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="mt-8 gradient-border rounded-2xl bg-card/60 p-7 backdrop-blur-md"
+          >
+            <div className="flex items-center gap-2">
+              <Terminal className="h-4 w-4 text-primary" />
+              <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-primary">Claude Desktop / Claude Code</span>
+            </div>
+            <p className="mt-4 text-sm text-muted-foreground">Install via npm — then add to your MCP config:</p>
+            <CodeBlock
+              language="json"
+              code={`npx cascrow-mcp
 
 # claude_desktop_config.json:
 {
@@ -708,19 +597,111 @@ cascrow verify --contract cm_abc123 \\
       "env": { "CASCROW_API_KEY": "csk_..." }
     }
   }
-}`}</pre>
-                  <p style={{ fontSize: 11, color: "hsl(30 10% 50%)", margin: 0 }}>
-                    Tools: <code style={{ color: "hsl(28 45% 72%)", fontSize: 11 }}>cascrow_create_contract</code> · <code style={{ color: "hsl(28 45% 72%)", fontSize: 11 }}>cascrow_mcp_submit</code> · <code style={{ color: "hsl(28 45% 72%)", fontSize: 11 }}>cascrow_verify</code>
-                  </p>
-                </div>
-                <div style={{ display: "flex", gap: 10, flexShrink: 0 }}>
-                  <a href="/api-docs#agent-api" style={{ fontSize: 13, padding: "8px 16px", borderRadius: 8, background: "hsl(22 55% 54% / 0.1)", border: "1px solid hsl(22 55% 54% / 0.3)", color: "hsl(22 55% 54%)", textDecoration: "none", fontWeight: 500 }}>API Docs ↗</a>
-                  <Link href="/register" style={{ fontSize: 13, padding: "8px 16px", borderRadius: 8, background: "hsl(22 55% 54%)", color: "hsl(24 14% 6%)", textDecoration: "none", fontWeight: 600 }}>Get started →</Link>
-                </div>
-              </div>
-            </div>
-          </ScrollReveal>
+}`}
+            />
+            <p className="mt-3 text-[13px] text-muted-foreground">
+              Tools: <code className="text-primary text-[12px] bg-primary/10 px-1.5 py-0.5 rounded">cascrow_create_contract</code> · <code className="text-primary text-[12px] bg-primary/10 px-1.5 py-0.5 rounded">cascrow_mcp_submit</code> · <code className="text-primary text-[12px] bg-primary/10 px-1.5 py-0.5 rounded">cascrow_verify</code>
+            </p>
+          </motion.div>
 
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="mt-12 flex flex-col items-center justify-center gap-3 sm:flex-row"
+          >
+            <a
+              href="/api-docs#agent-api"
+              className="group inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-7 py-3.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+            >
+              API Docs
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+            <Link
+              href="/register"
+              className="group inline-flex items-center gap-2 rounded-full bg-gradient-copper px-7 py-3.5 text-sm font-medium text-primary-foreground glow-on-hover"
+            >
+              Get started
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Link>
+            <button
+              onClick={() => setTab("human")}
+              className="group inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-7 py-3.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+            >
+              Prefer manual? Switch to Human flow
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </button>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ARCHITECTURE */}
+      <section id="architecture" className={`relative pb-24 scroll-mt-24 ${tab === "architecture" ? "" : "hidden"}`}>
+        <div className="container-tight max-w-4xl">
+          <div className="mb-2 flex items-center gap-3">
+            <span className="h-px w-8 bg-gradient-to-r from-primary to-transparent" />
+            <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-primary">Architecture</span>
+          </div>
+          <h2 className="mt-5 max-w-3xl text-4xl font-semibold leading-[1.05] tracking-[-0.02em] text-gradient md:text-5xl">
+            How the protocol works.
+          </h2>
+          <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
+            Under the hood: how funds are escrowed, how AI verifies proof, and why Cascrow uses two chains in parallel.
+          </p>
+          <div className="mt-12 space-y-6">
+            <EscrowFlowDiagram />
+            <DualChainDiagram />
+          </div>
+        </div>
+      </section>
+
+      {/* HUMAN FLOW */}
+      <section id="human-flow" className={`relative pb-24 scroll-mt-24 ${tab === "human" ? "" : "hidden"}`}>
+        <div className="container-tight max-w-3xl">
+          <div className="mb-10 flex items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3">
+                <span className="h-px w-8 bg-gradient-to-r from-primary to-transparent" />
+                <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-primary">Human flow · 11 steps</span>
+              </div>
+              <h2 className="mt-4 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">Do it yourself.</h2>
+            </div>
+          </div>
+
+          <div className="space-y-5">
+            {humanSteps.map((s, i) => <StepCard key={s.num} step={s} i={i} />)}
+          </div>
+
+          {/* You're set */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="mt-12 gradient-border rounded-2xl bg-card/60 p-8 text-center backdrop-blur-md"
+          >
+            <h3 className="text-2xl font-semibold tracking-tight text-foreground">You&apos;re set.</h3>
+            <p className="mt-3 text-muted-foreground">
+              That&apos;s the full human flow. Questions? Open an issue or reach out — we&apos;re happy to help.
+            </p>
+            <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Link
+                href="/register"
+                className="group inline-flex items-center gap-2 rounded-full bg-gradient-copper px-7 py-3.5 text-sm font-medium text-primary-foreground glow-on-hover"
+              >
+                Create your first contract
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Link>
+              <button
+                onClick={() => setTab("agent")}
+                className="group inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-7 py-3.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+              >
+                Building with agents?
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </button>
+            </div>
+          </motion.div>
         </div>
       </section>
 
