@@ -50,27 +50,35 @@ function CodeRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function StepBadge({ n }: { n: number }) {
-  return (
-    <div style={{
-      width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
-      background: "hsl(22 55% 54% / 0.12)", border: "1px solid hsl(22 55% 54% / 0.3)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: "14px", fontWeight: 700, color: "hsl(22 55% 54%)",
-    }}>{n}</div>
-  );
-}
-
 function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
+  const num = String(n).padStart(2, "0");
   return (
-    <ScrollReveal delay={(n - 1) * 60}>
-      <div style={{ display: "flex", gap: "20px" }}>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
-          <StepBadge n={n} />
-          <div style={{ width: 1, flex: 1, background: "hsl(22 55% 54% / 0.15)", marginTop: 8 }} />
-        </div>
-        <div style={{ flex: 1, paddingBottom: 40, display: "flex", flexDirection: "column", gap: 16 }}>
-          <h3 style={{ fontWeight: 600, fontSize: 20, color: "hsl(32 35% 92%)", marginTop: 6 }}>{title}</h3>
+    <ScrollReveal delay={(n - 1) * 40}>
+      <div style={{
+        display: "flex",
+        gap: "24px",
+        marginBottom: 16,
+        padding: "24px 28px",
+        borderRadius: 18,
+        background: "hsl(24 12% 6% / 0.6)",
+        border: "1px solid hsl(22 55% 54% / 0.18)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+      }}>
+        <div style={{
+          fontFamily: "monospace",
+          fontSize: 32,
+          fontWeight: 700,
+          lineHeight: 1,
+          flexShrink: 0,
+          paddingTop: 2,
+          background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          backgroundClip: "text",
+        }}>{num}</div>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
+          <h3 style={{ fontWeight: 600, fontSize: 19, color: "hsl(32 35% 92%)", margin: 0, lineHeight: 1.2 }}>{title}</h3>
           {children}
         </div>
       </div>
@@ -115,26 +123,66 @@ export default function GuidePage() {
       <SiteNav activePage="Guide" />
 
       {/* Hero */}
-      <section className="py-24 pt-36 px-6 text-center" style={{ position: "relative", zIndex: 1 }}>
-        <ScrollReveal>
-          <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: "hsl(22 55% 54%)" }}>Testnet Guide</p>
-          <h1
-            className="tracking-tight"
-            style={{ fontWeight: 600, fontSize: "clamp(36px, 6vw, 58px)", color: "hsl(32 35% 92%)" }}
-          >
-            Get started on testnet
-          </h1>
-          <p className="mt-4 text-lg max-w-xl mx-auto" style={{ color: "hsl(30 10% 62%)" }}>
-            Everything you need to set up MetaMask, get test tokens, and run your first escrow — step by step.
-          </p>
-        </ScrollReveal>
+      <section className="px-6" style={{ position: "relative", zIndex: 1, paddingTop: 144, paddingBottom: 64 }}>
+        {/* Radial copper glow */}
+        <div aria-hidden style={{ pointerEvents: "none", position: "absolute", inset: 0, top: 0, zIndex: 0, height: 600, background: "radial-gradient(ellipse at top, hsl(22 70% 35% / 0.28), transparent 60%)" }} />
+
+        <div className="max-w-3xl mx-auto" style={{ position: "relative", zIndex: 1 }}>
+          <ScrollReveal>
+            {/* Back link */}
+            <Link
+              href="/"
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                fontFamily: "monospace", fontSize: 11, textTransform: "uppercase",
+                letterSpacing: "0.2em", color: "hsl(30 10% 52%)", textDecoration: "none",
+                marginBottom: 36, transition: "color 0.15s",
+              }}
+              onMouseOver={(e) => (e.currentTarget.style.color = "hsl(32 35% 92%)")}
+              onMouseOut={(e) => (e.currentTarget.style.color = "hsl(30 10% 52%)")}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+              cd ../
+            </Link>
+
+            {/* Terminal header */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: "monospace", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.18em", marginBottom: 36 }}>
+              <span style={{ color: "hsl(30 10% 52%)" }}>cascrow ~/guide</span>
+              <span style={{ color: "hsl(22 55% 54%)" }}>›</span>
+              <span style={{ color: "hsl(32 35% 92%)" }}>testnet --start</span>
+              <span style={{ display: "inline-block", width: 6, height: 14, background: "hsl(22 55% 54%)", animation: "pulse 1.2s ease-in-out infinite", marginLeft: 2 }} />
+            </div>
+
+            {/* Label */}
+            <p style={{ fontFamily: "monospace", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.22em", color: "hsl(22 55% 54%)", marginBottom: 20 }}>Testnet Guide</p>
+
+            {/* Heading */}
+            <h1 style={{
+              fontWeight: 600,
+              fontSize: "clamp(38px, 6vw, 62px)",
+              lineHeight: 1.05,
+              letterSpacing: "-0.025em",
+              margin: "0 0 28px",
+              background: "linear-gradient(180deg, hsl(32 60% 95%) 0%, hsl(28 50% 78%) 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            }}>
+              Get started on testnet.
+            </h1>
+
+            <p style={{ fontSize: 18, color: "hsl(30 10% 62%)", lineHeight: 1.65, maxWidth: 560, margin: 0 }}>
+              Everything you need to set up MetaMask, get test tokens, and run your first escrow — step by step.
+            </p>
+          </ScrollReveal>
+        </div>
       </section>
 
       {/* Architecture diagram */}
       <section className="px-6 pb-16" style={{ position: "relative", zIndex: 1 }}>
         <div className="max-w-3xl mx-auto">
           <ScrollReveal>
-            <p className="text-xs font-semibold uppercase tracking-widest mb-8 text-center" style={{ color: "hsl(22 55% 54%)" }}>How it works</p>
+            <p className="text-xs font-semibold uppercase tracking-widest mb-8" style={{ color: "hsl(22 55% 54%)", fontFamily: "monospace", letterSpacing: "0.18em" }}>How it works</p>
 
             {/* Flow diagram */}
             <div style={{ background: "hsl(24 12% 6% / 0.5)", border: "1px solid hsl(22 55% 54% / 0.14)", borderRadius: 16, padding: "32px 24px", marginBottom: 24 }}>
@@ -216,7 +264,7 @@ export default function GuidePage() {
 
       {/* Steps */}
       <section className="px-6 pb-32" style={{ position: "relative", zIndex: 1 }}>
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-3xl mx-auto">
 
           {/* ── Step 1 ── */}
           <Step n={1} title="Install MetaMask">
