@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Grant Giver Dashboard",
+  title: "Requester Dashboard",
   description: "Overview of your milestone escrow contracts. Fund milestones and track AI verification results.",
 };
 

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Receiver Dashboard",
+  title: "Builder Dashboard",
   description: "View your contracts, submit milestone proof, and track AI verification on Cascrow.",
 };
 

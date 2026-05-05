@@ -902,7 +902,7 @@ export default function ProfilePage() {
                   color: "hsl(22 55% 54%)",
                 }}
               >
-                {role === "INVESTOR" ? "Grant Giver" : "Receiver"}
+                {role === "INVESTOR" ? "Requester" : "Builder"}
               </span>
             </div>
           </div>
@@ -1170,14 +1170,14 @@ export default function ProfilePage() {
             <div className="flex flex-col">
               {role === "INVESTOR" && (
                 <>
-                  <NotifyToggle label="Proof submitted" description="Receiver has submitted proof for a milestone" checked={notifyProofSubmitted} onChange={setNotifyProofSubmitted} />
+                  <NotifyToggle label="Proof submitted" description="Builder has submitted proof for a milestone" checked={notifyProofSubmitted} onChange={setNotifyProofSubmitted} />
                   <NotifyToggle label="Manual review required" description="The AI is uncertain — your assessment is needed" checked={notifyPendingReview} onChange={setNotifyPendingReview} />
                   <NotifyToggle label="Milestone completed" description="Payment has been successfully released" checked={notifyMilestoneCompleted} onChange={setNotifyMilestoneCompleted} />
                 </>
               )}
               {role === "STARTUP" && (
                 <>
-                  <NotifyToggle label="Milestone funded" description="A Grant Giver has funded your milestone with RLUSD" checked={notifyFunded} onChange={setNotifyFunded} />
+                  <NotifyToggle label="Milestone funded" description="A Requester has funded your milestone with RLUSD" checked={notifyFunded} onChange={setNotifyFunded} />
                   <NotifyToggle label="Proof approved" description="AI accepted your proof — payment is being released" checked={notifyVerified} onChange={setNotifyVerified} />
                   <NotifyToggle label="Proof rejected" description="AI rejected your proof — resubmission is possible" checked={notifyRejected} onChange={setNotifyRejected} />
                 </>
@@ -2202,7 +2202,7 @@ export default function ProfilePage() {
                     color: "hsl(22 55% 54%)",
                   }}
                 >
-                  {role === "INVESTOR" ? "Grant Giver" : "Receiver"}
+                  {role === "INVESTOR" ? "Requester" : "Builder"}
                 </span>
               </div>
             </div>

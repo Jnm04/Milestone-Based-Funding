@@ -55,7 +55,7 @@ export default function NotFound() {
                 color: "hsl(22 55% 54%)",
               }}
             >
-              Grant Giver Dashboard
+              Requester Dashboard
             </Link>
             <Link
               href="/dashboard/startup"
@@ -66,7 +66,7 @@ export default function NotFound() {
                 color: "hsl(30 10% 62%)",
               }}
             >
-              Receiver Dashboard
+              Builder Dashboard
             </Link>
           </div>
         </div>

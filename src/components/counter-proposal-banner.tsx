@@ -126,7 +126,7 @@ export function CounterProposalBanner({ contractId, counterProposal, startupName
             Counter-proposal received
           </p>
           <p className="text-xs" style={{ color: "#A89B8C" }}>
-            <strong style={{ color: "#D4B896" }}>{startupName ?? "The Receiver"}</strong>
+            <strong style={{ color: "#D4B896" }}>{startupName ?? "The Builder"}</strong>
             {" "}proposed changes · {new Date(cp.createdAt).toLocaleDateString()}
           </p>
         </div>
@@ -249,7 +249,7 @@ export function CounterProposalBanner({ contractId, counterProposal, startupName
           </button>
         </div>
         <p className="text-xs" style={{ color: "#6B5E52" }}>
-          Accepting applies the proposed terms immediately. Rejecting returns the original invite to the Receiver.
+          Accepting applies the proposed terms immediately. Rejecting returns the original invite to the Builder.
         </p>
       </div>
     </div>

@@ -414,7 +414,7 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
       }
 
       const { contractId, directlyLinked } = await res.json();
-      toast.success(directlyLinked ? "Contract created and Receiver linked!" : "Contract created! Share the invite link with the Receiver.");
+      toast.success(directlyLinked ? "Contract created and Builder linked!" : "Contract created! Share the invite link with the Builder.");
       router.push(`/contract/${contractId}?investor=${investorAddress}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong.");
@@ -675,7 +675,7 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
 
       {/* Receiver */}
       <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-        <Label htmlFor="receiverWallet">Receiver Wallet Address <span style={{ color: "#a1a1aa", fontWeight: 400 }}>(optional)</span></Label>
+        <Label htmlFor="receiverWallet">Builder Wallet Address <span style={{ color: "#a1a1aa", fontWeight: 400 }}>(optional)</span></Label>
         <Input
           id="receiverWallet"
           placeholder="0x… — leave empty to share an invite link instead"
@@ -684,8 +684,8 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
         />
         <p style={{ fontSize: "12px", color: "#71717a" }}>
           {receiverWallet.trim()
-            ? "The Receiver will be linked directly — no invite link needed."
-            : "You will get an invite link to share with the Receiver after creation."}
+            ? "The Builder will be linked directly — no invite link needed."
+            : "You will get an invite link to share with the Builder after creation."}
         </p>
       </div>
 

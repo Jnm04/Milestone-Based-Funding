@@ -122,7 +122,7 @@ export default async function StatsPage() {
     {
       label: "Registered Users",
       value: totalUsers.toLocaleString(),
-      sub: "grant givers & receivers",
+      sub: "requesters & builders",
     },
   ];
 
