@@ -45,8 +45,8 @@ export function AvvContent() {
           </h1>
           <p className="text-sm" style={{ color: "#A89B8C" }}>
             {de
-              ? "gemäß Art. 28 DSGVO · Zuletzt aktualisiert: April 2026"
-              : "pursuant to Art. 28 GDPR · Last updated: April 2026"}
+              ? "gemäß Art. 28 DSGVO · Zuletzt aktualisiert: Mai 2026"
+              : "pursuant to Art. 28 GDPR · Last updated: May 2026"}
           </p>
 
           <div className="mt-4 p-4 rounded-lg text-sm" style={{ background: "rgba(196,112,75,0.08)", border: "1px solid rgba(196,112,75,0.2)", color: "#A89B8C" }}>
@@ -283,8 +283,8 @@ export function AvvContent() {
             <Li>
               <strong>{de ? "Zugangskontrolle:" : "Access control:"}</strong>{" "}
               {de
-                ? "E-Mail + Passwort-Authentifizierung (bcrypt-Hash, nicht reversibel); JWT-Sessions (NextAuth); automatische Kontosperrung nach 5 Fehlversuchen; getrennte Rollen (Investor/Startup/Admin)"
-                : "Email + password authentication (bcrypt hash, irreversible); JWT sessions (NextAuth); automatic account lockout after 5 failed attempts; separate roles (Investor/Startup/Admin)"}
+                ? "E-Mail + Passwort-Authentifizierung (bcrypt-Hash, nicht reversibel); JWT-Sessions (NextAuth); automatische Kontosperrung nach 5 Fehlversuchen; rollenbasierte Zugriffskontrolle"
+                : "Email + password authentication (bcrypt hash, irreversible); JWT sessions (NextAuth); automatic account lockout after 5 failed attempts; role-based access control"}
             </Li>
             <Li>
               <strong>{de ? "Zugriffskontrolle:" : "Authorisation control:"}</strong>{" "}

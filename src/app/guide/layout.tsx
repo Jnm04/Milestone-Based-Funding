@@ -3,12 +3,12 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "How It Works",
   description:
-    "Step-by-step guide to Cascrow: lock RLUSD in XRPL escrow, upload milestone proof, and let AI automatically verify completion and release funds. No lawyers, no middlemen.",
+    "Step-by-step guide to Cascrow: connect your agent via MCP server, REST API, or CLI — create contracts, lock RLUSD in XRPL escrow, submit proof, and let a 5-model AI quorum verify completion and release funds autonomously.",
   alternates: { canonical: "https://cascrow.com/guide" },
   openGraph: {
-    title: "How Cascrow Works — AI-Powered Escrow on XRPL",
+    title: "How Cascrow Works — Agentic Escrow & Verification on XRPL",
     description:
-      "Lock RLUSD in smart contract escrow on the XRP Ledger. AI verifies milestone completion. Funds release automatically. Step-by-step setup guide.",
+      "Connect agents via MCP, REST API, or CLI. Lock RLUSD in smart contract escrow on the XRP Ledger. 5-model AI quorum verifies milestones. Funds release automatically.",
     url: "https://cascrow.com/guide",
   },
 };
@@ -16,18 +16,17 @@ export const metadata: Metadata = {
 const howToJsonLd = {
   "@context": "https://schema.org",
   "@type": "HowTo",
-  name: "How to use Cascrow — AI-powered XRPL escrow",
+  name: "How to use Cascrow — Agentic Escrow & Verification on XRPL",
   description:
-    "Cascrow locks RLUSD in a smart contract on the XRP Ledger EVM sidechain. A 5-model AI majority vote verifies milestone completion and automatically releases funds to the startup.",
+    "Cascrow locks RLUSD in a smart contract on the XRP Ledger EVM sidechain. A 5-model AI majority vote verifies milestone completion and automatically releases funds. Connect via MCP server, REST API, or CLI.",
   step: [
-    { "@type": "HowToStep", position: 1, name: "Install MetaMask", text: "Install the MetaMask browser extension and add the XRPL EVM Testnet (Chain ID 1449000)." },
-    { "@type": "HowToStep", position: 2, name: "Get testnet RLUSD", text: "Get testnet XRP for gas fees and mint MockRLUSD tokens via the XRPL EVM faucet." },
-    { "@type": "HowToStep", position: 3, name: "Register on Cascrow", text: "Create an account on cascrow.com and connect your MetaMask wallet." },
-    { "@type": "HowToStep", position: 4, name: "Create a contract", text: "As Grant Giver (investor), define the milestone, amount in USD, and deadline." },
-    { "@type": "HowToStep", position: 5, name: "Fund the escrow", text: "Approve RLUSD spending and call fundMilestone — two MetaMask transactions lock the funds on-chain." },
-    { "@type": "HowToStep", position: 6, name: "Submit proof", text: "The Receiver (startup) uploads a PDF or links a GitHub repo as milestone proof." },
-    { "@type": "HowToStep", position: 7, name: "AI verification", text: "Five AI models vote in parallel. If 3 or more say YES, funds are released automatically." },
-    { "@type": "HowToStep", position: 8, name: "Receive funds", text: "RLUSD is transferred to the startup's wallet. An NFT certificate is minted on XRPL mainnet." },
+    { "@type": "HowToStep", position: 1, name: "Get an API key", text: "Register on cascrow.com or call POST /api/agent/register to receive an API key (csk_...) instantly." },
+    { "@type": "HowToStep", position: 2, name: "Connect via MCP or REST", text: "Add the Cascrow MCP server to Claude Desktop, or use the REST API with Bearer token auth from any language or agent framework." },
+    { "@type": "HowToStep", position: 3, name: "Create a contract", text: "Define one or more milestones with a title, optional USD amount, and deadline. For verification-only, set amountUSD to 0." },
+    { "@type": "HowToStep", position: 4, name: "Fund the milestone", text: "For escrow contracts: approve RLUSD spending and call fundMilestone via MetaMask — two transactions lock the funds on-chain. For verification-only: milestone activates instantly." },
+    { "@type": "HowToStep", position: 5, name: "Submit proof", text: "Upload a PDF, image, or structured text as proof of milestone completion via the platform, API, or CLI." },
+    { "@type": "HowToStep", position: 6, name: "AI verification", text: "Five AI models from five companies vote in parallel. If 3 or more say YES, the milestone is verified and funds are released automatically." },
+    { "@type": "HowToStep", position: 7, name: "Receive funds and NFT", text: "RLUSD is released to the recipient's wallet. A non-transferable NFT certificate is minted on the XRP Ledger Mainnet as permanent proof of completion." },
   ],
 };
 
@@ -40,7 +39,7 @@ const faqJsonLd = {
       name: "What is Cascrow?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Cascrow is an AI-powered escrow platform on the XRP Ledger. It locks RLUSD stablecoins in a smart contract and releases funds automatically when a 5-model AI majority vote verifies that the agreed milestone has been completed — no lawyers or middlemen required.",
+        text: "Cascrow is an agentic escrow and verification platform on the XRP Ledger. It locks RLUSD stablecoins in a smart contract and releases funds automatically when a 5-model AI majority vote verifies milestone completion. Native MCP server, REST API, and CLI — built for agents as first-class citizens.",
       },
     },
     {
@@ -72,7 +71,7 @@ const faqJsonLd = {
       name: "What happens if the proof is rejected?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "If the AI rejects the proof, the startup is notified and can delete the proof, improve their deliverable, and resubmit. The RLUSD remains locked in escrow until a proof is approved or the deadline passes.",
+        text: "If the AI rejects the proof, the submitting party is notified and can delete the proof, improve their deliverable, and resubmit. The RLUSD remains locked in escrow until a proof is approved or the deadline passes.",
       },
     },
     {
@@ -88,7 +87,7 @@ const faqJsonLd = {
       name: "Do I need a crypto wallet to use Cascrow?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "The investor (Grant Giver) needs MetaMask to fund the escrow — this requires an Ethereum-compatible wallet on the XRPL EVM Sidechain. The startup (Receiver) only needs a Cascrow account to submit proof; they do not need a wallet unless they want to receive RLUSD directly to a wallet address.",
+        text: "For escrow contracts, the funding party needs MetaMask — this requires an Ethereum-compatible wallet on the XRPL EVM Sidechain. The receiving party only needs a Cascrow account to submit proof; they do not need a wallet unless they want to receive RLUSD directly to a wallet address. For verification-only contracts, no wallet is required at all.",
       },
     },
   ],

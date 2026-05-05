@@ -22,26 +22,26 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Cascrow — AI-Powered Escrow on XRPL",
+    default: "Cascrow — Agentic Escrow & Verification",
     template: "%s | Cascrow",
   },
   description:
-    "Cascrow locks RLUSD in native XRPL escrow and releases funds only when AI verifies milestone completion. Trustless, instant, no middlemen.",
+    "Cascrow is agentic escrow and verification for the AI era. Lock RLUSD in a smart contract on XRPL — a 5-model AI majority vote decides release. Native MCP server, REST API, and CLI for agents.",
   keywords: [
     "cascrow",
+    "agentic escrow",
+    "ai verification",
     "xrpl escrow",
     "rlusd escrow",
-    "xrpl milestone escrow",
-    "ai escrow",
-    "xls-85",
-    "crypto escrow platform",
-    "milestone based funding",
+    "milestone verification",
+    "mcp server",
+    "ai agent escrow",
     "trustless escrow",
-    "xrp ledger escrow",
+    "xrp ledger",
     "rlusd",
     "decentralized escrow",
-    "smart escrow",
-    "startup investor escrow",
+    "smart contract escrow",
+    "ai majority vote",
   ],
   authors: [{ name: "Cascrow" }],
   creator: "Cascrow",
@@ -54,15 +54,15 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "https://cascrow.com",
     siteName: "Cascrow",
-    title: "Cascrow — AI-Powered Escrow on XRPL",
+    title: "Cascrow — Agentic Escrow & Verification",
     description:
-      "Lock RLUSD in native XRPL escrow. AI verifies milestone completion. Instant trustless settlement — no lawyers, no middlemen.",
+      "Lock RLUSD in a smart contract on XRPL. A 5-model AI majority vote verifies milestones and releases funds automatically. MCP server, REST API, CLI — built for agents.",
     images: [
       {
         url: "https://cascrow.com/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "Cascrow — AI-Powered Escrow on XRPL",
+        alt: "Cascrow — Agentic Escrow & Verification",
       },
     ],
   },
@@ -70,9 +70,9 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     site: "@cascrowhq",
     creator: "@cascrowhq",
-    title: "Cascrow — AI-Powered Escrow on XRPL",
+    title: "Cascrow — Agentic Escrow & Verification",
     description:
-      "Lock RLUSD in native XRPL escrow. AI verifies milestone completion. Instant trustless settlement.",
+      "Agentic escrow on XRPL. 5-model AI majority vote verifies milestones. MCP server, REST API, CLI — no human in the loop required.",
     images: ["https://cascrow.com/opengraph-image"],
   },
   robots: {
@@ -100,7 +100,7 @@ const jsonLd = {
         url: "https://cascrow.com/icon.svg",
       },
       description:
-        "Cascrow is an AI-powered escrow platform on the XRP Ledger. It locks RLUSD in a smart contract and releases funds automatically when AI verifies milestone completion — no lawyers, no middlemen.",
+        "Cascrow is agentic escrow and verification for the AI era. It locks RLUSD in a smart contract on the XRP Ledger EVM Sidechain and uses a 5-model AI majority vote to verify milestone completion before releasing funds. Native MCP server, REST API, and CLI — built for agents as first-class citizens.",
       sameAs: [
         "https://cascrow.com",
         "https://twitter.com/cascrowhq",
@@ -122,7 +122,7 @@ const jsonLd = {
       operatingSystem: "Web",
       url: "https://cascrow.com",
       description:
-        "AI-powered escrow platform on XRPL. Cascrow locks RLUSD in a smart contract on the XRP Ledger EVM sidechain and uses a 5-model AI majority vote to verify milestone completion before releasing funds.",
+        "Agentic escrow and verification platform on XRPL. Cascrow locks RLUSD in a smart contract on the XRP Ledger EVM Sidechain and uses a 5-model AI majority vote to verify milestone completion before releasing funds. Available via MCP server, REST API, and CLI.",
       offers: {
         "@type": "Offer",
         price: "0",

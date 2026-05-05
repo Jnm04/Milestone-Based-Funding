@@ -43,8 +43,8 @@ export function WiderrufContent() {
           </h1>
           <p className="text-sm" style={{ color: "#A89B8C" }}>
             {de
-              ? "gemäß § 312g BGB i.V.m. Art. 246a EGBGB · Zuletzt aktualisiert: April 2026"
-              : "pursuant to § 312g BGB in conjunction with Art. 246a EGBGB · Last updated: April 2026"}
+              ? "gemäß § 312g BGB i.V.m. Art. 246a EGBGB · Zuletzt aktualisiert: Mai 2026"
+              : "pursuant to § 312g BGB in conjunction with Art. 246a EGBGB · Last updated: May 2026"}
           </p>
         </div>
 

@@ -54,8 +54,8 @@ export function ImpressumContent() {
             </h1>
             <p className="text-sm" style={{ color: "#A89B8C" }}>
               {de
-                ? "Angaben gemäß § 5 TMG · Stand: April 2026"
-                : "Information pursuant to § 5 TMG · As of: April 2026"}
+                ? "Angaben gemäß § 5 TMG · Stand: Mai 2026"
+                : "Information pursuant to § 5 TMG · As of: May 2026"}
             </p>
           </div>
 
@@ -107,7 +107,7 @@ export function ImpressumContent() {
           </Section>
 
           {/* Responsible for content */}
-          <Section title={de ? "Inhaltlich Verantwortlicher gemäß § 55 Abs. 2 RStV" : "Responsible for Content pursuant to § 55 (2) RStV"}>
+          <Section title={de ? "Inhaltlich Verantwortlicher gemäß § 18 Abs. 2 MStV" : "Responsible for Content pursuant to § 18 (2) MStV"}>
             <p style={{ color: "#EDE6DD" }}>Jan-Niklas Möller, Paul Wagner</p>
             <p className="mt-1">
               {de

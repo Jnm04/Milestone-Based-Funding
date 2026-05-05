@@ -43,7 +43,7 @@ export function PrivacyContent() {
             {de ? "Datenschutzerklärung" : "Privacy Policy"}
           </h1>
           <p className="text-sm" style={{ color: "#A89B8C" }}>
-            {de ? "Zuletzt aktualisiert: April 2026" : "Last updated: April 2026"}
+            {de ? "Zuletzt aktualisiert: Mai 2026" : "Last updated: May 2026"}
           </p>
         </div>
 
@@ -61,6 +61,21 @@ export function PrivacyContent() {
             {de
               ? "Hinweis: Cascrow befindet sich im Aufbau. Die vollständigen Angaben zum Verantwortlichen (Firmenname, Adresse) werden nach Gründung des Unternehmens ergänzt."
               : "Note: Cascrow is currently in development. Full details about the controller (company name, address) will be added after the company is formally incorporated."}
+          </p>
+        </Section>
+
+        {/* Section 1b — DSB */}
+        <Section title={de ? "1a. Datenschutzbeauftragter" : "1a. Data Protection Officer"}>
+          <p>
+            {de
+              ? "Ein Datenschutzbeauftragter ist gemäß Art. 37 DSGVO nicht zu bestellen, da weder eine behördliche Stelle noch eine Stelle vorliegt, deren Kerntätigkeit in der umfangreichen Verarbeitung besonderer Kategorien personenbezogener Daten besteht, noch eine systematische und umfangreiche Überwachung von Personen stattfindet."
+              : "A data protection officer is not required to be appointed pursuant to Art. 37 GDPR, as neither a public authority nor a body whose core activities consist of large-scale processing of special categories of personal data is involved, nor does systematic and large-scale monitoring of individuals take place."}
+          </p>
+          <p className="mt-2">
+            {de
+              ? "Für alle Datenschutzanfragen wenden Sie sich bitte direkt an:"
+              : "For all data protection enquiries, please contact directly:"}{" "}
+            <a href="mailto:hello@cascrow.com" style={{ color: "#C4704B" }}>hello@cascrow.com</a>
           </p>
         </Section>
 

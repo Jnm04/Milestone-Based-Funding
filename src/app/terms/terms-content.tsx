@@ -42,7 +42,7 @@ export function TermsContent() {
             {de ? "Nutzungsbedingungen" : "Terms of Use"}
           </h1>
           <p className="text-sm" style={{ color: "#A89B8C" }}>
-            {de ? "Zuletzt aktualisiert: April 2026" : "Last updated: April 2026"}
+            {de ? "Zuletzt aktualisiert: Mai 2026" : "Last updated: May 2026"}
           </p>
         </div>
 
@@ -68,8 +68,8 @@ export function TermsContent() {
         <Section title={de ? "2. Leistungsbeschreibung" : "2. Description of Service"}>
           <p>
             {de
-              ? "Cascrow ermöglicht es Investoren (Grant Givers) und Startups (Receivers), meilensteinbasierte Escrow-Verträge abzuschließen. Kernfunktionen der Plattform:"
-              : "Cascrow enables investors (Grant Givers) and startups (Receivers) to enter into milestone-based escrow agreements. Core platform features:"}
+              ? "Cascrow ist eine agentische Escrow- und Verifikationsplattform. Sie ermöglicht es Nutzern und KI-Agenten, meilensteinbasierte Verträge abzuschließen, Mittel zu sperren und Meilensteinerfüllungen automatisiert zu verifizieren. Kernfunktionen der Plattform:"
+              : "Cascrow is an agentic escrow and verification platform. It enables users and AI agents to enter into milestone-based contracts, lock funds, and verify milestone completion autonomously. Core platform features:"}
           </p>
           <ul className="flex flex-col gap-2 mt-3">
             <Li>
