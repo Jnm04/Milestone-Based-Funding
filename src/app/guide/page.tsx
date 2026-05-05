@@ -77,8 +77,8 @@ const CodeBlock = ({ language, code }: { language: string; code: string }) => {
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
-      <pre className="overflow-x-auto px-5 py-4 font-mono text-[12.5px] leading-relaxed text-foreground/90">
-        <code>{code}</code>
+      <pre className="overflow-x-auto px-5 py-4 font-mono text-[12.5px] leading-relaxed" style={{ color: "hsl(32 35% 92%)" }}>
+        <code style={{ color: "inherit", background: "none", padding: 0, borderRadius: 0 }}>{code}</code>
       </pre>
     </div>
   );
