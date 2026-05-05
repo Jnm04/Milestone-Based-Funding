@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { resolveApiKey } from "@/lib/api-key-auth";
 import { nanoid } from "nanoid";
+import { fireAgentCallback } from "@/services/agent/callback.service";
 
 // Agent-only endpoint: sets a milestone to FUNDED with a simulated tx hash.
 // Requires API key auth. Only works for contracts owned by the API key's user.
@@ -83,6 +84,16 @@ export async function POST(request: NextRequest) {
       data: { status: "FUNDED", evmTxHash: fakeTxHash },
     }),
   ]);
+
+  // Notify the builder agent (startupId) that their milestone was funded, if one is assigned
+  if (contract.startupId && contract.startupId !== apiKeyCtx.userId) {
+    fireAgentCallback(contract.startupId, {
+      event:       "milestone.funded",
+      contractId:  resolvedContractId,
+      milestoneId: target.id,
+      data:        { txHash: fakeTxHash },
+    }).catch(() => {});
+  }
 
   return NextResponse.json({
     ok: true,

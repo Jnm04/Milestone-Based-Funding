@@ -18,6 +18,7 @@ import { resolveApiKey } from "@/lib/api-key-auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { mintCompletionNFT } from "@/services/xrpl/nft.service";
 import { writeAuditLog as writeAuditLogNft } from "@/services/evm/audit.service";
+import { fireAgentCallback } from "@/services/agent/callback.service";
 import crypto from "crypto";
 
 function generatePublicProofHash(contractId: string, milestoneId: string, verifiedAt: Date): string {
@@ -461,6 +462,16 @@ export async function POST(request: NextRequest) {
             }).catch((err) => console.error("[email] sendRejectedEmail failed:", err));
           }
 
+          // Notify builder agent via callback if it's an agent contract
+          if (contract.isAgentContract && contract.startupId) {
+            fireAgentCallback(contract.startupId, {
+              event:       "milestone.rejected",
+              contractId:  contract.id,
+              milestoneId: proof.milestoneId ?? undefined,
+              data:        { milestoneTitle, confidence: result.confidence, reasoning: result.reasoning },
+            }).catch(() => {});
+          }
+
           // Generate structured objections for the Appeal Wizard — best-effort, non-fatal
           if (hasApiKey) {
             generateRejectionObjections({
@@ -549,6 +560,17 @@ export async function POST(request: NextRequest) {
               sendVerifiedEmail({ to: contract.startup.email, contractId: contract.id, milestoneTitle, amountUSD, txHash, startupId: contract.startupId ?? undefined })
                 .catch((err) => console.error("[email] sendVerifiedEmail failed:", err));
             }
+
+            // Notify builder agent via callback if it's an agent contract
+            if (contract.isAgentContract && contract.startupId) {
+              fireAgentCallback(contract.startupId, {
+                event:       "milestone.verified",
+                contractId:  contract.id,
+                milestoneId: proof.milestoneId ?? undefined,
+                data:        { milestoneTitle, amountUSD, txHash, confidence: result.confidence },
+              }).catch(() => {});
+            }
+
             if (contract.investor.notifyMilestoneCompleted) {
               sendMilestoneCompletedInvestorEmail({ to: contract.investor.email, contractId: contract.id, milestoneTitle, amountUSD, investorId: contract.investorId })
                 .catch((err) => console.error("[email] sendMilestoneCompletedInvestorEmail failed:", err));

@@ -49,6 +49,22 @@ async function apiGet(path) {
   return data;
 }
 
+async function apiPatch(path, body) {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: "PATCH",
+    headers: {
+      "Authorization": `Bearer ${API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error ?? `HTTP ${res.status}`);
+  }
+  return data;
+}
+
 async function uploadProof(milestoneId, filename, content) {
   const blob = new Blob([content], { type: "text/plain" });
   const form = new FormData();
@@ -313,6 +329,74 @@ const TOOLS = [
     },
   },
   {
+    name: "cascrow_get_reputation",
+    description:
+      "Look up the on-chain reputation of any agent by their XRPL wallet address. " +
+      "Returns total milestones completed, total RLUSD released, success rate, and XRPL tx hashes for each milestone as portable on-chain proof. " +
+      "No authentication required — public endpoint.",
+    inputSchema: {
+      type: "object",
+      required: ["walletAddress"],
+      properties: {
+        walletAddress: {
+          type: "string",
+          description: "The XRPL wallet address of the agent (e.g. rXXXX...)",
+        },
+      },
+    },
+  },
+  {
+    name: "cascrow_discover_agents",
+    description:
+      "Search for discoverable Builder agents. " +
+      "Filter by skill tags and minimum success rate to find the best agent for your task. " +
+      "Returns agent IDs, wallet addresses, skill lists, and reputation stats. " +
+      "Use this before cascrow_handoff to identify which builder agent to assign work to.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        skill: {
+          type: "string",
+          description: "Filter by skill tag, e.g. 'python', 'solidity', 'data-analysis'",
+        },
+        minRate: {
+          type: "number",
+          description: "Minimum success rate between 0 and 1, e.g. 0.8 for 80%",
+        },
+        limit: {
+          type: "number",
+          description: "Max results to return (default 20, max 100)",
+        },
+      },
+    },
+  },
+  {
+    name: "cascrow_set_discoverable",
+    description:
+      "Configure this agent's discovery settings: opt in/out of the agent marketplace, " +
+      "set skill tags so Requester agents can find you, and register a callback URL to receive " +
+      "real-time events instead of polling (handoff received, milestone funded, verified, rejected). " +
+      "Call this once after registering to make yourself visible and reactive.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        discoverable: {
+          type: "boolean",
+          description: "Set to true to appear in cascrow_discover_agents searches",
+        },
+        skills: {
+          type: "array",
+          items: { type: "string" },
+          description: "List of skill tags, e.g. ['python', 'solidity', 'data-analysis']",
+        },
+        callbackUrl: {
+          type: "string",
+          description: "HTTPS URL to receive real-time event notifications (POST). Set to null to disable.",
+        },
+      },
+    },
+  },
+  {
     name: "cascrow_mcp_submit",
     description:
       "Submit text-based proof and get an immediate verdict — all in one call. " +
@@ -517,6 +601,89 @@ async function handleCheckInvites() {
   };
 }
 
+async function handleGetReputation({ walletAddress }) {
+  const data = await apiGet(`/api/agent/reputation/${encodeURIComponent(walletAddress)}`);
+
+  const { stats, milestones = [], skills = [] } = data;
+  const successPct = stats.successRate !== null
+    ? `${Math.round(stats.successRate * 100)}%`
+    : "no data yet";
+
+  const milestoneLines = milestones.slice(0, 5).map((m) => {
+    const proofLinks = Object.entries(m.proofs)
+      .filter(([, hash]) => hash)
+      .map(([k, hash]) => `${k}: https://xrpscan.com/tx/${hash}`)
+      .join(", ");
+    return `  - "${m.title}" ($${m.amountUSD} RLUSD)${proofLinks ? ` — ${proofLinks}` : ""}`;
+  }).join("\n");
+
+  return {
+    ...data,
+    message: [
+      `Agent reputation for ${walletAddress}:`,
+      `  Completed: ${stats.milestonesCompleted} milestones`,
+      `  RLUSD released: $${stats.totalRlusdReleased}`,
+      `  Success rate: ${successPct}`,
+      skills.length > 0 ? `  Skills: ${skills.join(", ")}` : null,
+      milestones.length > 0 ? `\nRecent milestones:\n${milestoneLines}` : null,
+    ].filter(Boolean).join("\n"),
+  };
+}
+
+async function handleDiscoverAgents({ skill, minRate, limit } = {}) {
+  const params = new URLSearchParams();
+  if (skill)   params.set("skill",   skill);
+  if (minRate !== undefined) params.set("minRate", String(minRate));
+  if (limit)   params.set("limit",   String(limit));
+
+  const qs = params.toString();
+  const data = await apiGet(`/api/agent/discover${qs ? `?${qs}` : ""}`);
+
+  const { agents = [], total } = data;
+  if (agents.length === 0) {
+    return { agents: [], total: 0, message: "No discoverable agents found matching your criteria." };
+  }
+
+  const lines = agents.map((a) => {
+    const rate = a.stats.successRate !== null
+      ? ` (${Math.round(a.stats.successRate * 100)}% success)`
+      : "";
+    const skills = a.skills.length > 0 ? ` — skills: ${a.skills.join(", ")}` : "";
+    return `  - ${a.name ?? a.agentId} [agentId: ${a.agentId}]${rate}${skills}`;
+  }).join("\n");
+
+  return {
+    ...data,
+    message: `Found ${total} agent(s)${total > agents.length ? ` (showing ${agents.length})` : ""}:\n${lines}\n\nUse cascrow_handoff with the agentId to assign work.`,
+  };
+}
+
+async function handleSetDiscoverable({ discoverable, skills, callbackUrl } = {}) {
+  const body = {};
+  if (discoverable !== undefined) body.discoverable = discoverable;
+  if (skills       !== undefined) body.skills        = skills;
+  if (callbackUrl  !== undefined) body.callbackUrl   = callbackUrl;
+
+  const data = await apiPatch("/api/agent/settings", body);
+
+  const parts = [];
+  if (data.discoverable !== undefined)
+    parts.push(`Discoverable: ${data.discoverable ? "✅ yes" : "❌ no"}`);
+  if (data.skills?.length > 0)
+    parts.push(`Skills: ${data.skills.join(", ")}`);
+  if (data.callbackUrl)
+    parts.push(`Callback URL: ${data.callbackUrl}`);
+  if (data.profileUrl)
+    parts.push(`Public profile: ${BASE_URL}${data.profileUrl}`);
+
+  return {
+    ...data,
+    message: parts.length > 0
+      ? `Agent settings updated:\n${parts.map((p) => `  ${p}`).join("\n")}`
+      : "Settings saved.",
+  };
+}
+
 async function handleMcpSubmit({ contract_id, milestone_id, evidence }) {
   const data = await apiPost("/api/mcp/submit", { contract_id, milestone_id, evidence });
 
@@ -554,7 +721,7 @@ async function handleMcpSubmit({ contract_id, milestone_id, evidence }) {
 // ─── MCP Server ───────────────────────────────────────────────────────────────
 
 const server = new Server(
-  { name: "cascrow", version: "1.2.0" },
+  { name: "cascrow", version: "1.3.0" },
   { capabilities: { tools: {} } }
 );
 
@@ -576,9 +743,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "cascrow_get_contract":     result = await handleGetContract(args);     break;
       case "cascrow_join_contract":    result = await handleJoinContract(args);    break;
       case "cascrow_handoff":          result = await handleHandoff(args);         break;
-      case "cascrow_check_invites":    result = await handleCheckInvites();        break;
-      case "cascrow_get_agent_id":     result = await handleGetAgentId();          break;
-      case "cascrow_mcp_submit":       result = await handleMcpSubmit(args);       break;
+      case "cascrow_check_invites":    result = await handleCheckInvites();              break;
+      case "cascrow_get_agent_id":     result = await handleGetAgentId();               break;
+      case "cascrow_get_reputation":   result = await handleGetReputation(args);        break;
+      case "cascrow_discover_agents":  result = await handleDiscoverAgents(args);       break;
+      case "cascrow_set_discoverable": result = await handleSetDiscoverable(args);      break;
+      case "cascrow_mcp_submit":       result = await handleMcpSubmit(args);            break;
       default:
         throw new Error(`Unknown tool: ${name}`);
     }

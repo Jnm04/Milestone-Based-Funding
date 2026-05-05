@@ -141,6 +141,14 @@ model User {
 
   // SSO one-time token (redeemed after OIDC/SAML callback)
   ssoToken SsoToken?
+
+  // Agent Economy — discovery + callbacks
+  /// When true, this agent appears in GET /api/agent/discover
+  agentDiscoverable Boolean @default(false)
+  /// JSON array of skill tags e.g. ["solidity", "python", "data-analysis"]
+  agentSkills       String? @db.Text
+  /// HTTPS URL the platform POSTs to when a contract event occurs (handoff, funded, verified, rejected)
+  agentCallbackUrl  String?
 }
 
 enum Role {
@@ -1208,4 +1216,26 @@ model AgentHandoff {
   createdAt      DateTime  @default(now())
 
   @@index([builderAgentId, claimedAt])
+}
+
+// ── Agent Callbacks ────────────────────────────────────────────────────────────
+
+/// Outbound webhook call fired from Cascrow to a Builder agent's callbackUrl.
+/// Persisted for audit / retry visibility. Delivery is best-effort (no retry).
+model AgentCallbackLog {
+  id          String   @id @default(cuid())
+  /// The agent user whose callbackUrl was targeted
+  agentUserId String
+  /// "handoff.received" | "milestone.funded" | "milestone.verified" | "milestone.rejected"
+  event       String
+  contractId  String?
+  milestoneId String?
+  /// HTTP status returned by the agent's callback endpoint (null = network error)
+  httpStatus  Int?
+  /// Whether the delivery was considered successful (2xx)
+  delivered   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([agentUserId, createdAt])
+  @@index([contractId])
 }

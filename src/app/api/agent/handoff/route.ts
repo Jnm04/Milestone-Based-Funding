@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { resolveApiKey } from "@/lib/api-key-auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
+import { fireAgentCallback } from "@/services/agent/callback.service";
 
 const schema = z.object({
   inviteCode: z.string().min(1).max(100),
@@ -59,6 +60,13 @@ export async function POST(request: NextRequest) {
   const handoff = await prisma.agentHandoff.create({
     data: { inviteCode, builderAgentId, contractId, message: message ?? null },
   });
+
+  // Notify the builder agent immediately so they don't have to poll
+  fireAgentCallback(builderAgentId, {
+    event:      "handoff.received",
+    contractId,
+    data:       { inviteCode, message: message ?? null, handoffId: handoff.id },
+  }).catch(() => {});
 
   return NextResponse.json({
     handoffId: handoff.id,
