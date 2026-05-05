@@ -70,7 +70,7 @@ export async function PATCH(request: NextRequest) {
 
   return NextResponse.json({
     discoverable:  updated.agentDiscoverable,
-    skills:        updated.agentSkills ? (JSON.parse(updated.agentSkills) as string[]) : [],
+    skills:        (() => { try { return updated.agentSkills ? (JSON.parse(updated.agentSkills) as string[]) : []; } catch { return []; } })(),
     callbackUrl:   updated.agentCallbackUrl ?? null,
     walletAddress: updated.walletAddress ?? null,
     profileUrl:    updated.walletAddress ? `/agent/${updated.walletAddress}` : null,
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     discoverable:  user.agentDiscoverable,
-    skills:        user.agentSkills ? (JSON.parse(user.agentSkills) as string[]) : [],
+    skills:        (() => { try { return user.agentSkills ? (JSON.parse(user.agentSkills) as string[]) : []; } catch { return []; } })(),
     callbackUrl:   user.agentCallbackUrl ?? null,
     walletAddress: user.walletAddress ?? null,
     profileUrl:    user.walletAddress ? `/agent/${user.walletAddress}` : null,

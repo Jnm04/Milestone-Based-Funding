@@ -131,9 +131,12 @@ export async function GET(
     };
   });
 
-  const skills: string[] = agent.agentSkills
-    ? (JSON.parse(agent.agentSkills) as string[])
-    : [];
+  let skills: string[] = [];
+  try {
+    skills = agent.agentSkills ? (JSON.parse(agent.agentSkills) as string[]) : [];
+  } catch {
+    skills = [];
+  }
 
   return NextResponse.json({
     walletAddress,

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { createHmac } from "crypto";
 
 export type AgentCallbackEvent =
   | "handoff.received"
@@ -33,27 +34,39 @@ export async function fireAgentCallback(
 
   if (!callbackUrl) return;
 
+  const body = JSON.stringify({
+    event:       payload.event,
+    contractId:  payload.contractId  ?? null,
+    milestoneId: payload.milestoneId ?? null,
+    data:        payload.data        ?? {},
+    timestamp:   new Date().toISOString(),
+  });
+
+  // HMAC-SHA256 over the raw body so receivers can verify origin.
+  // If the env var is absent the header is omitted — existing receivers still work.
+  const secret = process.env.CASCROW_CALLBACK_SECRET;
+  const signature = secret
+    ? "sha256=" + createHmac("sha256", secret).update(body).digest("hex")
+    : null;
+
   let httpStatus: number | null = null;
   let delivered = false;
 
   try {
     const res = await fetch(callbackUrl, {
       method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({
-        event:      payload.event,
-        contractId: payload.contractId ?? null,
-        milestoneId: payload.milestoneId ?? null,
-        data:       payload.data ?? {},
-        timestamp:  new Date().toISOString(),
-      }),
-      // 10-second timeout — agent endpoints must respond quickly
+      headers: {
+        "Content-Type": "application/json",
+        ...(signature ? { "X-Cascrow-Signature": signature } : {}),
+      },
+      body,
+      redirect: "error",   // never follow redirects — blocks SSRF via open redirects
       signal: AbortSignal.timeout(10_000),
     });
     httpStatus = res.status;
     delivered  = res.status >= 200 && res.status < 300;
   } catch (err) {
-    // Network error, timeout, or DNS failure — recorded as null status
+    // Network error, timeout, redirect attempt, or DNS failure
     console.error("[agent-callback] Delivery failed:", err);
   }
 
@@ -62,8 +75,8 @@ export async function fireAgentCallback(
     .create({
       data: {
         agentUserId,
-        event:      payload.event,
-        contractId: payload.contractId ?? null,
+        event:       payload.event,
+        contractId:  payload.contractId  ?? null,
         milestoneId: payload.milestoneId ?? null,
         httpStatus,
         delivered,

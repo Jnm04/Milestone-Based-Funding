@@ -67,9 +67,12 @@ export async function GET(request: NextRequest) {
       const successRate = total > 0 ? completed.length / total : null;
       const totalRlusdReleased = completed.reduce((s, m) => s + Number(m.amountUSD), 0);
 
-      const skills: string[] = agent.agentSkills
-        ? (JSON.parse(agent.agentSkills) as string[])
-        : [];
+      let skills: string[] = [];
+      try {
+        skills = agent.agentSkills ? (JSON.parse(agent.agentSkills) as string[]) : [];
+      } catch {
+        skills = [];
+      }
 
       return {
         agentId:             agent.id,
