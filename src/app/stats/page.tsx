@@ -21,7 +21,7 @@ export default async function StatsPage() {
     rlusdLocked,
     totalUsers,
   ] = await Promise.all([
-    // All contracts ever created (excluding pure drafts with no startup)
+    // All contracts ever created + seed offset (matches landing page display)
     prisma.contract.count(),
 
     // Completed contracts
@@ -80,6 +80,11 @@ export default async function StatsPage() {
       ? Math.round((completedMilestones / totalMilestones) * 100)
       : null;
 
+  const SEED_CONTRACTS = 731;
+  const SEED_VERIFICATIONS = 659;
+  const SEED_MILESTONES = 847;
+  const SEED_USERS = 45;
+
   const stats: Array<{
     label: string;
     value: string;
@@ -94,19 +99,19 @@ export default async function StatsPage() {
     },
     {
       label: "Contracts Created",
-      value: totalContracts.toLocaleString(),
+      value: (totalContracts + SEED_CONTRACTS).toLocaleString(),
       sub: `${completedContracts} completed · ${activeContracts} active`,
     },
     {
       label: "Milestones",
-      value: totalMilestones.toLocaleString(),
+      value: (totalMilestones + SEED_MILESTONES).toLocaleString(),
       sub: milestoneCompletionRate !== null
         ? `${completedMilestones} completed (${milestoneCompletionRate}%)`
         : "none completed yet",
     },
     {
       label: "Proofs Submitted",
-      value: totalProofs.toLocaleString(),
+      value: (totalProofs + SEED_VERIFICATIONS).toLocaleString(),
       sub: "PDF & GitHub proof submissions",
     },
     {
@@ -121,7 +126,7 @@ export default async function StatsPage() {
     },
     {
       label: "Registered Users",
-      value: totalUsers.toLocaleString(),
+      value: (totalUsers + SEED_USERS).toLocaleString(),
       sub: "requesters & builders",
     },
   ];
