@@ -1,0 +1,26 @@
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
+
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      CASCROW_API_KEY:
+        type: string
+        description: "Your cascrow API key (starts with csk_). Get one at cascrow.com/settings/api-keys."
+        pattern: "^csk_"
+      CASCROW_API_URL:
+        type: string
+        description: "Cascrow API base URL. Leave blank to use the default (https://cascrow.com)."
+        default: "https://cascrow.com"
+    required:
+      - CASCROW_API_KEY
+  commandFunction: |-
+    (config) => ({
+      command: 'npx',
+      args: ['-y', 'cascrow-mcp'],
+      env: {
+        CASCROW_API_KEY: config.CASCROW_API_KEY,
+        CASCROW_API_URL: config.CASCROW_API_URL || 'https://cascrow.com'
+      }
+    })

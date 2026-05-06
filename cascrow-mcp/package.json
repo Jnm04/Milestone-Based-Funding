@@ -1,7 +1,7 @@
 {
   "name": "cascrow-mcp",
-  "version": "1.4.0",
-  "description": "MCP server for Cascrow — agentic escrow and verification",
+  "version": "1.4.1",
+  "description": "MCP server for Cascrow — AI-verified milestone escrow on the XRP Ledger",
   "type": "module",
   "main": "index.js",
   "bin": {
@@ -12,5 +12,31 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.15.0"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "cascrow",
+    "escrow",
+    "xrp",
+    "rlusd",
+    "ai-verification",
+    "milestone",
+    "agent",
+    "agentic",
+    "elizaos",
+    "agentkit",
+    "verification"
+  ],
+  "author": "Cascrow <dev@cascrow.com>",
+  "license": "MIT",
+  "homepage": "https://cascrow.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Jnm04/Milestone-Based-Funding.git",
+    "directory": "cascrow-mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/Jnm04/Milestone-Based-Funding/issues"
   }
 }
