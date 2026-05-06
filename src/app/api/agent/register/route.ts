@@ -56,11 +56,12 @@ export async function POST(request: NextRequest) {
 
   const passwordHash = await bcrypt.hash(password, 12);
 
-  // Auto-create EVM wallet if agent didn't bring their own
+  // Auto-create EVM wallet if agent didn't bring their own.
+  // Disabled until AGENT_AUTO_WALLET_ENABLED=true is set in env.
   let generatedWallet: { address: string; privateKey: string } | null = null;
   const resolvedWalletAddress = providedWallet ?? null;
 
-  if (!providedWallet) {
+  if (!providedWallet && process.env.AGENT_AUTO_WALLET_ENABLED === "true") {
     const wallet = ethers.Wallet.createRandom(getEVMProvider());
     generatedWallet = { address: wallet.address, privateKey: wallet.privateKey };
 
