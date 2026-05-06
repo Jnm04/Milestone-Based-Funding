@@ -1,0 +1,20 @@
+{
+  "name": "elizaos-plugin-cascrow",
+  "version": "1.0.0",
+  "description": "ElizaOS plugin for Cascrow — agentic escrow and milestone verification on the XRP Ledger",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": ["elizaos", "eliza", "plugin", "cascrow", "escrow", "xrpl", "rlusd"],
+  "license": "MIT",
+  "peerDependencies": {
+    "@elizaos/core": ">=0.1.0"
+  },
+  "devDependencies": {
+    "@elizaos/core": "^0.1.9",
+    "typescript": "^5.0.0"
+  }
+}
