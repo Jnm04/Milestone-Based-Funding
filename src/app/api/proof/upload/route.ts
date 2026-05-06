@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
       if (!milestone) {
         return NextResponse.json({ error: "Milestone not found" }, { status: 404 });
       }
-      if (milestone.contract.startupId !== userId && milestone.contract.investorId !== userId) {
+      if (milestone.contract.startupId !== userId) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
       if (!["FUNDED", "PROOF_SUBMITTED", "PENDING_REVIEW"].includes(milestone.status)) {
@@ -312,7 +312,7 @@ export async function POST(request: NextRequest) {
         include: { investor: true, startup: true },
       });
       if (!contract) return NextResponse.json({ error: "Contract not found" }, { status: 404 });
-      if (contract.startupId !== userId && contract.investorId !== userId) {
+      if (contract.startupId !== userId) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
       if (!["FUNDED", "PROOF_SUBMITTED", "PENDING_REVIEW"].includes(contract.status)) {

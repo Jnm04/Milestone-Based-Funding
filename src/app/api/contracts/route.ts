@@ -407,8 +407,8 @@ export async function GET(request: NextRequest) {
       prisma.contract.findMany({
         where,
         include: {
-          investor: true,
-          startup: true,
+          investor: { select: { id: true, name: true, email: true, companyName: true, walletAddress: true, avatarUrl: true } },
+          startup:  { select: { id: true, name: true, email: true, companyName: true, walletAddress: true, avatarUrl: true } },
           milestones: { select: { status: true, cancelAfter: true }, orderBy: { order: "asc" } },
         },
         orderBy: { createdAt: "desc" },

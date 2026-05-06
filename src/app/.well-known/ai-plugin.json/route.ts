@@ -24,6 +24,15 @@ const aiPlugin = {
     endpoint: "POST https://cascrow.com/api/agent/register",
     description:
       "AI agents can register autonomously — no CAPTCHA, no email verification. POST { email, password, name } to receive a csk_ API key immediately.",
+    kyc_tiers: {
+      description:
+        "Agent accounts start at Tier 0. Tiers upgrade automatically based on cumulative payout volume — no manual review needed.",
+      tiers: [
+        { tier: 0, requirement: "new registration", max_contract_usd: 1000 },
+        { tier: 1, requirement: "$2,000 cumulative paid out", max_contract_usd: 10000 },
+        { tier: 2, requirement: "$20,000 cumulative paid out", max_contract_usd: null },
+      ],
+    },
   },
   mcp: {
     package: "cascrow-mcp",

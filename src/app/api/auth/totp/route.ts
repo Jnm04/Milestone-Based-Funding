@@ -5,12 +5,13 @@ import { prisma } from "@/lib/prisma";
 import { generateSecret, generateURI, verify as verifyTotp } from "otplib";
 import QRCode from "qrcode";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 function generateRecoveryCodes(): string[] {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   return Array.from({ length: 10 }, () => {
     const part = (n: number) =>
-      Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+      Array.from({ length: n }, () => chars[crypto.randomInt(0, chars.length)]).join("");
     return `${part(4)}-${part(4)}`;
   });
 }

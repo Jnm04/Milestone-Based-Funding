@@ -130,6 +130,32 @@ export async function POST(request: NextRequest) {
       ? (contract.milestones.find((m) => m.id === milestoneId)?.amountUSD ?? contract.amountUSD).toString()
       : contract.amountUSD.toString();
 
+    // Agent KYC: accumulate paid volume on the startup and auto-upgrade kycTier
+    // Tier 0 → 1 at $2 000, Tier 1 → 2 at $20 000
+    if (contract.startupId) {
+      void (async () => {
+        try {
+          const updated = await prisma.user.update({
+            where: { id: contract.startupId! },
+            data: { agentVolumePaid: { increment: parseFloat(completedAmount) } },
+            select: { agentVolumePaid: true, kycTier: true },
+          });
+          const vol = Number(updated.agentVolumePaid);
+          let newTier: number | null = null;
+          if (updated.kycTier < 1 && vol >= 2000) newTier = 1;
+          else if (updated.kycTier < 2 && vol >= 20000) newTier = 2;
+          if (newTier !== null) {
+            await prisma.user.update({
+              where: { id: contract.startupId! },
+              data: { kycTier: newTier },
+            });
+          }
+        } catch (err) {
+          console.error("[escrow/finish] agent volume update failed:", err);
+        }
+      })();
+    }
+
     await writeAuditLog({
       contractId,
       milestoneId: milestoneId ?? undefined,

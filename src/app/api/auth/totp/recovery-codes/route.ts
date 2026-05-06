@@ -10,7 +10,7 @@ function generateRecoveryCodes(): string[] {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   return Array.from({ length: 10 }, () => {
     const part = (n: number) =>
-      Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+      Array.from({ length: n }, () => chars[crypto.randomInt(0, chars.length)]).join("");
     return `${part(4)}-${part(4)}`;
   });
 }
@@ -59,8 +59,6 @@ export async function POST(req: NextRequest) {
   const plainCodes = generateRecoveryCodes();
   const hashes = await Promise.all(plainCodes.map((c) => bcrypt.hash(c, 10)));
 
-  // Use a salt to ensure uniqueness even if two codes are identical (shouldn't happen with crypto.randomBytes-based generation)
-  void crypto; // keep import used
   await prisma.user.update({
     where: { id: session.user.id },
     data: { totpRecoveryCodes: JSON.stringify(hashes) },

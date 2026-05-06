@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       name: name ?? null,
       role: "INVESTOR",
       emailVerified: true,
-      kycTier: 1,
+      kycTier: 0,
     },
   });
 

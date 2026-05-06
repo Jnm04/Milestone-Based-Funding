@@ -149,6 +149,8 @@ model User {
   agentSkills       String? @db.Text
   /// HTTPS URL the platform POSTs to when a contract event occurs (handoff, funded, verified, rejected)
   agentCallbackUrl  String?
+  /// Cumulative USD paid out to this agent across all completed milestones — used for automatic kycTier upgrades
+  agentVolumePaid   Decimal @default(0) @db.Decimal(12, 2)
 }
 
 enum Role {
@@ -1215,6 +1217,7 @@ model AgentHandoff {
   claimedAt      DateTime?
   createdAt      DateTime  @default(now())
 
+  @@unique([contractId, inviteCode])
   @@index([builderAgentId, claimedAt])
 }
 
