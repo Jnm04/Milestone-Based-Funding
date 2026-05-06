@@ -44,6 +44,7 @@ export default async function PublicProofPage({ params }: Props) {
           aiModelVotes: true,
           createdAt: true,
           proofType: true,
+          agentExecutionMetadata: true,
         },
       },
     },
@@ -72,9 +73,29 @@ export default async function PublicProofPage({ params }: Props) {
     : [];
 
   const proofTypeLabel =
+    latestProof.proofType === "agent_execution" ? "AI Agent Execution" :
     latestProof.proofType === "mcp_agent" ? "Agent Submission" :
     latestProof.proofType === "github_url" ? "GitHub Connector" :
     null;
+
+  interface AgentExecutionMeta {
+    agentModel: string;
+    agentProvider: string;
+    agentVersion?: string;
+    frameworkVersion?: string;
+    executionId?: string;
+    toolCalls?: Array<{ tool: string; inputSummary?: string; outputSummary?: string }>;
+    tokenUsage?: { inputTokens?: number; outputTokens?: number; totalTokens?: number };
+    outputSummary: string;
+    outputArtifacts?: Array<{ type: string; description: string; hash?: string; url?: string }>;
+    startedAt?: string;
+    completedAt?: string;
+  }
+
+  const agentMeta: AgentExecutionMeta | null =
+    latestProof.proofType === "agent_execution" && latestProof.agentExecutionMetadata
+      ? (latestProof.agentExecutionMetadata as unknown as AgentExecutionMeta)
+      : null;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start py-12 px-4" style={{ background: "#1A1512" }}>
@@ -119,6 +140,67 @@ export default async function PublicProofPage({ params }: Props) {
                   </span>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Agent execution metadata */}
+        {agentMeta && (
+          <div className="flex flex-col gap-3">
+            <span className="text-xs uppercase tracking-widest font-semibold" style={{ color: "#C4704B" }}>
+              AI Agent Attribution
+            </span>
+            <div className="rounded-xl p-4 flex flex-col gap-2.5 text-xs" style={{ background: "rgba(0,0,0,0.25)", border: "1px solid rgba(196,112,75,0.15)" }}>
+              <div className="flex justify-between">
+                <span style={{ color: "#A89B8C" }}>Model</span>
+                <span className="font-mono" style={{ color: "#EDE6DD" }}>{agentMeta.agentModel}</span>
+              </div>
+              <div className="flex justify-between">
+                <span style={{ color: "#A89B8C" }}>Provider</span>
+                <span style={{ color: "#EDE6DD" }}>{agentMeta.agentProvider}{agentMeta.agentVersion ? ` v${agentMeta.agentVersion}` : ""}</span>
+              </div>
+              {agentMeta.frameworkVersion && (
+                <div className="flex justify-between">
+                  <span style={{ color: "#A89B8C" }}>Framework</span>
+                  <span style={{ color: "#EDE6DD" }}>{agentMeta.frameworkVersion}</span>
+                </div>
+              )}
+              {agentMeta.tokenUsage && (
+                <div className="flex justify-between">
+                  <span style={{ color: "#A89B8C" }}>Tokens used</span>
+                  <span style={{ color: "#EDE6DD" }}>
+                    {[
+                      agentMeta.tokenUsage.inputTokens != null && `${agentMeta.tokenUsage.inputTokens.toLocaleString()} in`,
+                      agentMeta.tokenUsage.outputTokens != null && `${agentMeta.tokenUsage.outputTokens.toLocaleString()} out`,
+                    ].filter(Boolean).join(" / ") || `${agentMeta.tokenUsage.totalTokens?.toLocaleString() ?? "—"} total`}
+                  </span>
+                </div>
+              )}
+              {agentMeta.toolCalls && agentMeta.toolCalls.length > 0 && (
+                <div className="flex justify-between">
+                  <span style={{ color: "#A89B8C" }}>Tool calls</span>
+                  <span style={{ color: "#EDE6DD" }}>{agentMeta.toolCalls.length}</span>
+                </div>
+              )}
+              {agentMeta.startedAt && agentMeta.completedAt && (
+                <div className="flex justify-between">
+                  <span style={{ color: "#A89B8C" }}>Duration</span>
+                  <span style={{ color: "#EDE6DD" }}>
+                    {Math.round((new Date(agentMeta.completedAt).getTime() - new Date(agentMeta.startedAt).getTime()) / 1000)}s
+                  </span>
+                </div>
+              )}
+              {agentMeta.outputArtifacts && agentMeta.outputArtifacts.length > 0 && (
+                <div className="flex flex-col gap-1 pt-1 border-t" style={{ borderColor: "rgba(196,112,75,0.1)" }}>
+                  <span style={{ color: "#A89B8C" }}>Artifacts produced</span>
+                  {agentMeta.outputArtifacts.slice(0, 5).map((a, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="px-1.5 py-0.5 rounded text-xs" style={{ background: "rgba(196,112,75,0.12)", color: "#C4704B" }}>{a.type}</span>
+                      <span style={{ color: "#D4B896" }} className="truncate">{a.description}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

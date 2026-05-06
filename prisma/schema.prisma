@@ -238,7 +238,7 @@ model Proof {
   aiConfidence       Int?
   /// [{model, decision, confidence, reasoning}] — individual votes from each AI model
   aiModelVotes       Json?
-  /// "file" | "github_url" — how the proof was submitted
+  /// "file" | "github_url" | "agent_execution" — how the proof was submitted
   proofType          String     @default("file")
   /// For github_url proofs: the submitted GitHub repo URL
   proofUrl           String?
@@ -265,6 +265,9 @@ model Proof {
   /// Feature: Adaptive Loop — how many times the startup has been nudged to address objections
   nudgeCount         Int        @default(0)
   nudgedAt           DateTime?
+  /// Structured execution metadata for agent_execution proof type.
+  /// Shape: { agentModel, agentProvider, executionId?, frameworkVersion?, toolCalls?, tokenUsage?, outputSummary, outputArtifacts?, startedAt?, completedAt? }
+  agentExecutionMetadata Json?
   createdAt          DateTime   @default(now())
 
   @@index([contractId])
