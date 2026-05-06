@@ -127,6 +127,7 @@ export async function POST(request: NextRequest) {
       attestationMilestones,
       isConfidential,
       confidentialPassphrase,
+      agentReviewMode = "AUTO",
     } = parsed.data;
 
     const isAttestation = mode === "ATTESTATION";
@@ -295,6 +296,7 @@ export async function POST(request: NextRequest) {
           inviteLink: directLink,
           status: contractStatus,
           isAgentContract: !!apiKeyCtx,
+          agentReviewMode: apiKeyCtx ? agentReviewMode : "AUTO",
         },
       });
 

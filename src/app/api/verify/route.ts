@@ -340,15 +340,21 @@ export async function POST(request: NextRequest) {
         }).catch((err) => console.error("[brain] storeBrainData failed:", err));
 
         // Three-tier confidence logic
+        // Agent contracts with AUTO mode skip manual review entirely — 60-85% → REJECTED
+        const skipManualReview = contract.isAgentContract && contract.agentReviewMode === "AUTO";
+
         let newStatus: string;
         let action: string;
 
         if (result.confidence < 60) {
           newStatus = "REJECTED";
           action = "REJECTED";
-        } else if (result.confidence <= 85) {
+        } else if (result.confidence <= 85 && !skipManualReview) {
           newStatus = "PENDING_REVIEW";
           action = "PENDING_REVIEW";
+        } else if (result.confidence <= 85 && skipManualReview) {
+          newStatus = "REJECTED";
+          action = "REJECTED";
         } else if (result.decision === "YES") {
           newStatus = "VERIFIED";
           action = "VERIFIED";

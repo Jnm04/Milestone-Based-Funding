@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
   try {
   const now = new Date();
   const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+  const twoDaysAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
 
   // ── 1a. Open renegotiation window for expired FUNDED milestones ──────────
   // Instead of immediately cancelling, give startups 48h to submit a progress update.
@@ -114,82 +115,116 @@ export async function GET(request: NextRequest) {
     })
   );
 
-  // ── 2. Auto-approve stalled PENDING_REVIEW milestones (>14 days) ─────────
-  const stalledMilestones = await prisma.milestone.findMany({
+  // ── 2a. Auto-approve agent MANUAL_AUTO contracts stalled >48h ────────────
+  const stalledAgentMilestones = await prisma.milestone.findMany({
     where: {
       status: "PENDING_REVIEW",
-      updatedAt: { lt: fourteenDaysAgo },
+      updatedAt: { lt: twoDaysAgo },
+      contract: { isAgentContract: true, agentReviewMode: "MANUAL_AUTO" },
     },
     include: {
       contract: { include: { investor: true, startup: true } },
     },
   });
 
+  // ── 2b. Auto-approve human PENDING_REVIEW milestones stalled >14 days ────
+  const stalledMilestones = await prisma.milestone.findMany({
+    where: {
+      status: "PENDING_REVIEW",
+      updatedAt: { lt: fourteenDaysAgo },
+      contract: {
+        OR: [
+          { isAgentContract: false },
+          { isAgentContract: true, agentReviewMode: "MANUAL" },
+        ],
+      },
+    },
+    include: {
+      contract: { include: { investor: true, startup: true } },
+    },
+  });
+
+  async function autoReleaseMilestone(
+    milestone: typeof stalledMilestones[number],
+    reason: string
+  ) {
+    const { contract } = milestone;
+    const rawFulfillment = milestone.escrowFulfillment ?? contract.escrowFulfillment;
+    if (!rawFulfillment) {
+      throw new Error(`No fulfillment key for milestone ${milestone.id}`);
+    }
+    const fulfillment = decryptFulfillment(rawFulfillment);
+    const milestoneTitle = milestone.title;
+    const amountUSD = milestone.amountUSD.toString();
+
+    if (contract.startup?.email) {
+      sendFulfillmentKeyEmail({
+        to: contract.startup.email,
+        contractId: contract.id,
+        milestoneTitle,
+        fulfillment,
+        contractIdHash: contractIdToBytes32(contract.id),
+        milestoneOrder: milestone.order,
+      }).catch((err) => console.error("[email] sendFulfillmentKeyEmail failed:", err));
+    }
+
+    const txHash = await releaseMilestone(contract.id, milestone.order, fulfillment);
+
+    const completedMilestone = await prisma.milestone.update({
+      where: { id: milestone.id },
+      data: { status: "COMPLETED", evmTxHash: txHash },
+      include: { contract: { include: { milestones: { orderBy: { order: "asc" } } } } },
+    });
+
+    const milestones = completedMilestone.contract.milestones;
+    const remaining = milestones.find(
+      (m) => m.id !== milestone.id && !["COMPLETED", "EXPIRED"].includes(m.status)
+    );
+    const nextStatus = !remaining ? "COMPLETED" : remaining.status === "FUNDED" ? "FUNDED" : "AWAITING_ESCROW";
+    await prisma.contract.update({ where: { id: contract.id }, data: { status: nextStatus as never } });
+
+    await writeAuditLog({
+      contractId: contract.id,
+      milestoneId: milestone.id,
+      event: "MANUAL_REVIEW_APPROVED",
+      actor: "SYSTEM",
+      metadata: { auto: true, reason },
+    });
+
+    await writeAuditLog({
+      contractId: contract.id,
+      milestoneId: milestone.id,
+      event: "FUNDS_RELEASED",
+      metadata: { txHash, amountUSD, auto: true },
+    });
+
+    if (contract.startup?.notifyVerified && contract.startup.email) {
+      sendVerifiedEmail({ to: contract.startup.email, contractId: contract.id, milestoneTitle, amountUSD, txHash })
+        .catch((err) => console.error("[email] sendVerifiedEmail failed:", err));
+    }
+    if (contract.investor.notifyMilestoneCompleted) {
+      sendMilestoneCompletedInvestorEmail({ to: contract.investor.email, contractId: contract.id, milestoneTitle, amountUSD })
+        .catch((err) => console.error("[email] sendMilestoneCompletedInvestorEmail failed:", err));
+    }
+
+    return { id: milestone.id, action: "auto-approved", txHash };
+  }
+
+  const agentApproveResults = await Promise.allSettled(
+    stalledAgentMilestones.map(async (milestone) => {
+      try {
+        return await autoReleaseMilestone(milestone, "No agent action within 48 hours (MANUAL_AUTO mode)");
+      } catch (err) {
+        console.error(`[cron/agent-auto-approve] Failed for milestone ${milestone.id}:`, err);
+        throw err;
+      }
+    })
+  );
+
   const approveResults = await Promise.allSettled(
     stalledMilestones.map(async (milestone) => {
-      const { contract } = milestone;
       try {
-        const rawFulfillment = milestone.escrowFulfillment ?? contract.escrowFulfillment;
-        if (!rawFulfillment) {
-          throw new Error(`No fulfillment key for milestone ${milestone.id}`);
-        }
-        const fulfillment = decryptFulfillment(rawFulfillment);
-
-        const milestoneTitle = milestone.title;
-        const amountUSD = milestone.amountUSD.toString();
-
-        // Send fulfillment key to startup before attempting release
-        if (contract.startup?.email) {
-          sendFulfillmentKeyEmail({
-            to: contract.startup.email,
-            contractId: contract.id,
-            milestoneTitle,
-            fulfillment,
-            contractIdHash: contractIdToBytes32(contract.id),
-            milestoneOrder: milestone.order,
-          }).catch((err) => console.error("[email] sendFulfillmentKeyEmail failed:", err));
-        }
-
-        const txHash = await releaseMilestone(contract.id, milestone.order, fulfillment);
-
-        const completedMilestone = await prisma.milestone.update({
-          where: { id: milestone.id },
-          data: { status: "COMPLETED", evmTxHash: txHash },
-          include: { contract: { include: { milestones: { orderBy: { order: "asc" } } } } },
-        });
-
-        const milestones = completedMilestone.contract.milestones;
-        const remaining = milestones.find(
-          (m) => m.id !== milestone.id && !["COMPLETED", "EXPIRED"].includes(m.status)
-        );
-        const nextStatus = !remaining ? "COMPLETED" : remaining.status === "FUNDED" ? "FUNDED" : "AWAITING_ESCROW";
-        await prisma.contract.update({ where: { id: contract.id }, data: { status: nextStatus as never } });
-
-        await writeAuditLog({
-          contractId: contract.id,
-          milestoneId: milestone.id,
-          event: "MANUAL_REVIEW_APPROVED",
-          actor: "SYSTEM",
-          metadata: { auto: true, reason: "No investor action within 14 days" },
-        });
-
-        await writeAuditLog({
-          contractId: contract.id,
-          milestoneId: milestone.id,
-          event: "FUNDS_RELEASED",
-          metadata: { txHash, amountUSD, auto: true },
-        });
-
-        if (contract.startup?.notifyVerified) {
-          sendVerifiedEmail({ to: contract.startup.email, contractId: contract.id, milestoneTitle, amountUSD, txHash })
-            .catch((err) => console.error("[email] sendVerifiedEmail failed:", err));
-        }
-        if (contract.investor.notifyMilestoneCompleted) {
-          sendMilestoneCompletedInvestorEmail({ to: contract.investor.email, contractId: contract.id, milestoneTitle, amountUSD })
-            .catch((err) => console.error("[email] sendMilestoneCompletedInvestorEmail failed:", err));
-        }
-
-        return { id: milestone.id, action: "auto-approved", txHash };
+        return await autoReleaseMilestone(milestone, "No investor action within 14 days");
       } catch (err) {
         console.error(`[cron/auto-approve] Failed for milestone ${milestone.id}:`, err);
         throw err;
@@ -203,6 +238,8 @@ export async function GET(request: NextRequest) {
   const cancelFailed = cancelResults.filter((r) => r.status === "rejected").length;
   const approveSucceeded = approveResults.filter((r) => r.status === "fulfilled").length;
   const approveFailed = approveResults.filter((r) => r.status === "rejected").length;
+  const agentApproveSucceeded = agentApproveResults.filter((r) => r.status === "fulfilled").length;
+  const agentApproveFailed = agentApproveResults.filter((r) => r.status === "rejected").length;
 
   // ── 3. Delete stale DRAFT / DECLINED contracts (>30 days, no escrow funds) ─
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -272,16 +309,17 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  if (cancelFailed > 0 || approveFailed > 0 || renegotiationFailed > 0) {
+  if (cancelFailed > 0 || approveFailed > 0 || agentApproveFailed > 0 || renegotiationFailed > 0) {
     console.error(
       `[cron/cancel-expired] FAILURES — renegotiated: ${renegotiationSucceeded} ok, ${renegotiationFailed} failed | ` +
       `cancelled: ${cancelSucceeded} ok, ${cancelFailed} failed | ` +
-      `auto-approved: ${approveSucceeded} ok, ${approveFailed} failed`
+      `auto-approved: ${approveSucceeded} ok, ${approveFailed} failed | ` +
+      `agent-auto-approved: ${agentApproveSucceeded} ok, ${agentApproveFailed} failed`
     );
   } else {
     console.log(
       `[cron/cancel-expired] OK — renegotiated: ${renegotiationSucceeded} | cancelled: ${cancelSucceeded} | ` +
-      `auto-approved: ${approveSucceeded} | drafts deleted: ${deletedDrafts} | ` +
+      `auto-approved: ${approveSucceeded} | agent-auto-approved: ${agentApproveSucceeded} | drafts deleted: ${deletedDrafts} | ` +
       `awaiting-escrow declined: ${declinedAwaitingEscrow} | stuck proofs retried: ${retried} | ` +
       `callback logs pruned: ${deletedCallbackLogs}`
     );
@@ -295,6 +333,8 @@ export async function GET(request: NextRequest) {
     cancelFailed,
     autoApproved: approveSucceeded,
     approveFailed,
+    agentAutoApproved: agentApproveSucceeded,
+    agentApproveFailed,
     deletedDrafts,
     declinedAwaitingEscrow,
     retriedVerifications: retried,

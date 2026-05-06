@@ -192,6 +192,11 @@ model Contract {
   isDemo              Boolean        @default(false)
   /// Contract created by an agent via API key (not via browser session)
   isAgentContract     Boolean        @default(false)
+  /// Agent review mode — only applies when isAgentContract=true.
+  /// "AUTO": 60-85% confidence → REJECTED (no manual review, fully autonomous)
+  /// "MANUAL": funder agent reviews via API at /api/contracts/review
+  /// "MANUAL_AUTO": funder agent can review, but auto-approves after 48h if no action
+  agentReviewMode     String         @default("AUTO")
   deletedAt           DateTime?
   proofs              Proof[]
   milestones          Milestone[]

@@ -115,6 +115,9 @@ export const createContractSchema = z
     mode: z.enum(["ESCROW", "ATTESTATION"]).optional().default("ESCROW"),
     auditorEmail: z.string().email("Invalid auditor email").max(254).optional(),
 
+    // Agent review mode — only meaningful when called via API key (isAgentContract=true)
+    agentReviewMode: z.enum(["AUTO", "MANUAL", "MANUAL_AUTO"]).optional().default("AUTO"),
+
     // Feature 10: Confidential Attestation
     isConfidential: z.boolean().optional().default(false),
     confidentialPassphrase: z.string().min(8, "Passphrase must be at least 8 characters").max(200).optional(),

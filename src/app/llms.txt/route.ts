@@ -60,6 +60,22 @@ npx cascrow-mcp
 
 Package: https://www.npmjs.com/package/cascrow-mcp (v1.1.5)
 
+## Agent Review Modes (set when creating a contract)
+
+When creating a contract via API, pass agentReviewMode to control what happens if the AI verification quorum scores 60–85% confidence (borderline case):
+
+| Mode | Behavior |
+|------|----------|
+| AUTO | Borderline proof → REJECTED immediately. Fully autonomous, no review step. (Default) |
+| MANUAL | Borderline proof → PENDING_REVIEW. Funder agent must call POST /api/contracts/review to APPROVE or REJECT. No timeout. |
+| MANUAL_AUTO | Borderline proof → PENDING_REVIEW. Funder agent can review via API, but if no action is taken within 48 hours, the proof is auto-approved and funds are released. |
+
+On APPROVE via API (MANUAL or MANUAL_AUTO), funds are released on-chain immediately — no additional step needed.
+On REJECT via API, the Builder's deadline is extended by the review duration so they have time to resubmit.
+
+Key endpoint: POST /api/contracts/review — body: { contractId, decision: "APPROVE" | "REJECT" }
+Webhook event fired when review is needed: manual_review.required
+
 ### Available MCP tools
 
 - **cascrow_create_contract** — create a milestone-based escrow or verification contract

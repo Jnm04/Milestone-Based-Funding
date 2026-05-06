@@ -160,6 +160,12 @@ const spec = {
                       },
                     },
                   },
+                  agentReviewMode: {
+                    type: "string",
+                    enum: ["AUTO", "MANUAL", "MANUAL_AUTO"],
+                    default: "AUTO",
+                    description: "Controls what happens when AI quorum scores 60-85% confidence (borderline). AUTO: rejected immediately (fully autonomous). MANUAL: pauses for funder agent review via POST /api/contracts/review. MANUAL_AUTO: pauses for review but auto-approves after 48h if no action.",
+                  },
                 },
               },
             },
@@ -255,6 +261,46 @@ const spec = {
               },
             },
           },
+        },
+      },
+    },
+    "/api/contracts/review": {
+      post: {
+        summary: "Approve or reject a borderline proof (MANUAL / MANUAL_AUTO mode)",
+        description:
+          "Called by the Funder agent when a contract is in PENDING_REVIEW status. Only available for contracts where agentReviewMode is MANUAL or MANUAL_AUTO. APPROVE releases funds on-chain immediately. REJECT extends the Builder's deadline by the review duration so they can resubmit. Fires manual_review.required webhook when review is needed.",
+        tags: ["Agent-to-Agent"],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["contractId", "decision"],
+                properties: {
+                  contractId: { type: "string" },
+                  decision: { type: "string", enum: ["APPROVE", "REJECT"] },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Review processed",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    status: { type: "string", enum: ["COMPLETED", "REJECTED", "VERIFIED"] },
+                    txHash: { type: "string", nullable: true, description: "On-chain tx hash if funds were released" },
+                  },
+                },
+              },
+            },
+          },
+          "409": { description: "Contract not in PENDING_REVIEW status, or agentReviewMode is AUTO" },
         },
       },
     },
