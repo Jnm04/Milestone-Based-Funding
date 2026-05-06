@@ -801,7 +801,7 @@ function Footer() {
               ].map(l => (
                 <li key={l.href}><Link href={l.href} className="transition-colors hover:text-foreground" style={{ color: "hsl(30 10% 62%)" }}>{l.label}</Link></li>
               ))}
-              <li><a href="https://github.com/Jnm04/Milestone-Based-Funding" className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground" style={{ color: "hsl(30 10% 62%)" }}><Github className="h-3.5 w-3.5" /> GitHub</a></li>
+              <li><a href="https://github.com/Jnm04" className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground" style={{ color: "hsl(30 10% 62%)" }}><Github className="h-3.5 w-3.5" /> GitHub</a></li>
             </ul>
           </div>
         </div>
