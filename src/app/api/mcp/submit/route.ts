@@ -24,6 +24,7 @@ import { releaseMilestone, contractIdToBytes32 } from "@/services/evm/escrow.ser
 import { decryptFulfillment } from "@/lib/crypto";
 import { mintCompletionNFT } from "@/services/xrpl/nft.service";
 import { fireWebhook } from "@/services/webhook/webhook.service";
+import { fireAgentCallback } from "@/services/agent/callback.service";
 import { sendVerifiedEmail, sendFulfillmentKeyEmail, sendMilestoneCompletedInvestorEmail } from "@/lib/email";
 import crypto from "crypto";
 
@@ -382,6 +383,16 @@ export async function POST(request: NextRequest) {
     // pending_review
     await prisma.milestone.update({ where: { id: milestone.id }, data: { status: "PENDING_REVIEW" as never } });
     await prisma.contract.update({ where: { id: contract.id }, data: { status: "PENDING_REVIEW" as never } });
+  }
+
+  // Fire agent callbacks — matches verify/route.ts behaviour for consistency
+  if (contract.startupId) {
+    fireAgentCallback(contract.startupId, {
+      event: verdict === "approved" ? "milestone.verified" : "milestone.rejected",
+      contractId: contract.id,
+      milestoneId: milestone.id,
+      data: { verdict, confidence: verifyResult.confidence, via: "mcp" },
+    }).catch(() => {});
   }
 
   return NextResponse.json({

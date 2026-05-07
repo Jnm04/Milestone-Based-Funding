@@ -1,18 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import { resolveApiKey } from "@/lib/api-key-auth";
 import { prisma } from "@/lib/prisma";
 import { getMilestoneEscrowState } from "@/services/evm/escrow.service";
 
 /**
  * POST /api/escrow/sync
- * Called when the frontend detects "Already funded" on-chain but DB is still AWAITING_ESCROW.
+ * Called when the frontend (or an agent that funded via escrow-prepare + local signing)
+ * detects "Already funded" on-chain but the DB is still AWAITING_ESCROW.
  * Reads on-chain state and updates the DB to match.
+ *
+ * Auth: session cookie (browser) or API key (agents).
  */
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    const apiKeyCtx = !session ? await resolveApiKey(request.headers.get("authorization")) : null;
+    const actorId = session?.user?.id ?? apiKeyCtx?.userId;
+    if (!actorId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -29,7 +35,7 @@ export async function POST(request: NextRequest) {
     if (!contract) {
       return NextResponse.json({ error: "Contract not found" }, { status: 404 });
     }
-    if (contract.investorId !== session.user.id) {
+    if (contract.investorId !== actorId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

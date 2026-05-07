@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import { resolveApiKey } from "@/lib/api-key-auth";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/services/evm/audit.service";
 
@@ -18,7 +19,9 @@ import { writeAuditLog } from "@/services/evm/audit.service";
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    const apiKeyCtx = !session ? await resolveApiKey(request.headers.get("authorization")) : null;
+    const actorId = session?.user?.id ?? apiKeyCtx?.userId;
+    if (!actorId) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
@@ -48,7 +51,7 @@ export async function POST(request: NextRequest) {
       if (!milestone || milestone.contractId !== contractId) {
         return NextResponse.json({ error: "Milestone not found" }, { status: 404 });
       }
-      if (milestone.contract.startupId !== session.user.id) {
+      if (milestone.contract.startupId !== actorId) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
       if (milestone.status !== "REJECTED") {
@@ -81,7 +84,7 @@ export async function POST(request: NextRequest) {
           contractId,
           milestoneId,
           event: "MANUAL_REVIEW_REJECTED",
-          actor: session.user.id,
+          actor: actorId,
           metadata: { reason: `${rejectedProofCount} AI rejections — escalated to manual review` },
         });
         return NextResponse.json({ ok: true, status: "PENDING_REVIEW", escalated: true });
@@ -99,7 +102,7 @@ export async function POST(request: NextRequest) {
         contractId,
         milestoneId,
         event: "PROOF_RESUBMITTED",
-        actor: session.user.id,
+        actor: actorId,
       });
 
       return NextResponse.json({ ok: true, status: "FUNDED" });
@@ -114,7 +117,7 @@ export async function POST(request: NextRequest) {
     if (!contract) {
       return NextResponse.json({ error: "Contract not found" }, { status: 404 });
     }
-    if (contract.startupId !== session.user.id) {
+    if (contract.startupId !== actorId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     if (contract.status !== "REJECTED") {
@@ -159,7 +162,7 @@ export async function POST(request: NextRequest) {
         contractId,
         milestoneId: rejectedMilestone?.id,
         event: "MANUAL_REVIEW_REJECTED",
-        actor: session.user.id,
+        actor: actorId,
         metadata: { reason: `${rejectedProofCount} AI rejections — escalated to manual review` },
       });
       return NextResponse.json({ ok: true, status: "PENDING_REVIEW", escalated: true });
@@ -182,7 +185,7 @@ export async function POST(request: NextRequest) {
       contractId,
       milestoneId: rejectedMilestone?.id,
       event: "PROOF_RESUBMITTED",
-      actor: session.user.id,
+      actor: actorId,
     });
 
     return NextResponse.json({ ok: true, status: "FUNDED" });

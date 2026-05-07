@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { resolveApiKey } from "@/lib/api-key-auth";
 import Anthropic from "@anthropic-ai/sdk";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
@@ -24,7 +25,9 @@ export async function POST(
   { params }: { params: Promise<{ proofId: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session) {
+  const apiKeyCtx = !session ? await resolveApiKey(req.headers.get("authorization")) : null;
+  const actorId = session?.user?.id ?? apiKeyCtx?.userId;
+  if (!actorId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -46,7 +49,7 @@ export async function POST(
   }
 
   // ── Authorization: startup on this contract only ──────────────────────────
-  if (proof.contract.startupId !== session.user.id) {
+  if (proof.contract.startupId !== actorId) {
     return NextResponse.json(
       { error: "Forbidden — only the receiver can file an appeal" },
       { status: 403 }
@@ -72,7 +75,7 @@ export async function POST(
 
   // ── Rate limit: 5 appeals per hour per user ───────────────────────────────
   const ip = getClientIp(req);
-  const allowed = await checkRateLimit(`appeal:${session.user.id ?? ip}`, 5, 60 * 60 * 1000);
+  const allowed = await checkRateLimit(`appeal:${actorId ?? ip}`, 5, 60 * 60 * 1000);
   if (!allowed) {
     return NextResponse.json(
       { error: "Too many appeals — please wait before trying again." },
