@@ -102,11 +102,19 @@ export async function POST(request: NextRequest) {
           where: { id: ownedMilestone.id },
           data: { status: "EXPIRED" },
         });
+        // Only mark the whole contract EXPIRED once every milestone is terminal.
+        // Cancelling one milestone in a multi-milestone contract must not prematurely
+        // close the remaining funded milestones.
+        const TERMINAL = new Set(["EXPIRED", "COMPLETED"]);
+        const allTerminal = contract.milestones.every(
+          (m) => m.id === milestoneId || TERMINAL.has(m.status)
+        );
+        if (allTerminal) {
+          await prisma.contract.update({ where: { id: contractId }, data: { status: "EXPIRED" } });
+        }
+      } else {
+        await prisma.contract.update({ where: { id: contractId }, data: { status: "EXPIRED" } });
       }
-      await prisma.contract.update({
-        where: { id: contractId },
-        data: { status: "EXPIRED" },
-      });
       return NextResponse.json({ ok: true, action: "already_closed" });
     }
 
@@ -123,12 +131,16 @@ export async function POST(request: NextRequest) {
         where: { id: ownedMilestone.id },
         data: { status: "EXPIRED", evmTxHash: txHash },
       });
+      const TERMINAL = new Set(["EXPIRED", "COMPLETED"]);
+      const allTerminal = contract.milestones.every(
+        (m) => m.id === milestoneId || TERMINAL.has(m.status)
+      );
+      if (allTerminal) {
+        await prisma.contract.update({ where: { id: contractId }, data: { status: "EXPIRED" } });
+      }
+    } else {
+      await prisma.contract.update({ where: { id: contractId }, data: { status: "EXPIRED" } });
     }
-
-    await prisma.contract.update({
-      where: { id: contractId },
-      data: { status: "EXPIRED" },
-    });
 
     await writeAuditLog({
       contractId,

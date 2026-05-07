@@ -58,7 +58,7 @@ function LoginForm() {
           const sessionRes = await fetch("/api/auth/session");
           const session = await sessionRes.json();
           const role = session?.user?.role;
-          if (callbackUrl && callbackUrl.startsWith("/")) {
+          if (callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")) {
             router.push(callbackUrl);
           } else if (session?.user?.isEnterprise) {
             router.push("/dashboard/investor");

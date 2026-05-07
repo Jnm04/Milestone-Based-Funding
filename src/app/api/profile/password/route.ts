@@ -37,7 +37,10 @@ export async function PUT(request: NextRequest) {
   if (!valid) return NextResponse.json({ error: "Current password is incorrect" }, { status: 400 });
 
   const hash = await bcrypt.hash(newPassword, 12);
-  await prisma.user.update({ where: { id: session.user.id }, data: { passwordHash: hash } });
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { passwordHash: hash, sessionVersion: { increment: 1 } },
+  });
 
   return NextResponse.json({ success: true });
 }

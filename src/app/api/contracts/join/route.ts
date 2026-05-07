@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { getPostHogClient } from "@/lib/posthog-server";
 import { resolveApiKey } from "@/lib/api-key-auth";
@@ -71,13 +72,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const updated = await prisma.contract.update({
-      where: { id: contract.id },
-      data: {
-        startupId: userId,
-        status: "AWAITING_ESCROW",
-      },
-    });
+    let updated;
+    try {
+      // The `status: "DRAFT"` guard in the WHERE clause makes this atomic: if another
+      // request already joined between our read and this write, Prisma throws P2025
+      // and we return 409 instead of silently overwriting the first joiner.
+      updated = await prisma.contract.update({
+        where: { id: contract.id, status: "DRAFT" },
+        data: {
+          startupId: userId,
+          status: "AWAITING_ESCROW",
+        },
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+        return NextResponse.json({ error: "Contract is no longer accepting participants" }, { status: 409 });
+      }
+      throw err;
+    }
 
     await prisma.milestone.updateMany({
       where: { contractId: contract.id },

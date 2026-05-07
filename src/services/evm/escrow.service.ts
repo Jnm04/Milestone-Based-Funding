@@ -120,6 +120,9 @@ export async function verifyFundTx(txHash: string, contractId: string): Promise<
   const iface = new ethers.Interface(ESCROW_ABI);
   for (const log of receipt.logs) {
     try {
+      // Reject logs that don't originate from the known escrow contract address.
+      // Without this, a fake contract could emit an identical MilestoneFunded event.
+      if (log.address.toLowerCase() !== ESCROW_CONTRACT.toLowerCase()) continue;
       const parsed = iface.parseLog({ topics: [...log.topics], data: log.data });
       if (parsed?.name === "MilestoneFunded") {
         if (parsed.args.contractId !== expectedContractIdHash) return { ok: false };

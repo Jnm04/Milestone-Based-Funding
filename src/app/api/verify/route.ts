@@ -261,7 +261,12 @@ export async function POST(request: NextRequest) {
         };
 
         const runVerify = async () => {
-          if (!hasApiKey) return mockVerifyMilestone({ milestone: milestoneTitle, extractedText });
+          if (!hasApiKey) {
+            if (process.env.NODE_ENV === "production") {
+              throw new Error("AI verification unavailable: ANTHROPIC_API_KEY is not configured");
+            }
+            return mockVerifyMilestone({ milestone: milestoneTitle, extractedText });
+          }
           if (category === "image" && imageBuffer) {
             try {
               return await verifyMilestoneImage({ milestone: milestoneTitle, imageBuffer, mimeType, enrichmentContext: enrichmentContext + fraudContext, onVote });

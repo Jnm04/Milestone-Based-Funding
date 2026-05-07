@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { verifyFundTx } from "@/services/evm/escrow.service";
 import { sendFundedEmail } from "@/lib/email";
 import { writeAuditLog } from "@/services/evm/audit.service";
@@ -21,6 +22,14 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    // 10 confirm attempts per investor per hour — a real MetaMask flow has at most 1-2
+    if (!(await checkRateLimit(`escrow-confirm:${session.user.id}`, 10, 60 * 60 * 1000))) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429, headers: { "Retry-After": "3600" } }
+      );
     }
 
     const { contractId, txHash, milestoneId } = await request.json();

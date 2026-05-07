@@ -475,18 +475,25 @@ export default function InvestorDashboard() {
   const [showDeployAgent, setShowDeployAgent] = useState(false);
   const PAGE_SIZE = 20;
 
+  // Scope the hidden-contracts store to the logged-in user so two accounts on
+  // the same device don't bleed their hide-lists into each other.
+  const userId = session?.user?.id ?? null;
+  const lsKey = userId ? `${LS_KEY}_${userId}` : LS_KEY;
+
   useEffect(() => {
+    if (!userId) return; // wait until session is loaded
     try {
-      const stored = localStorage.getItem(LS_KEY);
+      const stored = localStorage.getItem(lsKey);
       if (stored) setHiddenIds(new Set(JSON.parse(stored)));
     } catch {}
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   function hideContract(id: string) {
     setHiddenIds((prev) => {
       const next = new Set(prev);
       next.add(id);
-      localStorage.setItem(LS_KEY, JSON.stringify([...next]));
+      localStorage.setItem(lsKey, JSON.stringify([...next]));
       return next;
     });
   }
@@ -495,7 +502,7 @@ export default function InvestorDashboard() {
     setHiddenIds((prev) => {
       const next = new Set(prev);
       next.delete(id);
-      localStorage.setItem(LS_KEY, JSON.stringify([...next]));
+      localStorage.setItem(lsKey, JSON.stringify([...next]));
       return next;
     });
   }

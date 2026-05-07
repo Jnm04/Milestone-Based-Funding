@@ -92,6 +92,9 @@ function StartupDashboardContent() {
   const [totalContracts, setTotalContracts] = useState(0);
   const PAGE_SIZE = 20;
 
+  const userId = session?.user?.id ?? null;
+  const lsKey = userId ? `${LS_KEY}_${userId}` : LS_KEY;
+
   // Feature Z: Counter-proposal state
   const [showCounterForm, setShowCounterForm] = useState(false);
   const [counterRationale, setCounterRationale] = useState("");
@@ -102,17 +105,19 @@ function StartupDashboardContent() {
   const counterFormRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!userId) return;
     try {
-      const stored = localStorage.getItem(LS_KEY);
+      const stored = localStorage.getItem(lsKey);
       if (stored) setHiddenIds(new Set(JSON.parse(stored)));
     } catch {}
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   function hideContract(id: string) {
     setHiddenIds((prev) => {
       const next = new Set(prev);
       next.add(id);
-      localStorage.setItem(LS_KEY, JSON.stringify([...next]));
+      localStorage.setItem(lsKey, JSON.stringify([...next]));
       return next;
     });
   }
@@ -121,7 +126,7 @@ function StartupDashboardContent() {
     setHiddenIds((prev) => {
       const next = new Set(prev);
       next.delete(id);
-      localStorage.setItem(LS_KEY, JSON.stringify([...next]));
+      localStorage.setItem(lsKey, JSON.stringify([...next]));
       return next;
     });
   }

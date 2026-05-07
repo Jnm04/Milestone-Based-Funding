@@ -10,7 +10,7 @@ const DEMO_STARTUP_EMAIL   = "demo-startup@cascrow.demo";
 // Deterministic fake EVM address — used only as a viewer-identity key, no real funds
 const DEMO_INVESTOR_WALLET = "0xDem0Investor000000000000000000000000000";
 const DEMO_STARTUP_WALLET  = "0xDem0Startup0000000000000000000000000000";
-const DEMO_PASSWORD        = "DemoCascrow2026!";
+const DEMO_PASSWORD        = process.env.DEMO_PASSWORD ?? "DemoCascrow2026!";
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);

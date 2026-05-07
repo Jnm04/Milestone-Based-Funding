@@ -392,7 +392,7 @@ export async function GET(request: NextRequest) {
     ]);
     const rawStatus = searchParams.get("status") ?? undefined;
     const status = rawStatus && VALID_STATUSES.has(rawStatus) ? rawStatus : undefined;
-    const search = searchParams.get("search")?.trim() || undefined;
+    const search = searchParams.get("search")?.trim().slice(0, 200) || undefined;
 
     const where = {
       deletedAt: null,

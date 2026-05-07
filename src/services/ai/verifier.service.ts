@@ -350,23 +350,15 @@ async function callCerebrasText(userMessage: string): Promise<AIVerificationResu
   return parseAIResponse(text, "Cerebras/Qwen3");
 }
 
-// Cerebras doesn't support vision — fall back to text-only with a note
+// Cerebras doesn't support vision. Casting a vote without seeing the image would
+// introduce noise into the 3/5 consensus — abstain instead so the remaining four
+// vision-capable models decide.
 async function callCerebrasImage(
   _imageBase64: string,
   _mimeType: string,
-  userMessage: string
+  _userMessage: string
 ): Promise<AIVerificationResult> {
-  const response = await getCerebras().chat.completions.create({
-    model: CEREBRAS_MODEL,
-    max_tokens: 512,
-    messages: [
-      { role: "system", content: VERIFICATION_SYSTEM_PROMPT },
-      { role: "user", content: userMessage + "\n\n[Note: evaluate based on the milestone description only — image not available to this model]" },
-    ],
-  });
-  logUsage("Cerebras/Qwen3", response.usage?.prompt_tokens ?? 0, response.usage?.completion_tokens ?? 0);
-  const text = response.choices[0]?.message?.content ?? "";
-  return parseAIResponse(text, "Cerebras/Qwen3");
+  throw new Error("Cerebras does not support vision — abstaining from image vote");
 }
 
 // ─── Safe wrappers (log error, return null on failure) ───────────────────────
