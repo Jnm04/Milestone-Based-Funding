@@ -33,6 +33,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL("/enterprise/dashboard?invite=expired", req.url));
   }
 
+  // Ensure the logged-in user's email matches the invited email
+  if (invite.email.toLowerCase() !== session.user.email?.toLowerCase()) {
+    return NextResponse.redirect(new URL("/enterprise/dashboard?invite=wrong_account", req.url));
+  }
+
   // Accept invite: link the current user, clear token
   await prisma.orgMember.update({
     where: { id: invite.id },

@@ -28,15 +28,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    // Enforce cooldown: check if existing token was issued less than 60s ago
+    // Enforce cooldown: check if existing token was issued less than 60s ago.
+    // Return ok:true (not 429) to avoid revealing whether this email has a pending account.
     if (user.emailVerificationTokenExpiry) {
       const tokenAge = Date.now() - (user.emailVerificationTokenExpiry.getTime() - 24 * 60 * 60 * 1000);
       if (tokenAge < RESEND_COOLDOWN_MS) {
-        const secondsLeft = Math.ceil((RESEND_COOLDOWN_MS - tokenAge) / 1000);
-        return NextResponse.json(
-          { error: `Please wait ${secondsLeft} seconds before requesting another email.` },
-          { status: 429 }
-        );
+        return NextResponse.json({ ok: true });
       }
     }
 

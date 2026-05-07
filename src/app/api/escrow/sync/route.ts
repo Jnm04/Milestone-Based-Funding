@@ -45,10 +45,16 @@ export async function POST(request: NextRequest) {
 
     // Update DB to reflect on-chain reality
     if (milestoneId) {
+      // Validate milestoneId belongs to this contract before writing
+      const ownedMilestone = contract.milestones.find((m) => m.id === milestoneId);
+      if (!ownedMilestone) {
+        return NextResponse.json({ error: "Milestone not found" }, { status: 404 });
+      }
+
       // Wrap in transaction so concurrent syncs can't produce inconsistent status
       await prisma.$transaction(async (tx) => {
         await tx.milestone.update({
-          where: { id: milestoneId },
+          where: { id: ownedMilestone.id, contractId },
           data: { status: "FUNDED" },
         });
 

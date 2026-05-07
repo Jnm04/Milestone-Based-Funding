@@ -1,7 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function GET(req: NextRequest) {
+  const ip = getClientIp(req);
+  if (!(await checkRateLimit(`email-change-confirm:${ip}`, 10, 60 * 60 * 1000))) {
+    return NextResponse.redirect(new URL("/profile?emailChangeError=too_many_requests", req.url));
+  }
+
   const token = req.nextUrl.searchParams.get("token");
   if (!token) return NextResponse.redirect(new URL("/profile?emailChangeError=invalid", req.url));
 

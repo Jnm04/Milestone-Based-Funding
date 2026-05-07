@@ -338,7 +338,7 @@ export async function sendVerifiedEmail({
     html: `
       <p>Hi,</p>
       <p>${aiBody ? esc(aiBody) : `Congratulations! Your proof for <strong>${esc(milestoneTitle)}</strong> has been approved. <strong>$${Number(amountUSD).toLocaleString()} RLUSD</strong> has been sent to your wallet.`}</p>
-      ${txHash ? `<p>Transaction: <code>${txHash}</code></p>` : ""}
+      ${txHash ? `<p>Transaction: <code>${esc(txHash)}</code></p>` : ""}
       <p><a href="${contractLink(contractId)}">View contract →</a></p>
     `,
   });

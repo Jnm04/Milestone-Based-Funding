@@ -12,7 +12,11 @@ const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
  */
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get("token");
-  const callbackUrl = request.nextUrl.searchParams.get("callbackUrl") ?? "/enterprise/dashboard";
+  const rawCallback = request.nextUrl.searchParams.get("callbackUrl") ?? "/enterprise/dashboard";
+  // Only allow relative paths — reject any absolute URL or protocol-relative URL
+  const callbackUrl = rawCallback.startsWith("/") && !rawCallback.startsWith("//")
+    ? rawCallback
+    : "/enterprise/dashboard";
 
   if (!token || !/^[0-9a-f]{64}$/.test(token)) {
     return NextResponse.redirect(`${BASE_URL}/login?error=sso_invalid`);

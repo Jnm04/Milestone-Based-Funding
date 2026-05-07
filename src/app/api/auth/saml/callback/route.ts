@@ -4,7 +4,7 @@ import { decryptApiKey } from "@/lib/encrypt";
 import crypto from "crypto";
 
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
-const SECRET = process.env.NEXTAUTH_SECRET ?? "dev-secret";
+const SECRET = process.env.NEXTAUTH_SECRET!;
 const SSO_TOKEN_TTL_MS = 3 * 60 * 1000; // 3 minutes
 
 // ── State verification ────────────────────────────────────────────────────────
@@ -20,12 +20,12 @@ function verifyState(raw: string): string | null {
     const expectedSig = crypto
       .createHmac("sha256", SECRET)
       .update(payload)
-      .digest("hex")
-      .slice(0, 16);
+      .digest("hex");
 
+    if (sig.length !== expectedSig.length) return null;
     const match = crypto.timingSafeEqual(
-      Buffer.from(sig.padEnd(32, "0")),
-      Buffer.from(expectedSig.padEnd(32, "0"))
+      Buffer.from(sig),
+      Buffer.from(expectedSig)
     );
     if (!match) return null;
 

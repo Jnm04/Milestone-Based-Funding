@@ -40,12 +40,6 @@ export function isSafePublicUrl(raw: string): boolean {
   return true;
 }
 
-const TEAMS_WEBHOOK_DOMAINS = [
-  "outlook.office.com",
-  "outlook.office365.com",
-  "prod-",
-];
-
 export function isValidTeamsWebhookUrl(raw: string): boolean {
   if (!isSafePublicUrl(raw)) return false;
   let parsed: URL;
@@ -55,5 +49,8 @@ export function isValidTeamsWebhookUrl(raw: string): boolean {
     return false;
   }
   const host = parsed.hostname.toLowerCase();
-  return TEAMS_WEBHOOK_DOMAINS.some((d) => host === d || host.endsWith("." + d) || host.startsWith("prod-"));
+  return host === "outlook.office.com"
+    || host.endsWith(".outlook.office.com")
+    || host === "outlook.office365.com"
+    || host.endsWith(".outlook.office365.com");
 }

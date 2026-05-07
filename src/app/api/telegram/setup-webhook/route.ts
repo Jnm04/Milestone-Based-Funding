@@ -1,16 +1,16 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { NextRequest, NextResponse } from "next/server";
+import { isInternalAuthorized } from "@/lib/internal-auth";
 
 /**
  * POST /api/telegram/setup-webhook
  * One-time call to register the bot's webhook URL with Telegram.
  * Must be called after deploying and setting TELEGRAM_BOT_TOKEN + TELEGRAM_WEBHOOK_SECRET.
- * Only accessible to authenticated users (admin action — call once from the profile page).
+ * Requires INTERNAL_API_SECRET — admin-only operation.
  */
-export async function POST() {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function POST(req: NextRequest) {
+  if (!isInternalAuthorized(req)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET;

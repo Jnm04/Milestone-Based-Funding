@@ -45,29 +45,21 @@ async function collectGithubData(params: {
 }): Promise<ProofSource | null> {
   const { repoUrl, tokenEnc, contractCreatedAt } = params;
 
-  // Temporarily inject decrypted token into env for the GitHub service
-  const originalToken = process.env.GITHUB_TOKEN;
+  let token: string | undefined;
   if (tokenEnc) {
     try {
-      process.env.GITHUB_TOKEN = decryptApiKey(tokenEnc);
+      token = decryptApiKey(tokenEnc);
     } catch {
       console.warn("[proof-collector] Failed to decrypt GitHub token, using public access");
     }
   }
 
-  try {
-    const doc = await fetchGitHubProof(repoUrl, contractCreatedAt);
-    if (!doc) return null;
-    return {
-      type: "github",
-      data: { repoUrl: doc.repoUrl, text: doc.text },
-    };
-  } finally {
-    // Restore original token
-    if (tokenEnc) {
-      process.env.GITHUB_TOKEN = originalToken;
-    }
-  }
+  const doc = await fetchGitHubProof(repoUrl, contractCreatedAt, token);
+  if (!doc) return null;
+  return {
+    type: "github",
+    data: { repoUrl: doc.repoUrl, text: doc.text },
+  };
 }
 
 async function collectStripeData(params: {

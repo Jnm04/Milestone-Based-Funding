@@ -44,6 +44,8 @@ export async function POST(request: NextRequest) {
         // Reset lockout in case they were locked out
         loginAttempts: 0,
         lockoutUntil: null,
+        // Invalidate all existing sessions after password reset
+        sessionVersion: { increment: 1 },
       },
     });
 

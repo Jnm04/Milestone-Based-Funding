@@ -23,6 +23,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
+    // API-key path: also enforce INVESTOR role
+    if (apiKeyCtx) {
+      const apiUser = await prisma.user.findUnique({
+        where: { id: apiKeyCtx.userId },
+        select: { role: true },
+      });
+      if (apiUser?.role !== "INVESTOR") {
+        return NextResponse.json({ error: "Investor access required" }, { status: 403 });
+      }
+    }
+
     const actorId = session?.user?.id ?? apiKeyCtx!.userId;
     const isAgent = !!apiKeyCtx;
 

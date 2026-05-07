@@ -93,8 +93,13 @@ export async function POST(request: NextRequest) {
     if (!onChain.funded || onChain.completed || onChain.cancelled) {
       // Escrow already settled — just update DB
       if (milestoneId) {
+        // Re-validate ownership: milestoneId must belong to this contract
+        const ownedMilestone = contract.milestones.find((m) => m.id === milestoneId);
+        if (!ownedMilestone) {
+          return NextResponse.json({ error: "Milestone not found" }, { status: 404 });
+        }
         await prisma.milestone.update({
-          where: { id: milestoneId },
+          where: { id: ownedMilestone.id },
           data: { status: "EXPIRED" },
         });
       }
@@ -110,8 +115,12 @@ export async function POST(request: NextRequest) {
     console.log("[escrow/cancel] Cancelled on-chain:", txHash);
 
     if (milestoneId) {
+      const ownedMilestone = contract.milestones.find((m) => m.id === milestoneId);
+      if (!ownedMilestone) {
+        return NextResponse.json({ error: "Milestone not found" }, { status: 404 });
+      }
       await prisma.milestone.update({
-        where: { id: milestoneId },
+        where: { id: ownedMilestone.id },
         data: { status: "EXPIRED", evmTxHash: txHash },
       });
     }

@@ -15,7 +15,7 @@ export async function GET() {
         settlement_token: {
           symbol: "RLUSD",
           contract: process.env.NEXT_PUBLIC_RLUSD_CONTRACT_ADDRESS ?? null,
-          decimals: 18,
+          decimals: 6,
           issuer: "Ripple",
         },
       },

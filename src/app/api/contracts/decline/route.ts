@@ -17,7 +17,11 @@ export async function POST(req: NextRequest) {
   if (contract.investorId === session.user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  // If a startup has already joined, only they can decline (prevents other auth users from hijacking)
+  // Only STARTUPs can decline a contract
+  if (session.user.role !== "STARTUP") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  // If a startup has already joined, only they can decline
   if (contract.startupId && contract.startupId !== session.user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

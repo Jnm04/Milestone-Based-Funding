@@ -23,9 +23,9 @@ export async function POST(request: NextRequest) {
   if (!proof) return NextResponse.json({ error: "Proof not found" }, { status: 404 });
   if (proof.draftStatus !== "DRAFT") return NextResponse.json({ error: "Not a draft proof" }, { status: 409 });
 
-  const isStartup = proof.contract.startupId === session.user.id;
-  const isInvestor = proof.contract.investorId === session.user.id;
-  if (!isStartup && !isInvestor) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (proof.contract.startupId !== session.user.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   // Confirm draft
   await prisma.proof.update({

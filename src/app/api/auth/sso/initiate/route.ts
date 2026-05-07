@@ -5,7 +5,7 @@ import { decryptApiKey } from "@/lib/encrypt";
 import crypto from "crypto";
 
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
-const SECRET = process.env.NEXTAUTH_SECRET ?? "dev-secret";
+const SECRET = process.env.NEXTAUTH_SECRET!;
 const OIDC_PROVIDERS = new Set(["OKTA", "AZURE_AD", "GOOGLE_WORKSPACE"]);
 
 // ── PKCE helpers ──────────────────────────────────────────────────────────────
@@ -29,8 +29,7 @@ function signState(domain: string): string {
   const sig = crypto
     .createHmac("sha256", SECRET)
     .update(payload)
-    .digest("hex")
-    .slice(0, 16);
+    .digest("hex");
   return Buffer.from(`${payload}:${sig}`).toString("base64url");
 }
 

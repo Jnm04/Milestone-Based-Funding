@@ -21,7 +21,12 @@ export function encryptApiKey(plaintext: string): string {
 }
 
 export function decryptApiKey(stored: string): string {
-  if (!stored.startsWith(PREFIX)) return stored;
+  if (!stored.startsWith(PREFIX)) {
+    if (process.env.NODE_ENV === "production") {
+      console.warn("[encrypt] decryptApiKey received a non-encrypted value — ATTESTATION_KEY_SECRET may have been missing when this value was stored");
+    }
+    return stored;
+  }
   const key = getKey();
   const parts = stored.slice(PREFIX.length).split(":");
   if (parts.length !== 3) throw new Error("Invalid encrypted API key format");

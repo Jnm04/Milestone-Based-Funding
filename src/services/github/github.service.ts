@@ -26,19 +26,20 @@
 
 const FETCH_TIMEOUT_MS = 10_000;
 
-function githubHeaders(): Record<string, string> {
+function githubHeaders(token?: string): Record<string, string> {
   const h: Record<string, string> = {
     Accept: "application/vnd.github.v3+json",
     "User-Agent": "Cascrow-Verifier/1.0",
   };
-  if (process.env.GITHUB_TOKEN) {
-    h.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  const t = token ?? process.env.GITHUB_TOKEN;
+  if (t) {
+    h.Authorization = `Bearer ${t}`;
   }
   return h;
 }
 
-async function ghFetch(url: string, signal: AbortSignal): Promise<Response> {
-  return fetch(url, { headers: githubHeaders(), signal });
+async function ghFetch(url: string, signal: AbortSignal, token?: string): Promise<Response> {
+  return fetch(url, { headers: githubHeaders(token), signal });
 }
 
 export interface GitHubProofDocument {
@@ -74,19 +75,20 @@ export function parseGitHubUrl(url: string): { owner: string; repo: string } | n
  */
 export async function fetchGitHubProof(
   repoUrl: string,
-  contractCreatedAt?: Date
+  contractCreatedAt?: Date,
+  token?: string
 ): Promise<GitHubProofDocument | null> {
   const parsed = parseGitHubUrl(repoUrl);
   if (!parsed) return null;
   const { owner, repo } = parsed;
-  const apiBase = `https://api.github.com/repos/${owner}/${repo}`;
+  const apiBase = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
     // ── 1. Repo metadata ──────────────────────────────────────────────────────
-    const repoRes = await ghFetch(apiBase, controller.signal);
+    const repoRes = await ghFetch(apiBase, controller.signal, token);
     if (!repoRes.ok) {
       if (repoRes.status === 404) return null; // private or non-existent
       throw new Error(`GitHub API ${repoRes.status}`);
@@ -117,7 +119,7 @@ export async function fetchGitHubProof(
 
     const since = contractCreatedAt?.toISOString() ?? "";
     const commitsUrl = `${apiBase}/commits?per_page=100${since ? `&since=${since}` : ""}`;
-    const commitsRes = await ghFetch(commitsUrl, controller.signal);
+    const commitsRes = await ghFetch(commitsUrl, controller.signal, token);
     if (commitsRes.ok) {
       type CommitItem = {
         commit?: {
@@ -138,7 +140,7 @@ export async function fetchGitHubProof(
 
     // ── 3. README ─────────────────────────────────────────────────────────────
     let readmeText = "";
-    const readmeRes = await ghFetch(`${apiBase}/readme`, controller.signal);
+    const readmeRes = await ghFetch(`${apiBase}/readme`, controller.signal, token);
     if (readmeRes.ok) {
       type ReadmeData = { content?: string; encoding?: string };
       const readmeData = (await readmeRes.json()) as ReadmeData;
@@ -155,7 +157,8 @@ export async function fetchGitHubProof(
     const branch = repoData.default_branch ?? "main";
     const treeRes = await ghFetch(
       `${apiBase}/git/trees/${branch}?recursive=0`,
-      controller.signal
+      controller.signal,
+      token
     );
     if (treeRes.ok) {
       type TreeData = { tree?: { path?: string; type?: string }[] };
@@ -170,7 +173,7 @@ export async function fetchGitHubProof(
 
     // ── 5. Latest release ─────────────────────────────────────────────────────
     let latestRelease = "";
-    const releaseRes = await ghFetch(`${apiBase}/releases/latest`, controller.signal);
+    const releaseRes = await ghFetch(`${apiBase}/releases/latest`, controller.signal, token);
     if (releaseRes.ok) {
       type ReleaseData = { tag_name?: string; name?: string; published_at?: string; body?: string };
       const release = (await releaseRes.json()) as ReleaseData;
