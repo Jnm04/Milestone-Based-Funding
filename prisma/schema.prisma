@@ -49,6 +49,7 @@ model User {
   // Brute-force protection
   loginAttempts Int       @default(0)
   lockoutUntil  DateTime?
+  lastLoginIp   String?
 
   // Password reset
   passwordResetToken       String?   @unique

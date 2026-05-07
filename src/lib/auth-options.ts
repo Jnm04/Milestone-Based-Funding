@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 import { verify as verifyTotp } from "otplib";
 import type { NextAuthOptions } from "next-auth";
 import type { JWT } from "next-auth/jwt";
+import { sendNewLoginEmail } from "@/lib/email";
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
@@ -64,7 +65,7 @@ export const authOptions: NextAuthOptions = {
             isEnterprise: true, passwordHash: true, emailVerified: true,
             loginAttempts: true, lockoutUntil: true,
             totpEnabled: true, totpSecret: true, totpRecoveryCodes: true,
-            sessionVersion: true,
+            sessionVersion: true, lastLoginIp: true,
           },
         });
         if (!user) {
@@ -131,12 +132,21 @@ export const authOptions: NextAuthOptions = {
           });
         }
 
-        // Log login event (fire-and-forget)
+        // Log login event + IP-change notification (fire-and-forget)
         const ipRaw = req?.headers?.["x-forwarded-for"] ?? req?.headers?.["x-real-ip"];
         const ip = Array.isArray(ipRaw) ? ipRaw[0] : (typeof ipRaw === "string" ? ipRaw.split(",")[0].trim() : null);
         const uaRaw = req?.headers?.["user-agent"];
         const userAgent = Array.isArray(uaRaw) ? uaRaw[0] : (uaRaw ?? null);
         void prisma.loginEvent.create({ data: { userId: user.id, ip, userAgent } }).catch(() => {});
+
+        // Notify user if they're signing in from a new IP address
+        if (ip && user.lastLoginIp && user.lastLoginIp !== ip) {
+          void sendNewLoginEmail({ to: user.email, ip }).catch(() => {});
+        }
+        void prisma.user.update({
+          where: { id: user.id },
+          data: { lastLoginIp: ip ?? undefined },
+        }).catch(() => {});
 
         return {
           id: user.id,

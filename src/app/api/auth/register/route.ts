@@ -9,6 +9,7 @@ import { verifyTurnstile } from "@/lib/turnstile";
 import { getPostHogClient } from "@/lib/posthog-server";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import zxcvbn from "zxcvbn";
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,6 +36,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: message }, { status: 400 });
     }
     const { email, password, name, role, dateOfBirth } = parsed.data;
+
+    // Password strength — reject score 0 and 1 (too easy/guessable)
+    if (zxcvbn(password).score < 2) {
+      return NextResponse.json(
+        { error: "Password is too weak. Use a mix of letters, numbers, and symbols, or a longer passphrase." },
+        { status: 400 }
+      );
+    }
 
     // Domain-specific name validation (business rules beyond what Zod covers)
     if (typeof name === "string" && name.trim().length > 0) {

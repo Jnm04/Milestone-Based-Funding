@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import bcrypt from "bcryptjs";
+import zxcvbn from "zxcvbn";
 
 export async function PUT(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -27,6 +28,12 @@ export async function PUT(request: NextRequest) {
   }
   if (newPassword.length > 72) {
     return NextResponse.json({ error: "New password must be at most 72 characters" }, { status: 400 });
+  }
+  if (zxcvbn(newPassword).score < 2) {
+    return NextResponse.json(
+      { error: "Password is too weak. Use a mix of letters, numbers, and symbols, or a longer passphrase." },
+      { status: 400 }
+    );
   }
 
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });

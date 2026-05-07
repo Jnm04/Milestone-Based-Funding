@@ -8,22 +8,22 @@ import posthog from "posthog-js";
 import { toast } from "sonner";
 import { Turnstile } from "@marsidev/react-turnstile";
 import type { TurnstileInstance } from "@marsidev/react-turnstile";
+import zxcvbn from "zxcvbn";
 
-/* ── Password strength ───────────────────────────────────── */
-function pwStrength(pw: string): { score: number; label: string; color: string } {
-  if (!pw) return { score: 0, label: "", color: "transparent" };
-  let score = 0;
-  if (pw.length >= 8) score++;
-  if (/[A-Z]/.test(pw)) score++;
-  if (/[0-9]/.test(pw)) score++;
-  if (/[^A-Za-z0-9]/.test(pw)) score++;
+/* ── Password strength (zxcvbn, score 0–4) ───────────────── */
+function pwStrength(pw: string): { score: number; label: string; color: string; warning: string } {
+  if (!pw) return { score: 0, label: "", color: "transparent", warning: "" };
+  const result = zxcvbn(pw);
   const map = [
-    { label: "Weak",   color: "#f87171" },
-    { label: "Fair",   color: "#fb923c" },
-    { label: "Good",   color: "#facc15" },
-    { label: "Strong", color: "#34d399" },
+    { label: "Too weak", color: "#f87171" },
+    { label: "Weak",     color: "#fb923c" },
+    { label: "Fair",     color: "#facc15" },
+    { label: "Good",     color: "#34d399" },
+    { label: "Strong",   color: "#4ade80" },
   ];
-  return { score, ...map[Math.min(score, 3)] };
+  const { label, color } = map[result.score];
+  const warning = result.feedback.warning || (result.score < 2 ? result.feedback.suggestions[0] ?? "" : "");
+  return { score: result.score, label, color, warning };
 }
 
 /* ── Role card ───────────────────────────────────────────── */
@@ -306,7 +306,7 @@ function RegisterForm() {
               {password && (
                 <div className="flex flex-col gap-1 mt-2">
                   <div className="flex gap-1">
-                    {[1, 2, 3, 4].map((i) => (
+                    {[0, 1, 2, 3, 4].map((i) => (
                       <div
                         key={i}
                         className="flex-1 h-1 rounded-full transition-all"
@@ -315,6 +315,9 @@ function RegisterForm() {
                     ))}
                   </div>
                   <p className="text-xs" style={{ color: strength.color }}>{strength.label}</p>
+                  {strength.warning && (
+                    <p className="text-xs" style={{ color: "#A89B8C" }}>{strength.warning}</p>
+                  )}
                 </div>
               )}
             </div>

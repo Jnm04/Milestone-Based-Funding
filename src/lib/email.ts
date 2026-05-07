@@ -93,6 +93,29 @@ function enterpriseLink(contractId: string) {
   return `${BASE_URL}/enterprise/dashboard/attestations/${contractId}`;
 }
 
+// ── New login notification ─────────────────────────────────────────────────
+
+export async function sendNewLoginEmail({ to, ip }: { to: string; ip: string }) {
+  if (!process.env.RESEND_API_KEY) return;
+  const time = new Date().toUTCString();
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: "New sign-in to your Cascrow account",
+    html: `
+      <p>Hi,</p>
+      <p>We detected a sign-in to your Cascrow account from a new location.</p>
+      <table style="border-collapse:collapse;font-family:sans-serif;font-size:14px;margin:12px 0">
+        <tr><td style="padding:4px 16px 4px 0;color:#64748b">Time</td><td>${time}</td></tr>
+        <tr><td style="padding:4px 16px 4px 0;color:#64748b">IP address</td><td>${esc(ip)}</td></tr>
+      </table>
+      <p>If this was you, no action is needed.</p>
+      <p><strong>If this wasn't you</strong>, your account may be compromised.
+      <a href="${BASE_URL}/profile">Change your password immediately →</a></p>
+    `,
+  });
+}
+
 // ── Email verification ──────────────────────────────────────────────────────
 
 export async function sendVerificationEmail({

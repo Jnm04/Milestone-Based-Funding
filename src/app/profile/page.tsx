@@ -7,6 +7,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { PageLoader } from "@/components/page-loader";
+import zxcvbn from "zxcvbn";
 
 // ── Telegram state ─────────────────────────────────────────────────────────
 interface TelegramStatus { configured: boolean; connected: boolean; connectedAt: string | null }
@@ -1280,6 +1281,24 @@ export default function ProfilePage() {
                       <EyeIcon open={showNew} />
                     </button>
                   </div>
+                  {newPassword && (() => {
+                    const r = zxcvbn(newPassword);
+                    const colors = ["#f87171","#fb923c","#facc15","#34d399","#4ade80"];
+                    const labels = ["Too weak","Weak","Fair","Good","Strong"];
+                    const c = colors[r.score];
+                    const warning = r.feedback.warning || (r.score < 2 ? r.feedback.suggestions[0] ?? "" : "");
+                    return (
+                      <div className="flex flex-col gap-1 mt-1">
+                        <div className="flex gap-1">
+                          {[0,1,2,3,4].map((i) => (
+                            <div key={i} className="flex-1 h-1 rounded-full transition-all" style={{ background: i <= r.score ? c : "rgba(255,255,255,0.08)" }} />
+                          ))}
+                        </div>
+                        <p className="text-xs" style={{ color: c }}>{labels[r.score]}</p>
+                        {warning && <p className="text-xs" style={{ color: "#A89B8C" }}>{warning}</p>}
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="cs-label">Confirm Password</label>
