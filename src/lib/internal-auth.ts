@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 const MIN_SECRET_LENGTH = 32;
 const SIG_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 const COOKIE_NAME = "cascrow_admin";
+const COOKIE_MAX_AGE_MS = 8 * 60 * 60 * 1000; // must match /api/internal/auth
 
 // H5: nonce store — prevents replay of captured HMAC-signed requests within the window
 const usedNonces = new Map<string, number>(); // nonce → expiry timestamp
@@ -18,12 +19,23 @@ function evictExpiredNonces(): void {
   }
 }
 
-/** Derives the same session token used by /api/internal/auth. */
-function makeSessionToken(secret: string): string {
-  return crypto
+/** Validates the v2 session cookie set by /api/internal/auth. Format: "<issuedAt>.<hmac>" */
+function verifySessionCookie(secret: string, cookieValue: string): boolean {
+  const dot = cookieValue.indexOf(".");
+  if (dot === -1) return false;
+  const issuedAt = parseInt(cookieValue.slice(0, dot), 10);
+  if (isNaN(issuedAt) || Date.now() - issuedAt > COOKIE_MAX_AGE_MS) return false;
+  const actual = cookieValue.slice(dot + 1);
+  const expected = crypto
     .createHmac("sha256", secret)
-    .update("admin-session-v1")
+    .update(`admin-session-v2:${issuedAt}`)
     .digest("hex");
+  if (actual.length !== expected.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(actual), Buffer.from(expected));
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -55,15 +67,8 @@ export function isInternalAuthorized(req: NextRequest): boolean {
 
   // ── 1. HTTP-only cookie (preferred) ────────────────────────────────────────
   const cookieToken = req.cookies.get(COOKIE_NAME)?.value ?? "";
-  if (cookieToken) {
-    const expected = makeSessionToken(secret);
-    if (cookieToken.length === expected.length) {
-      try {
-        if (crypto.timingSafeEqual(Buffer.from(cookieToken), Buffer.from(expected))) {
-          return true;
-        }
-      } catch { /* fall through */ }
-    }
+  if (cookieToken && verifySessionCookie(secret, cookieToken)) {
+    return true;
   }
 
   // ── 2. HMAC + timestamp headers (programmatic / legacy) ───────────────────

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { resolveApiKey } from "@/lib/api-key-auth";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { assertPublicUrl } from "@/lib/validate-url";
 import { z } from "zod";
 
 const schema = z.object({
@@ -47,6 +48,14 @@ export async function PATCH(request: NextRequest) {
   }
 
   const { discoverable, skills, callbackUrl } = parsed.data;
+
+  if (callbackUrl) {
+    try {
+      assertPublicUrl(callbackUrl);
+    } catch {
+      return NextResponse.json({ error: "callbackUrl must point to a public HTTPS address" }, { status: 400 });
+    }
+  }
 
   const data: Record<string, unknown> = {};
   if (discoverable !== undefined) data.agentDiscoverable = discoverable;

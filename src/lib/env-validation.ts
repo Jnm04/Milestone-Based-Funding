@@ -26,6 +26,7 @@ const WARN_IF_MISSING: string[] = [
   "XRPL_PLATFORM_SEED",
   "INTERNAL_API_SECRET",
   "CASCROW_CALLBACK_SECRET",
+  "FULFILLMENT_ENCRYPTION_KEY",
 ];
 
 // Only validate server-side (skip in browser bundles)

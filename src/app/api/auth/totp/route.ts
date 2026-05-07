@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { generateSecret, generateURI, verify as verifyTotp } from "otplib";
 import QRCode from "qrcode";
 import bcrypt from "bcryptjs";
@@ -59,6 +60,10 @@ export async function PUT(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  if (!(await checkRateLimit(`totp-enable:${session.user.id}`, 10, 15 * 60 * 1000))) {
+    return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
+  }
+
   const body = await req.json() as { code?: string };
   if (!body.code || !/^\d{6}$/.test(body.code)) {
     return NextResponse.json({ error: "A 6-digit code is required" }, { status: 400 });
@@ -89,6 +94,11 @@ export async function PUT(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const ip = getClientIp(req) ?? "unknown";
+  if (!(await checkRateLimit(`totp-disable:${session.user.id}:${ip}`, 5, 15 * 60 * 1000))) {
+    return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
+  }
 
   const body = await req.json() as { password?: string; code?: string };
   if (!body.password || !body.code) {

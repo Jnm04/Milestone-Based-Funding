@@ -187,9 +187,10 @@ export async function POST(request: NextRequest) {
   });
   if (!contract) return NextResponse.json({ error: "Contract not found" }, { status: 404 });
 
-  // Auth: caller must be investor or startup of this contract
-  const isParty = contract.investorId === apiKeyContext.userId || contract.startupId === apiKeyContext.userId;
-  if (!isParty) return NextResponse.json({ error: "Forbidden — you are not a party to this contract" }, { status: 403 });
+  // Auth: only the startup (recipient) may submit evidence — investor must not self-approve their own release
+  if (contract.startupId !== apiKeyContext.userId) {
+    return NextResponse.json({ error: "Forbidden — only the startup can submit milestone evidence" }, { status: 403 });
+  }
 
   // Find milestone
   const milestone = milestone_id
