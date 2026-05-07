@@ -185,6 +185,14 @@ export default function DealRoomPage() {
               <div key={doc.id} className="px-5 py-3 flex items-center gap-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                 <span className="text-sm flex-1" style={{ color: "#EDE6DD" }}>{doc.name}</span>
                 <span className="text-xs font-mono" style={{ color: "#A89B8C" }}>{doc.sha256.slice(0, 10)}…</span>
+                <a
+                  href={`/api/deal-room/${params.id}/documents/${doc.id}`}
+                  download={doc.name}
+                  className="text-xs px-3 py-1 rounded"
+                  style={{ background: "rgba(196,112,75,0.1)", border: "1px solid rgba(196,112,75,0.25)", color: "#C4704B", textDecoration: "none" }}
+                >
+                  Download
+                </a>
               </div>
             ))}
           </div>

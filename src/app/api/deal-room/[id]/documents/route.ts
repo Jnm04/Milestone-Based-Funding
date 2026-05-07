@@ -39,8 +39,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const buffer = Buffer.from(await file.arrayBuffer());
   const sha256 = crypto.createHash("sha256").update(buffer).digest("hex");
 
-  const blob = await put(`deal-room/${id}/${Date.now()}-${file.name}`, buffer, {
-    access: "public",
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 200);
+  const blob = await put(`deal-room/${id}/${Date.now()}-${safeName}`, buffer, {
+    access: "private",
     contentType: file.type || "application/octet-stream",
   });
 
