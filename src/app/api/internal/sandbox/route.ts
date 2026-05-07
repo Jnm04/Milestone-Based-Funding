@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
       }
     } catch (err) {
       console.error("[sandbox/save] DB write failed:", err);
-      return NextResponse.json({ error: "DB write failed", detail: String(err) }, { status: 500 });
+      return NextResponse.json({ error: "DB write failed" }, { status: 500 });
     }
 
     // Fire-and-forget embedding (non-critical, no duplicate TrainingEntry)

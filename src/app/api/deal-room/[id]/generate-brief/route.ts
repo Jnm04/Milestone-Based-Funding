@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import Anthropic from "@anthropic-ai/sdk";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 /**
  * POST /api/deal-room/[id]/generate-brief
@@ -11,6 +12,10 @@ import Anthropic from "@anthropic-ai/sdk";
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  if (!(await checkRateLimit(`deal-room-brief:${session.user.id}`, 5, 60 * 60 * 1000))) {
+    return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+  }
 
   const { id } = await params;
   const room = await prisma.dealRoom.findUnique({ where: { id }, include: { documents: true } });

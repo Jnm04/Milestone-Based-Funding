@@ -131,7 +131,7 @@ export async function POST(
         const data: { amountUSD?: string; cancelAfter?: Date } = {};
         if (mc.newAmountUSD !== undefined) {
           const parsed = parseFloat(mc.newAmountUSD);
-          if (!isNaN(parsed) && parsed > 0) {
+          if (!isNaN(parsed) && parsed > 0 && parsed <= 999_999_999) {
             data.amountUSD = mc.newAmountUSD;
           }
         }

@@ -178,8 +178,8 @@ export async function POST(
     for (const mc of milestoneChanges as MilestoneChange[]) {
       if (mc.newAmountUSD !== undefined) {
         const parsed = parseFloat(mc.newAmountUSD);
-        if (isNaN(parsed) || parsed < 1) {
-          return NextResponse.json({ error: "newAmountUSD must be at least $1" }, { status: 400 });
+        if (isNaN(parsed) || parsed < 1 || parsed > 999_999_999) {
+          return NextResponse.json({ error: "newAmountUSD must be between $1 and $999,999,999" }, { status: 400 });
         }
       }
       if (mc.newCancelAfter !== undefined) {
