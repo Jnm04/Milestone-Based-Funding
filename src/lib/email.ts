@@ -14,6 +14,24 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.EMAIL_FROM ?? "Cascrow <noreply@cascrow.com>";
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 
+// Wrap resend.emails.send so every message gets List-Unsubscribe headers.
+// Gmail/Outlook use these to show a one-click unsubscribe button and to
+// improve deliverability scoring even for transactional mail.
+type SendParams = Parameters<typeof resend.emails.send>[0];
+function send(payload: SendParams) {
+  const unsubEmail = (process.env.EMAIL_FROM ?? "noreply@cascrow.com")
+    .replace(/^.*<(.+)>$/, "$1")
+    .replace(/^[^@]+@/, "unsubscribe@");
+  return resend.emails.send({
+    ...payload,
+    headers: {
+      "List-Unsubscribe": `<mailto:${unsubEmail}?subject=unsubscribe>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      ...payload.headers,
+    },
+  });
+}
+
 // ── Feature M: AI-Personalized Email Copy ────────────────────────────────────
 
 let _anthropic: Anthropic | null = null;
@@ -101,7 +119,7 @@ export async function sendContractInviteEmail({
   to: string; inviterName: string; inviteUrl: string; milestone: string; amountUSD: number;
 }) {
   if (!process.env.RESEND_API_KEY) return;
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `${esc(inviterName)} invited you to an escrow contract on cascrow`,
@@ -127,7 +145,7 @@ export async function sendContractInviteRegistrationEmail({
   to: string; inviterName: string; inviteUrl: string; milestone: string; amountUSD: number;
 }) {
   if (!process.env.RESEND_API_KEY) return;
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `${esc(inviterName)} invited you to join cascrow`,
@@ -154,7 +172,7 @@ export async function sendContractDirectLinkEmail({
   to: string; inviterName: string; dashboardUrl: string; milestone: string; amountUSD: number;
 }) {
   if (!process.env.RESEND_API_KEY) return;
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `${esc(inviterName)} linked you to an escrow contract on cascrow`,
@@ -178,7 +196,7 @@ export async function sendContractDirectLinkEmail({
 export async function sendNewLoginEmail({ to, ip }: { to: string; ip: string }) {
   if (!process.env.RESEND_API_KEY) return;
   const time = new Date().toUTCString();
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: "New sign-in to your Cascrow account",
@@ -207,7 +225,7 @@ export async function sendVerificationEmail({
 }) {
   if (!process.env.RESEND_API_KEY) return;
   const link = `${BASE_URL}/api/auth/verify-email?token=${token}`;
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: "Verify your Cascrow email address",
@@ -233,7 +251,7 @@ export async function sendEmailChangeVerification({
 }) {
   if (!process.env.RESEND_API_KEY) return;
   const link = `${BASE_URL}/api/user/change-email/confirm?token=${token}`;
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: "Confirm your new Cascrow email address",
@@ -257,7 +275,7 @@ export async function sendPasswordResetEmail({
 }) {
   if (!process.env.RESEND_API_KEY) return;
   const link = `${BASE_URL}/reset-password?token=${token}`;
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: "Reset your Cascrow password",
@@ -296,7 +314,7 @@ export async function sendProofSubmittedEmail({
   });
   const bodyText = aiBody
     ?? `<strong>${esc(startupName) || "The Builder"}</strong> has submitted proof for the milestone <strong>${esc(milestoneTitle)}</strong>.`;
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `Proof submitted: ${milestoneTitle}`,
@@ -326,7 +344,7 @@ export async function sendPendingReviewEmail({
     void tgPendingReview({ investorId, contractId, milestoneTitle, aiReasoning });
   }
   if (!process.env.RESEND_API_KEY) return;
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `Manual review required: ${milestoneTitle}`,
@@ -363,7 +381,7 @@ export async function sendMilestoneCompletedInvestorEmail({
     "milestone title": milestoneTitle,
     "amount RLUSD": `$${Number(amountUSD).toLocaleString()}`,
   });
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `Milestone completed: ${milestoneTitle}`,
@@ -398,7 +416,7 @@ export async function sendFundedEmail({
     "milestone title": milestoneTitle,
     "amount RLUSD": `$${Number(amountUSD).toLocaleString()}`,
   });
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `Milestone funded: ${milestoneTitle}`,
@@ -434,7 +452,7 @@ export async function sendVerifiedEmail({
     "milestone title": milestoneTitle,
     "amount RLUSD": `$${Number(amountUSD).toLocaleString()}`,
   });
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `Payment released: ${milestoneTitle}`,
@@ -468,7 +486,7 @@ export async function sendRejectedEmail({
     "milestone title": milestoneTitle,
     "rejection reason": aiReasoning ?? undefined,
   });
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `Proof rejected: ${milestoneTitle}`,
@@ -505,8 +523,8 @@ export async function sendPublicProofReadyEmail({
     <p><a href="${contractLink(contractId)}">View contract →</a></p>
   `;
   await Promise.allSettled([
-    resend.emails.send({ from: FROM, to: toInvestor, subject: `Milestone verified: ${milestoneTitle}`, html }),
-    resend.emails.send({ from: FROM, to: toStartup, subject: `Your public proof page is ready: ${milestoneTitle}`, html }),
+    send({ from: FROM, to: toInvestor, subject: `Milestone verified: ${milestoneTitle}`, html }),
+    send({ from: FROM, to: toStartup, subject: `Your public proof page is ready: ${milestoneTitle}`, html }),
   ]);
 }
 
@@ -528,7 +546,7 @@ export async function sendAgentProofCollectedEmail({
   if (!process.env.RESEND_API_KEY) return;
   const sourceList = sourceTypes.map((t) => `<li>${esc(t === "github" ? "GitHub repository activity" : "Stripe revenue data")}</li>`).join("");
   const confirmUrl = `${BASE_URL}/contract/${contractId}?confirmDraft=${proofId}`;
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `We collected proof automatically for "${milestoneTitle}" — review & confirm`,
@@ -558,7 +576,7 @@ export async function sendAdaptiveNudgeEmail({
 }) {
   if (!process.env.RESEND_API_KEY) return;
   const items = objections.map((o) => `<li><strong>${esc(o.code)}:</strong> ${esc(o.description)}</li>`).join("");
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `Action needed: address these points to get "${milestoneTitle}" approved`,
@@ -612,7 +630,7 @@ export async function sendDeadlineReminderEmail({
          <p>The deadline is in <strong>${timeLabel}</strong>. If no proof is submitted, the escrow will be automatically returned to you.</p>
          <p><a href="${contractLink(contractId)}">View contract →</a></p>`;
 
-  await resend.emails.send({ from: FROM, to, subject, html: body });
+  await send({ from: FROM, to, subject, html: body });
 }
 
 export async function sendManualApprovedEmail({
@@ -632,7 +650,7 @@ export async function sendManualApprovedEmail({
     void tgVerified({ startupId, contractId, milestoneTitle, amountUSD, txHash: null });
   }
   if (!process.env.RESEND_API_KEY) return;
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `Approved — release your funds: ${milestoneTitle}`,
@@ -663,7 +681,7 @@ export async function sendFulfillmentKeyEmail({
 }) {
   if (!process.env.RESEND_API_KEY) return;
   const escrowAddress = process.env.NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS;
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `Escrow release key: ${milestoneTitle}`,
@@ -702,7 +720,7 @@ export async function sendRenegotiationOpenedEmail({
   if (!process.env.RESEND_API_KEY) return;
   const link = contractLink(contractId);
   await Promise.allSettled([
-    resend.emails.send({
+    send({
       from: FROM,
       to: toInvestor,
       subject: `Renegotiation window open: ${milestoneTitle}`,
@@ -714,7 +732,7 @@ export async function sendRenegotiationOpenedEmail({
         <p><a href="${link}">View contract →</a></p>
       `,
     }),
-    resend.emails.send({
+    send({
       from: FROM,
       to: toStartup,
       subject: `Extension request window open: ${milestoneTitle}`,
@@ -743,7 +761,7 @@ export async function sendExtensionRequestedEmail({
   startupName?: string | null;
 }) {
   if (!process.env.RESEND_API_KEY) return;
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `Extension request: ${milestoneTitle}`,
@@ -770,7 +788,7 @@ export async function sendExtensionApprovedEmail({
   newDeadline: Date;
 }) {
   if (!process.env.RESEND_API_KEY) return;
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `Extension approved: ${milestoneTitle}`,
@@ -794,7 +812,7 @@ export async function sendExtensionRejectedEmail({
   milestoneTitle: string;
 }) {
   if (!process.env.RESEND_API_KEY) return;
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `Extension rejected: ${milestoneTitle}`,
@@ -820,7 +838,7 @@ export async function sendProgressCheckinEmail({
   milestoneTitle: string;
 }) {
   if (!process.env.RESEND_API_KEY) return;
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `Weekly check-in: ${milestoneTitle}`,
@@ -848,7 +866,7 @@ export async function sendProgressUpdateNotifiedEmail({
   startupName?: string | null;
 }) {
   if (!process.env.RESEND_API_KEY) return;
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `Progress update: ${milestoneTitle}`,
@@ -878,7 +896,7 @@ export async function sendCounterProposalSubmittedEmail({
   rationale: string;
 }) {
   if (!process.env.RESEND_API_KEY) return;
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `Counter-proposal received: ${contractTitle}`,
@@ -909,7 +927,7 @@ export async function sendCounterProposalRespondedEmail({
 }) {
   if (!process.env.RESEND_API_KEY) return;
   const accepted = decision === "ACCEPTED";
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `Counter-proposal ${accepted ? "accepted" : "rejected"}: ${contractTitle}`,
@@ -951,7 +969,7 @@ export async function sendAttestationResultEmail({
   const isTestnet = process.env.XRPL_NETWORK === "testnet";
   const xrplExplorer = isTestnet ? "testnet.xrpscan.com" : "xrpscan.com";
 
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `Attestation result: ${milestoneTitle} — ${verdict}`,
@@ -992,7 +1010,7 @@ export async function sendEarlyWarningEmail({
   const riskLabel = risk === "LIKELY_MISS" ? "⚠️ Likely to miss target" : "⚠️ At risk of missing target";
   const riskColor = risk === "LIKELY_MISS" ? "#DC2626" : "#D97706";
 
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `Early warning: "${milestoneTitle}" — ${riskLabel}`,
@@ -1039,7 +1057,7 @@ export async function sendPredictiveMissEmail({
   const pct = Math.round(confidence * 100);
   const weeks = Math.round(weeksToDeadline * 10) / 10;
 
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `⚠ Predictive Warning: "${milestoneTitle}" is trending to miss`,
@@ -1082,7 +1100,7 @@ export async function sendConsensusVoteInviteEmail({
   const voteUrl = `${baseUrl}/vote/${voteToken}`;
   const deadlineStr = deadline.toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
 
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `You're invited to verify: "${milestoneTitle}"`,
@@ -1114,7 +1132,7 @@ export async function sendConsensusReachedEmail({
 }) {
   if (!process.env.RESEND_API_KEY) return;
 
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `Consensus reached: "${milestoneTitle}" VERIFIED`,
@@ -1149,7 +1167,7 @@ export async function sendAttestationDeadlineReminderEmail({
   const deadlineStr = deadlineAt.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const urgentColor = daysLeft <= 3 ? "#DC2626" : "#D97706";
 
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `Attestation deadline in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}: ${milestoneTitle}`,
@@ -1187,7 +1205,7 @@ export async function sendTeamInviteEmail({
   const acceptUrl = `${BASE_URL}/api/enterprise/team/accept?token=${inviteToken}`;
   const roleLabel = role === "EDITOR" ? "Editor" : "Viewer";
 
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `${esc(inviterName)} invited you to ${esc(companyName)}'s cascrow workspace`,
@@ -1233,7 +1251,7 @@ export async function sendConnectorHealthAlert({
     ? `⚠️ ESCALATION: Data connector failing for "${milestoneTitle}" (${daysUntilVerification} days left)`
     : `🔴 Data connector error — "${milestoneTitle}"`;
 
-  await resend.emails.send({
+  await send({
     from: FROM,
     to: recipients,
     subject,
@@ -1277,7 +1295,7 @@ export async function sendRegulatoryAlertEmail({
     ? '<span style="background:#ef4444;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:bold">MAJOR</span>'
     : '<span style="background:#f59e0b;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:bold">MINOR</span>';
 
-  await resend.emails.send({
+  await send({
     from: FROM,
     to,
     subject: `${severity === "MAJOR" ? "⚠️ " : ""}Regulatory update may affect your attestations — ${esc(alertTitle)}`,

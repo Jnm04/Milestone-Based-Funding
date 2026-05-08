@@ -228,7 +228,19 @@ export default async function ContractPage({ params, searchParams }: ContractPag
                 </span>
               )}
             </div>
-            <CalendarButton contractId={contract.id} />
+            <div className="flex items-center gap-2">
+              <a
+                href={`/api/contracts/${contract.id}/report`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="cs-btn-ghost cs-btn-sm flex items-center gap-1.5"
+                title="Download contract as PDF"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span className="hidden sm:inline text-xs">PDF</span>
+              </a>
+              <CalendarButton contractId={contract.id} />
+            </div>
           </div>
           <p className="text-sm leading-relaxed" style={{ color: "hsl(32 35% 92%)" }}>{contract.milestone}</p>
           <div className="flex items-center gap-4 pt-1 text-sm" style={{ color: "hsl(30 10% 62%)" }}>

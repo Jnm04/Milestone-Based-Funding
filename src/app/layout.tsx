@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { AuthSessionProvider } from "@/components/session-provider";
 import { CookieBanner } from "@/components/cookie-banner";
 import { SupportChat } from "@/components/support-chat";
+import { IdleTimeout } from "@/components/idle-timeout";
 
 const interTight = Inter_Tight({
   subsets: ["latin"],
@@ -151,6 +152,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthSessionProvider>
           {children}
           <Toaster richColors position="top-right" />
+          <IdleTimeout />
           <CookieBanner />
           <SupportChat />
         </AuthSessionProvider>
