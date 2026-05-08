@@ -104,6 +104,7 @@ export async function POST(request: NextRequest) {
         emailVerificationToken,
         emailVerificationTokenExpiry,
         dateOfBirth: parsedDOB,
+        termsAcceptedAt: new Date(),
       },
     });
 
