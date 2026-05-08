@@ -21,8 +21,10 @@ export async function GET(
     return new NextResponse("Agent not found", { status: 404 });
   }
 
-  const agent = await prisma.user.findUnique({
-    where: { walletAddress: walletAddress.toLowerCase() },
+  // findFirst with mode:'insensitive' handles both checksum (0xAbCd…) and
+  // lowercase EVM addresses regardless of how they were stored by the wallet route.
+  const agent = await prisma.user.findFirst({
+    where: { walletAddress: { equals: walletAddress, mode: "insensitive" } },
     select: {
       id: true,
       name: true,

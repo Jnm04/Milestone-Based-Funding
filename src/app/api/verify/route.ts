@@ -208,6 +208,7 @@ export async function POST(request: NextRequest) {
         proofId: proof.id,
         fileHash: proof.fileHash,
         contractId: contract.id,
+        startupId: contract.startupId,
         extractedText,
         fileCategory: category,
       });

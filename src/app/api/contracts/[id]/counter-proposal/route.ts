@@ -119,13 +119,6 @@ export async function POST(
       return NextResponse.json({ error: "Only receivers can submit counter-proposals" }, { status: 403 });
     }
 
-    if (!session.user.walletAddress) {
-      return NextResponse.json(
-        { error: "Connect your EVM wallet before submitting a counter-proposal" },
-        { status: 422 }
-      );
-    }
-
     // Rate limit: 10 counter-proposals per user per hour
     if (!(await checkRateLimit(`counter-proposal:${session.user.id}`, 10, 60 * 60 * 1000))) {
       return NextResponse.json(

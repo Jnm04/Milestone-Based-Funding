@@ -607,12 +607,15 @@ export async function runFraudPreScreen(params: {
   proofId: string;
   fileHash: string | null;
   contractId: string;
+  startupId?: string | null;
   extractedText: string | null;
   fileCategory: FileCategory;
 }): Promise<FraudPreScreenResult> {
   const flags: AuthenticityFlag[] = [];
 
   // ─ Check 1: cross-contract duplicate file hash ────────────────────────────
+  // Only flag if the duplicate was submitted by a DIFFERENT startup — same startup
+  // reusing a file across their own contracts is legitimate (e.g. a shared report).
   if (params.fileHash) {
     try {
       const duplicate = await prisma.proof.findFirst({
@@ -621,14 +624,17 @@ export async function runFraudPreScreen(params: {
           contractId: { not: params.contractId },
           id: { not: params.proofId },
         },
-        select: { id: true, contractId: true },
+        select: { id: true, contract: { select: { startupId: true } } },
       });
-      if (duplicate) {
+      const isDifferentStartup =
+        duplicate &&
+        params.startupId &&
+        duplicate.contract.startupId !== params.startupId;
+      if (isDifferentStartup) {
         flags.push({
           type: "DUPLICATE_FILE",
           severity: "RED_FLAG",
-          // L-1: Do not include partial internal contract IDs in text sent to external AI providers
-          detail: `This exact file has been submitted as proof on a different contract. Reusing identical files across contracts is a strong indicator of fraudulent proof.`,
+          detail: `This exact file has been submitted as proof by a different party on another contract. Cross-party file reuse may indicate fraudulent or recycled proof.`,
         });
       }
     } catch (err) {
