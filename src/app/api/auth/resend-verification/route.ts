@@ -31,18 +31,20 @@ export async function POST(request: NextRequest) {
     // Enforce cooldown: check if existing token was issued less than 60s ago.
     // Return ok:true (not 429) to avoid revealing whether this email has a pending account.
     if (user.emailVerificationTokenExpiry) {
-      const tokenAge = Date.now() - (user.emailVerificationTokenExpiry.getTime() - 24 * 60 * 60 * 1000);
-      if (tokenAge < RESEND_COOLDOWN_MS) {
+      const tokenCreatedAt = user.emailVerificationTokenExpiry.getTime() - 24 * 60 * 60 * 1000;
+      const timeSinceIssue = Date.now() - tokenCreatedAt;
+      if (timeSinceIssue < RESEND_COOLDOWN_MS) {
         return NextResponse.json({ ok: true });
       }
     }
 
     const emailVerificationToken = crypto.randomBytes(32).toString("hex");
+    const emailVerificationTokenHash = crypto.createHash("sha256").update(emailVerificationToken).digest("hex");
     const emailVerificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     await prisma.user.update({
       where: { id: user.id },
-      data: { emailVerificationToken, emailVerificationTokenExpiry },
+      data: { emailVerificationToken: emailVerificationTokenHash, emailVerificationTokenExpiry },
     });
 
     try {

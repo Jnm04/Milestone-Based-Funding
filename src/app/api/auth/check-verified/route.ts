@@ -20,6 +20,10 @@ export async function GET(request: NextRequest) {
   if (!(await checkRateLimit(`check-verified:${ip}`, 20, 60_000))) {
     return NextResponse.json({ verified: false }, { status: 429 });
   }
+  // Rate-limit per email: prevents bulk enumeration across multiple IPs
+  if (!(await checkRateLimit(`check-verified:email:${email}`, 25, 60_000))) {
+    return NextResponse.json({ verified: false });
+  }
 
   const user = await prisma.user.findUnique({
     where: { email },

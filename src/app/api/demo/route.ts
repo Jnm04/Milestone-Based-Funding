@@ -10,15 +10,19 @@ const DEMO_STARTUP_EMAIL   = "demo-startup@cascrow.demo";
 // Deterministic fake EVM address — used only as a viewer-identity key, no real funds
 const DEMO_INVESTOR_WALLET = "0xDem0Investor000000000000000000000000000";
 const DEMO_STARTUP_WALLET  = "0xDem0Startup0000000000000000000000000000";
-const DEMO_PASSWORD        = process.env.DEMO_PASSWORD ?? "DemoCascrow2026!";
+const DEMO_PASSWORD        = process.env.DEMO_PASSWORD;
 
 export async function POST(req: NextRequest) {
+  if (!DEMO_PASSWORD) {
+    return NextResponse.json({ error: "Demo not available." }, { status: 503 });
+  }
+
   const ip = getClientIp(req);
   if (!(await checkRateLimit(`demo:${ip}`, 3, 60 * 60 * 1000))) {
     return NextResponse.json({ error: "Too many demo requests — try again in an hour." }, { status: 429 });
   }
 
-  const hash = await bcrypt.hash(DEMO_PASSWORD, 10);
+  const hash = await bcrypt.hash(DEMO_PASSWORD, 12);
 
   const [investor, startup] = await Promise.all([
     prisma.user.upsert({

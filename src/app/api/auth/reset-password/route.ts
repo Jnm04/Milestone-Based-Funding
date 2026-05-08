@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import zxcvbn from "zxcvbn";
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,6 +24,10 @@ export async function POST(request: NextRequest) {
 
     if (password.length > 72) {
       return NextResponse.json({ error: "Password must be at most 72 characters" }, { status: 400 });
+    }
+
+    if (zxcvbn(password).score < 2) {
+      return NextResponse.json({ error: "Password is too weak. Use a mix of letters, numbers, and symbols, or a longer passphrase." }, { status: 400 });
     }
 
     // Hash the received token before DB lookup — tokens are stored as SHA-256 hashes.

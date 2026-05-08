@@ -5,8 +5,12 @@
 export async function verifyTurnstile(token: string | undefined | null): Promise<boolean> {
   const secret = process.env.TURNSTILE_SECRET_KEY;
   if (!secret) {
-    // If secret not configured, skip verification (e.g. local dev without key)
-    console.warn("[turnstile] TURNSTILE_SECRET_KEY not set — skipping verification");
+    if (process.env.NODE_ENV === "production") {
+      // Fail closed in production — never silently bypass bot protection
+      console.error("[turnstile] TURNSTILE_SECRET_KEY not set in production — rejecting request");
+      return false;
+    }
+    console.warn("[turnstile] TURNSTILE_SECRET_KEY not set — skipping verification (dev only)");
     return true;
   }
   if (!token) return false;

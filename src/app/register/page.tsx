@@ -94,11 +94,12 @@ function RegisterForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setLoading(true);
     if (password !== passwordConfirm) {
       toast.error("Passwords do not match.");
+      setLoading(false);
       return;
     }
-    setLoading(true);
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
@@ -383,7 +384,7 @@ function RegisterForm() {
 
             <button
               type="submit"
-              disabled={loading || !turnstileToken || !termsAccepted}
+              disabled={loading || !turnstileToken || !termsAccepted || (password.length > 0 && strength.score < 2)}
               className="w-full rounded-full py-3 text-sm font-medium mt-1 disabled:opacity-50"
               style={{ background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)", color: "hsl(24 14% 6%)" }}
             >
@@ -428,7 +429,7 @@ function RegisterForm() {
           <p className="text-sm text-center" style={{ color: "hsl(30 10% 62%)" }}>
             Already have an account?{" "}
             <Link
-              href={callbackUrl ? `/login?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/login"}
+              href={callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//") ? `/login?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/login"}
               className="font-medium hover:underline"
               style={{ color: "hsl(22 55% 54%)" }}
             >

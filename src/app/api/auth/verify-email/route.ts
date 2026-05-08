@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import crypto from "crypto";
 
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 
@@ -11,8 +12,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
     const user = await prisma.user.findUnique({
-      where: { emailVerificationToken: token },
+      where: { emailVerificationToken: tokenHash },
     });
 
     if (!user) {

@@ -171,7 +171,7 @@ function LoginForm() {
         posthog.capture("user_logged_in", { role });
       }
 
-      if (callbackUrl && callbackUrl.startsWith("/")) {
+      if (callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")) {
         router.push(callbackUrl);
       } else if (role === "INVESTOR") {
         router.push("/dashboard/investor");

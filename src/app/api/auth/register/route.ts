@@ -69,10 +69,11 @@ export async function POST(request: NextRequest) {
       // If account exists but is unverified, resend the verification email
       if (!existing.emailVerified) {
         const emailVerificationToken = crypto.randomBytes(32).toString("hex");
+        const emailVerificationTokenHash = crypto.createHash("sha256").update(emailVerificationToken).digest("hex");
         const emailVerificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
         await prisma.user.update({
           where: { id: existing.id },
-          data: { emailVerificationToken, emailVerificationTokenExpiry },
+          data: { emailVerificationToken: emailVerificationTokenHash, emailVerificationTokenExpiry },
         });
         try {
           await sendVerificationEmail({ to: email, token: emailVerificationToken });
@@ -86,6 +87,7 @@ export async function POST(request: NextRequest) {
 
     const passwordHash = await bcrypt.hash(password, 12);
     const emailVerificationToken = crypto.randomBytes(32).toString("hex");
+    const emailVerificationTokenHash = crypto.createHash("sha256").update(emailVerificationToken).digest("hex");
     const emailVerificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
 
     // dateOfBirth is required (Zod already enforces 18+ format); re-check here as defense in depth
@@ -96,21 +98,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "You must be at least 18 years old to register." }, { status: 400 });
     }
 
-    const user = await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        name: name || null,
-        role,
-        emailVerificationToken,
-        emailVerificationTokenExpiry,
-        dateOfBirth: parsedDOB,
-        termsAcceptedAt: new Date(),
-        termsVersion: TERMS_VERSION,
-        registrationIp: getClientIp(request),
-        passwordChangedAt: new Date(),
-      },
-    });
+    let user;
+    try {
+      user = await prisma.user.create({
+        data: {
+          email,
+          passwordHash,
+          name: name || null,
+          role,
+          emailVerificationToken: emailVerificationTokenHash,
+          emailVerificationTokenExpiry,
+          dateOfBirth: parsedDOB,
+          termsAcceptedAt: new Date(),
+          termsVersion: TERMS_VERSION,
+          registrationIp: getClientIp(request),
+          passwordChangedAt: new Date(),
+        },
+      });
+    } catch (err: unknown) {
+      const prismaErr = err as { code?: string };
+      if (prismaErr?.code === "P2002") {
+        // Concurrent registration with same email — treat as duplicate
+        const dup = await prisma.user.findUnique({ where: { email } });
+        if (dup && !dup.emailVerified) {
+          return NextResponse.json({ ok: true, resent: true });
+        }
+        return NextResponse.json({ error: "Email already registered" }, { status: 409 });
+      }
+      throw err;
+    }
 
     // Send verification email
     try {
@@ -162,7 +178,7 @@ export async function POST(request: NextRequest) {
       properties: { role, has_name: !!name, has_dob: !!parsedDOB },
     });
 
-    return NextResponse.json({ id: user.id, email: user.email, role: user.role });
+    return NextResponse.json({ email: user.email, role: user.role });
   } catch (err) {
     console.error("[register]", err);
     return NextResponse.json({ error: "Registration failed. Please try again." }, { status: 500 });

@@ -20,6 +20,7 @@ const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 type SendParams = Parameters<typeof resend.emails.send>[0];
 function send(payload: SendParams) {
   const unsubEmail = (process.env.EMAIL_FROM ?? "noreply@cascrow.com")
+    .replace(/[\r\n]/g, "")
     .replace(/^.*<(.+)>$/, "$1")
     .replace(/^[^@]+@/, "unsubscribe@");
   return resend.emails.send({
@@ -131,7 +132,7 @@ export async function sendContractInviteEmail({
         <tr><td style="padding:4px 12px 4px 0;color:#6b7280;font-size:13px">Amount</td><td style="font-size:13px;font-weight:600">$${Number(amountUSD).toLocaleString()} RLUSD</td></tr>
       </table>
       <p style="margin:24px 0">
-        <a href="${inviteUrl}" style="background:#C4704B;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;font-weight:600">View &amp; Accept Contract →</a>
+        <a href="${esc(inviteUrl)}" style="background:#C4704B;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;font-weight:600">View &amp; Accept Contract →</a>
       </p>
       <p style="font-size:12px;color:#999">Funds are held in on-chain escrow and released automatically when the AI verifies your proof of work.</p>
       <p style="font-size:12px;color:#999">If you did not expect this invitation, you can safely ignore this email.</p>
@@ -158,7 +159,7 @@ export async function sendContractInviteRegistrationEmail({
       </table>
       <p><strong>You don't have a cascrow account yet.</strong> Register for free, then use the link below to accept the contract:</p>
       <p style="margin:24px 0">
-        <a href="${inviteUrl}" style="background:#C4704B;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;font-weight:600">Register &amp; Accept Contract →</a>
+        <a href="${esc(inviteUrl)}" style="background:#C4704B;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;font-weight:600">Register &amp; Accept Contract →</a>
       </p>
       <p style="font-size:12px;color:#999">cascrow is an AI-powered escrow platform. Funds are locked on-chain and released automatically when the AI verifies your proof of work.</p>
       <p style="font-size:12px;color:#999">If you did not expect this invitation, you can safely ignore this email.</p>
@@ -184,7 +185,7 @@ export async function sendContractDirectLinkEmail({
         <tr><td style="padding:4px 12px 4px 0;color:#6b7280;font-size:13px">Amount</td><td style="font-size:13px;font-weight:600">$${Number(amountUSD).toLocaleString()} RLUSD</td></tr>
       </table>
       <p style="margin:24px 0">
-        <a href="${dashboardUrl}" style="background:#C4704B;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;font-weight:600">View Contract →</a>
+        <a href="${esc(dashboardUrl)}" style="background:#C4704B;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;font-weight:600">View Contract →</a>
       </p>
       <p style="font-size:12px;color:#999">Funds will be locked in escrow once the Requester funds the contract. You will be notified when it is ready.</p>
     `,
@@ -555,7 +556,7 @@ export async function sendAgentProofCollectedEmail({
       <p>Your milestone <strong>${esc(milestoneTitle)}</strong> is coming up soon. We automatically collected evidence from ${sourcesCount} source${sourcesCount !== 1 ? "s" : ""}:</p>
       <ul>${sourceList}</ul>
       <p>Please review the collected evidence and confirm with one click to send it to the AI verification panel.</p>
-      <p><a href="${confirmUrl}" style="background:#C4704B;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block;">Review &amp; Confirm Proof →</a></p>
+      <p><a href="${esc(confirmUrl)}" style="background:#C4704B;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block;">Review &amp; Confirm Proof →</a></p>
       <p style="color:#888;font-size:12px;">You can also edit or replace this proof before confirming.</p>
     `,
   });
@@ -982,7 +983,7 @@ export async function sendAttestationResultEmail({
       </table>
       <p style="background:#f7f7f7;padding:12px;border-left:3px solid #C4704B;font-style:italic">${esc(reasoning)}</p>
       ${xrplTxHash ? `<p style="font-size:12px;color:#666">On-chain record: <a href="https://${xrplExplorer}/transactions/${xrplTxHash}">${xrplTxHash.slice(0, 20)}…</a></p>` : ""}
-      ${certUrl ? `<p><a href="${certUrl}">View attestation certificate →</a></p>` : ""}
+      ${certUrl ? `<p><a href="${esc(certUrl)}">View attestation certificate →</a></p>` : ""}
       <p><a href="${contractLink(contractId)}">View contract →</a></p>
     `,
   });
@@ -1109,7 +1110,7 @@ export async function sendConsensusVoteInviteEmail({
       <p style="font-weight:bold;font-size:1.1em">${esc(milestoneTitle)}</p>
       <p>Your vote is required by <strong>${deadlineStr}</strong>.</p>
       <p>Click below to view the evidence and cast your vote:</p>
-      <p><a href="${voteUrl}" style="background:#1D4ED8;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block">Cast Your Vote →</a></p>
+      <p><a href="${esc(voteUrl)}" style="background:#1D4ED8;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block">Cast Your Vote →</a></p>
       <p style="font-size:12px;color:#666">This link is unique to you and can only be used once. If you have questions, contact the contract owner.</p>
     `,
   });
@@ -1140,7 +1141,7 @@ export async function sendConsensusReachedEmail({
       <p>The consensus attestation for the following milestone has been completed:</p>
       <p style="font-weight:bold;font-size:1.1em">${esc(milestoneTitle)}</p>
       <p>Result: <strong style="color:#16a34a">VERIFIED</strong> — ${yesVotes} of ${totalParties} parties confirmed.</p>
-      ${certUrl ? `<p><a href="${certUrl}">Download Attestation Certificate →</a></p>` : ""}
+      ${certUrl ? `<p><a href="${esc(certUrl)}">Download Attestation Certificate →</a></p>` : ""}
       <p><a href="${enterpriseLink(contractId)}">View full results →</a></p>
     `,
   });
