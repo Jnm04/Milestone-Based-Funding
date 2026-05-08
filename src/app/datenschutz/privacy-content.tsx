@@ -97,8 +97,8 @@ export function PrivacyContent() {
             <Li>
               <strong>{de ? "Sicherheitsdaten:" : "Security data:"}</strong>{" "}
               {de
-                ? "Passwort-Hash (bcrypt, nicht reversibel), Login-Versuche, Kontosperrstatus"
-                : "Password hash (bcrypt, irreversible), login attempts, account lock status"}
+                ? "Passwort-Hash (bcrypt, nicht reversibel), Login-Versuche, Kontosperrstatus, Zeitpunkt der letzten Passwortänderung, Zeitpunkt der letzten Aktivität (Login)"
+                : "Password hash (bcrypt, irreversible), login attempts, account lock status, timestamp of last password change, timestamp of last activity (login)"}
             </Li>
             <Li>
               <strong>{de ? "Vertragsdaten:" : "Contract data:"}</strong>{" "}
@@ -125,10 +125,22 @@ export function PrivacyContent() {
                 : "Wallet addresses and transaction data on the XRPL EVM Sidechain (escrow) and XRP Ledger Mainnet (NFT certificates, audit memos) – public and immutable"}
             </Li>
             <Li>
-              <strong>{de ? "IP-Adresse:" : "IP address:"}</strong>{" "}
+              <strong>{de ? "IP-Adresse (Rate Limiting):" : "IP address (rate limiting):"}</strong>{" "}
               {de
                 ? "Für Rate Limiting und Missbrauchsschutz temporär bei Upstash Redis gespeichert (max. 1 Stunde TTL, danach automatisch gelöscht)"
                 : "Temporarily stored in Upstash Redis for rate limiting and abuse protection (max. 1 hour TTL, then automatically deleted)"}
+            </Li>
+            <Li>
+              <strong>{de ? "Registrierungs-IP:" : "Registration IP address:"}</strong>{" "}
+              {de
+                ? "Die bei der Kontoerstellung verwendete IP-Adresse wird dauerhaft in der Datenbank gespeichert. Zweck: forensische Nachvollziehbarkeit, Betrugserkennung, Gerichtsstand-Bestimmung bei Streitigkeiten. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigte Interessen)."
+                : "The IP address used at account creation is stored permanently in the database. Purpose: forensic traceability, fraud detection, and establishing jurisdiction in disputes. Legal basis: Art. 6(1)(f) GDPR (legitimate interests)."}
+            </Li>
+            <Li>
+              <strong>{de ? "Einwilligungsnachweise:" : "Consent records:"}</strong>{" "}
+              {de
+                ? "Bei der Registrierung werden Zeitpunkt und Version der akzeptierten Nutzungsbedingungen gespeichert (z.B. \"2026-05\"). Zweck: Nachweis der Zustimmung gemäß DSGVO Art. 5 Abs. 2 (Rechenschaftspflicht). Beim KI-Training-Opt-in wird zusätzlich der Zeitpunkt der letzten Einwilligungsänderung gespeichert."
+                : "At registration, the timestamp and version of the accepted Terms of Use are stored (e.g. \"2026-05\"). Purpose: documenting consent pursuant to GDPR Art. 5(2) (accountability principle). For the AI training opt-in, the timestamp of the most recent consent change is also stored."}
             </Li>
             <Li>
               <strong>{de ? "Nutzungsereignisse (Analytics):" : "Usage events (analytics):"}</strong>{" "}
@@ -163,8 +175,8 @@ export function PrivacyContent() {
             <Li>
               <strong>{de ? "Berechtigtes Interesse (Art. 6 Abs. 1 lit. f DSGVO):" : "Legitimate interests (Art. 6(1)(f) GDPR):"}</strong>{" "}
               {de
-                ? "Sicherheitsmaßnahmen (Rate Limiting, Kontosperre), Betrugserkennung, Fehlerüberwachung (Sentry), Produktanalyse (PostHog – pseudonym, EU-Region), Plattformbetrieb"
-                : "Security measures (rate limiting, account lockout), fraud detection, error monitoring (Sentry), product analytics (PostHog – pseudonymous, EU region), platform operation"}
+                ? "Sicherheitsmaßnahmen (Rate Limiting, Kontosperre), Betrugserkennung, dauerhafte Speicherung der Registrierungs-IP für forensische Zwecke, Speicherung des Passwortänderungs- und Aktivitätszeitstempels für Sicherheitsaudits, Dokumentation von Einwilligungsnachweisen (Rechenschaftspflicht Art. 5 Abs. 2 DSGVO), Fehlerüberwachung (Sentry), Produktanalyse (PostHog – pseudonym, EU-Region), Plattformbetrieb"
+                : "Security measures (rate limiting, account lockout), fraud detection, permanent storage of registration IP for forensic purposes, storage of password-change and activity timestamps for security audits, documentation of consent records (accountability under Art. 5(2) GDPR), error monitoring (Sentry), product analytics (PostHog – pseudonymous, EU region), platform operation"}
             </Li>
             <Li>
               <strong>{de ? "Einwilligung (Art. 6 Abs. 1 lit. a DSGVO):" : "Consent (Art. 6(1)(a) GDPR):"}</strong>{" "}
@@ -461,6 +473,12 @@ export function PrivacyContent() {
               {de
                 ? "Bei Upstash Redis gespeichert mit automatischem Ablauf (TTL): max. 15 Minuten für Login-Schutz, max. 1 Stunde für API-Limits"
                 : "Stored in Upstash Redis with automatic expiry (TTL): max. 15 minutes for login protection, max. 1 hour for API limits"}
+            </Li>
+            <Li>
+              <strong>{de ? "Sicherheits- und Einwilligungsdaten:" : "Security and consent data:"}</strong>{" "}
+              {de
+                ? "Registrierungs-IP, AGB-Zustimmungszeitstempel und -version, Zeitpunkt der letzten Passwortänderung, Zeitpunkt der letzten Aktivität: bis zur Kontolöschung durch den Nutzer oder auf Anfrage (Art. 17 DSGVO)"
+                : "Registration IP, terms acceptance timestamp and version, timestamp of last password change, timestamp of last activity: until account deletion by the user or upon request (Art. 17 GDPR)"}
             </Li>
           </ul>
         </Section>
