@@ -313,8 +313,8 @@ export default function InternalSupportPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("");
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const params = statusFilter ? `?status=${statusFilter}` : "";
       const res = await internalFetch(`/api/support/tickets${params}`);
@@ -324,11 +324,17 @@ export default function InternalSupportPage() {
         setTotal(data.total);
       }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [statusFilter]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Auto-refresh every 30s (silent) to pick up new user messages without hiding the UI
+  useEffect(() => {
+    const interval = setInterval(() => load(true), 30_000);
+    return () => clearInterval(interval);
+  }, [load]);
 
   function handleUpdate(id: string, patch: Partial<SupportTicket>) {
     setTickets((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
@@ -378,7 +384,7 @@ export default function InternalSupportPage() {
           </button>
         ))}
         <button
-          onClick={load}
+          onClick={() => load()}
           style={{
             marginLeft: "auto",
             padding: "6px 14px",

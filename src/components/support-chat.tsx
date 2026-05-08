@@ -187,11 +187,29 @@ export function SupportChat() {
     const text = (overrideText !== undefined ? overrideText : input).trim();
     if (!text || loading) return;
 
-    const newMessages: Message[] = [...messages, { role: "user", content: text }];
-    setMessages(newMessages);
+    const userMsg: Message = { role: "user", content: text };
+    setMessages((prev) => [...prev, userMsg]);
     if (overrideText === undefined) setInput("");
     setLoading(true);
     setCantHelp(false);
+
+    // If a ticket is open, route the message to the ticket, not the AI
+    if (ticketId) {
+      try {
+        await fetch(`/api/support/tickets/${ticketId}/message`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text }),
+        });
+      } catch {
+        // silent — message is shown locally regardless
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    const newMessages: Message[] = [...messages, userMsg];
 
     const looksLikeProblem = PROBLEM_KEYWORDS.test(text);
     if (looksLikeProblem) {

@@ -44,8 +44,19 @@ export default function SupportPage() {
 
   const [tab, setTab] = useState<"chat" | "cases">("chat");
 
+  const LS_MSGS = "cascrow-support-page-messages";
+  const LS_TICKET = "cascrow-support-page-ticket";
+
+  function loadLS<T>(key: string, fallback: T): T {
+    if (typeof window === "undefined") return fallback;
+    try { const r = localStorage.getItem(key); return r ? (JSON.parse(r) as T) : fallback; } catch { return fallback; }
+  }
+
   // Chat
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const stored = loadLS<Message[]>("cascrow-support-page-messages", []);
+    return stored.length > 0 ? stored : [];
+  });
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [cantHelp, setCantHelp] = useState(false);
@@ -54,7 +65,10 @@ export default function SupportPage() {
     try { return localStorage.getItem("cascrow-support-page-ticket"); } catch { return null; }
   });
   const [creatingTicket, setCreatingTicket] = useState(false);
-  const [lastAdminMsgCount, setLastAdminMsgCount] = useState(0);
+  const [lastAdminMsgCount, setLastAdminMsgCount] = useState<number>(() => {
+    const stored = loadLS<Message[]>("cascrow-support-page-messages", []);
+    return stored.filter((m) => m.role === "admin").length;
+  });
 
   // Cases
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -72,15 +86,25 @@ export default function SupportPage() {
     }
   }, [status, router]);
 
+  // Persist messages to localStorage (skip system messages)
   useEffect(() => {
-    setMessages([
-      {
-        role: "assistant",
-        content:
-          "Hi! I'm the cascrow support assistant. I can help with contracts, escrow funding, proof submission, AI verification, and more. What's your question?",
-      },
-    ]);
-  }, []);
+    try {
+      localStorage.setItem(LS_MSGS, JSON.stringify(messages.filter((m) => m.role !== "system")));
+    } catch {}
+  }, [messages]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Show greeting only when no history
+  useEffect(() => {
+    if (messages.length === 0) {
+      setMessages([
+        {
+          role: "assistant",
+          content:
+            "Hi! I'm the cascrow support assistant. I can help with contracts, escrow funding, proof submission, AI verification, and more. What's your question?",
+        },
+      ]);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -132,11 +156,28 @@ export default function SupportPage() {
     const text = input.trim();
     if (!text || loading) return;
 
-    const newMessages: Message[] = [...messages, { role: "user", content: text }];
-    setMessages(newMessages);
+    setMessages((prev) => [...prev, { role: "user", content: text }]);
     setInput("");
     setLoading(true);
     setCantHelp(false);
+
+    // If ticket is open, route message to the ticket (human support), not the AI
+    if (ticketId) {
+      try {
+        await fetch(`/api/support/tickets/${ticketId}/message`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text }),
+        });
+      } catch {
+        // silent — message is shown locally regardless
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    const newMessages: Message[] = [...messages, { role: "user", content: text }];
 
     if (PROBLEM_KEYWORDS.test(text)) {
       setMessages((prev) => [
@@ -190,8 +231,16 @@ export default function SupportPage() {
       });
       const data = await res.json();
       setTicketId(data.ticketId);
-      try { localStorage.setItem("cascrow-support-page-ticket", data.ticketId); } catch {}
+      try { localStorage.setItem(LS_TICKET, data.ticketId); } catch {}
       setCantHelp(false);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content:
+            "Case created — our team will reply here. You can keep writing and we'll see every message.",
+        },
+      ]);
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -203,6 +252,17 @@ export default function SupportPage() {
     } finally {
       setCreatingTicket(false);
     }
+  }
+
+  function clearChat() {
+    setMessages([]);
+    setTicketId(null);
+    setCantHelp(false);
+    setLastAdminMsgCount(0);
+    try {
+      localStorage.removeItem(LS_MSGS);
+      localStorage.removeItem(LS_TICKET);
+    } catch {}
   }
 
   const filteredTickets = tickets.filter((t) => {
@@ -774,7 +834,7 @@ export default function SupportPage() {
               My Cases
             </h2>
             <button
-              onClick={() => setTab("chat")}
+              onClick={() => { clearChat(); setTab("chat"); }}
               style={{
                 padding: "8px 18px",
                 borderRadius: 8,
