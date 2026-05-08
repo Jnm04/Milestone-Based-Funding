@@ -90,6 +90,9 @@ function StartupDashboardContent() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalContracts, setTotalContracts] = useState(0);
+  const [search, setSearch] = useState("");
+  const [searchDebounced, setSearchDebounced] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const PAGE_SIZE = 20;
 
   const userId = session?.user?.id ?? null;
@@ -148,11 +151,22 @@ function StartupDashboardContent() {
   }, [inviteCode]);
 
   useEffect(() => {
+    const t = setTimeout(() => setSearchDebounced(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => { setPage(1); }, [searchDebounced, statusFilter]);
+
+  useEffect(() => {
     if (status !== "authenticated") return;
+
+    const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
+    if (searchDebounced.trim()) params.set("search", searchDebounced.trim());
+    if (statusFilter) params.set("status", statusFilter);
 
     const load = (showSpinner: boolean) => {
       if (showSpinner) setLoadingContracts(true);
-      fetch(`/api/contracts?page=${page}&limit=${PAGE_SIZE}`)
+      fetch(`/api/contracts?${params}`)
         .then((r) => r.json())
         .then((data) => {
           setContracts(data.contracts ?? []);
@@ -166,7 +180,7 @@ function StartupDashboardContent() {
     load(true);
     const interval = setInterval(() => load(false), 5000);
     return () => clearInterval(interval);
-  }, [status, page]);
+  }, [status, page, searchDebounced, statusFilter]);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -198,6 +212,26 @@ function StartupDashboardContent() {
     } finally {
       setSavingWallet(false);
     }
+  }
+
+  function exportCSV() {
+    const header = ["ID", "Milestone", "Amount (RLUSD)", "Status", "Requester Wallet", "Created"];
+    const rows = contracts.map((c) => [
+      c.id,
+      `"${c.milestone.replace(/"/g, '""')}"`,
+      c.amountUSD,
+      c.status,
+      c.investor?.walletAddress ?? "",
+      new Date(c.createdAt).toLocaleDateString("en-CA"),
+    ]);
+    const csv = [header, ...rows].map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `cascrow-contracts-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   async function handleDeclineContract() {
@@ -704,12 +738,80 @@ function StartupDashboardContent() {
             </>
           )}
 
+          {/* Onboarding checklist — shown when wallet connected but no contracts yet */}
+          {walletAddress && !inviteCode && !loadingContracts && totalContracts === 0 && (
+            <div
+              className="flex flex-col gap-5 p-6 rounded-2xl"
+              style={{ background: "rgba(196,112,75,0.05)", border: "1px solid rgba(196,112,75,0.25)", borderTop: "3px solid #C4704B" }}
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(196,112,75,0.15)" }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C4704B" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-base font-semibold" style={{ color: "#EDE6DD" }}>Welcome to cascrow — here&apos;s how to get started</p>
+                  <p className="text-xs mt-1" style={{ color: "#A89B8C" }}>
+                    A Requester will send you a contract invite link. Once you accept and deliver your milestone, funds are released automatically.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3">
+                {/* Step 1 — done */}
+                <div className="flex items-center gap-4 p-4 rounded-xl" style={{ background: "rgba(52,211,153,0.06)", border: "1px solid rgba(52,211,153,0.2)" }}>
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(52,211,153,0.15)" }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold" style={{ color: "#34d399" }}>Wallet connected</p>
+                    <p className="text-xs" style={{ color: "#A89B8C" }}>Your MetaMask address is linked to your account.</p>
+                  </div>
+                </div>
+                {/* Step 2 — action required */}
+                <div className="flex items-center gap-4 p-4 rounded-xl" style={{ background: "rgba(196,112,75,0.06)", border: "1px solid rgba(196,112,75,0.25)" }}>
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-sm font-bold" style={{ background: "rgba(196,112,75,0.15)", color: "#C4704B" }}>2</div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold" style={{ color: "#EDE6DD" }}>Accept a contract invitation</p>
+                    <p className="text-xs mt-0.5" style={{ color: "#A89B8C" }}>
+                      Ask your Requester to send you an invite link. Open it to preview and accept the contract terms.
+                    </p>
+                  </div>
+                </div>
+                {/* Step 3 — locked */}
+                <div className="flex items-center gap-4 p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", opacity: 0.6 }}>
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-sm font-bold" style={{ background: "rgba(255,255,255,0.06)", color: "#6B5E52" }}>3</div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold" style={{ color: "#A89B8C" }}>Deliver your milestone & submit proof</p>
+                    <p className="text-xs mt-0.5" style={{ color: "#6B5E52" }}>
+                      Upload your proof of work. The AI verifies it — if approved, funds are released to your wallet automatically.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 text-xs" style={{ color: "#6B5E52", borderTop: "1px solid rgba(196,112,75,0.1)", paddingTop: 16 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Funds are locked on-chain and released only when AI verifies your proof (3/5 model vote) or the Requester approves manually.
+              </div>
+            </div>
+          )}
+
           {/* ── Contracts list ── */}
           {walletAddress && !inviteCode && (
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold" style={{ color: "#EDE6DD" }}>My Contracts</h2>
                 <div className="flex items-center gap-3">
+                  {contracts.length > 0 && (
+                    <button
+                      onClick={exportCSV}
+                      className="cs-btn-ghost cs-btn-sm flex items-center gap-1.5"
+                      title="Export contracts as CSV"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                      <span className="hidden sm:inline">Export CSV</span>
+                    </button>
+                  )}
                   {hiddenIds.size > 0 && (
                     <button
                       onClick={() => setShowHidden((v) => !v)}
@@ -720,6 +822,37 @@ function StartupDashboardContent() {
                     </button>
                   )}
                   <span className="text-sm" style={{ color: "#A89B8C" }}>{totalContracts} total</span>
+                </div>
+              </div>
+
+              {/* Search + filter */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A89B8C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search contracts…"
+                    className="cs-input pl-8 w-full text-sm"
+                  />
+                </div>
+                <div className="flex gap-1 p-1 rounded-xl shrink-0" style={{ background: "hsl(24 12% 6% / 0.7)", border: "1px solid rgba(196,112,75,0.1)" }}>
+                  {(["", "ACTIVE", "PENDING_REVIEW", "COMPLETED"] as const).map((s) => {
+                    const labels: Record<string, string> = { "": "All", ACTIVE: "Active", PENDING_REVIEW: "Review", COMPLETED: "Done" };
+                    return (
+                      <button
+                        key={s}
+                        onClick={() => setStatusFilter(s)}
+                        className="px-3 py-1 rounded-lg text-xs font-medium transition-all"
+                        style={statusFilter === s
+                          ? { background: "rgba(196,112,75,0.2)", color: "#C4704B", border: "1px solid rgba(196,112,75,0.3)" }
+                          : { background: "transparent", color: "#A89B8C", border: "1px solid transparent" }}
+                      >
+                        {labels[s]}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

@@ -473,6 +473,9 @@ export default function InvestorDashboard() {
   const [totalContracts, setTotalContracts] = useState(0);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showDeployAgent, setShowDeployAgent] = useState(false);
+  const [search, setSearch] = useState("");
+  const [searchDebounced, setSearchDebounced] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const PAGE_SIZE = 20;
 
   // Scope the hidden-contracts store to the logged-in user so two accounts on
@@ -523,18 +526,50 @@ export default function InvestorDashboard() {
     }
   }
 
+  function exportCSV() {
+    const header = ["ID", "Milestone", "Amount (RLUSD)", "Status", "Builder Wallet", "Created", "Deadline"];
+    const rows = contracts.map((c) => [
+      c.id,
+      `"${c.milestone.replace(/"/g, '""')}"`,
+      c.amountUSD,
+      c.status,
+      c.startup?.walletAddress ?? "",
+      new Date(c.createdAt).toLocaleDateString("en-CA"),
+      new Date(c.cancelAfter).toLocaleDateString("en-CA"),
+    ]);
+    const csv = [header, ...rows].map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `cascrow-contracts-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated" && session.user.role !== "INVESTOR") router.push("/dashboard/startup");
   }, [status, session, router]);
 
   useEffect(() => {
+    const t = setTimeout(() => setSearchDebounced(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => { setPage(1); }, [searchDebounced, statusFilter]);
+
+  useEffect(() => {
     if (status !== "authenticated") return;
     setLoadingContracts(true);
 
+    const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
+    if (searchDebounced.trim()) params.set("search", searchDebounced.trim());
+    if (statusFilter) params.set("status", statusFilter);
+
     const load = (showSpinner: boolean) => {
       if (showSpinner) setLoadingContracts(true);
-      fetch(`/api/contracts?page=${page}&limit=${PAGE_SIZE}`)
+      fetch(`/api/contracts?${params}`)
         .then((r) => r.json())
         .then((data) => {
           setContracts(data.contracts ?? []);
@@ -548,7 +583,7 @@ export default function InvestorDashboard() {
     load(true);
     const interval = setInterval(() => load(false), 5000);
     return () => clearInterval(interval);
-  }, [status, page]);
+  }, [status, page, searchDebounced, statusFilter]);
 
   if (status === "loading") {
     return (
@@ -592,6 +627,16 @@ export default function InvestorDashboard() {
             <p className="text-sm mt-1" style={{ color: "#A89B8C" }}>Overview of your contracts and milestones</p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
+            {contracts.length > 0 && (
+              <button
+                onClick={exportCSV}
+                className="cs-btn-ghost cs-btn-sm flex items-center gap-1.5"
+                title="Export contracts as CSV"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span className="hidden sm:inline">Export CSV</span>
+              </button>
+            )}
             <button
               onClick={() => setShowReportModal(true)}
               className="cs-btn-ghost cs-btn-sm flex items-center gap-1.5"
@@ -829,6 +874,37 @@ export default function InvestorDashboard() {
                     </button>
                   )}
                   <span className="text-sm" style={{ color: "#A89B8C" }}>{totalContracts} total</span>
+                </div>
+              </div>
+
+              {/* Search + filter */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A89B8C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search contracts…"
+                    className="cs-input pl-8 w-full text-sm"
+                  />
+                </div>
+                <div className="flex gap-1 p-1 rounded-xl shrink-0" style={{ background: "hsl(24 12% 6% / 0.7)", border: "1px solid rgba(196,112,75,0.1)" }}>
+                  {(["", "ACTIVE", "PENDING_REVIEW", "COMPLETED"] as const).map((s) => {
+                    const labels: Record<string, string> = { "": "All", ACTIVE: "Active", PENDING_REVIEW: "Review", COMPLETED: "Done" };
+                    return (
+                      <button
+                        key={s}
+                        onClick={() => setStatusFilter(s)}
+                        className="px-3 py-1 rounded-lg text-xs font-medium transition-all"
+                        style={statusFilter === s
+                          ? { background: "rgba(196,112,75,0.2)", color: "#C4704B", border: "1px solid rgba(196,112,75,0.3)" }
+                          : { background: "transparent", color: "#A89B8C", border: "1px solid transparent" }}
+                      >
+                        {labels[s]}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

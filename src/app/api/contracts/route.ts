@@ -387,11 +387,13 @@ export async function GET(request: NextRequest) {
     const limit  = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10) || 20));
     const skip   = (page - 1) * limit;
     const VALID_STATUSES = new Set([
-      "DRAFT","AWAITING_ESCROW","FUNDED","PROOF_SUBMITTED",
+      "DRAFT","AWAITING_ESCROW","FUNDED","PROOF_SUBMITTED","PENDING_REVIEW",
       "VERIFIED","REJECTED","EXPIRED","COMPLETED","DECLINED",
     ]);
+    type ContractStatus = "DRAFT"|"AWAITING_ESCROW"|"FUNDED"|"PROOF_SUBMITTED"|"PENDING_REVIEW"|"VERIFIED"|"REJECTED"|"EXPIRED"|"COMPLETED"|"DECLINED";
+    const ACTIVE_STATUSES: ContractStatus[] = ["DRAFT","AWAITING_ESCROW","FUNDED","PROOF_SUBMITTED","PENDING_REVIEW","VERIFIED","REJECTED"];
     const rawStatus = searchParams.get("status") ?? undefined;
-    const status = rawStatus && VALID_STATUSES.has(rawStatus) ? rawStatus : undefined;
+    const status = rawStatus === "ACTIVE" ? "ACTIVE" : (rawStatus && VALID_STATUSES.has(rawStatus) ? rawStatus : undefined);
     const search = searchParams.get("search")?.trim().slice(0, 200) || undefined;
 
     const where = {
@@ -399,7 +401,9 @@ export async function GET(request: NextRequest) {
       ...(session.user.role === "INVESTOR"
         ? { investorId: session.user.id }
         : { startupId: session.user.id }),
-      ...(status ? { status: status as "DRAFT" | "AWAITING_ESCROW" | "FUNDED" | "PROOF_SUBMITTED" | "VERIFIED" | "REJECTED" | "EXPIRED" | "COMPLETED" | "DECLINED" } : {}),
+      ...(status === "ACTIVE"
+        ? { status: { in: ACTIVE_STATUSES } }
+        : status ? { status: status as "DRAFT" | "AWAITING_ESCROW" | "FUNDED" | "PROOF_SUBMITTED" | "PENDING_REVIEW" | "VERIFIED" | "REJECTED" | "EXPIRED" | "COMPLETED" | "DECLINED" } : {}),
       ...(search
         ? { milestone: { contains: search, mode: "insensitive" as const } }
         : {}),
