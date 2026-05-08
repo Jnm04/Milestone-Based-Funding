@@ -23,14 +23,24 @@ export async function POST(request: NextRequest) {
 
     // Turnstile bot protection — fail silently (return ok) to avoid info leak
     if (!(await verifyTurnstile(turnstileToken))) {
+      await minDelay;
       return NextResponse.json({ ok: true });
     }
 
     if (!email || typeof email !== "string" || email.length > 254) {
+      await minDelay;
       return NextResponse.json({ ok: true }); // Always return ok — no user enumeration
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Per-email rate limit prevents a botnet from flooding a single target inbox
+    if (!(await checkRateLimit(`forgot-pw:email:${normalizedEmail}`, 3, 24 * 60 * 60 * 1000))) {
+      await minDelay;
+      return NextResponse.json({ ok: true });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
 
     if (user && user.emailVerified) {
       const token = crypto.randomBytes(32).toString("hex");
@@ -45,7 +55,7 @@ export async function POST(request: NextRequest) {
       });
 
       try {
-        await sendPasswordResetEmail({ to: email, token });
+        await sendPasswordResetEmail({ to: normalizedEmail, token });
       } catch (err) {
         console.error("[forgot-password] Email send failed:", err);
       }

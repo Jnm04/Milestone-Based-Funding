@@ -48,13 +48,29 @@ export async function PUT(request: NextRequest) {
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
   if (!user.passwordHash) return NextResponse.json({ error: "Google accounts cannot change password here" }, { status: 400 });
 
+  if (user.lockoutUntil && user.lockoutUntil > new Date()) {
+    return NextResponse.json(
+      { error: "Account is temporarily locked. Please try again later." },
+      { status: 429, headers: { "Retry-After": Math.ceil((user.lockoutUntil.getTime() - Date.now()) / 1000).toString() } }
+    );
+  }
+
   const valid = await bcrypt.compare(currentPassword, user.passwordHash);
   if (!valid) return NextResponse.json({ error: "Current password is incorrect" }, { status: 400 });
+
+  const sameAsOld = await bcrypt.compare(newPassword, user.passwordHash);
+  if (sameAsOld) return NextResponse.json({ error: "New password must be different from your current password" }, { status: 400 });
 
   const hash = await bcrypt.hash(newPassword, 12);
   await prisma.user.update({
     where: { id: session.user.id },
-    data: { passwordHash: hash, sessionVersion: { increment: 1 }, passwordChangedAt: new Date() },
+    data: {
+      passwordHash: hash,
+      sessionVersion: { increment: 1 },
+      passwordChangedAt: new Date(),
+      loginAttempts: 0,
+      lockoutUntil: null,
+    },
   });
 
   return NextResponse.json({ success: true });

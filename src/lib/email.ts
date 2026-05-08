@@ -265,6 +265,27 @@ export async function sendEmailChangeVerification({
   });
 }
 
+export async function sendEmailChangeSecurityAlert({
+  to,
+  newEmail,
+}: {
+  to: string;
+  newEmail: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  await send({
+    from: FROM,
+    to,
+    subject: "Security alert: Email change requested on your Cascrow account",
+    html: `
+      <p>Hi,</p>
+      <p>A request was made to change the email address on your Cascrow account to <strong>${esc(newEmail)}</strong>.</p>
+      <p>If this was you, no action is needed — the change will take effect once confirmed via the link sent to your new address.</p>
+      <p><strong>If you did NOT request this change</strong>, your account may be at risk. <a href="${BASE_URL}/forgot-password">Secure your account immediately →</a></p>
+    `,
+  });
+}
+
 // ── Password reset ──────────────────────────────────────────────────────────
 
 export async function sendPasswordResetEmail({

@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { sendEmailChangeVerification } from "@/lib/email";
+import { sendEmailChangeVerification, sendEmailChangeSecurityAlert } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -59,14 +59,17 @@ export async function POST(req: NextRequest) {
   }
 
   const token = crypto.randomBytes(32).toString("hex");
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
   const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
   await prisma.user.update({
     where: { id: session.user.id },
-    data: { pendingEmail: cleaned, emailChangeToken: token, emailChangeTokenExpiry: expiry },
+    data: { pendingEmail: cleaned, emailChangeToken: tokenHash, emailChangeTokenExpiry: expiry },
   });
 
   await sendEmailChangeVerification({ to: cleaned, token, currentEmail: user.email });
+  // Alert the current email address so the account holder knows a change was requested
+  void sendEmailChangeSecurityAlert({ to: user.email, newEmail: cleaned }).catch(() => {});
 
   return NextResponse.json({ ok: true });
 }

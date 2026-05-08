@@ -90,6 +90,13 @@ export async function POST(req: NextRequest) {
           emailVerificationTokenExpiry: null,
           passwordResetToken: null,
           passwordResetTokenExpiry: null,
+          pendingEmail: null,
+          emailChangeToken: null,
+          emailChangeTokenExpiry: null,
+          totpEnabled: false,
+          totpSecret: null,
+          totpRecoveryCodes: null,
+          sessionVersion: { increment: 1 },
         },
       }),
     ]);

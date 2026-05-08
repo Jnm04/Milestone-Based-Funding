@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import crypto from "crypto";
 
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req);
@@ -11,8 +12,10 @@ export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get("token");
   if (!token) return NextResponse.redirect(new URL("/profile?emailChangeError=invalid", req.url));
 
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
   const user = await prisma.user.findUnique({
-    where: { emailChangeToken: token },
+    where: { emailChangeToken: tokenHash },
     select: { id: true, pendingEmail: true, emailChangeTokenExpiry: true },
   });
 
@@ -20,8 +23,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL("/profile?emailChangeError=invalid", req.url));
   }
   if (!user.emailChangeTokenExpiry || user.emailChangeTokenExpiry < new Date()) {
-    await prisma.user.update({
-      where: { id: user.id },
+    await prisma.user.updateMany({
+      where: { id: user.id, emailChangeToken: tokenHash },
       data: { pendingEmail: null, emailChangeToken: null, emailChangeTokenExpiry: null },
     });
     return NextResponse.redirect(new URL("/profile?emailChangeError=expired", req.url));
@@ -33,9 +36,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL("/profile?emailChangeError=taken", req.url));
   }
 
-  // Apply change and invalidate all sessions
-  await prisma.user.update({
-    where: { id: user.id },
+  // Atomic update — token in WHERE prevents double-consumption under concurrent requests
+  const updated = await prisma.user.updateMany({
+    where: { id: user.id, emailChangeToken: tokenHash },
     data: {
       email: user.pendingEmail,
       pendingEmail: null,
@@ -44,6 +47,10 @@ export async function GET(req: NextRequest) {
       sessionVersion: { increment: 1 },
     },
   });
+
+  if (updated.count === 0) {
+    return NextResponse.redirect(new URL("/profile?emailChangeError=invalid", req.url));
+  }
 
   return NextResponse.redirect(new URL("/login?emailChanged=1", req.url));
 }
