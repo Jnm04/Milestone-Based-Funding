@@ -43,6 +43,7 @@ model User {
 
   // Terms of Use acceptance — DSGVO Art. 5 Abs. 2 Rechenschaftspflicht
   termsAcceptedAt   DateTime? // set once at registration, never updated
+  termsVersion      String?   // e.g. "2026-05" — version of AGB accepted at registration
 
   // AI training consent — opt-in only, DSGVO Art. 6 Abs. 1 lit. a
   // When true, anonymised (milestoneText + proofText + modelVotes) may be stored in TrainingEntry
@@ -50,9 +51,10 @@ model User {
   trainingConsentAt        DateTime? // timestamp of last consent change
 
   // Brute-force protection
-  loginAttempts Int       @default(0)
-  lockoutUntil  DateTime?
-  lastLoginIp   String?
+  loginAttempts   Int       @default(0)
+  lockoutUntil    DateTime?
+  registrationIp  String?   // IP at account creation — never updated
+  lastLoginIp     String?
 
   // Password reset
   passwordResetToken       String?   @unique

@@ -4,6 +4,8 @@ import { sendVerificationEmail } from "@/lib/email";
 import { screenName } from "@/services/sanctions/sanctions.service";
 import { validateName } from "@/lib/validate-name";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+
+const TERMS_VERSION = "2026-05";
 import { registerSchema } from "@/lib/zod-schemas";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { getPostHogClient } from "@/lib/posthog-server";
@@ -105,6 +107,8 @@ export async function POST(request: NextRequest) {
         emailVerificationTokenExpiry,
         dateOfBirth: parsedDOB,
         termsAcceptedAt: new Date(),
+        termsVersion: TERMS_VERSION,
+        registrationIp: getClientIp(request),
       },
     });
 
