@@ -49,7 +49,10 @@ export default function SupportPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [cantHelp, setCantHelp] = useState(false);
-  const [ticketId, setTicketId] = useState<string | null>(null);
+  const [ticketId, setTicketId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    try { return localStorage.getItem("cascrow-support-page-ticket"); } catch { return null; }
+  });
   const [creatingTicket, setCreatingTicket] = useState(false);
   const [lastAdminMsgCount, setLastAdminMsgCount] = useState(0);
 
@@ -121,7 +124,7 @@ export default function SupportPage() {
 
   useEffect(() => {
     if (!ticketId) return;
-    const interval = setInterval(pollAdminReplies, 30_000);
+    const interval = setInterval(pollAdminReplies, 8_000);
     return () => clearInterval(interval);
   }, [ticketId, pollAdminReplies]);
 
@@ -187,6 +190,7 @@ export default function SupportPage() {
       });
       const data = await res.json();
       setTicketId(data.ticketId);
+      try { localStorage.setItem("cascrow-support-page-ticket", data.ticketId); } catch {}
       setCantHelp(false);
     } catch {
       setMessages((prev) => [

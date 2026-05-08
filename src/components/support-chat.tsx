@@ -179,7 +179,7 @@ export function SupportChat() {
 
   useEffect(() => {
     if (!ticketId) return;
-    const interval = setInterval(pollAdminReplies, 30_000);
+    const interval = setInterval(pollAdminReplies, 8_000);
     return () => clearInterval(interval);
   }, [ticketId, pollAdminReplies]);
 
