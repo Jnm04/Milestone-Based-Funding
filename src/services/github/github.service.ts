@@ -154,7 +154,8 @@ export async function fetchGitHubProof(
 
     // ── 4. Repository file tree (top-level) ───────────────────────────────────
     let fileTree = "";
-    const branch = repoData.default_branch ?? "main";
+    // H-2: encodeURIComponent prevents path traversal via crafted branch names
+    const branch = encodeURIComponent(repoData.default_branch ?? "main");
     const treeRes = await ghFetch(
       `${apiBase}/git/trees/${branch}?recursive=0`,
       controller.signal,

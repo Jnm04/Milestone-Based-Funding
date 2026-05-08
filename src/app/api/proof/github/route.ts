@@ -100,6 +100,19 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // L-3: Prevent duplicate submissions — reject if same repo already pending for this milestone
+      const normalizedRepoUrl = `https://github.com/${parsed.owner}/${parsed.repo}`;
+      const existingProof = await prisma.proof.findFirst({
+        where: { milestoneId, proofUrl: normalizedRepoUrl, aiDecision: null },
+        select: { id: true },
+      });
+      if (existingProof) {
+        return NextResponse.json(
+          { error: "This repository has already been submitted for this milestone and is pending verification.", proofId: existingProof.id },
+          { status: 409 }
+        );
+      }
+
       // Fetch GitHub data
       const ghDoc = await fetchGitHubProof(repoUrl, milestone.contract.createdAt);
       if (!ghDoc) {

@@ -37,7 +37,8 @@ export async function POST(request: NextRequest) {
     const actorId = session?.user?.id ?? apiKeyCtx!.userId;
     const isAgent = !!apiKeyCtx;
 
-    if (isAgent && !(await checkRateLimit(`contract-review:${actorId}`, 20, 60 * 60 * 1000))) {
+    // M-6: Rate limit for ALL callers (previously only agents were limited)
+    if (!(await checkRateLimit(`contract-review:${actorId}`, 20, 60 * 60 * 1000))) {
       return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
     }
 

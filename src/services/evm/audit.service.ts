@@ -8,6 +8,7 @@ export type AuditEvent =
   | "ATTESTATION_CONTRACT_CREATED"
   | "ESCROW_FUNDED"
   | "PROOF_SUBMITTED"
+  | "PROOF_DELETED"
   | "AI_DECISION"
   | "FUNDS_RELEASED"
   | "ESCROW_CANCELLED"
@@ -17,7 +18,9 @@ export type AuditEvent =
   | "NFT_MINTED"
   | "EXTENSION_APPROVED"
   | "EXTENSION_REJECTED"
-  | "MCP_SUBMISSION";
+  | "MCP_SUBMISSION"
+  | "APPEAL_FILED"
+  | "APPEAL_DECIDED";
 
 interface AuditParams {
   contractId: string;

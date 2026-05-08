@@ -34,13 +34,16 @@ function extractUrls(text: string): string[] {
     .filter((u) => {
       try {
         const { hostname } = new URL(u);
-        // Block localhost and RFC-1918 private ranges
+        // Block localhost, RFC-1918 private ranges, cloud IMDS, and other reserved ranges
         if (
           hostname === "localhost" ||
+          hostname === "0.0.0.0" ||
           /^127\./.test(hostname) ||
           /^10\./.test(hostname) ||
           /^192\.168\./.test(hostname) ||
-          /^172\.(1[6-9]|2\d|3[01])\./.test(hostname)
+          /^172\.(1[6-9]|2\d|3[01])\./.test(hostname) ||
+          /^169\.254\./.test(hostname) ||  // AWS/GCP/Azure cloud metadata (IMDS)
+          /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(hostname) // CGNAT shared range
         )
           return false;
         return true;

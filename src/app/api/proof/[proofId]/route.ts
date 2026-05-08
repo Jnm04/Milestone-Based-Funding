@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { del } from "@vercel/blob";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { writeAuditLog } from "@/services/evm/audit.service";
 
 /**
  * DELETE /api/proof/:proofId
@@ -12,7 +13,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
  * Resets the milestone back to FUNDED so they can re-upload.
  *
  * Conditions for deletion:
- * - Authenticated as the startup on this contract
+ * - Authenticated as the startup on this contract (STARTUP role required)
  * - aiDecision must be null (AI hasn't decided yet)
  * - Milestone must be in PROOF_SUBMITTED status
  */
@@ -23,6 +24,11 @@ export async function DELETE(
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ error: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
+  }
+
+  // H-2: Role check — only STARTUPs can delete proofs
+  if (session.user.role !== "STARTUP") {
+    return NextResponse.json({ error: "Forbidden", code: "FORBIDDEN" }, { status: 403 });
   }
 
   if (!(await checkRateLimit(`proof-delete:${session.user.id}`, 10, 60 * 60 * 1000))) {
@@ -62,23 +68,26 @@ export async function DELETE(
     return NextResponse.json({ error: "Forbidden", code: "FORBIDDEN" }, { status: 403 });
   }
 
-  // Cannot delete after AI has already decided
-  if (proof.aiDecision !== null) {
+  // H-1: Use atomic conditional delete to prevent TOCTOU race with the verify route.
+  // deleteMany with aiDecision: null + milestone status PROOF_SUBMITTED ensures we
+  // cannot delete a proof that was decided between the findUnique above and this write.
+  const deleted = await prisma.proof.deleteMany({
+    where: {
+      id: proofId,
+      aiDecision: null,
+      milestone: { status: "PROOF_SUBMITTED" },
+    },
+  });
+
+  if (deleted.count === 0) {
+    // Either the AI decided in the meantime, or the milestone status changed
     return NextResponse.json(
       { error: "Cannot delete proof after AI has already made a decision", code: "ALREADY_DECIDED" },
       { status: 409 }
     );
   }
 
-  // Proof must still be in submitted state (not yet decided)
-  if (proof.milestone?.status !== "PROOF_SUBMITTED") {
-    return NextResponse.json(
-      { error: "Proof can only be deleted while the milestone is awaiting AI decision", code: "WRONG_STATUS" },
-      { status: 409 }
-    );
-  }
-
-  // Delete the file from Vercel Blob storage (best-effort — don't fail if URL not a Blob URL)
+  // Delete the file from Vercel Blob storage (best-effort)
   if (proof.fileUrl && proof.fileUrl.includes("vercel-storage.com")) {
     try {
       await del(proof.fileUrl);
@@ -87,14 +96,22 @@ export async function DELETE(
     }
   }
 
-  // Delete the proof record and reset milestone + contract status in a transaction
+  // Reset milestone + contract status
   await prisma.$transaction([
-    prisma.proof.delete({ where: { id: proofId } }),
     ...(proof.milestoneId
       ? [prisma.milestone.update({ where: { id: proof.milestoneId }, data: { status: "FUNDED" } })]
       : []),
     prisma.contract.update({ where: { id: proof.contractId }, data: { status: "FUNDED" } }),
   ]);
+
+  // H-3: Audit trail — record deletion so evidence cannot be silently erased
+  void writeAuditLog({
+    contractId: proof.contractId,
+    milestoneId: proof.milestoneId ?? undefined,
+    event: "PROOF_DELETED",
+    actor: session.user.id,
+    metadata: { proofId, deletedAt: new Date().toISOString() },
+  }).catch((err) => console.warn("[proof-delete] audit log failed:", err));
 
   return NextResponse.json({ ok: true });
 }

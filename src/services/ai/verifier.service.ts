@@ -627,7 +627,8 @@ export async function runFraudPreScreen(params: {
         flags.push({
           type: "DUPLICATE_FILE",
           severity: "RED_FLAG",
-          detail: `This exact file has been submitted as proof on another contract (${duplicate.contractId.slice(0, 8)}…). Reusing identical files across contracts is a strong indicator of fraudulent proof.`,
+          // L-1: Do not include partial internal contract IDs in text sent to external AI providers
+          detail: `This exact file has been submitted as proof on a different contract. Reusing identical files across contracts is a strong indicator of fraudulent proof.`,
         });
       }
     } catch (err) {
