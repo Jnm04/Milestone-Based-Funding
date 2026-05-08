@@ -20,7 +20,18 @@ export const registerSchema = z.object({
 
   // Optional fields — coerce undefined/null to undefined so they're truly optional
   name: z.string().max(200, "Name too long").optional(),
-  dateOfBirth: z.string().optional(),
+  dateOfBirth: z
+    .string({ required_error: "Date of birth is required" })
+    .refine((v) => !isNaN(new Date(v).getTime()), { message: "Invalid date of birth" })
+    .refine(
+      (v) => {
+        const dob = new Date(v);
+        const minAge = new Date();
+        minAge.setFullYear(minAge.getFullYear() - 18);
+        return dob <= minAge;
+      },
+      { message: "You must be at least 18 years old to register." }
+    ),
 
   termsAccepted: z.literal(true, { errorMap: () => ({ message: "You must accept the Terms of Use to register." }) }),
 });

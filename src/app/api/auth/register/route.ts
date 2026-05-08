@@ -88,13 +88,12 @@ export async function POST(request: NextRequest) {
     const emailVerificationToken = crypto.randomBytes(32).toString("hex");
     const emailVerificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
 
-    // Validate optional dateOfBirth — must be a valid past date
-    let parsedDOB: Date | null = null;
-    if (dateOfBirth) {
-      const d = new Date(dateOfBirth);
-      if (!isNaN(d.getTime()) && d < new Date()) {
-        parsedDOB = d;
-      }
+    // dateOfBirth is required (Zod already enforces 18+ format); re-check here as defense in depth
+    const parsedDOB = new Date(dateOfBirth);
+    const minAge = new Date();
+    minAge.setFullYear(minAge.getFullYear() - 18);
+    if (parsedDOB > minAge) {
+      return NextResponse.json({ error: "You must be at least 18 years old to register." }, { status: 400 });
     }
 
     const user = await prisma.user.create({

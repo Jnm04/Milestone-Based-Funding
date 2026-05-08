@@ -103,7 +103,7 @@ function RegisterForm() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, name, role, dateOfBirth: dateOfBirth || undefined, turnstileToken, termsAccepted: true }),
+        body: JSON.stringify({ email, password, name, role, dateOfBirth, turnstileToken, termsAccepted: true }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -263,18 +263,16 @@ function RegisterForm() {
 
             <div>
               <label className={labelClass}>
-                Date of birth{" "}
-                <span style={{ color: "hsl(30 10% 50%)", fontWeight: 400, textTransform: "none", letterSpacing: "normal" }}>
-                  — optional, improves sanctions screening
-                </span>
+                Date of birth
               </label>
               <input
                 type="date"
+                required
                 value={dateOfBirth}
                 onChange={(e) => setDateOfBirth(e.target.value)}
                 className={inputClass}
                 style={inputStyle}
-                max={new Date().toISOString().split("T")[0]}
+                max={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 18); return d.toISOString().split("T")[0]; })()}
               />
             </div>
 

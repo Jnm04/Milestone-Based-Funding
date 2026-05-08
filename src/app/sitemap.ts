@@ -52,5 +52,23 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "yearly",
       priority: 0.1,
     },
+    {
+      url: `${BASE_URL}/widerruf`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.1,
+    },
+    {
+      url: `${BASE_URL}/avv`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.1,
+    },
+    {
+      url: `${BASE_URL}/risiken`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.2,
+    },
   ];
 }
