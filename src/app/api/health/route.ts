@@ -80,18 +80,22 @@ export async function GET() {
   const allOk = [db, xrpl, evm, ai].every((s) => s.ok);
   const overallStatus = allOk ? "operational" : "degraded";
 
-  // Strip internal detail strings — only expose ok/latencyMs publicly
-  const sanitize = (s: ServiceResult) => ({ ok: s.ok, ...(s.latencyMs !== undefined ? { latencyMs: s.latencyMs } : {}) });
+  const fmt = (s: ServiceResult) => ({
+    ok: s.ok,
+    ...(s.latencyMs !== undefined ? { latencyMs: s.latencyMs } : {}),
+    ...(s.detail !== undefined ? { detail: s.detail } : {}),
+  });
 
   return NextResponse.json(
     {
       status: overallStatus,
       services: {
-        database: { label: "Database", ...sanitize(db) },
-        xrpl: { label: "XRPL Mainnet (NFT / Audit)", ...sanitize(xrpl) },
-        evmRpc: { label: "XRPL EVM Sidechain (Escrow)", ...sanitize(evm) },
-        ai: { label: "AI Verification (Anthropic)", ...sanitize(ai) },
+        database: { label: "Database", ...fmt(db) },
+        xrpl: { label: "XRPL Mainnet (NFT / Audit)", ...fmt(xrpl) },
+        evmRpc: { label: "XRPL EVM Sidechain (Escrow)", ...fmt(evm) },
+        ai: { label: "AI Verification (Anthropic)", ...fmt(ai) },
       },
+      network: process.env.XRPL_NETWORK ?? "mainnet",
       checkedAt: new Date().toISOString(),
     },
     {

@@ -99,9 +99,9 @@ export async function GET() {
     take: 1000,
   });
 
-  // Audit log entries — scoped to actions performed by this user to avoid leaking other party's email
+  // Audit log entries for all contracts the user is part of
   const auditLogs = await prisma.auditLog.findMany({
-    where: { contractId: { in: contractIds }, actor: session.user.email },
+    where: { contractId: { in: contractIds } },
     select: {
       id: true,
       contractId: true,
