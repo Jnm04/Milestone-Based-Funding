@@ -57,7 +57,10 @@ const milestoneItemSchema = z.object({
     .string({ required_error: "cancelAfter is required" })
     .min(1, "cancelAfter cannot be empty")
     .refine((val) => !isNaN(new Date(val).getTime()), { message: "cancelAfter must be a valid date" })
-    .refine((val) => new Date(val) > new Date(), { message: "Deadline must be in the future" }),
+    .refine((val) => new Date(val) > new Date(), { message: "Deadline must be in the future" })
+    .refine((val) => new Date(val) < new Date(Date.now() + 5 * 365 * 24 * 60 * 60 * 1000), {
+      message: "Deadline cannot be more than 5 years in the future",
+    }),
 
   dependsOnIndex: z.number().int().min(0).optional(),
 
@@ -99,7 +102,10 @@ const attestationMilestoneItemSchema = z.object({
     .string({ required_error: "cancelAfter is required" })
     .min(1, "cancelAfter cannot be empty")
     .refine((val) => !isNaN(new Date(val).getTime()), { message: "cancelAfter must be a valid date" })
-    .refine((val) => new Date(val) > new Date(), { message: "Deadline must be in the future" }),
+    .refine((val) => new Date(val) > new Date(), { message: "Deadline must be in the future" })
+    .refine((val) => new Date(val) < new Date(Date.now() + 5 * 365 * 24 * 60 * 60 * 1000), {
+      message: "Deadline cannot be more than 5 years in the future",
+    }),
 
   scheduleType: z.enum(["ONE_OFF", "MONTHLY", "QUARTERLY", "ANNUAL"]).optional().default("ONE_OFF"),
 

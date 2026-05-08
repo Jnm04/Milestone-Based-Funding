@@ -58,9 +58,12 @@ export async function POST(req: NextRequest) {
   if (milestones.length === 0) {
     return NextResponse.json({ error: "No milestones provided" }, { status: 400 });
   }
+  if (milestones.length > 10) {
+    return NextResponse.json({ error: "At most 10 milestones can be analysed at once" }, { status: 400 });
+  }
 
   const milestoneLines = milestones.map((m, i) =>
-    `${i + 1}. "${m.title}" — $${Number(m.amountUSD)} RLUSD, deadline in ${Number(m.deadlineDays)} days`
+    `${i + 1}. "${String(m.title).slice(0, 1000)}" — $${Number(m.amountUSD)} RLUSD, deadline in ${Number(m.deadlineDays)} days`
   );
 
   // ── Generate with Claude Haiku ────────────────────────────────────────────

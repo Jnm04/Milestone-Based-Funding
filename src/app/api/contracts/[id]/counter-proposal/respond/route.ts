@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   sendCounterProposalRespondedEmail,
 } from "@/lib/email";
@@ -38,6 +39,14 @@ export async function POST(
 
     if (session.user.role !== "INVESTOR") {
       return NextResponse.json({ error: "Only grant givers can respond to counter-proposals" }, { status: 403 });
+    }
+
+    // Rate limit: 20 responds per user per hour
+    if (!(await checkRateLimit(`cp-respond:${session.user.id}`, 20, 60 * 60 * 1000))) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429, headers: { "Retry-After": "3600" } }
+      );
     }
 
     const body = await request.json().catch(() => null);
@@ -122,7 +131,22 @@ export async function POST(
 
     // ── ACCEPT ────────────────────────────────────────────────────────────────
 
-    const changes = (cp.milestoneChanges as unknown as MilestoneChange[]) ?? [];
+    const rawChanges = (cp.milestoneChanges as unknown as MilestoneChange[]) ?? [];
+
+    // Re-validate milestoneChanges at accept time — the stored JSON blob must not be trusted blindly
+    const contractMilestoneIds = new Set(contract.milestones.map((m) => m.id));
+    const changes = rawChanges.filter((mc) => {
+      if (!mc.milestoneId || !contractMilestoneIds.has(mc.milestoneId)) return false;
+      if (mc.newAmountUSD !== undefined) {
+        const v = parseFloat(mc.newAmountUSD);
+        if (isNaN(v) || v < 1 || v > 999_999_999) return false;
+      }
+      if (mc.newCancelAfter !== undefined) {
+        const d = new Date(mc.newCancelAfter);
+        if (isNaN(d.getTime()) || d <= new Date()) return false;
+      }
+      return true;
+    });
 
     // Build milestone update operations
     const milestoneUpdates = changes
@@ -147,10 +171,10 @@ export async function POST(
 
     // Apply all changes in a transaction
     await prisma.$transaction(async (tx) => {
-      // 1. Apply milestone term changes
+      // 1. Apply milestone term changes — contractId in WHERE prevents cross-contract IDOR
       for (const op of milestoneUpdates) {
         await tx.milestone.update({
-          where: { id: op.id },
+          where: { id: op.id, contractId: id },
           data: op.data,
         });
       }

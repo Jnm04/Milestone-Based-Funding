@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { resolveApiKey } from "@/lib/api-key-auth";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { writeAuditLog } from "@/services/evm/audit.service";
 import { z } from "zod";
 
 export async function GET(
@@ -47,7 +50,12 @@ const patchContractSchema = z.object({
   cancelAfter: z
     .string()
     .refine((v) => !isNaN(new Date(v).getTime()), { message: "cancelAfter must be a valid date" })
-    .refine((v) => new Date(v) > new Date(), { message: "Deadline must be in the future" })
+    .refine((v) => new Date(v) > new Date(Date.now() + 24 * 60 * 60 * 1000), {
+      message: "Deadline must be at least 24 hours in the future",
+    })
+    .refine((v) => new Date(v) < new Date(Date.now() + 5 * 365 * 24 * 60 * 60 * 1000), {
+      message: "Deadline cannot be more than 5 years in the future",
+    })
     .optional(),
 });
 
@@ -62,12 +70,20 @@ export async function PATCH(
 
   const { id } = await params;
 
+  // Rate limit: 30 edits per contract per hour
+  if (!(await checkRateLimit(`edit-contract:${session.user.id}:${id}`, 30, 60 * 60 * 1000))) {
+    return NextResponse.json(
+      { error: "Too many edits. Please wait before trying again.", code: "RATE_LIMITED" },
+      { status: 429, headers: { "Retry-After": "3600" } }
+    );
+  }
+
   const contract = await prisma.contract.findUnique({
     where: { id },
-    select: { investorId: true, startupId: true, status: true },
+    select: { investorId: true, startupId: true, status: true, deletedAt: true, milestone: true, amountUSD: true, cancelAfter: true },
   });
 
-  if (!contract) {
+  if (!contract || contract.deletedAt) {
     return NextResponse.json({ error: "Not found", code: "NOT_FOUND" }, { status: 404 });
   }
 
@@ -101,14 +117,47 @@ export async function PATCH(
     );
   }
 
-  const updated = await prisma.contract.update({
-    where: { id },
-    data: {
-      ...(milestone !== undefined ? { milestone } : {}),
-      ...(amountUSD !== undefined ? { amountUSD } : {}),
-      ...(cancelAfter !== undefined ? { cancelAfter: new Date(cancelAfter) } : {}),
+  let updated;
+  try {
+    // Atomic: the `status: "DRAFT"` in WHERE prevents a race where a concurrent join
+    // transitions the contract to AWAITING_ESCROW between our read and this write.
+    updated = await prisma.contract.update({
+      where: { id, status: "DRAFT" },
+      data: {
+        ...(milestone !== undefined ? { milestone } : {}),
+        ...(amountUSD !== undefined ? { amountUSD } : {}),
+        ...(cancelAfter !== undefined ? { cancelAfter: new Date(cancelAfter) } : {}),
+      },
+      select: { id: true, milestone: true, amountUSD: true, cancelAfter: true, updatedAt: true, status: true },
+    });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+      return NextResponse.json(
+        { error: "Contract is no longer in DRAFT status and cannot be edited", code: "WRONG_STATUS" },
+        { status: 409 }
+      );
+    }
+    throw err;
+  }
+
+  // Audit trail — record before/after so terms cannot be silently changed
+  void writeAuditLog({
+    contractId: id,
+    event: "CONTRACT_EDITED",
+    actor: session.user.id,
+    metadata: {
+      before: {
+        milestone: contract.milestone,
+        amountUSD: contract.amountUSD?.toString(),
+        cancelAfter: contract.cancelAfter?.toISOString(),
+      },
+      after: {
+        milestone: milestone ?? contract.milestone,
+        amountUSD: amountUSD?.toString() ?? contract.amountUSD?.toString(),
+        cancelAfter: cancelAfter ?? contract.cancelAfter?.toISOString(),
+      },
     },
-  });
+  }).catch((err) => console.warn("[patch-contract] audit log failed:", err));
 
   return NextResponse.json({ ok: true, contract: updated });
 }

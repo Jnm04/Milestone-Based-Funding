@@ -59,6 +59,9 @@ export async function POST(request: NextRequest) {
     if (!title || typeof title !== "string" || title.trim().length < 5) {
       return NextResponse.json({ error: "title must be at least 5 characters" }, { status: 400 });
     }
+    if (title.length > 2000) {
+      return NextResponse.json({ error: "title must be at most 2000 characters" }, { status: 400 });
+    }
     if (typeof deadlineDays !== "number" || deadlineDays < 1) {
       return NextResponse.json({ error: "deadlineDays must be a positive number" }, { status: 400 });
     }

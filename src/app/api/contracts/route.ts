@@ -72,6 +72,7 @@ Rules:
         f.text.length > 0 &&
         ["WARNING", "INFO"].includes(f.severity)
     )
+    .map((f) => ({ ...f, text: f.text.slice(0, 500) }))
     .slice(0, 5);
 
   if (validated.length > 0) {
@@ -103,6 +104,11 @@ export async function POST(request: NextRequest) {
 
     if (!userId) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    // Session users must have INVESTOR role — API key agents are always treated as investors
+    if (session && session.user.role !== "INVESTOR") {
+      return NextResponse.json({ error: "Only investors can create contracts" }, { status: 403 });
     }
 
     // 20 contract creations per user per hour — prevents DB/webhook spam
@@ -150,6 +156,10 @@ export async function POST(request: NextRequest) {
     const investor = await prisma.user.findUnique({ where: { id: userId } });
     if (!investor) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
+    if (inviteEmail && inviteEmail.trim().toLowerCase() === investor.email.toLowerCase()) {
+      return NextResponse.json({ error: "You cannot invite yourself as a receiver." }, { status: 422 });
+    }
+
     if (isAttestation && !investor.isEnterprise) {
       return NextResponse.json(
         { error: "Enterprise Attestation Mode is not enabled for your account. Request access from the team." },
@@ -182,6 +192,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { error: "No account found with that wallet address. The Receiver must register first." },
           { status: 404 }
+        );
+      }
+      if (receiver.id === userId) {
+        return NextResponse.json(
+          { error: "You cannot be both investor and receiver in the same contract." },
+          { status: 422 }
         );
       }
     }
@@ -337,7 +353,7 @@ export async function POST(request: NextRequest) {
       contractId: result.id,
       event: "CONTRACT_CREATED",
       actor: userId,
-      metadata: { milestoneCount: result.id ? 1 : 0 },
+      metadata: { milestoneCount: msData.length },
     });
 
     fireWebhook({

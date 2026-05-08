@@ -25,9 +25,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Session users must have STARTUP role; API key agents are always treated as builders
+    // Both session users and API key callers must have STARTUP role
     if (session && session.user.role !== "STARTUP") {
       return NextResponse.json({ error: "Only startups can join contracts" }, { status: 403 });
+    }
+    if (apiKeyCtx) {
+      const apiKeyUser = await prisma.user.findUnique({
+        where: { id: apiKeyCtx.userId },
+        select: { role: true },
+      });
+      if (!apiKeyUser || apiKeyUser.role !== "STARTUP") {
+        return NextResponse.json({ error: "Only startups can join contracts" }, { status: 403 });
+      }
     }
 
     let inviteCode: string | undefined;
