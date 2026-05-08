@@ -6,9 +6,9 @@ export const revalidate = 300; // cache 5 minutes
 export async function GET() {
   try {
     const [contracts, verifications, agentContracts] = await Promise.all([
-      prisma.contract.count({ where: { deletedAt: null } }),
+      prisma.contract.count(),
       prisma.proof.count({ where: { aiDecision: { not: null } } }),
-      prisma.contract.count({ where: { isAgentContract: true, deletedAt: null } }),
+      prisma.contract.count({ where: { isAgentContract: true } }),
     ]);
 
     return NextResponse.json(
