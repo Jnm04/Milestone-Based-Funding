@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
         lockoutUntil: null,
         // Invalidate all existing sessions after password reset
         sessionVersion: { increment: 1 },
+        passwordChangedAt: new Date(),
       },
     });
 

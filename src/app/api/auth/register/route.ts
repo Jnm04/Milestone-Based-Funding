@@ -109,6 +109,7 @@ export async function POST(request: NextRequest) {
         termsAcceptedAt: new Date(),
         termsVersion: TERMS_VERSION,
         registrationIp: getClientIp(request),
+        passwordChangedAt: new Date(),
       },
     });
 

@@ -55,6 +55,8 @@ model User {
   lockoutUntil    DateTime?
   registrationIp  String?   // IP at account creation — never updated
   lastLoginIp     String?
+  lastActiveAt    DateTime? // updated on login; basis for GDPR storage-limitation cleanup
+  passwordChangedAt DateTime? // set at registration and on every password change
 
   // Password reset
   passwordResetToken       String?   @unique

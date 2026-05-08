@@ -145,7 +145,7 @@ export const authOptions: NextAuthOptions = {
         }
         void prisma.user.update({
           where: { id: user.id },
-          data: { lastLoginIp: ip ?? undefined },
+          data: { lastLoginIp: ip ?? undefined, lastActiveAt: new Date() },
         }).catch(() => {});
 
         return {
