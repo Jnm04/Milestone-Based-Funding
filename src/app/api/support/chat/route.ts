@@ -153,12 +153,14 @@ export async function POST(req: NextRequest) {
     )
     .map((m) => ({ role: m.role, content: m.content.slice(0, MAX_MSG_LENGTH) }));
 
-  // Enforce strict user/assistant alternation — drop consecutive same-role messages
+  // Enforce strict user/assistant alternation — drop consecutive same-role messages.
+  // Also strip leading assistant messages: Claude's API requires user first,
+  // and allowing attacker-supplied assistant turns at the start is a prompt-injection vector.
   const sanitized: { role: "user" | "assistant"; content: string }[] = [];
   for (const m of filtered) {
-    if (sanitized.length === 0 || sanitized[sanitized.length - 1].role !== m.role) {
-      sanitized.push(m);
-    }
+    if (sanitized.length === 0 && m.role !== "user") continue; // must start with user
+    if (sanitized.length > 0 && sanitized[sanitized.length - 1].role === m.role) continue; // no consecutive same-role
+    sanitized.push(m);
   }
   // Claude requires the last message to be from the user
   while (sanitized.length > 0 && sanitized[sanitized.length - 1].role !== "user") {
