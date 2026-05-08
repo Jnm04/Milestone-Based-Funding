@@ -72,9 +72,12 @@ export async function checkRateLimit(key: string, limit: number, windowMs: numbe
 
   try {
     const count = await redis.incr(key);
-    // Always set TTL — if we only set it on count===1 and the call fails,
-    // the key lives forever and permanently locks out the user.
-    await redis.pexpire(key, windowMs);
+    if (count === 1) {
+      // First hit: anchor the fixed window. Subsequent requests must NOT reset
+      // the TTL — otherwise this becomes a rolling window and sustained traffic
+      // never resets the counter.
+      await redis.pexpire(key, windowMs);
+    }
     return count <= limit;
   } catch {
     // Redis unavailable — fall back to in-memory per-instance limiting rather than

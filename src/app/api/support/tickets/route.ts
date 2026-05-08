@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       subject: subject.trim().slice(0, MAX_SUBJECT),
       messages: [{ role: "user", content: message.trim(), timestamp: new Date().toISOString() }],
       errorDigest: safeDigest,
-      priority: "LOW",
+      priority: safeDigest ? "HIGH" : "LOW",
       status: "OPEN",
     },
   });

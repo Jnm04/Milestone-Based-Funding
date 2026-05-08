@@ -258,9 +258,10 @@ export const authOptions: NextAuthOptions = {
         token.sessionVersion = (user as unknown as { sessionVersion: number }).sessionVersion ?? 1;
         return token;
       }
-      // Allow updating avatarUrl via session update (walletAddress must be re-fetched from DB, not taken from client)
       if (trigger === "update") {
         if (session?.avatarUrl !== undefined) token.avatarUrl = session.avatarUrl as string | null;
+        // walletAddress is display-only — allow client to sync after POST /api/user/wallet
+        if (session?.walletAddress !== undefined) token.walletAddress = session.walletAddress as string | null;
       }
       // On every token refresh (not fresh login), verify account hasn't been deleted
       // and that the session version is still valid.
