@@ -58,7 +58,7 @@ function LoginForm() {
           const sessionRes = await fetch("/api/auth/session");
           const session = await sessionRes.json();
           const role = session?.user?.role;
-          if (callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")) {
+          if (callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//") && !callbackUrl.includes("%2F") && !callbackUrl.includes("%5C") && !callbackUrl.includes("\\")) {
             router.push(callbackUrl);
           } else if (session?.user?.isEnterprise) {
             router.push("/dashboard/investor");
@@ -171,7 +171,7 @@ function LoginForm() {
         posthog.capture("user_logged_in", { role });
       }
 
-      if (callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")) {
+      if (callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//") && !callbackUrl.includes("%2F") && !callbackUrl.includes("%5C") && !callbackUrl.includes("\\")) {
         router.push(callbackUrl);
       } else if (role === "INVESTOR") {
         router.push("/dashboard/investor");

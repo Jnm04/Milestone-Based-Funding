@@ -35,6 +35,10 @@ export async function POST() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  if (!(await checkRateLimit(`totp-setup:${session.user.id}`, 5, 15 * 60 * 1000))) {
+    return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: { email: true, totpEnabled: true },
@@ -116,14 +120,15 @@ export async function DELETE(req: NextRequest) {
 
   if (!user.passwordHash) return NextResponse.json({ error: "Google accounts cannot use 2FA password verification" }, { status: 400 });
   const passwordValid = await bcrypt.compare(body.password, user.passwordHash);
-  if (!passwordValid) return NextResponse.json({ error: "Incorrect password" }, { status: 400 });
-
   const codeResult = await verifyTotp({ token: body.code, secret: user.totpSecret });
-  if (!codeResult.valid) return NextResponse.json({ error: "Invalid 2FA code" }, { status: 400 });
+
+  if (!passwordValid || !codeResult.valid) {
+    return NextResponse.json({ error: "Incorrect password or 2FA code" }, { status: 400 });
+  }
 
   await prisma.user.update({
     where: { id: session.user.id },
-    data: { totpEnabled: false, totpSecret: null },
+    data: { totpEnabled: false, totpSecret: null, totpRecoveryCodes: null },
   });
 
   return NextResponse.json({ ok: true });

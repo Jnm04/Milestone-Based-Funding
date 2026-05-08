@@ -25,14 +25,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${BASE_URL}/login?error=token_expired`);
     }
 
-    await prisma.user.update({
-      where: { id: user.id },
+    const updated = await prisma.user.updateMany({
+      where: { id: user.id, emailVerificationToken: tokenHash },
       data: {
         emailVerified: true,
         emailVerificationToken: null,
         emailVerificationTokenExpiry: null,
       },
     });
+
+    if (updated.count === 0) {
+      return NextResponse.redirect(`${BASE_URL}/login?error=invalid_token`);
+    }
 
     return NextResponse.redirect(`${BASE_URL}/login?verified=1`);
   } catch (err) {

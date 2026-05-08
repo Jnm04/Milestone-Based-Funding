@@ -40,20 +40,24 @@ export async function POST(request: NextRequest) {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
-    await prisma.user.update({
-      where: { id: user.id },
+    // updateMany with token condition ensures the token can only be consumed once
+    // even under concurrent requests (second request finds count === 0)
+    const updated = await prisma.user.updateMany({
+      where: { id: user.id, passwordResetToken: tokenHash },
       data: {
         passwordHash,
         passwordResetToken: null,
         passwordResetTokenExpiry: null,
-        // Reset lockout in case they were locked out
         loginAttempts: 0,
         lockoutUntil: null,
-        // Invalidate all existing sessions after password reset
         sessionVersion: { increment: 1 },
         passwordChangedAt: new Date(),
       },
     });
+
+    if (updated.count === 0) {
+      return NextResponse.json({ error: "Invalid or expired reset link" }, { status: 400 });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {

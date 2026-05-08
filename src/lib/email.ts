@@ -233,7 +233,7 @@ export async function sendVerificationEmail({
     html: `
       <p>Hi,</p>
       <p>Thanks for signing up for Cascrow. Please verify your email address by clicking the link below.</p>
-      <p><a href="${link}">Verify email address →</a></p>
+      <p><a href="${esc(link)}">Verify email address →</a></p>
       <p>This link expires in 24 hours. If you did not create an account, you can ignore this email.</p>
     `,
   });
@@ -259,7 +259,7 @@ export async function sendEmailChangeVerification({
     html: `
       <p>Hi,</p>
       <p>A request was made to change the email address on your Cascrow account from <strong>${esc(currentEmail)}</strong> to this address.</p>
-      <p><a href="${link}">Confirm new email address →</a></p>
+      <p><a href="${esc(link)}">Confirm new email address →</a></p>
       <p>This link expires in 24 hours. If you did not request this change, you can safely ignore this email — your account remains unchanged.</p>
     `,
   });
@@ -283,7 +283,7 @@ export async function sendPasswordResetEmail({
     html: `
       <p>Hi,</p>
       <p>We received a request to reset your Cascrow password. Click the link below to set a new password.</p>
-      <p><a href="${link}">Reset password →</a></p>
+      <p><a href="${esc(link)}">Reset password →</a></p>
       <p>This link expires in 1 hour. If you did not request a password reset, you can safely ignore this email.</p>
     `,
   });
@@ -1215,7 +1215,7 @@ export async function sendTeamInviteEmail({
       <p><strong>${esc(inviterName)}</strong> has invited you to join <strong>${esc(companyName)}'s</strong> cascrow enterprise workspace as a <strong>${roleLabel}</strong>.</p>
       <p>cascrow is an AI-powered attestation platform for KPI reporting and ESG compliance.</p>
       <p style="margin:24px 0">
-        <a href="${acceptUrl}" style="background:#2563EB;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;font-weight:600">Accept Invitation →</a>
+        <a href="${esc(acceptUrl)}" style="background:#2563EB;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;font-weight:600">Accept Invitation →</a>
       </p>
       <p style="font-size:12px;color:#999">This invitation expires in 7 days. If you don't have a cascrow account yet, you'll be asked to register first.</p>
       <p style="font-size:12px;color:#999">If you did not expect this invitation, you can safely ignore this email.</p>

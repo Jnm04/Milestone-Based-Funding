@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
   }
 
   const plainCodes = generateRecoveryCodes();
-  const hashes = await Promise.all(plainCodes.map((c) => bcrypt.hash(c, 10)));
+  const hashes = await Promise.all(plainCodes.map((c) => bcrypt.hash(c, 12)));
 
   await prisma.user.update({
     where: { id: session.user.id },
