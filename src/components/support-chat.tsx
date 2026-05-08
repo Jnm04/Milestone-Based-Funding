@@ -99,8 +99,9 @@ export function SupportChat() {
   const [ticketSubject, setTicketSubject] = useState("");
   const [showTicketForm, setShowTicketForm] = useState(false);
   const [unread, setUnread] = useState(false);
-  const [lastAdminMsgCount, setLastAdminMsgCount] = useState<number>(
-    () => loadLS<Message[]>(LS_MESSAGES, []).filter((m) => m.role === "admin").length,
+  const [ticketStatus, setTicketStatus] = useState<string | null>(null);
+  const lastAdminMsgCountRef = useRef<number>(
+    loadLS<Message[]>(LS_MESSAGES, []).filter((m) => m.role === "admin").length,
   );
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -146,9 +147,10 @@ export function SupportChat() {
   function clearChat() {
     setMessages([]);
     setTicketId(null);
+    setTicketStatus(null);
     setCantHelp(false);
     setShowTicketForm(false);
-    setLastAdminMsgCount(0);
+    lastAdminMsgCountRef.current = 0;
     try {
       localStorage.removeItem(LS_MESSAGES);
       localStorage.removeItem(LS_TICKET);
@@ -161,21 +163,25 @@ export function SupportChat() {
       const res = await fetch("/api/support/tickets/mine");
       if (!res.ok) return;
       const data = await res.json();
-      const ticket = (data.tickets as Array<{ id: string; messages: Message[] }>).find(
+      const ticket = (data.tickets as Array<{ id: string; messages: Message[]; status: string }>).find(
         (t) => t.id === ticketId,
       );
       if (!ticket) return;
+
+      // Update ticket status so UI can react
+      setTicketStatus(ticket.status);
+
       const adminMsgs = ticket.messages.filter((m) => m.role === "admin");
-      if (adminMsgs.length > lastAdminMsgCount) {
-        const newReplies = adminMsgs.slice(lastAdminMsgCount);
-        setLastAdminMsgCount(adminMsgs.length);
+      if (adminMsgs.length > lastAdminMsgCountRef.current) {
+        const newReplies = adminMsgs.slice(lastAdminMsgCountRef.current);
+        lastAdminMsgCountRef.current = adminMsgs.length;
         setMessages((prev) => [...prev, ...newReplies]);
         if (!open) setUnread(true);
       }
     } catch {
       // silent
     }
-  }, [ticketId, session?.user?.id, lastAdminMsgCount, open]);
+  }, [ticketId, session?.user?.id, open]);
 
   useEffect(() => {
     if (!ticketId) return;
@@ -196,13 +202,29 @@ export function SupportChat() {
     // If a ticket is open, route the message to the ticket, not the AI
     if (ticketId) {
       try {
-        await fetch(`/api/support/tickets/${ticketId}/message`, {
+        const res = await fetch(`/api/support/tickets/${ticketId}/message`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message: text }),
         });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          const isClosedError = res.status === 409 && String(errData.error).toLowerCase().includes("closed");
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "system",
+              content: isClosedError
+                ? "This case has been resolved and is now closed. Open a new case if you need further help."
+                : "Message could not be sent. Please try again.",
+            },
+          ]);
+        }
       } catch {
-        // silent — message is shown locally regardless
+        setMessages((prev) => [
+          ...prev,
+          { role: "system", content: "Message could not be sent — network error. Please try again." },
+        ]);
       } finally {
         setLoading(false);
       }
@@ -286,7 +308,8 @@ export function SupportChat() {
   }
 
   const showQuickReplies = messages.length === 1 && messages[0].role === "assistant" && !ticketId && !loading;
-  const canSend = !!input.trim() && !loading;
+  const ticketClosed = ticketStatus === "RESOLVED" || ticketStatus === "CLOSED";
+  const canSend = !!input.trim() && !loading && !ticketClosed;
 
   return (
     <>
@@ -330,12 +353,15 @@ export function SupportChat() {
           </svg>
         )}
         {unread && !open && (
-          <span style={{
-            position: "absolute", top: 2, right: 2,
-            width: 10, height: 10, borderRadius: "50%",
-            background: "hsl(0 72% 51%)",
-            border: "2px solid hsl(24 14% 4%)",
-          }} />
+          <span
+            aria-label="Unread message"
+            style={{
+              position: "absolute", top: 2, right: 2,
+              width: 10, height: 10, borderRadius: "50%",
+              background: "hsl(0 72% 51%)",
+              border: "2px solid hsl(24 14% 4%)",
+            }}
+          />
         )}
       </button>
 
@@ -380,8 +406,12 @@ export function SupportChat() {
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: "hsl(32 35% 92%)" }}>cascrow support</div>
-              <div style={{ fontSize: 11, color: "hsl(30 10% 62%)", fontFamily: "'JetBrains Mono', monospace" }}>
-                {ticketId ? `#${ticketId.slice(-8)} · waiting for reply` : "AI + human support"}
+              <div style={{ fontSize: 11, color: ticketStatus === "RESOLVED" || ticketStatus === "CLOSED" ? "#22c55e" : "hsl(30 10% 62%)", fontFamily: "'JetBrains Mono', monospace" }}>
+                {ticketId
+                  ? ticketStatus === "RESOLVED" || ticketStatus === "CLOSED"
+                    ? `#${ticketId.slice(-8)} · resolved`
+                    : `#${ticketId.slice(-8)} · waiting for reply`
+                  : "AI + human support"}
               </div>
             </div>
             {messages.length > 1 && (
@@ -599,6 +629,27 @@ export function SupportChat() {
           </div>
 
           {/* Input */}
+          {ticketClosed ? (
+            <div style={{
+              padding: "10px 14px",
+              borderTop: "1px solid hsl(28 18% 14%)",
+              background: "hsl(24 14% 4% / 0.6)",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 12,
+              color: "#22c55e",
+            }}>
+              <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", flexShrink: 0 }} />
+              This case has been resolved.
+              <button
+                onClick={clearChat}
+                style={{ marginLeft: "auto", fontSize: 12, color: "hsl(22 55% 54%)", background: "none", border: "none", cursor: "pointer", whiteSpace: "nowrap" }}
+              >
+                New chat →
+              </button>
+            </div>
+          ) : (
           <div style={{
             padding: "10px 12px",
             borderTop: "1px solid hsl(28 18% 14%)",
@@ -662,6 +713,7 @@ export function SupportChat() {
               </svg>
             </button>
           </div>
+          )}
         </div>
       )}
 

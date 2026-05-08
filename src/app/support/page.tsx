@@ -44,8 +44,9 @@ export default function SupportPage() {
 
   const [tab, setTab] = useState<"chat" | "cases">("chat");
 
-  const LS_MSGS = "cascrow-support-page-messages";
-  const LS_TICKET = "cascrow-support-page-ticket";
+  // Same keys as the widget so both surfaces share one conversation
+  const LS_MSGS = "cascrow-support-messages";
+  const LS_TICKET = "cascrow-support-ticket";
 
   function loadLS<T>(key: string, fallback: T): T {
     if (typeof window === "undefined") return fallback;
@@ -53,22 +54,16 @@ export default function SupportPage() {
   }
 
   // Chat
-  const [messages, setMessages] = useState<Message[]>(() => {
-    const stored = loadLS<Message[]>("cascrow-support-page-messages", []);
-    return stored.length > 0 ? stored : [];
-  });
+  const [messages, setMessages] = useState<Message[]>(() => loadLS<Message[]>(LS_MSGS, []));
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [cantHelp, setCantHelp] = useState(false);
-  const [ticketId, setTicketId] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    try { return localStorage.getItem("cascrow-support-page-ticket"); } catch { return null; }
-  });
+  const [ticketId, setTicketId] = useState<string | null>(() => loadLS<string | null>(LS_TICKET, null));
+  const [ticketStatus, setTicketStatus] = useState<string | null>(null);
   const [creatingTicket, setCreatingTicket] = useState(false);
-  const [lastAdminMsgCount, setLastAdminMsgCount] = useState<number>(() => {
-    const stored = loadLS<Message[]>("cascrow-support-page-messages", []);
-    return stored.filter((m) => m.role === "admin").length;
-  });
+  const lastAdminMsgCountRef = useRef<number>(
+    loadLS<Message[]>(LS_MSGS, []).filter((m) => m.role === "admin").length,
+  );
 
   // Cases
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -135,16 +130,17 @@ export default function SupportPage() {
       const data = await res.json();
       const ticket = data.tickets.find((t: Ticket) => t.id === ticketId);
       if (!ticket) return;
+      setTicketStatus(ticket.status);
       const adminMsgs = ticket.messages.filter((m: Message) => m.role === "admin");
-      if (adminMsgs.length > lastAdminMsgCount) {
-        const newReplies = adminMsgs.slice(lastAdminMsgCount);
-        setLastAdminMsgCount(adminMsgs.length);
+      if (adminMsgs.length > lastAdminMsgCountRef.current) {
+        const newReplies = adminMsgs.slice(lastAdminMsgCountRef.current);
+        lastAdminMsgCountRef.current = adminMsgs.length;
         setMessages((prev) => [...prev, ...newReplies]);
       }
     } catch {
       // silent
     }
-  }, [ticketId, session?.user?.id, lastAdminMsgCount]);
+  }, [ticketId, session?.user?.id]);
 
   useEffect(() => {
     if (!ticketId) return;
@@ -164,13 +160,29 @@ export default function SupportPage() {
     // If ticket is open, route message to the ticket (human support), not the AI
     if (ticketId) {
       try {
-        await fetch(`/api/support/tickets/${ticketId}/message`, {
+        const res = await fetch(`/api/support/tickets/${ticketId}/message`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message: text }),
         });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          const isClosedError = res.status === 409 && String(errData.error).toLowerCase().includes("closed");
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "system",
+              content: isClosedError
+                ? "This case has been resolved and is now closed. Open a new case if you need further help."
+                : "Message could not be sent. Please try again.",
+            },
+          ]);
+        }
       } catch {
-        // silent — message is shown locally regardless
+        setMessages((prev) => [
+          ...prev,
+          { role: "system", content: "Message could not be sent — network error. Please try again." },
+        ]);
       } finally {
         setLoading(false);
       }
@@ -257,8 +269,9 @@ export default function SupportPage() {
   function clearChat() {
     setMessages([]);
     setTicketId(null);
+    setTicketStatus(null);
     setCantHelp(false);
-    setLastAdminMsgCount(0);
+    lastAdminMsgCountRef.current = 0;
     try {
       localStorage.removeItem(LS_MSGS);
       localStorage.removeItem(LS_TICKET);
@@ -686,50 +699,55 @@ export default function SupportPage() {
             <div ref={bottomRef} />
           </div>
 
-          {/* Awaiting response status */}
-          {ticketId && (
-            <div
-              style={{
-                padding: "11px 16px",
-                borderTop: "1px solid rgba(196,112,75,0.1)",
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                fontSize: 12,
-                color: "#A89B8C",
-                flexShrink: 0,
-              }}
-            >
+          {/* Ticket status bar */}
+          {ticketId && (() => {
+            const isClosed = ticketStatus === "RESOLVED" || ticketStatus === "CLOSED";
+            return (
               <div
                 style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: "50%",
-                  background: "#f59e0b",
-                  flexShrink: 0,
-                  boxShadow: "0 0 6px rgba(245,158,11,0.5)",
-                }}
-              />
-              Awaiting response — someone on the support team will help you soon.
-              <button
-                onClick={() => setTab("cases")}
-                style={{
-                  marginLeft: "auto",
+                  padding: "11px 16px",
+                  borderTop: "1px solid rgba(196,112,75,0.1)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
                   fontSize: 12,
-                  color: "#C4704B",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
+                  color: isClosed ? "#22c55e" : "#A89B8C",
+                  flexShrink: 0,
                 }}
               >
-                View case →
-              </button>
-            </div>
-          )}
+                <div
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: "50%",
+                    background: isClosed ? "#22c55e" : "#f59e0b",
+                    flexShrink: 0,
+                    boxShadow: isClosed ? "0 0 6px rgba(34,197,94,0.5)" : "0 0 6px rgba(245,158,11,0.5)",
+                  }}
+                />
+                {isClosed
+                  ? "This case has been resolved."
+                  : "Awaiting response — someone on the support team will help you soon."}
+                <button
+                  onClick={() => setTab("cases")}
+                  style={{
+                    marginLeft: "auto",
+                    fontSize: 12,
+                    color: "#C4704B",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  View case →
+                </button>
+              </div>
+            );
+          })()}
 
           {/* Input */}
-          <div style={{ padding: "10px 0 28px", flexShrink: 0 }}>
+          <div style={{ padding: "10px 0 28px", flexShrink: 0, opacity: (ticketStatus === "RESOLVED" || ticketStatus === "CLOSED") ? 0.45 : 1, pointerEvents: (ticketStatus === "RESOLVED" || ticketStatus === "CLOSED") ? "none" : undefined }}>
             <div
               style={{
                 display: "flex",
@@ -834,7 +852,12 @@ export default function SupportPage() {
               My Cases
             </h2>
             <button
-              onClick={() => { clearChat(); setTab("chat"); }}
+              onClick={() => {
+                const activeTicket = ticketId && ticketStatus !== "RESOLVED" && ticketStatus !== "CLOSED";
+                if (activeTicket && !window.confirm("You have an open case. Starting a new chat will not close it — you can still find it in this list.\n\nStart new chat anyway?")) return;
+                clearChat();
+                setTab("chat");
+              }}
               style={{
                 padding: "8px 18px",
                 borderRadius: 8,
@@ -950,9 +973,11 @@ export default function SupportPage() {
                   >
                     {/* Row header */}
                     <div
-                      onClick={() =>
-                        setExpandedTicket(isExpanded ? null : ticket.id)
-                      }
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setExpandedTicket(isExpanded ? null : ticket.id)}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpandedTicket(isExpanded ? null : ticket.id); } }}
+                      aria-expanded={isExpanded}
                       style={{
                         padding: "16px 20px",
                         cursor: "pointer",

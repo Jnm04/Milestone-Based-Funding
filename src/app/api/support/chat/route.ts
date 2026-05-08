@@ -159,6 +159,14 @@ export async function POST(req: NextRequest) {
 
   // Ticket creation path
   if (createTicket) {
+    // Enforce the same 5/hour limit as POST /api/support/tickets to prevent bypass
+    const ticketRlKey = session?.user?.id
+      ? `support-ticket:${session.user.id}`
+      : `support-ticket:${ip}`;
+    if (!(await checkRateLimit(ticketRlKey, 5, 60 * 60 * 1000))) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
     const lastUserMsg = [...sanitized].reverse().find((m) => m.role === "user");
     const ticketSubject = subject ?? lastUserMsg?.content?.slice(0, 80) ?? "Support request";
 
@@ -169,12 +177,19 @@ export async function POST(req: NextRequest) {
       ? "MEDIUM"
       : "LOW";
 
+    // Only store user messages in the ticket transcript (not AI assistant replies)
+    // and add timestamps so ordering is unambiguous
+    const now = new Date().toISOString();
+    const ticketMessages = sanitized
+      .filter((m) => m.role === "user")
+      .map((m) => ({ role: "user", content: m.content, timestamp: now }));
+
     const ticket = await prisma.supportTicket.create({
       data: {
         userId: session?.user?.id ?? null,
         email: session?.user?.email ?? null,
         subject: ticketSubject,
-        messages: sanitized as unknown as Parameters<typeof prisma.supportTicket.create>[0]["data"]["messages"],
+        messages: ticketMessages as unknown as Parameters<typeof prisma.supportTicket.create>[0]["data"]["messages"],
         priority,
         status: "OPEN",
       },

@@ -92,6 +92,10 @@ function TicketRow({
     >
       {/* Summary row */}
       <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded((v) => !v); } }}
         style={{
           display: "grid",
           gridTemplateColumns: "1fr auto auto auto auto",

@@ -1128,6 +1128,7 @@ model SupportTicket {
 
   @@index([userId])
   @@index([status, createdAt(sort: Desc)])
+  @@index([email])
 }
 
 // ── Admin Audit Log ───────────────────────────────────────────────────────────

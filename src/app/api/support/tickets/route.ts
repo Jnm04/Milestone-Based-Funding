@@ -32,17 +32,32 @@ export async function POST(req: NextRequest) {
   if (!subject?.trim() || !message?.trim()) {
     return NextResponse.json({ error: "subject and message required" }, { status: 400 });
   }
+  if (subject.length > MAX_SUBJECT) {
+    return NextResponse.json({ error: `subject too long (max ${MAX_SUBJECT})` }, { status: 400 });
+  }
+  if (message.length > MAX_MESSAGE) {
+    return NextResponse.json({ error: `message too long (max ${MAX_MESSAGE})` }, { status: 400 });
+  }
 
   const resolvedEmail = session?.user?.email ?? email ?? null;
+  if (!session?.user?.id && (!resolvedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resolvedEmail))) {
+    return NextResponse.json({ error: "valid email required for anonymous tickets" }, { status: 400 });
+  }
+
+  // errorDigest is server-trusted only when it matches a known Next.js digest pattern
+  const safeDigest =
+    typeof errorDigest === "string" && /^[a-zA-Z0-9]{6,64}$/.test(errorDigest)
+      ? errorDigest.slice(0, 64)
+      : null;
 
   const ticket = await prisma.supportTicket.create({
     data: {
       userId: session?.user?.id ?? null,
       email: resolvedEmail,
-      subject: subject.slice(0, MAX_SUBJECT),
-      messages: [{ role: "user", content: message.slice(0, MAX_MESSAGE) }],
-      errorDigest: errorDigest ?? null,
-      priority: errorDigest ? "HIGH" : "LOW",
+      subject: subject.trim().slice(0, MAX_SUBJECT),
+      messages: [{ role: "user", content: message.trim(), timestamp: new Date().toISOString() }],
+      errorDigest: safeDigest,
+      priority: safeDigest ? "HIGH" : "LOW",
       status: "OPEN",
     },
   });
