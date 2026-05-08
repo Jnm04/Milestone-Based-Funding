@@ -12,6 +12,11 @@ import Anthropic from "@anthropic-ai/sdk";
 import { encryptGoal, hashGoal } from "@/lib/confidential";
 import { encryptApiKey } from "@/lib/encrypt";
 import { resolveApiKey } from "@/lib/api-key-auth";
+import {
+  sendContractInviteEmail,
+  sendContractInviteRegistrationEmail,
+  sendContractDirectLinkEmail,
+} from "@/lib/email";
 
 // ─── Lazy Anthropic client ────────────────────────────────────────────────────
 let _anthropic: Anthropic | null = null;
@@ -122,6 +127,7 @@ export async function POST(request: NextRequest) {
       cancelAfter,
       milestones: milestonesInput,
       receiverWalletAddress,
+      inviteEmail,
       mode = "ESCROW",
       auditorEmail,
       attestationMilestones,
@@ -356,6 +362,50 @@ export async function POST(request: NextRequest) {
         directly_linked: !!receiver,
       },
     });
+
+    // Invite emails — fire-and-forget, never block the response
+    const inviterName = investor.name ?? investor.email.split("@")[0];
+    const totalAmount = msData.reduce((s, m) => s + Number(m.amountUSD), 0);
+    const milestoneTitle = milestone ?? msData[0].title;
+    const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+
+    if (receiver && !inviteEmail) {
+      // Wallet-linked: startup already knows — notify by email (fire-and-forget)
+      void prisma.user.findUnique({ where: { id: receiver.id }, select: { email: true } })
+        .then((u) => {
+          if (u?.email) {
+            void sendContractDirectLinkEmail({
+              to: u.email,
+              inviterName,
+              dashboardUrl: `${BASE_URL}/dashboard/startup`,
+              milestone: milestoneTitle,
+              amountUSD: totalAmount,
+            }).catch(() => {});
+          }
+        }).catch(() => {});
+    } else if (inviteEmail && result.inviteLink) {
+      const inviteUrl = `${BASE_URL}/dashboard/startup?invite=${result.inviteLink}`;
+      void prisma.user.findUnique({ where: { email: inviteEmail }, select: { id: true } })
+        .then((existing) => {
+          if (existing) {
+            void sendContractInviteEmail({
+              to: inviteEmail,
+              inviterName,
+              inviteUrl,
+              milestone: milestoneTitle,
+              amountUSD: totalAmount,
+            }).catch(() => {});
+          } else {
+            void sendContractInviteRegistrationEmail({
+              to: inviteEmail,
+              inviterName,
+              inviteUrl,
+              milestone: milestoneTitle,
+              amountUSD: totalAmount,
+            }).catch(() => {});
+          }
+        }).catch(() => {});
+    }
 
     // Feature J: generate AI risk flags — best-effort, never blocks the response
     if (process.env.ANTHROPIC_API_KEY) {

@@ -110,6 +110,7 @@ export const createContractSchema = z
       .optional(),
 
     receiverWalletAddress: z.string().max(100).optional(),
+    inviteEmail: z.string().email("Invalid email address").max(254).optional(),
 
     // Enterprise Attestation Mode
     mode: z.enum(["ESCROW", "ATTESTATION"]).optional().default("ESCROW"),

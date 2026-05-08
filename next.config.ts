@@ -26,6 +26,7 @@ const nextConfig: NextConfig = {
       "form-action 'self'",
       // Belt-and-suspenders alongside X-Frame-Options: DENY
       "frame-ancestors 'none'",
+      "report-uri /api/csp-report",
     ].join("; ");
 
     return [

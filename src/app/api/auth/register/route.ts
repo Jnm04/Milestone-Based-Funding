@@ -7,6 +7,7 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { registerSchema } from "@/lib/zod-schemas";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { getPostHogClient } from "@/lib/posthog-server";
+import { isPasswordPwned } from "@/lib/hibp";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import zxcvbn from "zxcvbn";
@@ -41,6 +42,14 @@ export async function POST(request: NextRequest) {
     if (zxcvbn(password).score < 2) {
       return NextResponse.json(
         { error: "Password is too weak. Use a mix of letters, numbers, and symbols, or a longer passphrase." },
+        { status: 400 }
+      );
+    }
+
+    // HaveIBeenPwned check — k-anonymity, only 5-char SHA-1 prefix is sent
+    if (await isPasswordPwned(password)) {
+      return NextResponse.json(
+        { error: "This password has appeared in a data breach. Please choose a different password." },
         { status: 400 }
       );
     }

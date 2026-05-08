@@ -93,6 +93,86 @@ function enterpriseLink(contractId: string) {
   return `${BASE_URL}/enterprise/dashboard/attestations/${contractId}`;
 }
 
+// ── Contract invite emails ────────────────────────────────────────────────────
+
+export async function sendContractInviteEmail({
+  to, inviterName, inviteUrl, milestone, amountUSD,
+}: {
+  to: string; inviterName: string; inviteUrl: string; milestone: string; amountUSD: number;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `${esc(inviterName)} invited you to an escrow contract on cascrow`,
+    html: `
+      <p>Hi,</p>
+      <p><strong>${esc(inviterName)}</strong> has created an escrow contract and invited you to participate as the Builder.</p>
+      <table style="border-collapse:collapse;margin:16px 0">
+        <tr><td style="padding:4px 12px 4px 0;color:#6b7280;font-size:13px">Milestone</td><td style="font-size:13px">${esc(milestone)}</td></tr>
+        <tr><td style="padding:4px 12px 4px 0;color:#6b7280;font-size:13px">Amount</td><td style="font-size:13px;font-weight:600">$${Number(amountUSD).toLocaleString()} RLUSD</td></tr>
+      </table>
+      <p style="margin:24px 0">
+        <a href="${inviteUrl}" style="background:#C4704B;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;font-weight:600">View &amp; Accept Contract →</a>
+      </p>
+      <p style="font-size:12px;color:#999">Funds are held in on-chain escrow and released automatically when the AI verifies your proof of work.</p>
+      <p style="font-size:12px;color:#999">If you did not expect this invitation, you can safely ignore this email.</p>
+    `,
+  });
+}
+
+export async function sendContractInviteRegistrationEmail({
+  to, inviterName, inviteUrl, milestone, amountUSD,
+}: {
+  to: string; inviterName: string; inviteUrl: string; milestone: string; amountUSD: number;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `${esc(inviterName)} invited you to join cascrow`,
+    html: `
+      <p>Hi,</p>
+      <p><strong>${esc(inviterName)}</strong> has invited you to a milestone-based escrow contract on cascrow.</p>
+      <table style="border-collapse:collapse;margin:16px 0">
+        <tr><td style="padding:4px 12px 4px 0;color:#6b7280;font-size:13px">Milestone</td><td style="font-size:13px">${esc(milestone)}</td></tr>
+        <tr><td style="padding:4px 12px 4px 0;color:#6b7280;font-size:13px">Amount</td><td style="font-size:13px;font-weight:600">$${Number(amountUSD).toLocaleString()} RLUSD</td></tr>
+      </table>
+      <p><strong>You don't have a cascrow account yet.</strong> Register for free, then use the link below to accept the contract:</p>
+      <p style="margin:24px 0">
+        <a href="${inviteUrl}" style="background:#C4704B;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;font-weight:600">Register &amp; Accept Contract →</a>
+      </p>
+      <p style="font-size:12px;color:#999">cascrow is an AI-powered escrow platform. Funds are locked on-chain and released automatically when the AI verifies your proof of work.</p>
+      <p style="font-size:12px;color:#999">If you did not expect this invitation, you can safely ignore this email.</p>
+    `,
+  });
+}
+
+export async function sendContractDirectLinkEmail({
+  to, inviterName, dashboardUrl, milestone, amountUSD,
+}: {
+  to: string; inviterName: string; dashboardUrl: string; milestone: string; amountUSD: number;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `${esc(inviterName)} linked you to an escrow contract on cascrow`,
+    html: `
+      <p>Hi,</p>
+      <p><strong>${esc(inviterName)}</strong> has created an escrow contract and directly linked it to your account.</p>
+      <table style="border-collapse:collapse;margin:16px 0">
+        <tr><td style="padding:4px 12px 4px 0;color:#6b7280;font-size:13px">Milestone</td><td style="font-size:13px">${esc(milestone)}</td></tr>
+        <tr><td style="padding:4px 12px 4px 0;color:#6b7280;font-size:13px">Amount</td><td style="font-size:13px;font-weight:600">$${Number(amountUSD).toLocaleString()} RLUSD</td></tr>
+      </table>
+      <p style="margin:24px 0">
+        <a href="${dashboardUrl}" style="background:#C4704B;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;font-weight:600">View Contract →</a>
+      </p>
+      <p style="font-size:12px;color:#999">Funds will be locked in escrow once the Requester funds the contract. You will be notified when it is ready.</p>
+    `,
+  });
+}
+
 // ── New login notification ─────────────────────────────────────────────────
 
 export async function sendNewLoginEmail({ to, ip }: { to: string; ip: string }) {

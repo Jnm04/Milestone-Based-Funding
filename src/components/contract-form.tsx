@@ -79,6 +79,7 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
   const [mode, setMode] = useState<"ESCROW" | "ATTESTATION">("ESCROW");
   const [projectTitle, setProjectTitle] = useState("");
   const [receiverWallet, setReceiverWallet] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
   const [milestones, setMilestones] = useState<MilestoneInput[]>([
     { title: "", amountUSD: "", deadlineDays: "30", dependsOnIndex: "", agentGithubRepo: "", agentStripeKey: "", showAgentConfig: false },
   ]);
@@ -405,6 +406,7 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
           milestone: projectTitle || milestones[0].title,
           milestones: milestonesPayload,
           receiverWalletAddress: receiverWallet.trim() || undefined,
+          inviteEmail: !receiverWallet.trim() && inviteEmail.trim() ? inviteEmail.trim() : undefined,
         }),
       });
 
@@ -680,7 +682,7 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
           id="receiverWallet"
           placeholder="0x… — leave empty to share an invite link instead"
           value={receiverWallet}
-          onChange={(e) => setReceiverWallet(e.target.value)}
+          onChange={(e) => { setReceiverWallet(e.target.value); if (e.target.value.trim()) setInviteEmail(""); }}
         />
         <p style={{ fontSize: "12px", color: "#71717a" }}>
           {receiverWallet.trim()
@@ -688,6 +690,25 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
             : "You will get an invite link to share with the Builder after creation."}
         </p>
       </div>
+
+      {/* Invite by email — only shown when no wallet is entered */}
+      {!receiverWallet.trim() && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <Label htmlFor="inviteEmail">Builder Email <span style={{ color: "#a1a1aa", fontWeight: 400 }}>(optional)</span></Label>
+          <Input
+            id="inviteEmail"
+            type="email"
+            placeholder="builder@example.com — send invite automatically"
+            value={inviteEmail}
+            onChange={(e) => setInviteEmail(e.target.value)}
+          />
+          <p style={{ fontSize: "12px", color: "#71717a" }}>
+            {inviteEmail.trim()
+              ? "An invitation email will be sent automatically after creation."
+              : "If you know their email, we'll send them the invite automatically."}
+          </p>
+        </div>
+      )}
 
       {/* AI Drafting */}
       <div
