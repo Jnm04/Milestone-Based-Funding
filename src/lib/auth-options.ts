@@ -112,13 +112,19 @@ export const authOptions: NextAuthOptions = {
               for (let i = 0; i < stored.length; i++) {
                 if (await bcrypt.compare(totpCode, stored[i])) { usedIndex = i; break; }
               }
-              if (usedIndex === -1) throw new Error("TotpInvalid");
+              if (usedIndex === -1) {
+                const na = user.loginAttempts + 1;
+                await prisma.user.update({ where: { id: user.id }, data: { loginAttempts: na, lockoutUntil: na >= MAX_LOGIN_ATTEMPTS ? new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000) : null } });
+                throw new Error("TotpInvalid");
+              }
               const remaining = stored.filter((_, i) => i !== usedIndex);
               await prisma.user.update({
                 where: { id: user.id },
                 data: { totpRecoveryCodes: JSON.stringify(remaining) },
               });
             } else {
+              const na = user.loginAttempts + 1;
+              await prisma.user.update({ where: { id: user.id }, data: { loginAttempts: na, lockoutUntil: na >= MAX_LOGIN_ATTEMPTS ? new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000) : null } });
               throw new Error("TotpInvalid");
             }
           }
@@ -252,9 +258,8 @@ export const authOptions: NextAuthOptions = {
         token.sessionVersion = (user as unknown as { sessionVersion: number }).sessionVersion ?? 1;
         return token;
       }
-      // Allow updating wallet address or avatarUrl via session update
+      // Allow updating avatarUrl via session update (walletAddress must be re-fetched from DB, not taken from client)
       if (trigger === "update") {
-        if (session?.walletAddress) token.walletAddress = session.walletAddress;
         if (session?.avatarUrl !== undefined) token.avatarUrl = session.avatarUrl as string | null;
       }
       // On every token refresh (not fresh login), verify account hasn't been deleted

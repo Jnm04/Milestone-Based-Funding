@@ -48,6 +48,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         ? (ticket.messages as { role: string; content: string; timestamp?: string }[])
         : [];
 
+      if (currentMessages.length >= 100) return "full" as const;
+
       return tx.supportTicket.update({
         where: { id, updatedAt: ticket.updatedAt },
         data: { messages: [...currentMessages, newMessage] },
@@ -70,6 +72,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (updated === null) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (updated === "forbidden") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if (updated === "closed") return NextResponse.json({ error: "Ticket is closed" }, { status: 409 });
+  if (updated === "full") return NextResponse.json({ error: "Ticket has reached the maximum message limit" }, { status: 422 });
 
   return NextResponse.json(updated);
 }

@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
   // Sanitize: cap history, enforce message structure and length
   const MAX_MESSAGES = 12;
   const MAX_MSG_LENGTH = 1500;
-  const sanitized = messages
+  const filtered = messages
     .slice(-MAX_MESSAGES)
     .filter(
       (m) =>
@@ -152,6 +152,18 @@ export async function POST(req: NextRequest) {
         typeof m.content === "string",
     )
     .map((m) => ({ role: m.role, content: m.content.slice(0, MAX_MSG_LENGTH) }));
+
+  // Enforce strict user/assistant alternation — drop consecutive same-role messages
+  const sanitized: { role: "user" | "assistant"; content: string }[] = [];
+  for (const m of filtered) {
+    if (sanitized.length === 0 || sanitized[sanitized.length - 1].role !== m.role) {
+      sanitized.push(m);
+    }
+  }
+  // Claude requires the last message to be from the user
+  while (sanitized.length > 0 && sanitized[sanitized.length - 1].role !== "user") {
+    sanitized.pop();
+  }
 
   if (sanitized.length === 0) {
     return NextResponse.json({ error: "messages required" }, { status: 400 });

@@ -30,10 +30,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL("/profile?emailChangeError=expired", req.url));
   }
 
-  // Final check: new email still available
+  // Final check: new email still available — return generic error to avoid confirming whether an email is registered
   const taken = await prisma.user.findUnique({ where: { email: user.pendingEmail }, select: { id: true } });
   if (taken) {
-    return NextResponse.redirect(new URL("/profile?emailChangeError=taken", req.url));
+    return NextResponse.redirect(new URL("/profile?emailChangeError=invalid", req.url));
   }
 
   // Atomic update — token in WHERE prevents double-consumption under concurrent requests

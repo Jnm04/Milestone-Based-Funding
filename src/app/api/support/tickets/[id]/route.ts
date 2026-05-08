@@ -25,8 +25,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       updatedAt: true,
     },
   });
-  if (!ticket) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (ticket.userId !== session.user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!ticket || ticket.userId !== session.user.id) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   // Strip userId from response
   const { userId: _, ...safeTicket } = ticket;

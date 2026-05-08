@@ -69,8 +69,14 @@ export async function POST(req: NextRequest) {
     await prisma.$transaction([
       // Disconnect telegram chat if present
       prisma.telegramChat.deleteMany({ where: { userId } }),
-      // M2: delete webhook endpoints so no outbound calls happen post-deletion
+      // Delete webhook endpoints so no outbound calls happen post-deletion
       prisma.webhookEndpoint.deleteMany({ where: { userId } }),
+      // Delete login history (personal data)
+      prisma.loginEvent.deleteMany({ where: { userId } }),
+      // Delete API keys
+      prisma.apiKey.deleteMany({ where: { userId } }),
+      // Delete notification integrations
+      prisma.notificationIntegration.deleteMany({ where: { userId } }),
       // Anonymize the user record — preserve the row so contract FKs don't break
       prisma.user.update({
         where: { id: userId },
@@ -84,6 +90,33 @@ export async function POST(req: NextRequest) {
           department: null,
           jobTitle: null,
           walletAddress: null,
+          // OAuth provider IDs (unique constraints — must be nulled to avoid collision)
+          googleId: null,
+          githubId: null,
+          linkedinId: null,
+          // IP and activity data
+          registrationIp: null,
+          lastLoginIp: null,
+          lastActiveAt: null,
+          dateOfBirth: null,
+          loginAttempts: 0,
+          lockoutUntil: null,
+          passwordChangedAt: null,
+          // Consent and profile fields
+          trainingConsent: false,
+          trainingConsentAt: null,
+          avatarUrl: null,
+          publicProfile: false,
+          publicUsername: null,
+          companyBio: null,
+          companyWebsite: null,
+          linkedinUrl: null,
+          verifiedBadgeNftId: null,
+          // Agent fields
+          agentCallbackUrl: null,
+          agentSkills: null,
+          agentDiscoverable: false,
+          // Auth
           passwordHash: "",
           emailVerified: false,
           emailVerificationToken: null,

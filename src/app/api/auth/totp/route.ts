@@ -128,7 +128,7 @@ export async function DELETE(req: NextRequest) {
 
   await prisma.user.update({
     where: { id: session.user.id },
-    data: { totpEnabled: false, totpSecret: null, totpRecoveryCodes: null },
+    data: { totpEnabled: false, totpSecret: null, totpRecoveryCodes: null, sessionVersion: { increment: 1 } },
   });
 
   return NextResponse.json({ ok: true });

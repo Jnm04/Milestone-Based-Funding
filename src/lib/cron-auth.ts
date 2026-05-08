@@ -35,13 +35,11 @@ export function isValidCronSecret(authHeader: string | null): boolean {
   if (provided.length === 0) return false;
 
   try {
-    const len = Math.max(provided.length, secret.length);
-    const a = Buffer.alloc(len);
-    const b = Buffer.alloc(len);
-    Buffer.from(provided).copy(a);
-    Buffer.from(secret).copy(b);
-    const sameLength = provided.length === secret.length ? 1 : 0;
-    return crypto.timingSafeEqual(a, b) && sameLength === 1;
+    // HMAC both values before comparing so timingSafeEqual always gets equal-length buffers
+    // and length differences don't leak timing information.
+    const ha = crypto.createHmac("sha256", "cascrow").update(provided).digest();
+    const hb = crypto.createHmac("sha256", "cascrow").update(secret).digest();
+    return crypto.timingSafeEqual(ha, hb);
   } catch {
     return false;
   }

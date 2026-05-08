@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
         if (!blobHost.endsWith(".vercel-storage.com") && !blobHost.endsWith(".public.blob.vercel-storage.com")) {
           throw new Error("Untrusted blob host");
         }
-        const res = await fetch(milestone.attestationFetchedBlob);
+        const res = await fetch(milestone.attestationFetchedBlob, { redirect: "error" });
         rawContent = await res.text();
       } else {
         results.push({ milestoneId: milestone.id, status: "skipped", error: "Unsupported source type" });

@@ -17,11 +17,11 @@ export async function POST(request: NextRequest) {
 
     const { email } = await request.json();
 
-    if (!email) {
-      return NextResponse.json({ error: "email is required" }, { status: 400 });
+    if (!email || typeof email !== "string" || email.length > 254) {
+      return NextResponse.json({ ok: true }); // Silent — no enumeration
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({ where: { email: email.trim() } });
 
     // Return success even if user not found — don't leak whether an email is registered
     if (!user || user.emailVerified) {
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     });
 
     try {
-      await sendVerificationEmail({ to: email, token: emailVerificationToken });
+      await sendVerificationEmail({ to: email.trim(), token: emailVerificationToken });
     } catch (err) {
       console.error("[resend-verification] Failed to send email:", err);
     }

@@ -11,6 +11,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${BASE_URL}/login?error=invalid_token`);
   }
 
+  if (token.length > 128) {
+    return NextResponse.redirect(`${BASE_URL}/login?error=invalid_token`);
+  }
+
   try {
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
     const user = await prisma.user.findUnique({

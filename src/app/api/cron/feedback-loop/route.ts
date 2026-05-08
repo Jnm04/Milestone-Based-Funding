@@ -116,9 +116,9 @@ export async function GET(request: NextRequest) {
       await prisma.modelFeedbackWeight.update({
         where: { modelKey: key },
         data: {
-          falsePositives: { increment: falsePositives[key] },
-          falseNegatives: { increment: falseNegatives[key] },
-          totalVotes: { increment: totalVotes[key] },
+          falsePositives: { set: falsePositives[key] },
+          falseNegatives: { set: falseNegatives[key] },
+          totalVotes: { set: totalVotes[key] },
           weightMultiplier: weight,
           lastCalculatedAt: new Date(),
         },

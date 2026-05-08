@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import zxcvbn from "zxcvbn";
+import { isPasswordPwned } from "@/lib/hibp";
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,6 +19,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
+    if (token.length > 128) {
+      return NextResponse.json({ error: "Invalid or expired reset link" }, { status: 400 });
+    }
+
     if (password.length < 8) {
       return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
     }
@@ -28,6 +33,10 @@ export async function POST(request: NextRequest) {
 
     if (zxcvbn(password).score < 2) {
       return NextResponse.json({ error: "Password is too weak. Use a mix of letters, numbers, and symbols, or a longer passphrase." }, { status: 400 });
+    }
+
+    if (await isPasswordPwned(password)) {
+      return NextResponse.json({ error: "This password has appeared in a data breach. Please choose a different password." }, { status: 400 });
     }
 
     // Hash the received token before DB lookup — tokens are stored as SHA-256 hashes.

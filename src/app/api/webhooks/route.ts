@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { WEBHOOK_EVENTS } from "@/services/webhook/webhook.service";
+import { checkRateLimit } from "@/lib/rate-limit";
 import crypto from "crypto";
 import dns from "dns/promises";
 import net from "net";
@@ -86,6 +87,10 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  if (!(await checkRateLimit(`webhook-create:${session.user.id}`, 20, 60_000))) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
 
   const body = await request.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
@@ -241,6 +246,10 @@ export async function PATCH(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  if (!(await checkRateLimit(`webhook-secret-regen:${session.user.id}`, 5, 60_000))) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
 
   const id = request.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });

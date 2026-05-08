@@ -47,6 +47,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           messages: [...currentMessages, newMessage],
           status: ticket.status === "OPEN" ? "IN_PROGRESS" : ticket.status,
         },
+        select: {
+          id: true,
+          subject: true,
+          messages: true,
+          status: true,
+          priority: true,
+          createdAt: true,
+          resolvedAt: true,
+          updatedAt: true,
+        },
       });
     });
   } catch {

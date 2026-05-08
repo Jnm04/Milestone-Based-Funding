@@ -118,9 +118,20 @@ export async function POST(request: NextRequest) {
     } catch (err: unknown) {
       const prismaErr = err as { code?: string };
       if (prismaErr?.code === "P2002") {
-        // Concurrent registration with same email — treat as duplicate
+        // Concurrent registration with same email — resend verification if still unverified
         const dup = await prisma.user.findUnique({ where: { email } });
         if (dup && !dup.emailVerified) {
+          const emailVerificationToken = crypto.randomBytes(32).toString("hex");
+          const emailVerificationTokenHash = crypto.createHash("sha256").update(emailVerificationToken).digest("hex");
+          await prisma.user.update({
+            where: { id: dup.id },
+            data: { emailVerificationToken: emailVerificationTokenHash, emailVerificationTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000) },
+          });
+          try {
+            await sendVerificationEmail({ to: email, token: emailVerificationToken });
+          } catch (err) {
+            console.error("[register] Failed to resend verification email (race):", err);
+          }
           return NextResponse.json({ ok: true, resent: true });
         }
         return NextResponse.json({ error: "Email already registered" }, { status: 409 });

@@ -56,7 +56,7 @@ function isPrivateHostnameString(hostname: string): boolean {
 async function isPrivateUrl(urlStr: string): Promise<boolean> {
   try {
     const parsed = new URL(urlStr);
-    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return true;
+    if (parsed.protocol !== "https:") return true;
     const { hostname } = parsed;
     if (isPrivateHostnameString(hostname)) return true;
     if (net.isIP(hostname)) return false;
