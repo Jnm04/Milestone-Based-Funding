@@ -16,6 +16,11 @@ export async function GET(
 
   const { walletAddress } = await params;
 
+  // Validate format before hitting DB — accepts EVM (0x…) or XRPL (r…) addresses
+  if (!/^(0x[0-9a-fA-F]{40}|r[1-9A-HJ-NP-Za-km-z]{24,34})$/.test(walletAddress)) {
+    return new NextResponse("Agent not found", { status: 404 });
+  }
+
   const agent = await prisma.user.findUnique({
     where: { walletAddress: walletAddress.toLowerCase() },
     select: {

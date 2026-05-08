@@ -20,6 +20,11 @@ export async function GET(
 
   const { contractId } = await params;
 
+  // Validate CUID format to prevent ID enumeration via arbitrary string probing
+  if (!/^[a-z0-9]{20,30}$/.test(contractId)) {
+    return new NextResponse("Not found", { status: 404 });
+  }
+
   const contract = await prisma.contract.findUnique({
     where: { id: contractId },
     include: { milestones: true },
@@ -52,7 +57,7 @@ export async function GET(
 
   return NextResponse.json(metadata, {
     headers: {
-      "Cache-Control": "public, max-age=86400",
+      "Cache-Control": "public, max-age=3600, stale-while-revalidate=300",
       "Access-Control-Allow-Origin": "*",
     },
   });

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const MAX_MILESTONES = 20;
 const MAX_NAME = 100;
@@ -42,6 +43,10 @@ export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!(await checkRateLimit(`template-create:${session.user.id}`, 20, 60 * 60 * 1000))) {
+    return NextResponse.json({ error: "Too many templates created. Try again later." }, { status: 429 });
   }
 
   const body = await request.json() as {

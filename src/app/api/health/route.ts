@@ -64,48 +64,35 @@ async function checkEvmRpc(): Promise<ServiceResult> {
   }
 }
 
-async function checkAnthropic(): Promise<ServiceResult> {
-  if (!process.env.ANTHROPIC_API_KEY) return { ok: false, detail: "API key not configured" };
-  const start = Date.now();
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/models", {
-      headers: {
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) return { ok: false, latencyMs: Date.now() - start, detail: `HTTP ${res.status}` };
-    return { ok: true, latencyMs: Date.now() - start };
-  } catch {
-    return { ok: false, detail: "Anthropic API unreachable" };
-  }
+function checkAnthropic(): ServiceResult {
+  // Only check key presence — a live API call would reveal key validity/status to anonymous callers
+  return { ok: !!process.env.ANTHROPIC_API_KEY };
 }
 
 export async function GET() {
-  const [db, xrpl, evm, ai] = await Promise.all([
+  const [db, xrpl, evm] = await Promise.all([
     checkDatabase(),
     checkXrpl(),
     checkEvmRpc(),
-    checkAnthropic(),
   ]);
+  const ai = checkAnthropic();
 
-  const services = {
-    database: { label: "Database", ...db },
-    xrpl: { label: "XRPL Mainnet (NFT / Audit)", ...xrpl },
-    evmRpc: { label: "XRPL EVM Sidechain (Escrow)", ...evm },
-    ai: { label: "AI Verification (Anthropic)", ...ai },
-  };
-
-  const allOk = Object.values(services).every((s) => s.ok);
+  const allOk = [db, xrpl, evm, ai].every((s) => s.ok);
   const overallStatus = allOk ? "operational" : "degraded";
+
+  // Strip internal detail strings — only expose ok/latencyMs publicly
+  const sanitize = (s: ServiceResult) => ({ ok: s.ok, ...(s.latencyMs !== undefined ? { latencyMs: s.latencyMs } : {}) });
 
   return NextResponse.json(
     {
       status: overallStatus,
-      services,
+      services: {
+        database: { label: "Database", ...sanitize(db) },
+        xrpl: { label: "XRPL Mainnet (NFT / Audit)", ...sanitize(xrpl) },
+        evmRpc: { label: "XRPL EVM Sidechain (Escrow)", ...sanitize(evm) },
+        ai: { label: "AI Verification (Anthropic)", ...sanitize(ai) },
+      },
       checkedAt: new Date().toISOString(),
-      network: process.env.XRPL_NETWORK ?? "mainnet",
     },
     {
       status: allOk ? 200 : 503,

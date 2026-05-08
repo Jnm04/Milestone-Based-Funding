@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 /**
  * POST /api/templates/[id]/use
@@ -12,6 +13,12 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
+
+  // Rate limit per user per template — prevents gaming community rankings
+  if (!(await checkRateLimit(`template-use:${session.user.id}:${id}`, 3, 24 * 60 * 60 * 1000))) {
+    return NextResponse.json({ ok: true }); // Silent — no need to surface this to the UI
+  }
+
   const template = await prisma.contractTemplate.findUnique({ where: { id } });
   if (!template) return NextResponse.json({ error: "Not found" }, { status: 404 });
 

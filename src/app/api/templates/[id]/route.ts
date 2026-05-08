@@ -32,7 +32,10 @@ export async function GET(_req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  return NextResponse.json({ template });
+  // Strip creatorId from responses to non-owners — internal UUID should not be public
+  const isOwner = session?.user?.id === template.creatorId;
+  const { creatorId: _creatorId, ...publicTemplate } = template;
+  return NextResponse.json({ template: isOwner ? template : publicTemplate });
 }
 
 export async function PATCH(request: NextRequest, { params }: Params) {

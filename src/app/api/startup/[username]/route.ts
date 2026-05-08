@@ -42,7 +42,6 @@ export async function GET(
               amountUSD: true,
               nftTokenId: true,
               nftImageUrl: true,
-              nftTxHash: true,
               reputationSummary: true,
               reputationCategory: true,
             },
