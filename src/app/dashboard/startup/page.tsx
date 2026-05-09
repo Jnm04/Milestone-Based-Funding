@@ -112,7 +112,10 @@ function StartupDashboardContent() {
     try {
       const stored = localStorage.getItem(lsKey);
       if (stored) setHiddenIds(new Set(JSON.parse(stored)));
-    } catch {}
+    } catch (err) {
+      console.warn("[startup/dashboard] corrupt hidden-ids in localStorage, resetting:", err);
+      localStorage.removeItem(lsKey);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 

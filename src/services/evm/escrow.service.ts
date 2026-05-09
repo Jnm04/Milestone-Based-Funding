@@ -80,6 +80,7 @@ export async function releaseMilestone(
     const contractIdHash = contractIdToBytes32(contractId);
     const tx = await contract.releaseMilestone(contractIdHash, milestoneOrder, fulfillment);
     const receipt = await tx.wait();
+    if (!receipt) throw new Error("Transaction dropped or replaced — no receipt");
     return receipt.hash;
   });
 }
@@ -99,6 +100,7 @@ export async function cancelMilestone(
     const contractIdHash = contractIdToBytes32(contractId);
     const tx = await contract.cancelMilestone(contractIdHash, milestoneOrder);
     const receipt = await tx.wait();
+    if (!receipt) throw new Error("Transaction dropped or replaced — no receipt");
     return receipt.hash;
   });
 }

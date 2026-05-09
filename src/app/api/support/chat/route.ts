@@ -224,8 +224,8 @@ export async function POST(req: NextRequest) {
       const health = await runHealthChecks();
       systemPrompt = BASE_SYSTEM_PROMPT + buildHealthContext(health);
       systemChecked = true;
-    } catch {
-      // health check failed silently — continue without it
+    } catch (err) {
+      console.warn("[support/chat] health check failed:", err);
     }
   }
 

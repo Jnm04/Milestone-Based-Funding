@@ -160,6 +160,7 @@ export async function POST(request: NextRequest) {
       contractId,
       milestoneId: milestoneId ?? undefined,
       event: "FUNDS_RELEASED",
+      actor: session.user.id,
       metadata: { txHash, amountUSD: completedAmount, auto: false },
     });
 

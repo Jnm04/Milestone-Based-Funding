@@ -711,6 +711,7 @@ export function ContractActions({
       setFundingStep("confirming");
       toast.info("Confirming on server…");
       let confirmRes: Response | null = null;
+      let lastConfirmError = "Escrow confirm failed";
       for (let attempt = 0; attempt < 3; attempt++) {
         if (attempt > 0) await new Promise((r) => setTimeout(r, 4000));
         confirmRes = await fetch("/api/escrow/confirm", {
@@ -720,12 +721,12 @@ export function ContractActions({
         });
         if (confirmRes.ok) break;
         const e = await confirmRes.json();
+        lastConfirmError = e.error ?? "Escrow confirm failed";
         // Only retry on "not found / not mined yet" errors
-        if (!e.error?.includes("not found")) throw new Error(e.error ?? "Escrow confirm failed");
+        if (!lastConfirmError.includes("not found")) throw new Error(lastConfirmError);
       }
       if (!confirmRes?.ok) {
-        const e = await confirmRes!.json();
-        throw new Error(e.error ?? "Escrow confirm failed");
+        throw new Error(lastConfirmError);
       }
 
       setFundingStep("done");

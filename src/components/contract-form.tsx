@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -125,6 +125,10 @@ export function ContractForm({ investorAddress, isEnterprise = false }: Contract
     Record<number, ProbabilityResponse | "loading" | null>
   >({});
   const debounceTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+
+  useEffect(() => {
+    return () => { Object.values(debounceTimers.current).forEach(clearTimeout); };
+  }, []);
 
   function addMilestone() {
     setMilestones((prev) => [...prev, { title: "", amountUSD: "", deadlineDays: "30", dependsOnIndex: "", agentGithubRepo: "", agentStripeKey: "", showAgentConfig: false }]);
