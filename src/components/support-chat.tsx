@@ -14,6 +14,7 @@ const PROBLEM_KEYWORDS =
 
 const LS_MESSAGES = "cascrow-support-messages";
 const LS_TICKET = "cascrow-support-ticket";
+const LS_GUEST_EMAIL = "cascrow-support-email";
 
 const QUICK_REPLIES = [
   "MetaMask not working",
@@ -100,6 +101,7 @@ export function SupportChat() {
   const [showTicketForm, setShowTicketForm] = useState(false);
   const [unread, setUnread] = useState(false);
   const [ticketStatus, setTicketStatus] = useState<string | null>(null);
+  const [guestEmail, setGuestEmail] = useState<string>(() => loadLS<string>(LS_GUEST_EMAIL, ""));
   const lastAdminMsgCountRef = useRef<number>(
     loadLS<Message[]>(LS_MESSAGES, []).filter((m) => m.role === "admin").length,
   );
@@ -281,7 +283,7 @@ export function SupportChat() {
       const res = await fetch("/api/support/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages, createTicket: true, subject }),
+        body: JSON.stringify({ messages, createTicket: true, subject, guestEmail: session ? undefined : guestEmail || undefined }),
       });
       const data = await res.json();
       setTicketId(data.ticketId);
@@ -595,16 +597,42 @@ export function SupportChat() {
                     marginBottom: 8,
                   }}
                 />
+                {!session && (
+                  <input
+                    type="email"
+                    value={guestEmail}
+                    onChange={(e) => {
+                      setGuestEmail(e.target.value);
+                      try { localStorage.setItem(LS_GUEST_EMAIL, e.target.value); } catch {}
+                    }}
+                    placeholder="Your email address (required)"
+                    style={{
+                      width: "100%", padding: "8px 11px",
+                      borderRadius: 8, border: "1px solid hsl(28 18% 18%)",
+                      background: "hsl(28 18% 10%)",
+                      color: "hsl(32 35% 92%)", fontSize: 12,
+                      outline: "none", boxSizing: "border-box",
+                      marginBottom: 8,
+                    }}
+                    onFocus={(e) => (e.currentTarget.style.borderColor = "hsl(22 55% 54% / 0.5)")}
+                    onBlur={(e) => (e.currentTarget.style.borderColor = "hsl(28 18% 18%)")}
+                  />
+                )}
                 <div style={{ display: "flex", gap: 6 }}>
                   <button
                     onClick={createTicket}
-                    disabled={loading}
+                    disabled={loading || (!session && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail.trim()))}
                     style={{
                       flex: 1, padding: "7px 0",
                       borderRadius: 99,
-                      background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)",
-                      border: "none", cursor: "pointer",
-                      fontSize: 12, color: "hsl(24 14% 6%)", fontWeight: 600,
+                      background: !loading && (session || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail.trim()))
+                        ? "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)"
+                        : "hsl(28 18% 14%)",
+                      border: "none",
+                      cursor: !loading && (session || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail.trim())) ? "pointer" : "default",
+                      fontSize: 12,
+                      color: !loading && (session || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail.trim())) ? "hsl(24 14% 6%)" : "hsl(30 10% 62%)",
+                      fontWeight: 600,
                     }}
                   >
                     {loading ? "Creating…" : "Submit ticket"}

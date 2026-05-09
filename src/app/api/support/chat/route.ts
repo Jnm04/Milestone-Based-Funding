@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
-  let body: { messages: Message[]; createTicket?: boolean; subject?: string };
+  let body: { messages: Message[]; createTicket?: boolean; subject?: string; guestEmail?: string };
   try {
     body = await req.json();
   } catch {
@@ -136,6 +136,9 @@ export async function POST(req: NextRequest) {
   // Validate and cap the optional subject field
   const subject =
     typeof body.subject === "string" ? body.subject.slice(0, 200) : undefined;
+  // Validate optional guest email (only used for unauthenticated ticket creation)
+  const guestEmailRaw = typeof body.guestEmail === "string" ? body.guestEmail.trim().slice(0, 254) : undefined;
+  const guestEmail = guestEmailRaw && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmailRaw) ? guestEmailRaw : undefined;
 
   if (!Array.isArray(messages) || messages.length === 0) {
     return NextResponse.json({ error: "messages required" }, { status: 400 });
@@ -173,6 +176,11 @@ export async function POST(req: NextRequest) {
 
   // Ticket creation path
   if (createTicket) {
+    // Unauthenticated users must provide a valid email to create a ticket
+    if (!session && !guestEmail) {
+      return NextResponse.json({ error: "Email address required" }, { status: 400 });
+    }
+
     // Enforce the same 5/hour limit as POST /api/support/tickets to prevent bypass
     const ticketRlKey = session?.user?.id
       ? `support-ticket:${session.user.id}`
@@ -201,7 +209,7 @@ export async function POST(req: NextRequest) {
     const ticket = await prisma.supportTicket.create({
       data: {
         userId: session?.user?.id ?? null,
-        email: session?.user?.email ?? null,
+        email: session?.user?.email ?? guestEmail ?? null,
         subject: ticketSubject,
         messages: ticketMessages as unknown as Parameters<typeof prisma.supportTicket.create>[0]["data"]["messages"],
         priority,
