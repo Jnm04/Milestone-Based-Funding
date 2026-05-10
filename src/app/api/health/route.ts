@@ -95,7 +95,6 @@ export async function GET() {
         evmRpc: { label: "XRPL EVM Sidechain (Escrow)", ...fmt(evm) },
         ai: { label: "AI Verification (Anthropic)", ...fmt(ai) },
       },
-      network: process.env.XRPL_NETWORK ?? "mainnet",
       checkedAt: new Date().toISOString(),
     },
     {

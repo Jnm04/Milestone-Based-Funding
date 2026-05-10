@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request) ?? "unknown";
+  if (!(await checkRateLimit(`csp-report:${ip}`, 30, 60 * 1000))) {
+    return new NextResponse(null, { status: 204 }); // silently drop, no 429 needed
+  }
   try {
     const body = await request.json();
     const report = body["csp-report"] ?? body;

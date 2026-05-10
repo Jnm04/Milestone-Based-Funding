@@ -686,6 +686,18 @@ export default function ProfilePage() {
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    const MAX_BYTES = 5 * 1024 * 1024;
+    if (!ALLOWED.includes(file.type)) {
+      toast.error("Only JPEG, PNG, WebP, or GIF images are allowed.");
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+      return;
+    }
+    if (file.size > MAX_BYTES) {
+      toast.error("Image must be smaller than 5 MB.");
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+      return;
+    }
     setAvatarUploading(true);
     try {
       const fd = new FormData();

@@ -307,8 +307,8 @@ export async function POST(request: NextRequest) {
     } else {
       // Old flow (backward compat) — contractId must be set
       const resolvedContractId = contractId!;
-      const contract = await prisma.contract.findUnique({
-        where: { id: resolvedContractId },
+      const contract = await prisma.contract.findFirst({
+        where: { id: resolvedContractId, deletedAt: null },
         include: { investor: true, startup: true },
       });
       if (!contract) return NextResponse.json({ error: "Contract not found" }, { status: 404 });

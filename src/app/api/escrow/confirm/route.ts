@@ -34,15 +34,21 @@ export async function POST(request: NextRequest) {
 
     const { contractId, txHash, milestoneId } = await request.json();
 
-    if (!contractId || !txHash) {
-      return NextResponse.json(
-        { error: "contractId and txHash are required" },
-        { status: 400 }
-      );
+    if (!contractId || typeof contractId !== "string") {
+      return NextResponse.json({ error: "contractId is required" }, { status: 400 });
+    }
+    if (!txHash || typeof txHash !== "string") {
+      return NextResponse.json({ error: "txHash is required" }, { status: 400 });
+    }
+    if (!/^0x[0-9a-fA-F]{64}$/.test(txHash)) {
+      return NextResponse.json({ error: "txHash must be a valid 0x-prefixed 64-char hex string" }, { status: 400 });
+    }
+    if (milestoneId !== undefined && typeof milestoneId !== "string") {
+      return NextResponse.json({ error: "milestoneId must be a string" }, { status: 400 });
     }
 
-    const contract = await prisma.contract.findUnique({
-      where: { id: contractId },
+    const contract = await prisma.contract.findFirst({
+      where: { id: contractId, deletedAt: null },
       include: { startup: true },
     });
 
@@ -109,10 +115,12 @@ export async function POST(request: NextRequest) {
       fundedMilestoneTitle = result.title;
       fundedAmountUSD = result.amountUSD.toString();
     } else {
-      await prisma.contract.update({
-        where: { id: contractId },
-        data: { status: "FUNDED", evmTxHash: txHash },
-      });
+      await prisma.$transaction([
+        prisma.contract.update({
+          where: { id: contractId },
+          data: { status: "FUNDED", evmTxHash: txHash },
+        }),
+      ]);
     }
 
     // keccak256 of the milestone title — anyone can verify the agreed criteria on-chain

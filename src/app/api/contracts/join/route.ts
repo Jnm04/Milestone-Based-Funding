@@ -51,8 +51,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "inviteCode is required" }, { status: 400 });
     }
 
-    const contract = await prisma.contract.findUnique({
-      where: { inviteLink: inviteCode },
+    const contract = await prisma.contract.findFirst({
+      where: { inviteLink: inviteCode, deletedAt: null },
       include: { milestones: true },
     });
 

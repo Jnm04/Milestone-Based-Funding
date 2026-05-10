@@ -50,7 +50,12 @@ export async function POST(req: NextRequest) {
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!auth.isEnterprise) return NextResponse.json({ error: "Enterprise account required" }, { status: 403 });
 
-  const formData = await req.formData();
+  let formData: FormData;
+  try {
+    formData = await req.formData();
+  } catch {
+    return NextResponse.json({ error: "Expected multipart/form-data" }, { status: 400 });
+  }
   const file = formData.get("file") as File | null;
   const contractTitle = (formData.get("contractTitle") as string | null)?.trim() || null;
 

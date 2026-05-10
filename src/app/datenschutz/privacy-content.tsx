@@ -436,8 +436,8 @@ export function PrivacyContent() {
           </p>
           <p className="mt-3">
             {de
-              ? "Zusätzlich speichern wir im localStorage deines Browsers: deine Cookie-Hinweis-Bestätigung sowie den internen Admin-Zugriffsschlüssel (nur für Betreiber). Diese Daten verlassen deinen Browser nicht."
-              : "We also store in your browser's localStorage: your cookie notice acknowledgment and the internal admin access key (operators only). This data never leaves your browser."}
+              ? "Zusätzlich speichern wir im localStorage deines Browsers: deine Cookie-Hinweis-Bestätigung, den internen Admin-Zugriffsschlüssel (nur für Betreiber) sowie – wenn du den Support-Chat nutzt – deinen Chat-Verlauf und (für nicht eingeloggte Nutzer) deine E-Mail-Adresse für die Ticket-Erstellung. Diese Daten verlassen deinen Browser nicht und werden gelöscht, wenn du den Chat zurücksetzt."
+              : "We also store in your browser's localStorage: your cookie notice acknowledgment, the internal admin access key (operators only), and — if you use the support chat — your chat history and (for guests) your email address for ticket creation. This data never leaves your browser and is deleted when you clear the chat."}
           </p>
         </Section>
 

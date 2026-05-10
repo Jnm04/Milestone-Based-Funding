@@ -63,7 +63,11 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ success: true });
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const ip = getClientIp(request) ?? "unknown";
+  if (!(await checkRateLimit(`waitlist-count:${ip}`, 10, 60 * 1000))) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
   const count = await prisma.waitlistEntry.count();
   return NextResponse.json({ count });
 }

@@ -49,8 +49,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "contractId and decision (APPROVE|REJECT) required" }, { status: 400 });
     }
 
-    const contract = await prisma.contract.findUnique({
-      where: { id: contractId },
+    const contract = await prisma.contract.findFirst({
+      where: { id: contractId, deletedAt: null },
       include: {
         investor: true,
         startup: true,

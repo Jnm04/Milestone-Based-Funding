@@ -177,10 +177,20 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Prevent duplicate verification — if this proof already has a decision, return it directly
-  if (proof.aiDecision) {
+  // Atomic claim — set aiDecision to "PENDING" only if still null.
+  // Prevents two concurrent verify calls from both running the full AI pipeline.
+  const claimed = await prisma.proof.updateMany({
+    where: { id: proofId, aiDecision: null },
+    data: { aiDecision: "PENDING" as never },
+  });
+  if (claimed.count === 0) {
+    // Another request already claimed this proof (or it was already decided)
+    const existing = await prisma.proof.findUnique({
+      where: { id: proofId },
+      select: { aiDecision: true, aiConfidence: true },
+    });
     return NextResponse.json(
-      { error: "This proof has already been verified.", decision: proof.aiDecision, confidence: proof.aiConfidence },
+      { error: "This proof has already been verified.", decision: existing?.aiDecision, confidence: existing?.aiConfidence },
       { status: 409 }
     );
   }
@@ -664,6 +674,11 @@ export async function POST(request: NextRequest) {
         send({ type: "complete", decision: result.decision, reasoning: result.reasoning, confidence: result.confidence, action });
       } catch (err) {
         console.error("Verification error:", err);
+        // Release the atomic claim so the proof can be retried
+        await prisma.proof.updateMany({
+          where: { id: proofId, aiDecision: "PENDING" as never },
+          data: { aiDecision: null },
+        }).catch(() => {});
         send({ type: "error", message: "Verification failed", code: "VERIFICATION_FAILED" });
       } finally {
         controller.close();

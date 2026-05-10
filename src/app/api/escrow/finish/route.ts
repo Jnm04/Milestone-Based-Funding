@@ -33,12 +33,15 @@ export async function POST(request: NextRequest) {
 
     const { contractId, milestoneId } = await request.json();
 
-    if (!contractId) {
+    if (!contractId || typeof contractId !== "string") {
       return NextResponse.json({ error: "contractId is required" }, { status: 400 });
     }
+    if (milestoneId !== undefined && typeof milestoneId !== "string") {
+      return NextResponse.json({ error: "milestoneId must be a string" }, { status: 400 });
+    }
 
-    const contract = await prisma.contract.findUnique({
-      where: { id: contractId },
+    const contract = await prisma.contract.findFirst({
+      where: { id: contractId, deletedAt: null },
       include: { milestones: true, investor: true, startup: true },
     });
 

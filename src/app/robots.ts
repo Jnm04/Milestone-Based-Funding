@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/api/", "/dashboard/", "/contract/", "/profile/"],
+      disallow: ["/api/", "/dashboard/", "/contract/", "/profile/", "/internal/"],
     },
     sitemap: "https://cascrow.com/sitemap.xml",
   };

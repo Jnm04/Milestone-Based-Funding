@@ -41,6 +41,7 @@ export function DeployAgentModal({ onClose }: DeployAgentModalProps) {
     navigator.clipboard.writeText(text);
     setCopied(prev => ({ ...prev, [id]: true }));
     setTimeout(() => setCopied(prev => ({ ...prev, [id]: false })), 2000);
+    setTimeout(() => navigator.clipboard.writeText("").catch(() => {}), 60_000);
   };
 
   const mcpConfig = secret ? JSON.stringify({

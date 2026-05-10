@@ -108,6 +108,7 @@ export default function ApiKeysPage() {
     navigator.clipboard.writeText(newSecret).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => navigator.clipboard.writeText("").catch(() => {}), 60_000);
     });
   }
 

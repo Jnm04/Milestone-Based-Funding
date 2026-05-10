@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import zxcvbn from "zxcvbn";
+import { isPasswordPwned } from "@/lib/hibp";
 import { ethers } from "ethers";
 import { z } from "zod";
 import { getEVMProvider, getPlatformSigner } from "@/services/evm/client";
@@ -52,6 +54,19 @@ export async function POST(request: NextRequest) {
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
     return NextResponse.json({ error: "Email already registered" }, { status: 409 });
+  }
+
+  if (zxcvbn(password).score < 2) {
+    return NextResponse.json(
+      { error: "Password is too weak. Use a mix of letters, numbers, and symbols, or a longer passphrase." },
+      { status: 400 }
+    );
+  }
+  if (await isPasswordPwned(password)) {
+    return NextResponse.json(
+      { error: "This password has appeared in a data breach. Please choose a different password." },
+      { status: 400 }
+    );
   }
 
   const passwordHash = await bcrypt.hash(password, 12);

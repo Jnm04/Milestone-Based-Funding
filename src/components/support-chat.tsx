@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 interface Message {
   role: "user" | "assistant" | "admin" | "system";
   content: string;
+  id?: string;
 }
 
 const PROBLEM_KEYWORDS =
@@ -156,6 +157,7 @@ export function SupportChat() {
     try {
       localStorage.removeItem(LS_MESSAGES);
       localStorage.removeItem(LS_TICKET);
+      localStorage.removeItem(LS_GUEST_EMAIL);
     } catch {}
   }
 
@@ -445,7 +447,7 @@ export function SupportChat() {
               const isAdmin = msg.role === "admin";
               const isSystem = msg.role === "system";
               return (
-                <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: msg.role === "user" ? "flex-end" : "flex-start" }}>
+                <div key={msg.id ?? `${msg.role}-${i}-${msg.content.length}`} style={{ display: "flex", flexDirection: "column", alignItems: msg.role === "user" ? "flex-end" : "flex-start" }}>
                   {isAdmin && (
                     <div style={{ fontSize: 10, color: "hsl(22 55% 54%)", fontWeight: 700, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: "'JetBrains Mono', monospace" }}>
                       cascrow team
