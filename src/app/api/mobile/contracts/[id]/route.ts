@@ -60,6 +60,7 @@ export async function GET(
               aiDecision: true,
               aiConfidence: true,
               aiReasoning: true,
+              appealText: true,
               createdAt: true,
             },
           },
