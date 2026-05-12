@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { getMobileSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   buildApproveCalldata,
@@ -24,7 +23,7 @@ const RLUSD_CONTRACT = process.env.NEXT_PUBLIC_RLUSD_CONTRACT_ADDRESS!;
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getMobileSession(request);
     const apiKeyCtx = !session ? await resolveApiKey(request.headers.get("authorization")) : null;
     const userId = session?.user?.id ?? apiKeyCtx?.userId ?? null;
     const isAgentCall = !!apiKeyCtx && !session;

@@ -56,6 +56,8 @@ export async function PUT(request: NextRequest) {
     publicProfile, publicUsername, companyBio, companyWebsite, linkedinUrl,
     // AI training consent
     trainingConsent,
+    // Mobile push notifications
+    expoPushToken,
   } = body;
 
   // Input validation — max lengths and strip HTML tags
@@ -77,6 +79,13 @@ export async function PUT(request: NextRequest) {
   // Website: only allow http/https URLs
   const rawWebsite = strip(website, 200);
   const validatedWebsite = rawWebsite && /^https?:\/\/.+/.test(rawWebsite) ? rawWebsite : null;
+
+  // Expo push token: optional, must start with "ExponentPushToken[" or be null
+  if (expoPushToken !== undefined && expoPushToken !== null) {
+    if (typeof expoPushToken !== "string" || !expoPushToken.startsWith("ExponentPushToken[")) {
+      return NextResponse.json({ error: "Invalid expoPushToken format" }, { status: 400 });
+    }
+  }
 
   // Date of birth: optional, must be a valid past date
   let validatedDOB: Date | null | undefined = undefined;
@@ -127,6 +136,7 @@ export async function PUT(request: NextRequest) {
         trainingConsent: Boolean(trainingConsent),
         trainingConsentAt: new Date(),
       }),
+      ...(expoPushToken !== undefined ? { expoPushToken: expoPushToken || null } : {}),
     },
     select: {
       id: true, email: true, name: true, role: true, walletAddress: true,

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { getMobileSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyMilestone, verifyMilestoneImage, mockVerifyMilestone, categorizeFile, VERIFICATION_PROMPT_HASH, isInsufficientModels, generateRejectionObjections, runFraudPreScreen, buildFraudContext } from "@/services/ai/verifier.service";
 import { storeBrainData } from "@/services/brain/training.service";
@@ -117,7 +116,7 @@ export async function POST(request: NextRequest) {
       );
     }
   } else {
-    const session = await getServerSession(authOptions);
+    const session = await getMobileSession(request);
     const apiKeyCtx = !session ? await resolveApiKey(request.headers.get("authorization")) : null;
     const userId = session?.user?.id ?? apiKeyCtx?.userId ?? null;
 

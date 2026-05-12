@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { getMobileSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { del } from "@vercel/blob";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -21,7 +20,7 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ proofId: string }> }
 ) {
-  const session = await getServerSession(authOptions);
+  const session = await getMobileSession(_req);
   if (!session) {
     return NextResponse.json({ error: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
   }
