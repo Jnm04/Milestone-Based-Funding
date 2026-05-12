@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { getMobileSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isPasswordPwned } from "@/lib/hibp";
@@ -8,7 +7,7 @@ import bcrypt from "bcryptjs";
 import zxcvbn from "zxcvbn";
 
 export async function PUT(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getMobileSession(request);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // 10 password-change attempts per user per hour
