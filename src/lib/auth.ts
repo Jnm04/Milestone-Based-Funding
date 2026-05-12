@@ -23,6 +23,7 @@ export async function getMobileSession(req: NextRequest) {
           id: payload.sub as string,
           email: payload.email as string,
           role: payload.role as string,
+          walletAddress: (payload.walletAddress as string | null) ?? null,
         },
       };
     } catch {

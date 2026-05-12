@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import { getMobileSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { resolveApiKey } from "@/lib/api-key-auth";
@@ -12,7 +13,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
+  const session = await getMobileSession(req);
   const apiKeyCtx = !session ? await resolveApiKey(req.headers.get("authorization")) : null;
   const userId = session?.user?.id ?? apiKeyCtx?.userId ?? null;
 

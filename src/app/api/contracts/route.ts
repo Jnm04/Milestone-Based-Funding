@@ -99,7 +99,7 @@ Rules:
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getMobileSession(request);
     const apiKeyCtx = !session ? await resolveApiKey(request.headers.get("authorization")) : null;
     const userId = session?.user?.id ?? apiKeyCtx?.userId ?? null;
 

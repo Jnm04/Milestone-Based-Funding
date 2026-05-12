@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse, after } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { getMobileSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { extractPdfText, extractOfficeText, categorizeFile } from "@/services/ai/verifier.service";
 import { sendProofSubmittedEmail } from "@/lib/email";
@@ -89,7 +88,7 @@ const ALLOWED_MIME_TYPES = new Set([
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getMobileSession(request);
     const apiKeyCtx = !session ? await resolveApiKey(request.headers.get("authorization")) : null;
     const userId = session?.user?.id ?? apiKeyCtx?.userId ?? null;
 
