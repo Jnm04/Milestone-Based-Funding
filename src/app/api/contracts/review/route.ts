@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { getMobileSession } from "@/lib/auth";
 import { resolveApiKey } from "@/lib/api-key-auth";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/services/evm/audit.service";
@@ -11,7 +10,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getMobileSession(request);
     const apiKeyCtx = !session ? await resolveApiKey(request.headers.get("authorization")) : null;
 
     // Session path: must be INVESTOR role
