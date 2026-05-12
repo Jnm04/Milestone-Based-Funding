@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { getMobileSession } from "@/lib/auth";
 import { isInternalAuthorized } from "@/lib/internal-auth";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
@@ -10,7 +9,7 @@ const MAX_MESSAGE = 5000;
 
 // POST /api/support/tickets — create ticket (authenticated or anonymous with email)
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getMobileSession(req);
   const ip = getClientIp(req);
 
   // Rate limit: 5 tickets per hour per user/IP

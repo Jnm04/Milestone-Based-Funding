@@ -1,6 +1,5 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { NextRequest, NextResponse } from "next/server";
+import { getMobileSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -11,8 +10,8 @@ import { checkRateLimit } from "@/lib/rate-limit";
  * Returns a JSON file as a download attachment.
  * Sensitive fields (passwordHash, reset tokens) are stripped.
  */
-export async function GET() {
-  const session = await getServerSession(authOptions);
+export async function GET(request: NextRequest) {
+  const session = await getMobileSession(request);
   if (!session) {
     return NextResponse.json({ error: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
   }
