@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import { getMobileSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { nanoid } from "nanoid";
 import { writeAuditLog } from "@/services/evm/audit.service";
@@ -443,7 +444,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getMobileSession(request);
     if (!session) {
       return NextResponse.json({ error: "Not authenticated", code: "UNAUTHORIZED" }, { status: 401 });
     }

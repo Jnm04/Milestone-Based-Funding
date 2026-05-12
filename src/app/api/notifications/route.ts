@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import { getMobileSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 const PAGE_SIZE = 30;
@@ -9,7 +9,7 @@ const PAGE_SIZE = 30;
 // Bell: no params → last 30 + unreadCount
 // Page: ?page=1&filter=all|unread → paginated
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getMobileSession(req);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = req.nextUrl;
