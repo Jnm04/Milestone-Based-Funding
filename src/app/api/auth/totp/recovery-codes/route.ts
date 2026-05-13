@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { getMobileSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { verify as verifyTotp } from "otplib";
@@ -16,8 +15,8 @@ function generateRecoveryCodes(): string[] {
   });
 }
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
+export async function GET(req: NextRequest) {
+  const session = await getMobileSession(req);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const user = await prisma.user.findUnique({
@@ -35,7 +34,7 @@ export async function GET() {
 
 // Regenerate recovery codes — requires current TOTP code
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getMobileSession(req);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   if (!(await checkRateLimit(`totp-recovery-regen:${session.user.id}`, 5, 60 * 60 * 1000))) {

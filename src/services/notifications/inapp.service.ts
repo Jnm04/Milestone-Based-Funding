@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/prisma";
+import { sendPushNotification } from "./push.service";
 
 /**
- * Creates an in-app notification for a user.
+ * Creates an in-app notification for a user and sends a push notification
+ * if the user has a registered Expo push token.
  * Silent-fails — never throws so it cannot break the main flow.
  */
 export async function createNotification(
@@ -25,4 +27,14 @@ export async function createNotification(
   } catch {
     // Silent-fail
   }
+
+  // Fire-and-forget push notification — independent of in-app write success
+  const pushData: Record<string, unknown> = {};
+  if (href) {
+    pushData.href = href;
+    // Extract contractId from paths like /contract/abc123
+    const match = href.match(/^\/contract\/([^/]+)$/);
+    if (match) pushData.contractId = match[1];
+  }
+  sendPushNotification(userId, title, body, pushData).catch(() => {});
 }

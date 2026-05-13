@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { getMobileSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { generateSecret, generateURI, verify as verifyTotp } from "otplib";
@@ -18,8 +17,8 @@ function generateRecoveryCodes(): string[] {
 }
 
 // GET /api/auth/totp — returns current 2FA status
-export async function GET() {
-  const session = await getServerSession(authOptions);
+export async function GET(req: NextRequest) {
+  const session = await getMobileSession(req);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const user = await prisma.user.findUnique({
@@ -31,8 +30,8 @@ export async function GET() {
 }
 
 // POST /api/auth/totp — generate a new TOTP secret + QR code (not yet enabled)
-export async function POST() {
-  const session = await getServerSession(authOptions);
+export async function POST(req: NextRequest) {
+  const session = await getMobileSession(req);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   if (!(await checkRateLimit(`totp-setup:${session.user.id}`, 5, 15 * 60 * 1000))) {
@@ -61,7 +60,7 @@ export async function POST() {
 
 // PUT /api/auth/totp — verify code and enable 2FA
 export async function PUT(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getMobileSession(req);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   if (!(await checkRateLimit(`totp-enable:${session.user.id}`, 10, 15 * 60 * 1000))) {
@@ -96,7 +95,7 @@ export async function PUT(req: NextRequest) {
 
 // DELETE /api/auth/totp — disable 2FA (requires password + current TOTP code)
 export async function DELETE(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getMobileSession(req);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const ip = getClientIp(req) ?? "unknown";
