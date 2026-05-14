@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SignJWT } from "jose";
 import bcrypt from "bcryptjs";
+import { verify as verifyTotp } from "otplib";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
@@ -17,14 +18,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let body: { email?: string; password?: string };
+  let body: { email?: string; password?: string; totpCode?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const { email, password } = body;
+  const { email, password, totpCode } = body;
   if (!email || !password) {
     return NextResponse.json({ error: "E-Mail und Passwort erforderlich." }, { status: 400 });
   }
@@ -46,11 +47,12 @@ export async function POST(req: NextRequest) {
       emailVerified: true,
       loginAttempts: true,
       lockoutUntil: true,
+      totpEnabled: true,
+      totpSecret: true,
     },
   });
 
   if (!user) {
-    // Constant-time dummy compare to prevent user enumeration timing attacks
     await bcrypt.compare(password, "$2a$12$invalidhashpadding000000000000000000000000000000000000");
     return NextResponse.json({ error: "E-Mail oder Passwort falsch." }, { status: 401 });
   }
@@ -87,6 +89,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // 2FA check — if enabled, require a valid TOTP code
+  if (user.totpEnabled && user.totpSecret) {
+    if (!totpCode) {
+      return NextResponse.json({ requiresTOTP: true }, { status: 200 });
+    }
+    if (!/^\d{6}$/.test(totpCode)) {
+      return NextResponse.json({ error: "Ungültiger 2FA-Code." }, { status: 400 });
+    }
+    const result = await verifyTotp({ token: totpCode, secret: user.totpSecret });
+    if (!result.valid) {
+      return NextResponse.json({ error: "Falscher 2FA-Code. Bitte erneut versuchen." }, { status: 401 });
+    }
+  }
+
   if (user.loginAttempts > 0 || user.lockoutUntil) {
     await prisma.user.update({
       where: { id: user.id },
@@ -95,7 +111,12 @@ export async function POST(req: NextRequest) {
   }
 
   const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET!);
-  const token = await new SignJWT({ sub: user.id, email: user.email, role: user.role, walletAddress: user.walletAddress })
+  const token = await new SignJWT({
+    sub: user.id,
+    email: user.email,
+    role: user.role,
+    walletAddress: user.walletAddress,
+  })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(TOKEN_EXPIRY)
