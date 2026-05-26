@@ -439,6 +439,7 @@ const TOOLS = [
       "Runs the full 5-model AI verification pipeline and, on approval, automatically releases funds on-chain and mints an NFT certificate. " +
       "Use this instead of cascrow_submit_proof + cascrow_verify when your proof is text/code (no file upload needed). " +
       "Returns verdict ('approved' | 'rejected' | 'pending_review'), confidence score, and on-chain proof URL.",
+
     inputSchema: {
       type: "object",
       required: ["contract_id", "evidence"],
@@ -470,6 +471,45 @@ const TOOLS = [
             custom_fields: {
               type: "object",
               description: "Optional key-value pairs for additional context",
+            },
+          },
+        },
+      },
+    },
+  },
+  {
+    name: "cascrow_verify_work",
+    description:
+      "Verify AI-generated work without any escrow contract. " +
+      "Provide a task description and either a GitHub PR URL or paste code/text. " +
+      "Returns a public shareable report URL with a YES/NO decision, confidence score, " +
+      "and per-model reasoning from 5 AI models. Use this to prove that AI work was actually done correctly.",
+    inputSchema: {
+      type: "object",
+      required: ["taskDescription"],
+      properties: {
+        taskDescription: {
+          type: "string",
+          description: "What was the task? E.g. 'Fix the 3 security vulnerabilities listed in the audit report'",
+        },
+        prUrl: {
+          type: "string",
+          description: "GitHub PR URL (e.g. github.com/owner/repo/pull/42). Takes precedence over codeText.",
+        },
+        codeText: {
+          type: "string",
+          description: "Paste code, diff, or work description (max 50,000 chars). Used if no prUrl.",
+        },
+        checklistItems: {
+          type: "array",
+          description: "Optional list of specific items to verify individually",
+          items: {
+            type: "object",
+            required: ["id", "title"],
+            properties: {
+              id: { type: "number" },
+              title: { type: "string" },
+              severity: { type: "string", enum: ["CRITICAL", "HIGH", "MEDIUM", "LOW"] },
             },
           },
         },
@@ -804,6 +844,22 @@ async function handleMcpSubmit({ contract_id, milestone_id, evidence }) {
   };
 }
 
+async function handleVerifyWork({ taskDescription, prUrl, codeText, checklistItems }) {
+  if (!prUrl && !codeText) {
+    throw new Error("Provide either prUrl (GitHub PR URL) or codeText.");
+  }
+  const data = await apiPost("/api/verify/standalone", { taskDescription, prUrl, codeText, checklistItems });
+  const decision = data.decision === "YES" ? "✅ VERIFIED" : "❌ NOT VERIFIED";
+  const conf = data.confidence != null ? ` (${data.confidence}% confidence)` : "";
+  const checklistNote = data.checklistResults
+    ? ` — ${data.checklistResults.fixedCount}/${data.checklistResults.totalCount} checklist items addressed`
+    : "";
+  return {
+    ...data,
+    message: `${decision}${conf}${checklistNote}\n\nFull report: ${data.reportUrl ?? ""}${data.reasoning ? `\n\n${data.reasoning.slice(0, 400)}` : ""}`,
+  };
+}
+
 // ─── MCP Server ───────────────────────────────────────────────────────────────
 
 const server = new Server(
@@ -837,6 +893,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "cascrow_list_my_contracts": result = await handleListMyContracts(args);      break;
       case "cascrow_get_proof_status":  result = await handleGetProofStatus(args);       break;
       case "cascrow_mcp_submit":        result = await handleMcpSubmit(args);            break;
+      case "cascrow_verify_work":       result = await handleVerifyWork(args);            break;
       default:
         throw new Error(`Unknown tool: ${name}`);
     }

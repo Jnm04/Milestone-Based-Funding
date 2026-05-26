@@ -51,21 +51,187 @@ export interface GitHubProofDocument {
 }
 
 /**
- * Parse a GitHub URL and return { owner, repo } or null if invalid.
+ * Parse a GitHub URL. Returns owner + repo + optional pullNumber.
  * Accepts:
  *  - https://github.com/owner/repo
  *  - https://github.com/owner/repo/tree/branch
  *  - https://github.com/owner/repo/blob/main/README.md
+ *  - https://github.com/owner/repo/pull/123          ← PR URL
+ *  - https://github.com/owner/repo/pull/123/files
  */
-export function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
+export function parseGitHubUrl(
+  url: string
+): { owner: string; repo: string; pullNumber?: number } | null {
   try {
     const { hostname, pathname } = new URL(url);
     if (hostname !== "github.com") return null;
     const parts = pathname.split("/").filter(Boolean);
     if (parts.length < 2) return null;
-    return { owner: parts[0], repo: parts[1].replace(/\.git$/, "") };
+    const owner = parts[0];
+    const repo = parts[1].replace(/\.git$/, "");
+    // Detect PR URL: /owner/repo/pull/NNN
+    if (parts[2] === "pull" && parts[3] && /^\d+$/.test(parts[3])) {
+      return { owner, repo, pullNumber: parseInt(parts[3], 10) };
+    }
+    return { owner, repo };
   } catch {
     return null;
+  }
+}
+
+export interface GitHubPRProofDocument {
+  /** Normalised PR URL */
+  prUrl: string;
+  /** Normalised repo URL */
+  repoUrl: string;
+  /** Full text document to pass to AI verifiers */
+  text: string;
+}
+
+/**
+ * Fetch PR diff + metadata from GitHub and build a structured proof document.
+ * Only calls hardcoded api.github.com — no SSRF risk from user input.
+ * Returns null on any failure (private repo, 404, timeout).
+ */
+export async function fetchGitHubPrProof(
+  prUrl: string,
+  token?: string
+): Promise<GitHubPRProofDocument | null> {
+  const parsed = parseGitHubUrl(prUrl);
+  if (!parsed || !parsed.pullNumber) return null;
+  const { owner, repo, pullNumber } = parsed;
+
+  const apiBase = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  try {
+    // ── 1. PR metadata ────────────────────────────────────────────────────────
+    const prRes = await ghFetch(`${apiBase}/pulls/${pullNumber}`, controller.signal, token);
+    if (!prRes.ok) {
+      if (prRes.status === 404) return null;
+      throw new Error(`GitHub PR API ${prRes.status}`);
+    }
+    type PRData = {
+      title?: string;
+      body?: string;
+      state?: string;
+      merged?: boolean;
+      merged_at?: string;
+      created_at?: string;
+      user?: { login?: string };
+      head?: { ref?: string; sha?: string };
+      base?: { ref?: string };
+      additions?: number;
+      deletions?: number;
+      changed_files?: number;
+    };
+    const prData = (await prRes.json()) as PRData;
+
+    // ── 2. Changed files with diffs ───────────────────────────────────────────
+    // GitHub returns up to 300 files; we cap at 50 and 20k chars per diff
+    const filesRes = await ghFetch(
+      `${apiBase}/pulls/${pullNumber}/files?per_page=50`,
+      controller.signal,
+      token
+    );
+    type PRFile = {
+      filename?: string;
+      status?: string;
+      additions?: number;
+      deletions?: number;
+      patch?: string;
+    };
+    let changedFiles: PRFile[] = [];
+    if (filesRes.ok) {
+      changedFiles = (await filesRes.json()) as PRFile[];
+    }
+
+    // ── 3. CI / check-run status ──────────────────────────────────────────────
+    let ciStatus = "unknown";
+    const headSha = prData.head?.sha;
+    if (headSha) {
+      const checksRes = await ghFetch(
+        `${apiBase}/commits/${encodeURIComponent(headSha)}/check-runs?per_page=10`,
+        controller.signal,
+        token
+      );
+      if (checksRes.ok) {
+        type CheckRun = { name?: string; status?: string; conclusion?: string };
+        type ChecksData = { check_runs?: CheckRun[] };
+        const checksData = (await checksRes.json()) as ChecksData;
+        const runs = checksData.check_runs ?? [];
+        if (runs.length === 0) {
+          ciStatus = "no CI checks configured";
+        } else {
+          const conclusions = runs.map((r) => r.conclusion ?? r.status ?? "unknown");
+          const allPassed = conclusions.every((c) => c === "success");
+          const anyFailed = conclusions.some((c) => c === "failure" || c === "cancelled");
+          ciStatus = allPassed
+            ? `all ${runs.length} checks passed`
+            : anyFailed
+              ? `FAILED (${conclusions.filter((c) => c === "failure").length} failures)`
+              : `in progress or mixed (${conclusions.join(", ")})`;
+        }
+      }
+    }
+
+    // ── Compose document ──────────────────────────────────────────────────────
+    const lines: string[] = [
+      `=== GitHub Pull Request Proof ===`,
+      `PR: ${owner}/${repo}#${pullNumber}`,
+      `URL: https://github.com/${owner}/${repo}/pull/${pullNumber}`,
+      ``,
+      `--- PR Overview ---`,
+      `Title: ${prData.title ?? "(no title)"}`,
+      `Author: ${prData.user?.login ?? "unknown"}`,
+      `State: ${prData.state ?? "unknown"}${prData.merged ? " (merged)" : ""}`,
+      prData.merged_at ? `Merged at: ${prData.merged_at}` : null,
+      prData.created_at ? `Created at: ${prData.created_at}` : null,
+      `Branch: ${prData.head?.ref ?? "unknown"} → ${prData.base?.ref ?? "unknown"}`,
+      `Changes: +${prData.additions ?? 0} / -${prData.deletions ?? 0} across ${prData.changed_files ?? changedFiles.length} file(s)`,
+      `CI status: ${ciStatus}`,
+      ``,
+    ].filter((l): l is string => l !== null);
+
+    if (prData.body?.trim()) {
+      lines.push(`--- PR Description ---`);
+      lines.push(prData.body.trim().slice(0, 2_000));
+      lines.push(``);
+    }
+
+    // File diffs — cap total chars to avoid token overflow
+    if (changedFiles.length > 0) {
+      lines.push(`--- Changed Files (${changedFiles.length}) ---`);
+      let totalDiffChars = 0;
+      const MAX_DIFF_CHARS = 20_000;
+
+      for (const file of changedFiles) {
+        if (totalDiffChars >= MAX_DIFF_CHARS) {
+          lines.push(`... (remaining diffs truncated)`);
+          break;
+        }
+        const statusTag = file.status ? `[${file.status.toUpperCase()}]` : "";
+        lines.push(`${statusTag} ${file.filename ?? "unknown"} (+${file.additions ?? 0}/-${file.deletions ?? 0})`);
+        if (file.patch) {
+          const patch = file.patch.slice(0, Math.min(3_000, MAX_DIFF_CHARS - totalDiffChars));
+          lines.push(patch);
+          totalDiffChars += patch.length;
+        }
+        lines.push(``);
+      }
+    }
+
+    const text = lines.join("\n").trim();
+    const normalizedPrUrl = `https://github.com/${owner}/${repo}/pull/${pullNumber}`;
+    const normalizedRepoUrl = `https://github.com/${owner}/${repo}`;
+
+    return { prUrl: normalizedPrUrl, repoUrl: normalizedRepoUrl, text };
+  } catch (err) {
+    console.warn(`[github] fetchGitHubPrProof failed for ${prUrl} (non-fatal):`, err);
+    return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 

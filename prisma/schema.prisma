@@ -162,6 +162,14 @@ model User {
   agentCallbackUrl  String?
   /// Cumulative USD paid out to this agent across all completed milestones — used for automatic kycTier upgrades
   agentVolumePaid   Decimal @default(0) @db.Decimal(12, 2)
+
+  // Standalone Verification credits
+  /// Paid verification credits (1 credit = 1 standalone verification)
+  verificationCredits     Int @default(0)
+  /// How many free verifications this user has already used (limit: 3)
+  freeVerificationsUsed   Int @default(0)
+
+  standaloneVerifications StandaloneVerification[]
 }
 
 enum Role {
@@ -249,10 +257,12 @@ model Proof {
   aiConfidence       Int?
   /// [{model, decision, confidence, reasoning}] — individual votes from each AI model
   aiModelVotes       Json?
-  /// "file" | "github_url" | "agent_execution" — how the proof was submitted
+  /// "file" | "github_url" | "github_pr" | "agent_execution" | "mcp_agent" — how the proof was submitted
   proofType          String     @default("file")
-  /// For github_url proofs: the submitted GitHub repo URL
+  /// For github_url / github_pr proofs: the submitted GitHub repo or PR URL
   proofUrl           String?
+  /// For github_pr proofs: the specific PR URL (github.com/owner/repo/pull/N)
+  prUrl              String?
   /// [{code, description}] — structured rejection reasons generated at rejection time
   aiObjections       Json?
   /// Appeal filed by the startup after AI rejection
@@ -421,6 +431,10 @@ model Milestone {
 
   // Custom AI verification criteria (enterprise: override default prompt rubric)
   verificationCriteria String? @db.Text
+
+  // Structured checklist for item-by-item verification (standalone + enterprise)
+  // JSON: [{ id: number, title: string, severity?: "CRITICAL"|"HIGH"|"MEDIUM"|"LOW" }]
+  verificationChecklist Json?
 
   // Milestone dependency — this milestone cannot be funded until the dependency is COMPLETED
   dependsOnMilestoneId String?
@@ -1261,4 +1275,40 @@ model AgentCallbackLog {
 
   @@index([agentUserId, createdAt])
   @@index([contractId])
+}
+
+// ── Standalone Verification ───────────────────────────────────────────────────
+
+/// One-off AI verification request — no contract, no escrow, no milestone.
+/// Used by /verify page and cascrow_verify_work MCP tool.
+/// Anonymous users get 3 free verifications (tracked via freeVerificationsUsed on User or IP).
+model StandaloneVerification {
+  id          String   @id @default(cuid())
+  /// Null for anonymous (IP-tracked) verifications
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// What the AI was supposed to do (free text or JSON checklist description)
+  taskDescription  String  @db.Text
+  /// GitHub PR URL if submitted (github.com/owner/repo/pull/N)
+  prUrl            String?
+  /// Pasted code text if submitted directly (max 50k chars)
+  codeText         String? @db.Text
+  /// Structured checklist: [{id, title, severity?}] — null = free-text only
+  checklistItems   Json?
+  /// AI panel result: {decision, confidence, reasoning, modelVotes, checklistResults?}
+  result           Json?
+  /// Overall decision: "YES" | "NO" | null while pending
+  decision         String?
+  /// 0–100 confidence
+  confidence       Int?
+  /// Public share hash — SHA-256(id + createdAt ISO) — used in /verify/result/[hash]
+  publicHash       String  @unique
+  /// "PENDING" | "COMPLETED" | "FAILED"
+  status           String  @default("PENDING")
+  /// True if this consumed a paid credit (false = free tier)
+  usedCredit       Boolean @default(false)
+  createdAt        DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([publicHash])
 }

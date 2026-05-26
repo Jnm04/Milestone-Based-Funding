@@ -264,6 +264,68 @@ const spec = {
         },
       },
     },
+    "/api/verify/standalone": {
+      post: {
+        summary: "Verify AI-generated work without escrow",
+        description:
+          "Standalone verification endpoint — no contract, no escrow. Submit a task description and either a GitHub PR URL or pasted code. Runs the same 5-model AI panel as escrow verification. Returns a public shareable report URL. Anonymous: 3 free verifications per IP per 24h. Authenticated: uses verificationCredits (first 3 free).",
+        tags: ["Verification"],
+        security: [{ BearerAuth: [] }, {}],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["taskDescription"],
+                properties: {
+                  taskDescription: { type: "string", minLength: 10, maxLength: 2000 },
+                  prUrl: { type: "string", description: "GitHub PR URL (github.com only)" },
+                  codeText: { type: "string", maxLength: 50000 },
+                  checklistItems: {
+                    type: "array",
+                    maxItems: 20,
+                    items: {
+                      type: "object",
+                      required: ["id", "title"],
+                      properties: {
+                        id: { type: "integer" },
+                        title: { type: "string" },
+                        severity: { type: "string", enum: ["CRITICAL", "HIGH", "MEDIUM", "LOW"] },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Verification complete",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    id: { type: "string" },
+                    publicHash: { type: "string" },
+                    reportUrl: { type: "string" },
+                    decision: { type: "string", enum: ["YES", "NO"] },
+                    confidence: { type: "integer" },
+                    reasoning: { type: "string" },
+                    modelVotes: { type: "array", items: { type: "object" } },
+                    checklistResults: { type: "object", nullable: true },
+                  },
+                },
+              },
+            },
+          },
+          "402": { description: "No verification credits remaining" },
+          "429": { description: "Rate limit exceeded" },
+        },
+      },
+    },
     "/api/contracts/review": {
       post: {
         summary: "Approve or reject a borderline proof (MANUAL / MANUAL_AUTO mode)",

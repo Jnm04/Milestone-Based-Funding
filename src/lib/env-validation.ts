@@ -28,6 +28,7 @@ const WARN_IF_MISSING: string[] = [
   "ATTESTATION_KEY_SECRET",
   "CASCROW_CALLBACK_SECRET",
   "FULFILLMENT_ENCRYPTION_KEY",
+  "STRIPE_WEBHOOK_SECRET",
 ];
 
 // Only validate server-side (skip in browser bundles)
