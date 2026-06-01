@@ -57,9 +57,11 @@ export async function GET(
             select: {
               id: true,
               fileName: true,
+              fileUrl: true,
               aiDecision: true,
               aiConfidence: true,
               aiReasoning: true,
+              aiModelVotes: true,
               appealText: true,
               createdAt: true,
             },
