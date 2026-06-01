@@ -516,6 +516,32 @@ const TOOLS = [
       },
     },
   },
+  {
+    name: "cascrow_watch_verification",
+    description:
+      "Submit a proof and wait for AI verification to complete — all in one call. " +
+      "Combines cascrow_submit_proof + polling into a single blocking tool. " +
+      "Returns the final YES/NO decision, confidence score, and per-model votes once verification is done. " +
+      "Times out after ~100 seconds and returns the proofId so you can poll manually with cascrow_get_proof_status.",
+    inputSchema: {
+      type: "object",
+      required: ["milestoneId", "content"],
+      properties: {
+        milestoneId: {
+          type: "string",
+          description: "The milestone ID to submit proof for",
+        },
+        content: {
+          type: "string",
+          description: "Full proof report — what was built, how criteria are met, URLs, metrics",
+        },
+        filename: {
+          type: "string",
+          description: "Optional filename for the proof (default: proof-report.txt)",
+        },
+      },
+    },
+  },
 ];
 
 // ─── Tool handlers ────────────────────────────────────────────────────────────
@@ -860,6 +886,46 @@ async function handleVerifyWork({ taskDescription, prUrl, codeText, checklistIte
   };
 }
 
+async function handleWatchVerification({ milestoneId, content, filename }) {
+  // Submit proof using existing multipart upload helper
+  const submitData = await uploadProof(milestoneId, filename ?? "proof-report.txt", content);
+  const proofId = submitData.proofId;
+  if (!proofId) {
+    throw new Error(submitData.error ?? "Proof submission failed — no proofId returned");
+  }
+
+  // Poll until verification completes (max 100s, every 5s)
+  const MAX_WAIT_MS = 100_000;
+  const POLL_MS = 5_000;
+  const started = Date.now();
+
+  while (Date.now() - started < MAX_WAIT_MS) {
+    await new Promise((r) => setTimeout(r, POLL_MS));
+    let status;
+    try {
+      status = await apiGet(`/api/agent/proof-status/${encodeURIComponent(proofId)}`);
+    } catch {
+      continue; // transient error — keep polling
+    }
+    if (!status.pending) {
+      const decision = status.decision === "YES" ? "✅ APPROVED" : "❌ REJECTED";
+      const conf = status.confidence != null ? ` (${status.confidence}% confidence)` : "";
+      return {
+        ...status,
+        proofId,
+        message: `${decision}${conf}\n${status.reasoning ? status.reasoning.slice(0, 400) : ""}`,
+      };
+    }
+  }
+
+  // Timed out — return proofId so agent can poll manually
+  return {
+    pending: true,
+    proofId,
+    message: `Verification still in progress after ~100s. Poll the result with cascrow_get_proof_status using proofId: ${proofId}`,
+  };
+}
+
 // ─── MCP Server ───────────────────────────────────────────────────────────────
 
 const server = new Server(
@@ -893,7 +959,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "cascrow_list_my_contracts": result = await handleListMyContracts(args);      break;
       case "cascrow_get_proof_status":  result = await handleGetProofStatus(args);       break;
       case "cascrow_mcp_submit":        result = await handleMcpSubmit(args);            break;
-      case "cascrow_verify_work":       result = await handleVerifyWork(args);            break;
+      case "cascrow_verify_work":           result = await handleVerifyWork(args);            break;
+      case "cascrow_watch_verification":    result = await handleWatchVerification(args);   break;
       default:
         throw new Error(`Unknown tool: ${name}`);
     }

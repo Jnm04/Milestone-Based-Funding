@@ -23,7 +23,7 @@ import crypto from "crypto";
 import { Prisma } from "@prisma/client";
 import { getMobileSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { checkRateLimitFull, applyRateLimitHeaders, getClientIp } from "@/lib/rate-limit";
 import {
   verifyStandaloneWork,
   ChecklistItem,
@@ -77,20 +77,20 @@ export async function POST(request: NextRequest) {
 
   // ── Rate limiting ─────────────────────────────────────────────────────────────
   if (userId) {
-    if (!(await checkRateLimit(`standalone-verify-auth:${userId}`, 10, 60 * 60 * 1000))) {
-      return NextResponse.json(
-        { error: "Too many verification requests. Try again in an hour." },
-        { status: 429, headers: { "Retry-After": "3600" } }
-      );
+    const rl = await checkRateLimitFull(`standalone-verify-auth:${userId}`, 10, 60 * 60 * 1000);
+    if (!rl.allowed) {
+      const h: Record<string, string> = { "Retry-After": "3600" };
+      applyRateLimitHeaders(h, rl);
+      return NextResponse.json({ error: "Too many verification requests. Try again in an hour." }, { status: 429, headers: h });
     }
   } else {
-    if (!(await checkRateLimit(`standalone-verify-anon:${ip}`, 3, 24 * 60 * 60 * 1000))) {
+    const rl = await checkRateLimitFull(`standalone-verify-anon:${ip}`, 3, 24 * 60 * 60 * 1000);
+    if (!rl.allowed) {
+      const h: Record<string, string> = { "Retry-After": "86400" };
+      applyRateLimitHeaders(h, rl);
       return NextResponse.json(
-        {
-          error: "Free tier limit reached (3/day). Create a free account for more verifications.",
-          requiresAccount: true,
-        },
-        { status: 429, headers: { "Retry-After": "86400" } }
+        { error: "Free tier limit reached (3/day). Create a free account for more verifications.", requiresAccount: true },
+        { status: 429, headers: h }
       );
     }
   }

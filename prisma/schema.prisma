@@ -1312,3 +1312,19 @@ model StandaloneVerification {
   @@index([userId, createdAt])
   @@index([publicHash])
 }
+
+/// Per-model accuracy weights updated by /api/cron/calibrate-models (weekly).
+/// Used by verifyMilestone to apply weighted confidence scoring.
+/// Decision (3/5 threshold) is NOT affected — only confidence calculation uses weights.
+model ModelWeight {
+  id           String   @id @default(cuid())
+  modelName    String   @unique
+  /// Multiplier for weighted confidence: 1.0 = neutral, >1 = trusted, <1 = less trusted. Clamped [0.5, 2.0].
+  weight       Float    @default(1.0)
+  /// Historical accuracy: fraction of votes that matched the final AI decision (0–1)
+  accuracy     Float?
+  totalVotes   Int      @default(0)
+  correctVotes Int      @default(0)
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
+}

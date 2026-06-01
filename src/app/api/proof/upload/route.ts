@@ -107,7 +107,15 @@ export async function POST(request: NextRequest) {
     if (recentUploadCount >= 20) {
       return NextResponse.json(
         { error: "Too many uploads. Please wait before submitting again." },
-        { status: 429, headers: { "Retry-After": "3600" } }
+        {
+          status: 429,
+          headers: {
+            "Retry-After": "3600",
+            "X-RateLimit-Limit": "20",
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": String(Math.ceil((Date.now() + 3600_000) / 1000)),
+          },
+        }
       );
     }
 

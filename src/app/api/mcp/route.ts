@@ -16,7 +16,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { resolveApiKey } from "@/lib/api-key-auth";
-import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { checkRateLimitFull, applyRateLimitHeaders, getClientIp } from "@/lib/rate-limit";
 
 export const maxDuration = 120;
 
@@ -313,6 +313,23 @@ const TOOLS = [
       },
     },
   },
+  {
+    name: "cascrow_watch_verification",
+    description:
+      "Submit a proof and wait for AI verification to complete — all in one call. " +
+      "Combines proof submission + polling into a single blocking tool. " +
+      "Returns the final YES/NO decision, confidence score, and per-model votes once verification is done. " +
+      "Times out after ~100 seconds and returns the proofId so you can poll manually with cascrow_get_proof_status.",
+    inputSchema: {
+      type: "object",
+      required: ["milestoneId", "content"],
+      properties: {
+        milestoneId: { type: "string", description: "The milestone ID to submit proof for" },
+        content: { type: "string", description: "Full proof report — what was built, how criteria are met, URLs, metrics" },
+        filename: { type: "string", description: "Optional filename for the proof (default: proof-report.txt)" },
+      },
+    },
+  },
 ];
 
 // ─── Per-request server factory ───────────────────────────────────────────────
@@ -536,6 +553,45 @@ function buildServer(baseUrl: string, apiKey: string) {
     return { ...data, message: `${decision}${conf}${checklistNote}\n\nFull report: ${data.reportUrl ?? ""}${data.reasoning ? `\n\n${data.reasoning.slice(0, 400)}` : ""}` };
   }
 
+  async function handleWatchVerification({ milestoneId, content, filename }: { milestoneId: string; content: string; filename?: string }) {
+    // Submit proof via multipart form
+    const form = new FormData();
+    form.append("milestoneId", milestoneId);
+    form.append("file", new Blob([content], { type: "text/plain" }), filename ?? "proof-report.txt");
+    const submitRes = await fetch(`${baseUrl}/api/proof/upload`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}` },
+      body: form,
+    });
+    const submitData = await submitRes.json() as { proofId?: string; error?: string };
+    if (!submitRes.ok || !submitData.proofId) {
+      throw new Error(submitData.error ?? `Proof submission failed (HTTP ${submitRes.status})`);
+    }
+    const proofId = submitData.proofId;
+
+    // Poll until verification completes (max 100s, every 5s)
+    const MAX_WAIT_MS = 100_000;
+    const POLL_MS = 5_000;
+    const started = Date.now();
+
+    while (Date.now() - started < MAX_WAIT_MS) {
+      await new Promise((r) => setTimeout(r, POLL_MS));
+      let status: { pending?: boolean; decision?: string; confidence?: number; reasoning?: string } = {};
+      try {
+        status = await apiGet(`/api/agent/proof-status/${encodeURIComponent(proofId)}`) as typeof status;
+      } catch {
+        continue;
+      }
+      if (!status.pending) {
+        const dec = status.decision === "YES" ? "✅ APPROVED" : "❌ REJECTED";
+        const conf = status.confidence != null ? ` (${status.confidence}% confidence)` : "";
+        return { ...status, proofId, message: `${dec}${conf}\n${status.reasoning ? status.reasoning.slice(0, 400) : ""}` };
+      }
+    }
+
+    return { pending: true, proofId, message: `Verification still in progress after ~100s. Poll with cascrow_get_proof_status using proofId: ${proofId}` };
+  }
+
   // ── Server ───────────────────────────────────────────────────────────────────
 
   const server = new Server(
@@ -566,7 +622,8 @@ function buildServer(baseUrl: string, apiKey: string) {
         case "cascrow_list_my_contracts": result = await handleListMyContracts(args as Parameters<typeof handleListMyContracts>[0]); break;
         case "cascrow_get_proof_status":  result = await handleGetProofStatus(args as Parameters<typeof handleGetProofStatus>[0]); break;
         case "cascrow_mcp_submit":        result = await handleMcpSubmit(args as Parameters<typeof handleMcpSubmit>[0]); break;
-        case "cascrow_verify_work":       result = await handleVerifyWork(args as Parameters<typeof handleVerifyWork>[0]); break;
+        case "cascrow_verify_work":           result = await handleVerifyWork(args as Parameters<typeof handleVerifyWork>[0]); break;
+        case "cascrow_watch_verification":    result = await handleWatchVerification(args as Parameters<typeof handleWatchVerification>[0]); break;
         default: throw new Error(`Unknown tool: ${name}`);
       }
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
@@ -594,11 +651,11 @@ async function handleMcp(request: NextRequest): Promise<Response> {
 
   // Rate limit per API key
   const ip = getClientIp(request) ?? "unknown";
-  if (!(await checkRateLimit(`mcp-http:${keyCtx.keyId}:${ip}`, 200, 60 * 1000))) {
-    return new Response(JSON.stringify({ error: "Too many requests" }), {
-      status: 429,
-      headers: { "Content-Type": "application/json", "Retry-After": "60" },
-    });
+  const rl = await checkRateLimitFull(`mcp-http:${keyCtx.keyId}:${ip}`, 200, 60 * 1000);
+  if (!rl.allowed) {
+    const rlHeaders: Record<string, string> = { "Content-Type": "application/json", "Retry-After": "60" };
+    applyRateLimitHeaders(rlHeaders, rl);
+    return new Response(JSON.stringify({ error: "Too many requests" }), { status: 429, headers: rlHeaders });
   }
 
   const baseUrl = process.env.NEXTAUTH_URL ?? "https://cascrow.com";

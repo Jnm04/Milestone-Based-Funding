@@ -204,6 +204,60 @@ export function combineResults(results: { model: string; result: AIVerificationR
   return { decision, reasoning, confidence, modelVotes, consensusLevel: yesVoters.length };
 }
 
+/**
+ * Like combineResults but uses per-model accuracy weights from the ModelWeight table
+ * to compute a calibrated confidence score.
+ *
+ * Decision rule (3/5 majority) is UNCHANGED — only confidence is weighted.
+ * Falls back to equal weights (= combineResults) if DB query fails or returns no data.
+ * Used only by verifyMilestone and verifyMilestoneImage (escrow-affecting paths).
+ */
+async function combineResultsWeighted(
+  results: { model: string; result: AIVerificationResult }[]
+): Promise<AIVerificationResultWithVotes> {
+  // Load weights — non-fatal if unavailable, defaults to 1.0
+  let weightMap: Record<string, number> = {};
+  try {
+    const rows = await prisma.modelWeight.findMany({ select: { modelName: true, weight: true } });
+    for (const row of rows) weightMap[row.modelName] = row.weight;
+  } catch {
+    // DB unavailable — fall back to equal weights silently
+  }
+
+  const getWeight = (model: string) => weightMap[model] ?? 1.0;
+
+  const yesVoters = results.filter((r) => r.result.decision === "YES");
+  const noVoters = results.filter((r) => r.result.decision === "NO");
+  const decision = yesVoters.length >= 3 ? "YES" : "NO";
+  const majorityVoters = decision === "YES" ? yesVoters : noVoters;
+
+  // Weighted confidence: sum(confidence * weight) / sum(weight) for majority voters
+  const totalWeight = majorityVoters.reduce((sum, r) => sum + getWeight(r.model), 0);
+  const confidence =
+    totalWeight > 0
+      ? Math.round(
+          majorityVoters.reduce((sum, r) => sum + r.result.confidence * getWeight(r.model), 0) / totalWeight
+        )
+      : Math.round(majorityVoters.reduce((sum, r) => sum + r.result.confidence, 0) / Math.max(1, majorityVoters.length));
+
+  const yesNames = yesVoters.map((r) => r.model).join(", ");
+  const noNames = noVoters.map((r) => r.model).join(", ");
+  const primaryReasoning = majorityVoters[0]?.result.reasoning ?? "";
+  const voteSummary = noNames ? `YES: ${yesNames} | NO: ${noNames}` : `YES: ${yesNames}`;
+  const failedCount = 5 - results.length;
+  const failedNote = failedCount > 0 ? ` (${failedCount} model${failedCount > 1 ? "s" : ""} failed to respond)` : "";
+  const reasoning = `${yesVoters.length}/${results.length} models approved${failedNote} (${voteSummary}). ${primaryReasoning}`;
+
+  const modelVotes: ModelVote[] = results.map((r) => ({
+    model: r.model,
+    decision: r.result.decision,
+    confidence: r.result.confidence,
+    reasoning: r.result.reasoning,
+  }));
+
+  return { decision, reasoning, confidence, modelVotes, consensusLevel: yesVoters.length };
+}
+
 // ─── Individual model callers ─────────────────────────────────────────────────
 
 async function callClaude(
@@ -454,7 +508,7 @@ export async function verifyMilestone(params: {
       modelVotes: results.map((r) => ({ model: r.model, decision: r.result.decision, confidence: r.result.confidence, reasoning: r.result.reasoning })),
     };
   }
-  return combineResults(results);
+  return combineResultsWeighted(results);
 }
 
 /** Verifies milestone against an image using all 5 models' vision capabilities. */
@@ -507,7 +561,7 @@ export async function verifyMilestoneImage(params: {
       modelVotes: results.map((r) => ({ model: r.model, decision: r.result.decision, confidence: r.result.confidence, reasoning: r.result.reasoning })),
     };
   }
-  return combineResults(results);
+  return combineResultsWeighted(results);
 }
 
 /** Claude-only fallback when all other models fail for image verification. */

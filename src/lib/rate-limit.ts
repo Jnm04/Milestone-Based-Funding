@@ -58,7 +58,61 @@ function checkRateLimitMemory(key: string, limit: number, windowMs: number): boo
   return true;
 }
 
-// ─── Main export ──────────────────────────────────────────────────────────────
+// ─── Main exports ─────────────────────────────────────────────────────────────
+
+export interface RateLimitResult {
+  allowed: boolean;
+  limit: number;
+  remaining: number;
+  resetAt: number; // Unix timestamp in milliseconds
+}
+
+function checkRateLimitMemoryFull(key: string, limit: number, windowMs: number): RateLimitResult {
+  maybeClean();
+  const now = Date.now();
+  const entry = memoryStore.get(key);
+
+  if (!entry || now > entry.resetAt) {
+    memoryStore.set(key, { count: 1, resetAt: now + windowMs });
+    return { allowed: true, limit, remaining: limit - 1, resetAt: now + windowMs };
+  }
+
+  const allowed = entry.count < limit;
+  if (allowed) entry.count++;
+  return { allowed, limit, remaining: Math.max(0, limit - entry.count), resetAt: entry.resetAt };
+}
+
+/**
+ * Like checkRateLimit but returns metadata for X-RateLimit-* response headers.
+ * Use this in routes where you want to expose rate limit state to callers.
+ */
+export async function checkRateLimitFull(key: string, limit: number, windowMs: number): Promise<RateLimitResult> {
+  if (!redis) return checkRateLimitMemoryFull(key, limit, windowMs);
+
+  try {
+    const count = await redis.incr(key);
+    if (count === 1) {
+      await redis.pexpire(key, windowMs);
+    }
+    let resetAt: number;
+    try {
+      const pttl = await redis.pttl(key);
+      resetAt = pttl > 0 ? Date.now() + pttl : Date.now() + windowMs;
+    } catch {
+      resetAt = Date.now() + windowMs;
+    }
+    return { allowed: count <= limit, limit, remaining: Math.max(0, limit - count), resetAt };
+  } catch {
+    return checkRateLimitMemoryFull(key, limit, windowMs);
+  }
+}
+
+/** Convenience: add X-RateLimit-* headers to a Headers-compatible object. */
+export function applyRateLimitHeaders(headers: Record<string, string>, result: RateLimitResult): void {
+  headers["X-RateLimit-Limit"] = String(result.limit);
+  headers["X-RateLimit-Remaining"] = String(result.remaining);
+  headers["X-RateLimit-Reset"] = String(Math.ceil(result.resetAt / 1000));
+}
 
 /**
  * Returns true if the request is within the limit, false if it should be blocked.
@@ -68,22 +122,7 @@ function checkRateLimitMemory(key: string, limit: number, windowMs: number): boo
  * @param windowMs Window duration in milliseconds
  */
 export async function checkRateLimit(key: string, limit: number, windowMs: number): Promise<boolean> {
-  if (!redis) return checkRateLimitMemory(key, limit, windowMs);
-
-  try {
-    const count = await redis.incr(key);
-    if (count === 1) {
-      // First hit: anchor the fixed window. Subsequent requests must NOT reset
-      // the TTL — otherwise this becomes a rolling window and sustained traffic
-      // never resets the counter.
-      await redis.pexpire(key, windowMs);
-    }
-    return count <= limit;
-  } catch {
-    // Redis unavailable — fall back to in-memory per-instance limiting rather than
-    // failing open, which would silently disable all rate limits during an outage.
-    return checkRateLimitMemory(key, limit, windowMs);
-  }
+  return (await checkRateLimitFull(key, limit, windowMs)).allowed;
 }
 
 /**

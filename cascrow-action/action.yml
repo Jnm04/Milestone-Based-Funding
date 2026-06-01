@@ -1,0 +1,42 @@
+name: 'Submit Cascrow Proof'
+description: 'Submit proof of milestone completion to Cascrow and optionally wait for AI verification.'
+branding:
+  icon: 'check-circle'
+  color: 'orange'
+
+inputs:
+  api-key:
+    description: 'Your Cascrow API key (starts with csk_). Store as a GitHub secret.'
+    required: true
+  milestone-id:
+    description: 'The Cascrow milestone ID to submit proof for.'
+    required: true
+  content:
+    description: 'Proof content — what was built, how criteria are met, CI run ID, test results, etc.'
+    required: true
+  filename:
+    description: 'Filename for the proof document (default: proof-report.txt).'
+    required: false
+    default: 'proof-report.txt'
+  wait-for-result:
+    description: 'Wait for AI verification to complete before finishing the step (default: true). Set to false to submit and move on.'
+    required: false
+    default: 'true'
+  cascrow-url:
+    description: 'Cascrow API base URL (default: https://cascrow.com). Override for self-hosted instances.'
+    required: false
+    default: 'https://cascrow.com'
+
+outputs:
+  proof-id:
+    description: 'The submitted proof ID.'
+  decision:
+    description: 'AI verification decision: YES, NO, or PENDING (if wait-for-result is false).'
+  confidence:
+    description: 'AI confidence score (0–100).'
+  reasoning:
+    description: 'Short AI reasoning summary.'
+
+runs:
+  using: 'node20'
+  main: 'index.js'

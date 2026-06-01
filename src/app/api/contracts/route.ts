@@ -5,7 +5,7 @@ import { nanoid } from "nanoid";
 import { writeAuditLog } from "@/services/evm/audit.service";
 import { fireWebhook } from "@/services/webhook/webhook.service";
 import { createContractSchema } from "@/lib/zod-schemas";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimitFull, applyRateLimitHeaders } from "@/lib/rate-limit";
 import { getPostHogClient } from "@/lib/posthog-server";
 import Anthropic from "@anthropic-ai/sdk";
 import { encryptGoal, hashGoal } from "@/lib/confidential";
@@ -111,10 +111,13 @@ export async function POST(request: NextRequest) {
     }
 
     // 20 contract creations per user per hour — prevents DB/webhook spam
-    if (!(await checkRateLimit(`create-contract:${userId}`, 20, 60 * 60 * 1000))) {
+    const rlCreate = await checkRateLimitFull(`create-contract:${userId}`, 20, 60 * 60 * 1000);
+    if (!rlCreate.allowed) {
+      const rlHeaders: Record<string, string> = { "Retry-After": "3600" };
+      applyRateLimitHeaders(rlHeaders, rlCreate);
       return NextResponse.json(
         { error: "Too many contracts created. Please wait before trying again." },
-        { status: 429, headers: { "Retry-After": "3600" } }
+        { status: 429, headers: rlHeaders }
       );
     }
 
