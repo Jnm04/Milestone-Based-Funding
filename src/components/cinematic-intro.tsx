@@ -272,28 +272,30 @@ export function CinematicIntro() {
           visibility:    ww === 0 ? "hidden" : "visible",
         }}
       >
-        {/* ── 3 bars — same pattern as the logo mark ─────── */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 9, marginLeft: -15 }}>
-          {[
-            { delay: 0,   ml: 0,  baseOpacity: 1    },
-            { delay: 150, ml: 15, baseOpacity: 0.55 },
-            { delay: 300, ml: 29, baseOpacity: 0.22 },
-          ].map(({ delay, ml, baseOpacity }, idx) => (
-            <div
-              key={idx}
-              style={{
-                width:           80,
-                height:          5,
-                borderRadius:    3,
-                background:      "#C4704B",
-                marginLeft:      ml,
-                opacity:         phase >= 1 ? baseOpacity : 0,
-                transform:       phase >= 1 ? "scaleX(1)" : "scaleX(0)",
-                transformOrigin: "left center",
-                transition:      `transform 0.75s cubic-bezier(0.22,1,0.36,1) ${delay}ms, opacity 0.5s ease ${delay}ms`,
-              }}
+        {/* ── S-icon mark ───────────────────────────────── */}
+        <div
+          style={{
+            opacity:   phase >= 1 ? 1 : 0,
+            transform: phase >= 1 ? "scale(1)" : "scale(0.72)",
+            transition: "opacity 0.75s cubic-bezier(0.22,1,0.36,1), transform 0.75s cubic-bezier(0.22,1,0.36,1)",
+          }}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="10 10 80 80"
+            width={68}
+            height={68}
+            aria-hidden="true"
+          >
+            <path
+              fill="#C4704B"
+              d="M 30.7,67.3 A 33,33 0 1,1 85.9,35.5 L 71.4,39.3 A 18,18 0 1,0 41.3,56.7 Z"
             />
-          ))}
+            <path
+              fill="#C4704B"
+              d="M 69.3,32.7 A 33,33 0 1,1 14.1,64.5 L 28.6,60.7 A 18,18 0 1,0 58.7,43.3 Z"
+            />
+          </svg>
         </div>
 
         {/* ── "cascrow" letterforms ──────────────────────── */}
@@ -302,8 +304,8 @@ export function CinematicIntro() {
             <span
               key={i}
               style={{
-                fontFamily:    "var(--font-libre-franklin), sans-serif",
-                fontWeight:    300,
+                fontFamily:    "var(--font-inter-tight), sans-serif",
+                fontWeight:    600,
                 fontSize:      52,
                 lineHeight:    1,
                 color:         "#EDE6DD",

@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { CascrowIcon } from "@/components/logo";
 
 const muted  = "hsl(30 10% 62%)";
 const fg     = "hsl(32 35% 92%)";
@@ -16,7 +17,7 @@ export function SiteFooter() {
           {/* Brand col */}
           <div className="flex flex-col gap-5">
             <Link href="/" className="flex items-center gap-2 w-fit">
-              <span className="grid h-7 w-7 place-items-center rounded-md font-bold" style={{ background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)", fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: "hsl(24 14% 6%)" }}>c</span>
+              <CascrowIcon size={24} color="#C4704B" />
               <span className="text-sm font-semibold tracking-tight" style={{ color: fg }}>cascrow</span>
             </Link>
             <p className="text-sm leading-relaxed max-w-xs" style={{ color: muted }}>
