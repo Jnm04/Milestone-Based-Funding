@@ -69,8 +69,8 @@ export async function GET(
 
   <!-- Logo mark (S-icon, scaled to 22×22 at x=12,y=12) -->
   <g transform="translate(9.25,9.25) scale(0.275)">
-    <path fill="${COPPER}" d="M 30.7,67.3 A 33,33 0 1,1 85.9,35.5 L 71.4,39.3 A 18,18 0 1,0 41.3,56.7 Z"/>
-    <path fill="${COPPER}" d="M 69.3,32.7 A 33,33 0 1,1 14.1,64.5 L 28.6,60.7 A 18,18 0 1,0 58.7,43.3 Z"/>
+    <path fill="${COPPER}" d="M 28,68 A 35.5,35.5 0 0,1 80,20 L 68.6,32.7 A 18.5,18.5 0 0,0 41.6,57.7 Z"/>
+    <path fill="${COPPER}" d="M 72,32 A 35.5,35.5 0 0,1 20,80 L 31.4,67.3 A 18.5,18.5 0 0,0 58.4,42.3 Z"/>
   </g>
 
   <!-- cascrow label -->
