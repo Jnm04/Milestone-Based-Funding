@@ -7,6 +7,7 @@ import posthog from "posthog-js";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Logo } from "@/components/logo";
+import { CascrowIcon } from "@/components/logo";
 
 function EyeIcon({ open }: { open: boolean }) {
   return open ? (
@@ -211,7 +212,7 @@ function LoginForm() {
       <main className="min-h-screen flex items-center justify-center px-4" style={{ background: "hsl(24 14% 4%)" }}>
         <div className="w-full max-w-md">
           <Link href="/" className="mb-8 flex items-center gap-2 justify-center">
-            <span className="grid h-7 w-7 place-items-center rounded-md font-bold" style={{ background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)", fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: "hsl(24 14% 6%)" }}>c</span>
+            <CascrowIcon size={28} color="#C4704B" />
             <span className="text-sm font-semibold tracking-tight" style={{ color: "hsl(32 35% 92%)" }}>cascrow</span>
           </Link>
           <div className="gradient-border flex flex-col gap-5 p-8 rounded-2xl" style={{ background: "hsl(24 12% 6% / 0.6)", backdropFilter: "blur(20px)" }}>
@@ -258,7 +259,7 @@ function LoginForm() {
         <div className="flex flex-col justify-center gap-8">
           <div>
             <Link href="/" className="mb-8 inline-flex items-center gap-2">
-              <span className="grid h-7 w-7 place-items-center rounded-md font-bold" style={{ background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)", fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: "hsl(24 14% 6%)" }}>c</span>
+              <CascrowIcon size={28} color="#C4704B" />
               <span className="text-sm font-semibold tracking-tight" style={{ color: "hsl(32 35% 92%)" }}>cascrow</span>
             </Link>
             <h1 className="mt-6 text-4xl font-semibold tracking-[-0.02em]" style={{ color: "hsl(32 35% 92%)" }}>Sign in</h1>
