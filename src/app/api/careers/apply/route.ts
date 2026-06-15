@@ -66,10 +66,12 @@ export async function POST(request: NextRequest) {
   const semesterRaw   = get("semester");
   const gpa           = get("gpa");
 
+  const portfolioUrl      = get("portfolioUrl") || null;
   const cvFile            = formData.get("cv") as File | null;
   const referencesFile    = formData.get("references") as File | null;
   const transcriptFile    = formData.get("transcript") as File | null;
   const coverLetterFile   = formData.get("coverLetter") as File | null;
+  const workSampleFile    = formData.get("workSample") as File | null;
 
   // Validate required fields
   const required = { firstName, lastName, email, gender, role, hearAbout, university, fieldOfStudy, semester: semesterRaw, gpa };
@@ -97,6 +99,7 @@ export async function POST(request: NextRequest) {
   let referencesUrl: string | null = null;
   let transcriptUrl: string | null = null;
   let coverLetterUrl: string | null = null;
+  let workSampleUrl: string | null = null;
 
   try {
     cvUrl = await uploadFile(cvFile, "cv", applicationId);
@@ -108,6 +111,9 @@ export async function POST(request: NextRequest) {
     }
     if (coverLetterFile && coverLetterFile.size > 0) {
       coverLetterUrl = await uploadFile(coverLetterFile, "cover-letter", applicationId);
+    }
+    if (workSampleFile && workSampleFile.size > 0) {
+      workSampleUrl = await uploadFile(workSampleFile, "work-sample", applicationId);
     }
   } catch (err) {
     console.error("[careers/apply] File upload error:", err);
@@ -130,10 +136,12 @@ export async function POST(request: NextRequest) {
         fieldOfStudy,
         semester,
         gpa,
+        portfolioUrl,
         cvUrl,
         referencesUrl,
         transcriptUrl,
         coverLetterUrl,
+        workSampleUrl,
       },
       select: { id: true },
     });
@@ -174,9 +182,10 @@ export async function POST(request: NextRequest) {
   // Notify team
   const docs = [
     `CV: ${cvUrl}`,
-    referencesUrl ? `References: ${referencesUrl}` : null,
-    transcriptUrl ? `Transcript: ${transcriptUrl}` : null,
+    referencesUrl  ? `References: ${referencesUrl}` : null,
+    transcriptUrl  ? `Transcript: ${transcriptUrl}` : null,
     coverLetterUrl ? `Cover Letter: ${coverLetterUrl}` : null,
+    workSampleUrl  ? `Work Sample: ${workSampleUrl}` : null,
   ].filter(Boolean).join("<br>");
 
   await resend.emails.send({
@@ -196,6 +205,7 @@ export async function POST(request: NextRequest) {
           <tr><td style="color:#666;padding:4px 0;">Field of study</td><td>${fieldOfStudy}</td></tr>
           <tr><td style="color:#666;padding:4px 0;">Semester</td><td>${semester}</td></tr>
           <tr><td style="color:#666;padding:4px 0;">GPA</td><td>${gpa}</td></tr>
+          ${portfolioUrl ? `<tr><td style="color:#666;padding:4px 0;">Portfolio / GitHub</td><td><a href="${portfolioUrl}">${portfolioUrl}</a></td></tr>` : ""}
         </table>
         <div style="margin-top:20px;padding:16px;background:#f5f5f5;border-radius:8px;">
           <p style="margin:0 0 8px;font-size:13px;color:#444;font-weight:600;">Documents</p>

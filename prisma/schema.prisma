@@ -1355,6 +1355,8 @@ model JobApplication {
   referencesUrl  String?
   transcriptUrl  String?
   coverLetterUrl String?
+  workSampleUrl  String?
+  portfolioUrl   String?
 
   status         String   @default("NEW")
 

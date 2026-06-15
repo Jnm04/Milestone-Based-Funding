@@ -1,6 +1,6 @@
 "use client";
 
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useRef, useState, Suspense } from "react";
 import Link from "next/link";
 import { SiteNav } from "@/components/site-nav";
@@ -29,19 +29,36 @@ const HEAR_ABOUT_OPTIONS = [
 
 const GENDER_OPTIONS = ["Male", "Female", "Non-binary", "Prefer not to say"];
 
+const WORK_SAMPLE_ROLES = [
+  "UX / UI Designer",
+  "Marketing and Content",
+  "Community Manager",
+  "Business Development",
+  "Data / AI Research",
+];
+
+type FileKey = "cv" | "references" | "transcript" | "coverLetter" | "workSample";
+
 type FileField = {
-  key: "cv" | "references" | "transcript" | "coverLetter";
+  key: FileKey;
   label: string;
   required: boolean;
   hint: string;
 };
 
-const FILE_FIELDS: FileField[] = [
-  { key: "cv",          label: "CV / Resume",                  required: true,  hint: "PDF or DOCX, max 10 MB" },
-  { key: "references",  label: "Work references",              required: false, hint: "PDF or DOCX, max 10 MB" },
-  { key: "transcript",  label: "Academic transcript",          required: false, hint: "PDF or DOCX, max 10 MB" },
-  { key: "coverLetter", label: "Cover letter",                 required: false, hint: "PDF or DOCX, max 10 MB" },
+const BASE_FILE_FIELDS: FileField[] = [
+  { key: "cv",          label: "CV / Resume",       required: true,  hint: "PDF or DOCX, max 10 MB" },
+  { key: "references",  label: "Work references",   required: false, hint: "PDF or DOCX, max 10 MB" },
+  { key: "transcript",  label: "Academic transcript", required: false, hint: "PDF or DOCX, max 10 MB" },
+  { key: "coverLetter", label: "Cover letter",       required: false, hint: "PDF or DOCX, max 10 MB" },
 ];
+
+const WORK_SAMPLE_FIELD: FileField = {
+  key: "workSample",
+  label: "Work sample (last 12 months)",
+  required: false,
+  hint: "A piece of work from the past 12 months. PDF or DOCX, max 10 MB.",
+};
 
 function inputStyle(focused: boolean): React.CSSProperties {
   return {
@@ -176,7 +193,11 @@ function FileUpload({
 }
 
 function ApplyForm({ initialRole }: { initialRole: string }) {
-  const router = useRouter();
+  const role = roles.find((r) => r.title === initialRole) ?? null;
+  const isDevRole = role?.type === "Equity";
+  const portfolioLabel = isDevRole ? "GitHub or portfolio URL" : "Portfolio or work samples URL";
+  const showWorkSample = WORK_SAMPLE_ROLES.includes(initialRole);
+  const fileFields = showWorkSample ? [...BASE_FILE_FIELDS, WORK_SAMPLE_FIELD] : BASE_FILE_FIELDS;
 
   const [fields, setFields] = useState({
     firstName: "",
@@ -191,10 +212,11 @@ function ApplyForm({ initialRole }: { initialRole: string }) {
     fieldOfStudy: "",
     semester: "",
     gpa: "",
+    portfolioUrl: "",
   });
 
-  const [files, setFiles] = useState<Record<string, File | null>>({
-    cv: null, references: null, transcript: null, coverLetter: null,
+  const [files, setFiles] = useState<Record<FileKey, File | null>>({
+    cv: null, references: null, transcript: null, coverLetter: null, workSample: null,
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -278,16 +300,10 @@ function ApplyForm({ initialRole }: { initialRole: string }) {
         </div>
       </div>
 
-      {/* 2. Role */}
+      {/* 2. Position */}
+      <input type="hidden" name="role" value={fields.role} />
       <SectionHead title="Position" index={2} />
       <div className="flex flex-col gap-4">
-        <div>
-          <Label required>Role you are applying for</Label>
-          <FocusSelect value={fields.role} onChange={(e) => set("role", e.target.value)} required>
-            <option value="">Select a role...</option>
-            {roleNames.map((r) => <option key={r} value={r}>{r}</option>)}
-          </FocusSelect>
-        </div>
         <div>
           <Label required>How did you hear about this position?</Label>
           <FocusSelect value={fields.hearAbout} onChange={(e) => set("hearAbout", e.target.value)} required>
@@ -314,6 +330,16 @@ function ApplyForm({ initialRole }: { initialRole: string }) {
             <FocusInput value={fields.referredBy} onChange={(e) => set("referredBy", e.target.value)} placeholder="Full name" />
           </div>
         )}
+        <div>
+          <Label>{portfolioLabel}</Label>
+          <FocusInput
+            type="url"
+            value={fields.portfolioUrl}
+            onChange={(e) => set("portfolioUrl", e.target.value)}
+            placeholder="https://"
+          />
+          <p className="mt-1 text-xs" style={{ color: dim }}>Optional</p>
+        </div>
       </div>
 
       {/* 3. Education */}
@@ -341,7 +367,7 @@ function ApplyForm({ initialRole }: { initialRole: string }) {
       {/* 4. Documents */}
       <SectionHead title="Documents" index={4} />
       <div className="flex flex-col gap-4">
-        {FILE_FIELDS.map((f) => (
+        {fileFields.map((f) => (
           <FileUpload
             key={f.key}
             field={f}
