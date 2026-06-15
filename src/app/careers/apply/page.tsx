@@ -5,7 +5,7 @@ import { useRef, useState, Suspense } from "react";
 import Link from "next/link";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { roles } from "../careers-client";
+import { roles, type RoleType } from "../careers-client";
 
 const primary  = "hsl(22 55% 54%)";
 const muted    = "hsl(30 10% 62%)";
@@ -379,22 +379,60 @@ function ApplyForm({ initialRole }: { initialRole: string }) {
   );
 }
 
+function TypeBadge({ type }: { type: RoleType }) {
+  const isEquity = type === "Equity";
+  const isFullTime = type === "Full-time";
+  return (
+    <span
+      className="rounded-full px-3 py-0.5 text-xs font-medium"
+      style={{
+        background: isEquity ? "hsl(22 55% 54% / 0.15)" : isFullTime ? "hsl(140 40% 40% / 0.15)" : "hsl(28 18% 14%)",
+        color: isEquity ? primary : isFullTime ? "hsl(140 50% 65%)" : muted,
+        border: `1px solid ${isEquity ? "hsl(22 55% 54% / 0.3)" : isFullTime ? "hsl(140 40% 40% / 0.3)" : border}`,
+        fontFamily: "'JetBrains Mono', monospace",
+        letterSpacing: "0.08em",
+      }}
+    >
+      {type}
+    </span>
+  );
+}
+
+function BulletList({ items, accent }: { items: string[]; accent?: boolean }) {
+  return (
+    <ul className="flex flex-col gap-2">
+      {items.map((item) => (
+        <li key={item} className="flex items-start gap-2.5 text-sm leading-relaxed" style={{ color: muted }}>
+          <span className="mt-1.5 h-1 w-1 rounded-full shrink-0" style={{ background: accent ? primary : dim }} />
+          {item}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function ApplyContent() {
   const params = useSearchParams();
   const rawRole = params.get("role") ?? "";
   const initialRole = roleNames.includes(rawRole) ? rawRole : "";
+  const role = roles.find((r) => r.title === initialRole) ?? null;
+
+  const regularReqs = role?.requirements.filter((r) => !r.startsWith("Bonus:")) ?? [];
+  const bonusReqs   = role?.requirements
+    .filter((r) => r.startsWith("Bonus:"))
+    .map((r) => r.replace(/^Bonus:\s*/, "")) ?? [];
 
   return (
     <main className="container-tight pt-36 pb-24 max-w-2xl">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-10 text-sm" style={{ color: muted }}>
+      <div className="flex items-center gap-2 mb-10 text-sm">
         <Link href="/careers" className="transition-colors hover:text-foreground" style={{ color: muted }}>
           Careers
         </Link>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={dim} strokeWidth={2}>
           <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        <span style={{ color: fg }}>Apply{initialRole ? ` — ${initialRole}` : ""}</span>
+        <span style={{ color: fg }}>{initialRole || "Apply"}</span>
       </div>
 
       {/* Header */}
@@ -402,17 +440,73 @@ function ApplyContent() {
         <div className="flex items-center gap-3 mb-5">
           <span className="h-px w-8" style={{ background: `linear-gradient(90deg, ${primary}, transparent)` }} />
           <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.22em", color: primary }}>
-            Application
+            {initialRole || "Open position"}
           </span>
         </div>
         <h1 className="text-3xl font-semibold tracking-tight mb-3" style={{ color: fg }}>
-          {initialRole ? `Apply for ${initialRole}` : "Apply at cascrow"}
+          {initialRole || "Apply at cascrow"}
         </h1>
+        {role && (
+          <div className="flex items-center gap-2 flex-wrap mt-4">
+            <TypeBadge type={role.type} />
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: dim, letterSpacing: "0.1em" }}>
+              {role.duration} · Remote
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* About cascrow */}
+      <div className="mb-8 rounded-2xl p-6" style={{ background: card, border: `1px solid ${border}` }}>
+        <p
+          className="text-xs mb-3"
+          style={{ fontFamily: "'JetBrains Mono', monospace", textTransform: "uppercase", letterSpacing: "0.2em", color: dim }}
+        >
+          About cascrow
+        </p>
         <p className="text-sm leading-relaxed" style={{ color: muted }}>
-          Fill out the form below and we will get back to you. Takes about 5 minutes.
+          cascrow is an early-stage startup building the escrow layer for the agent economy. When an AI agent completes a task, cascrow locks funds in a smart contract on the XRPL EVM Sidechain and uses a panel of 5 AI models to verify the work before releasing payment. No intermediaries, no manual approval. We are a small team moving fast and every person here has real impact.
         </p>
       </div>
 
+      {/* Job description */}
+      {role && (
+        <div className="flex flex-col gap-8 mb-10">
+          <div>
+            <p className="text-sm font-medium mb-3" style={{ color: fg }}>About the role</p>
+            <p className="text-sm leading-relaxed" style={{ color: muted }}>{role.summary}</p>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium mb-3" style={{ color: fg }}>What you will do</p>
+            <BulletList items={role.responsibilities} accent />
+          </div>
+
+          <div>
+            <p className="text-sm font-medium mb-3" style={{ color: fg }}>What we are looking for</p>
+            <BulletList items={regularReqs} />
+          </div>
+
+          {bonusReqs.length > 0 && (
+            <div>
+              <p className="text-sm font-medium mb-1" style={{ color: fg }}>Preferred qualifications</p>
+              <p className="text-xs mb-3" style={{ color: dim }}>Nice to have, not required.</p>
+              <BulletList items={bonusReqs} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Divider */}
+      <div className="flex items-center gap-4 mb-10">
+        <span className="h-px flex-1" style={{ background: border }} />
+        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.2em", color: dim }}>
+          Your application
+        </span>
+        <span className="h-px flex-1" style={{ background: border }} />
+      </div>
+
+      {/* Form */}
       <div className="rounded-2xl p-7 sm:p-9" style={{ background: card, border: `1px solid ${border}` }}>
         <ApplyForm initialRole={initialRole} />
       </div>
