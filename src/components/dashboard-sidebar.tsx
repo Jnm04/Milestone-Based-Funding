@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { Logo } from "@/components/logo";
 import { NotificationBell } from "@/components/notification-bell";
-import { CascrowIcon } from "@/components/logo";
 
 interface SidebarProps {
   role: "investor" | "startup";
@@ -102,7 +101,7 @@ export function DashboardSidebar({ role }: SidebarProps) {
         {/* Logo */}
         <div className="flex h-16 items-center gap-2 px-5 border-b" style={{ borderColor }}>
           <Link href="/" className="flex items-center gap-2">
-            <CascrowIcon size={28} color="#C4704B" />
+            <span className="grid h-7 w-7 place-items-center rounded-md font-bold" style={{ background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)", fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: "hsl(24 14% 6%)" }}>c</span>
             <span className="text-sm font-semibold tracking-tight">cascrow</span>
           </Link>
           <span className="ml-auto rounded-full border px-2 py-0.5" style={{ borderColor, background: "hsl(24 14% 4% / 0.6)", fontFamily: "'JetBrains Mono', monospace", fontSize: 9, textTransform: "uppercase" as const, letterSpacing: "0.2em", color: mutedColor }}>app</span>

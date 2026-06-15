@@ -5,7 +5,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { REPUTATION_CATEGORIES, type ReputationCategory } from "@/services/ai/reputation.service";
-import { CascrowIcon } from "@/components/logo";
 
 interface ProfilePageProps {
   params: Promise<{ userId: string }>;
@@ -107,7 +106,7 @@ export default async function StartupProfilePage({ params }: ProfilePageProps) {
       >
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <CascrowIcon size={28} color="#C4704B" />
+            <span className="grid h-7 w-7 place-items-center rounded-md font-bold" style={{ background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)", fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: "hsl(24 14% 6%)" }}>c</span>
             <span className="text-sm font-semibold tracking-tight" style={{ color: "hsl(32 35% 92%)" }}>cascrow</span>
           </Link>
           <span

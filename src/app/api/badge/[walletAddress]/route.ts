@@ -67,11 +67,9 @@ export async function GET(
   <rect width="280" height="80" rx="10" fill="${BG}" />
   <rect x="0.5" y="0.5" width="279" height="79" rx="9.5" fill="none" stroke="${BORDER}" />
 
-  <!-- Logo mark (S-icon, scaled to 22×22 at x=12,y=12) -->
-  <g transform="translate(9.25,9.25) scale(0.275)">
-    <path fill="${COPPER}" d="M 28,68 A 35.5,35.5 0 0,1 80,20 L 68.6,32.7 A 18.5,18.5 0 0,0 41.6,57.7 Z"/>
-    <path fill="${COPPER}" d="M 72,32 A 35.5,35.5 0 0,1 20,80 L 31.4,67.3 A 18.5,18.5 0 0,0 58.4,42.3 Z"/>
-  </g>
+  <!-- Logo mark -->
+  <rect x="12" y="12" width="22" height="22" rx="5" fill="${COPPER}" />
+  <text x="23" y="28" font-family="monospace" font-size="13" font-weight="700" text-anchor="middle" fill="${BG}">c</text>
 
   <!-- cascrow label -->
   <text x="40" y="20" font-family="monospace" font-size="9" letter-spacing="2" fill="${COPPER}" text-transform="uppercase">CASCROW</text>

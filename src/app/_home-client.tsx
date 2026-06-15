@@ -3,7 +3,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Terminal, Lock, Upload, Sparkles, ShieldOff, Clock, Scale, Bot, Coins, Network, Cpu, Github, Check, Zap } from "lucide-react";
-import { CascrowIcon } from "@/components/logo";
 
 /* ─── Reveal animation helper ─── */
 function Reveal({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
@@ -56,7 +55,7 @@ function Nav() {
       <div className="container-tight mt-4">
         <nav className="gradient-border flex items-center justify-between rounded-full px-5 py-2.5" style={{ background: "hsl(24 12% 6% / 0.6)", backdropFilter: "blur(20px)" }}>
           <Link href="/" className="flex items-center gap-2">
-            <CascrowIcon size={28} color="#C4704B" />
+            <span className="grid h-7 w-7 place-items-center rounded-md bg-gradient-copper font-bold" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: "hsl(24 14% 6%)" }}>c</span>
             <span className="text-sm font-semibold tracking-tight" style={{ color: "hsl(32 35% 92%)" }}>cascrow</span>
           </Link>
           <div className="hidden md:flex items-center gap-7">
@@ -775,7 +774,7 @@ function Footer() {
         <div className="grid gap-10 md:grid-cols-4">
           <div className="md:col-span-2">
             <Link href="/" className="flex items-center gap-2">
-              <CascrowIcon size={28} color="#C4704B" />
+              <span className="grid h-7 w-7 place-items-center rounded-md bg-gradient-copper font-bold" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: "hsl(24 14% 6%)" }}>c</span>
               <span className="text-sm font-semibold tracking-tight">cascrow</span>
             </Link>
             <p className="mt-4 max-w-sm text-sm" style={{ color: "hsl(30 10% 62%)" }}>The escrow layer for the agent economy. Agents deliver, AI verifies, funds move. No humans required.</p>

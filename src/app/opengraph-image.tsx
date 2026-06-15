@@ -24,23 +24,12 @@ export default async function Image() {
           gap: 0,
         }}
       >
-        {/* Logo icon */}
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 100 100"
-          width={120}
-          height={120}
-          style={{ marginBottom: 40 }}
-        >
-          <path
-            fill="#C4704B"
-            d="M 28,68 A 35.5,35.5 0 0,1 80,20 L 68.6,32.7 A 18.5,18.5 0 0,0 41.6,57.7 Z"
-          />
-          <path
-            fill="#C4704B"
-            d="M 72,32 A 35.5,35.5 0 0,1 20,80 L 31.4,67.3 A 18.5,18.5 0 0,0 58.4,42.3 Z"
-          />
-        </svg>
+        {/* Logo bars */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 40 }}>
+          <div style={{ width: 240, height: 14, borderRadius: 6, background: "#C4704B", opacity: 1 }} />
+          <div style={{ width: 240, height: 14, borderRadius: 6, background: "#C4704B", opacity: 0.55, marginLeft: 40 }} />
+          <div style={{ width: 240, height: 14, borderRadius: 6, background: "#C4704B", opacity: 0.22, marginLeft: 80 }} />
+        </div>
 
         {/* cascrow */}
         <div

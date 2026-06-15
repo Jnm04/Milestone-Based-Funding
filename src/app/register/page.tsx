@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { Turnstile } from "@marsidev/react-turnstile";
 import type { TurnstileInstance } from "@marsidev/react-turnstile";
 import zxcvbn from "zxcvbn";
-import { CascrowIcon } from "@/components/logo";
 
 /* ── Password strength (zxcvbn, score 0–4) ───────────────── */
 function pwStrength(pw: string): { score: number; label: string; color: string; warning: string } {
@@ -161,7 +160,7 @@ function RegisterForm() {
         <div className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-[500px] opacity-30" style={{ background: "radial-gradient(ellipse at top, hsl(22 65% 30% / 0.4), transparent 70%)" }} />
         <div className="w-full max-w-md">
           <Link href="/" className="mb-8 flex items-center gap-2 justify-center">
-            <CascrowIcon size={28} color="#C4704B" />
+            <span className="grid h-7 w-7 place-items-center rounded-md font-bold" style={{ background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)", fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: "hsl(24 14% 6%)" }}>c</span>
             <span className="text-sm font-semibold tracking-tight" style={{ color: "hsl(32 35% 92%)" }}>cascrow</span>
           </Link>
           <div className="gradient-border flex flex-col gap-5 p-8 rounded-2xl" style={{ background: "hsl(24 12% 6% / 0.6)", backdropFilter: "blur(20px)" }}>
@@ -210,7 +209,7 @@ function RegisterForm() {
         <div className="flex flex-col justify-center gap-6">
           <div>
             <Link href="/" className="mb-8 inline-flex items-center gap-2">
-              <CascrowIcon size={28} color="#C4704B" />
+              <span className="grid h-7 w-7 place-items-center rounded-md font-bold" style={{ background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)", fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: "hsl(24 14% 6%)" }}>c</span>
               <span className="text-sm font-semibold tracking-tight" style={{ color: "hsl(32 35% 92%)" }}>cascrow</span>
             </Link>
             <h1 className="mt-6 text-4xl font-semibold tracking-[-0.02em]" style={{ color: "hsl(32 35% 92%)" }}>Create account</h1>

@@ -5,7 +5,6 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { Turnstile } from "@marsidev/react-turnstile";
 import type { TurnstileInstance } from "@marsidev/react-turnstile";
-import { CascrowIcon } from "@/components/logo";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail]     = useState("");
@@ -47,7 +46,7 @@ export default function ForgotPasswordPage() {
       <div className="relative z-10 w-full max-w-md flex flex-col gap-8">
         <div className="flex flex-col items-center gap-2">
           <Link href="/" className="flex items-center gap-2">
-            <CascrowIcon size={28} color="#C4704B" />
+            <span className="grid h-7 w-7 place-items-center rounded-md font-bold" style={{ background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)", fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: "hsl(24 14% 6%)" }}>c</span>
             <span className="text-sm font-semibold tracking-tight" style={{ color: "hsl(32 35% 92%)" }}>cascrow</span>
           </Link>
         </div>
