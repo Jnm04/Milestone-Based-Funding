@@ -9,7 +9,7 @@ const border  = "hsl(28 18% 14%)";
 const card    = "hsl(24 12% 6% / 0.5)";
 const dim     = "hsl(28 10% 28%)";
 
-export type RoleType = "Equity" | "Praktikum" | "Festanstellung";
+export type RoleType = "Equity" | "Internship" | "Full-time";
 
 export type Role = {
   title: string;
@@ -26,185 +26,185 @@ export const roles: Role[] = [
     title: "Fullstack Developer",
     type: "Equity",
     duration: "Ongoing",
-    summary: "Build and polish cascrow's web platform (Next.js) and mobile app (React Native/Expo). You'll work across the full stack — from UI components to API routes to blockchain integrations.",
+    summary: "Build and ship features across cascrow's web platform (Next.js) and mobile app (React Native). You'll touch everything from UI to API routes to blockchain integrations.",
     tags: ["typescript", "react", "next.js", "react native", "expo", "mobile", "frontend", "backend"],
     responsibilities: [
       "Develop and improve frontend features in Next.js (App Router) and TypeScript",
       "Build out the React Native / Expo mobile app from its current scaffold",
       "Work with our dual-chain backend (XRPL + EVM) and AI verification services",
-      "Improve UI/UX consistency across the platform",
+      "Improve UI consistency and fix rough edges across the platform",
     ],
     requirements: [
       "Strong TypeScript and React skills",
-      "Experience with Next.js (App Router preferred)",
-      "React Native / Expo experience is a plus",
-      "Comfortable working in an early-stage, fast-moving environment",
+      "Experience with Next.js, App Router preferred",
+      "React Native or Expo experience is a plus",
+      "Comfortable in a small team where things move fast",
     ],
   },
   {
     title: "Smart Contract Developer",
     type: "Equity",
     duration: "Ongoing",
-    summary: "Own and evolve the MilestoneFundEscrow smart contract on the XRPL EVM Sidechain. This is a high-trust, high-impact role — you're writing the code that holds real funds.",
+    summary: "Own and evolve the MilestoneFundEscrow contract on the XRPL EVM Sidechain. Real funds go through this code, so security and reliability come first.",
     tags: ["solidity", "hardhat", "evm", "blockchain", "smart contracts", "security", "xrpl"],
     responsibilities: [
       "Maintain and extend our Solidity escrow contract (Hardhat)",
-      "Write comprehensive tests and conduct internal security reviews",
-      "Design and implement new contract features (multi-party, conditional release)",
-      "Coordinate with the XRPL EVM community and stay current on chain updates",
+      "Write tests and run internal security reviews",
+      "Design and implement new contract features like multi-party and conditional release",
+      "Keep up with XRPL EVM updates and coordinate with the community",
     ],
     requirements: [
       "Solid Solidity experience and EVM fundamentals",
       "Familiarity with Hardhat and testing frameworks (Mocha/Chai or Foundry)",
-      "Security-first mindset — experience with reentrancy, integer overflow, access control",
+      "Security mindset with experience in reentrancy, integer overflow, and access control",
       "Bonus: experience with XRPL or non-Ethereum EVMs",
     ],
   },
   {
     title: "Founders Associate",
-    type: "Praktikum",
-    duration: "3–6 months",
-    summary: "Work directly with the founders on everything that matters most right now — strategy, partnerships, investors, and whatever the company needs to move forward. This is the highest-leverage internship we offer.",
+    type: "Internship",
+    duration: "3-6 months",
+    summary: "Work directly with the founders on strategy, partnerships, and investor relations. You will be in the room for the decisions that shape the company. This is the most generalist role we offer and the one with the most exposure.",
     tags: ["strategy", "operations", "biz dev", "investor", "generalist", "startup", "founders"],
     responsibilities: [
       "Join founder meetings, investor calls, and key strategy sessions",
       "Research potential partners, enterprise clients, and market opportunities",
       "Help prepare investor materials, pitch decks, and one-pagers",
-      "Identify and execute on the highest-priority operational gaps",
-      "Work across every function — product, marketing, sales, operations",
+      "Spot and fix operational gaps before they become real problems",
+      "Jump in wherever the company needs you most",
     ],
     requirements: [
-      "Studying business, entrepreneurship, computer science, or a related field",
-      "Clear, concise communicator — written and verbal, in English",
-      "Self-starter who doesn't need tasks handed to them",
-      "Genuine interest in AI agents, blockchain, or the future of programmable finance",
-      "Bonus: prior experience at a startup or your own entrepreneurial project",
+      "Studying business, entrepreneurship, computer science, or something related",
+      "Clear communicator in writing and on calls, in English",
+      "Self-starter who figures things out without being told what to do",
+      "Genuine interest in AI agents, blockchain, or programmable finance",
+      "Bonus: you have tried to build something yourself before",
     ],
   },
   {
     title: "UX / UI Designer",
-    type: "Praktikum",
-    duration: "2–3 months",
-    summary: "Shape the visual and interaction language of cascrow. You'll work with an existing dark copper design system and push it further — from landing page to dashboard flows to mobile.",
+    type: "Internship",
+    duration: "2-3 months",
+    summary: "Shape how cascrow looks and feels. You will work with an existing dark copper design system and push it further across landing pages, dashboard flows, and mobile screens.",
     tags: ["figma", "design", "ui", "ux", "mobile", "design system"],
     responsibilities: [
-      "Create and iterate on Figma designs for new features and existing screens",
+      "Create and iterate on Figma designs for new and existing screens",
       "Improve the onboarding flow, empty states, and mobile responsiveness",
-      "Maintain and extend the cascrow design system (colors, typography, components)",
-      "Collaborate closely with the developer(s) to hand off production-ready specs",
+      "Maintain and extend the cascrow design system",
+      "Work closely with developers to hand off specs that are actually usable",
     ],
     requirements: [
       "Proficient in Figma",
-      "Strong eye for dark-mode, minimal UI",
-      "Basic understanding of React/Tailwind is a plus but not required",
-      "Portfolio showing UI work — especially dashboards or fintech/crypto products",
+      "Strong eye for dark-mode and minimal UI",
+      "Basic understanding of React or Tailwind is a plus but not required",
+      "Portfolio with UI work, ideally dashboards or fintech/crypto products",
     ],
   },
   {
     title: "Community Manager",
-    type: "Praktikum",
-    duration: "2–3 months",
-    summary: "Build and nurture the community around cascrow — AI agent developers, crypto builders, and early users. You'll be the first point of contact for people who find us and the voice that makes them stay.",
+    type: "Internship",
+    duration: "2-3 months",
+    summary: "Build the community around cascrow from the ground up. AI agent developers, crypto builders, early users. You will be the first person they talk to and the reason they stick around.",
     tags: ["community", "discord", "telegram", "social media", "web3", "crypto", "ai"],
     responsibilities: [
-      "Manage and grow cascrow's presence in AI agent and crypto Discord servers and Telegram groups",
-      "Answer questions, gather feedback, and escalate product issues from community channels",
-      "Create community content — announcements, weekly updates, AMA sessions",
-      "Identify top community contributors and turn them into advocates",
-      "Track community metrics and report growth, engagement, and sentiment",
+      "Grow cascrow's presence in AI agent and crypto Discord servers and Telegram groups",
+      "Answer questions, collect feedback, and flag product issues from community channels",
+      "Write announcements, weekly updates, and run AMA sessions",
+      "Find the most active community members and turn them into advocates",
+      "Track growth, engagement, and sentiment and report back weekly",
     ],
     requirements: [
-      "Active member of at least one AI or crypto community (Discord, Telegram, X/Twitter)",
-      "Strong written English — you'll be the voice of cascrow in public channels",
-      "Organized: able to manage multiple channels and conversations simultaneously",
+      "Already active in at least one AI or crypto community on Discord, Telegram, or X",
+      "Strong written English since you will be the voice of cascrow in public",
+      "Organized enough to manage multiple channels at once",
       "Genuine interest in AI agents or decentralized finance",
-      "Bonus: existing following or network in the AI/crypto space",
+      "Bonus: you already have a following or network in the space",
     ],
   },
   {
-    title: "Marketing & Content",
-    type: "Praktikum",
-    duration: "2–3 months",
-    summary: "Tell the cascrow story to the world — developers, AI agent builders, investors, and enterprises. You'll own content, social, and early growth experiments.",
+    title: "Marketing and Content",
+    type: "Internship",
+    duration: "2-3 months",
+    summary: "Tell the cascrow story. Write for developers, AI builders, investors, and enterprises. Own content, social, and early growth experiments.",
     tags: ["marketing", "content", "seo", "twitter", "linkedin", "writing", "growth"],
     responsibilities: [
       "Write blog posts, tutorials, and X/Twitter threads about AI agents, escrow, and XRPL",
-      "Manage and grow cascrow's LinkedIn and X/Twitter presence",
-      "Coordinate a Product Hunt launch",
-      "Develop SEO strategy and optimize existing pages",
-      "Track and report on content performance",
+      "Manage and grow cascrow's LinkedIn and X presence",
+      "Plan and coordinate a Product Hunt launch",
+      "Build out an SEO strategy and improve existing pages",
+      "Track what is working and report on it",
     ],
     requirements: [
-      "Strong written English (German is a bonus)",
-      "Interest in AI, crypto, or fintech — you should understand what we're building",
-      "Experience with social media management or content marketing",
-      "Analytical: comfortable reading basic analytics data",
+      "Strong written English. German is a plus.",
+      "You understand what we are building and care about it",
+      "Some experience with social media or content marketing",
+      "Comfortable looking at analytics and drawing conclusions from them",
     ],
   },
   {
     title: "QA / Testing Engineer",
-    type: "Praktikum",
-    duration: "2–3 months",
-    summary: "Find bugs before users do. You'll test cascrow end-to-end — from wallet connection to AI verification to on-chain settlement — and build the automation that keeps it reliable.",
+    type: "Internship",
+    duration: "2-3 months",
+    summary: "Find bugs before users do. Test cascrow end to end, from wallet connection to AI verification to on-chain settlement, and build the automation that keeps it working.",
     tags: ["qa", "testing", "playwright", "automation", "bugs", "typescript"],
     responsibilities: [
-      "Manually test all user flows (contract creation, escrow funding, proof submission, AI verification, release)",
+      "Manually test all user flows: contract creation, escrow funding, proof submission, AI verification, and release",
       "Write end-to-end tests with Playwright",
-      "Document bugs clearly with reproduction steps and screenshots",
-      "Build a regression test suite so new features don't break existing ones",
+      "Document bugs with clear reproduction steps and screenshots",
+      "Build a regression test suite so new features do not break old ones",
     ],
     requirements: [
-      "Methodical mindset — you enjoy breaking things intentionally",
-      "Basic JavaScript/TypeScript to write Playwright tests",
-      "Familiarity with web apps and browser dev tools",
+      "You enjoy breaking things on purpose",
+      "Basic JavaScript or TypeScript to write Playwright tests",
+      "Comfortable with web apps and browser dev tools",
       "Bonus: experience testing crypto or fintech products",
     ],
   },
   {
     title: "Data / AI Research",
-    type: "Praktikum",
+    type: "Internship",
     duration: "3 months",
-    summary: "Improve the intelligence behind cascrow's 5-model AI verification system. You'll analyze model outputs, identify failure modes, and help tune the system that decides whether funds are released.",
+    summary: "Improve cascrow's 5-model AI verification system. Dig into model outputs, find where it fails, and help tune the system that decides whether funds get released.",
     tags: ["ai", "ml", "python", "data", "llm", "prompt engineering", "research"],
     responsibilities: [
-      "Analyze historical AI verification decisions (labels, confidence scores, disagreements)",
-      "Identify categories of proofs where the system performs poorly",
-      "Experiment with prompt variants and evaluate impact across all 5 models",
+      "Analyze historical AI verification decisions: labels, confidence scores, disagreements",
+      "Find categories of proofs where the system performs poorly",
+      "Test prompt variants and measure their impact across all 5 models",
       "Build simple dashboards to track model performance over time",
     ],
     requirements: [
-      "Python proficiency — data analysis, pandas, visualization",
+      "Python proficiency: data analysis, pandas, visualization",
       "Familiarity with LLMs and prompt engineering",
-      "Studying computer science, data science, or a related field",
-      "Bonus: experience with model evaluation or ML benchmarking",
+      "Studying computer science, data science, or something related",
+      "Bonus: experience with model evaluation or benchmarking",
     ],
   },
   {
     title: "Business Development",
-    type: "Praktikum",
-    duration: "2–3 months",
-    summary: "Open the doors to cascrow's first enterprise and partner relationships. You'll research targets, write outreach, and help close the deals that define our early traction.",
+    type: "Internship",
+    duration: "2-3 months",
+    summary: "Get cascrow in front of the right people. Research targets, write outreach, and help close the early deals that define our traction.",
     tags: ["business development", "sales", "outreach", "partnerships", "enterprise", "b2b"],
     responsibilities: [
-      "Research and identify potential enterprise clients (DAOs, AI agent platforms, accelerators)",
-      "Write and run outbound email sequences targeting AI agent developers and investors",
-      "Map the AI agent ecosystem — AutoGPT, CrewAI, Eliza, AgentKit, and beyond",
+      "Research and identify potential enterprise clients: DAOs, AI agent platforms, accelerators",
+      "Write and run outbound email sequences to AI agent developers and investors",
+      "Map the AI agent ecosystem: AutoGPT, CrewAI, Eliza, AgentKit, and others",
       "Support partnership negotiations and prepare materials for calls",
     ],
     requirements: [
-      "Excellent written communication in English",
+      "Excellent written English",
       "Interest in AI agents, blockchain, or B2B SaaS",
-      "Organized and persistent — outreach is a numbers game",
+      "Organized and persistent. Outreach is a numbers game.",
       "Bonus: existing network in crypto or AI startup communities",
     ],
   },
 ];
 
-const FILTER_LABELS: Record<RoleType | "Alle", string> = {
-  Alle: "Alle",
+const FILTER_LABELS: Record<RoleType | "All", string> = {
+  All: "All",
   Equity: "Equity",
-  Praktikum: "Praktikum",
-  Festanstellung: "Festanstellung",
+  Internship: "Internship",
+  "Full-time": "Full-time",
 };
 
 function TypeBadge({ type }: { type: RoleType }) {
@@ -214,12 +214,12 @@ function TypeBadge({ type }: { type: RoleType }) {
       color: primary,
       borderColor: "hsl(22 55% 54% / 0.3)",
     },
-    Praktikum: {
+    Internship: {
       bg: "hsl(28 18% 14%)",
       color: muted,
       borderColor: border,
     },
-    Festanstellung: {
+    "Full-time": {
       bg: "hsl(140 40% 40% / 0.15)",
       color: "hsl(140 50% 65%)",
       borderColor: "hsl(140 40% 40% / 0.3)",
@@ -327,16 +327,16 @@ function RoleCard({ role }: { role: Role }) {
   );
 }
 
-const availableFilters: Array<RoleType | "Alle"> = ["Alle", "Equity", "Praktikum", "Festanstellung"];
+const availableFilters: Array<RoleType | "All"> = ["All", "Equity", "Internship", "Full-time"];
 
 export function CareersClient() {
   const [search, setSearch] = useState("");
-  const [activeFilter, setActiveFilter] = useState<RoleType | "Alle">("Alle");
+  const [activeFilter, setActiveFilter] = useState<RoleType | "All">("All");
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     return roles.filter((role) => {
-      const matchesType = activeFilter === "Alle" || role.type === activeFilter;
+      const matchesType = activeFilter === "All" || role.type === activeFilter;
       if (!matchesType) return false;
       if (!q) return true;
       return (
@@ -348,7 +348,7 @@ export function CareersClient() {
   }, [search, activeFilter]);
 
   const typeCounts = useMemo(() => {
-    const counts: Record<string, number> = { Alle: roles.length };
+    const counts: Record<string, number> = { All: roles.length };
     for (const role of roles) {
       counts[role.type] = (counts[role.type] ?? 0) + 1;
     }
@@ -357,9 +357,7 @@ export function CareersClient() {
 
   return (
     <div className="flex flex-col gap-8">
-      {/* Search + Filter bar */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        {/* Search */}
         <div className="relative flex-1 max-w-sm">
           <svg
             className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none"
@@ -373,7 +371,7 @@ export function CareersClient() {
           </svg>
           <input
             type="text"
-            placeholder="Search roles…"
+            placeholder="Search roles..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-full pl-9 pr-4 py-2 text-sm outline-none transition-colors"
@@ -388,11 +386,10 @@ export function CareersClient() {
           />
         </div>
 
-        {/* Filter pills */}
         <div className="flex items-center gap-2 flex-wrap">
           {availableFilters.map((f) => {
             const count = typeCounts[f] ?? 0;
-            if (f !== "Alle" && count === 0) return null;
+            if (f !== "All" && count === 0) return null;
             const isActive = activeFilter === f;
             return (
               <button
@@ -420,7 +417,6 @@ export function CareersClient() {
         </div>
       </div>
 
-      {/* Results */}
       {filtered.length === 0 ? (
         <div
           className="rounded-2xl p-12 text-center"
@@ -438,7 +434,6 @@ export function CareersClient() {
         </div>
       )}
 
-      {/* Result count */}
       {filtered.length > 0 && (
         <p
           className="text-center text-xs"

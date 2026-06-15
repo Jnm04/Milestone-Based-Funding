@@ -6,7 +6,7 @@ import { CareersClient } from "./careers-client";
 export const metadata: Metadata = {
   title: "Careers | Cascrow",
   description:
-    "Join the team building the escrow layer for the agent economy. Equity, internship, and Pflichtpraktikum positions available.",
+    "Join the team building the escrow layer for the agent economy. Equity and internship positions available.",
 };
 
 const primary = "hsl(22 55% 54%)";
@@ -62,7 +62,7 @@ export default function CareersPage() {
             },
             {
               label: "Steep learning curve",
-              desc: "XRPL, EVM, multi-model AI, Next.js — you&apos;ll work across the entire stack.",
+              desc: "XRPL, EVM, multi-model AI, Next.js. You will work across the entire stack.",
             },
             {
               label: "Remote & async",
