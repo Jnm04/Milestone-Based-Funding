@@ -35,6 +35,7 @@ export function SiteFooter() {
               { href: "/guide",    label: "Guide" },
               { href: "/security", label: "Security" },
               { href: "/stats",    label: "Stats" },
+              { href: "/careers",  label: "Careers" },
               { href: "/login",    label: "Sign in" },
               { href: "/register", label: "Register" },
             ].map(l => (
