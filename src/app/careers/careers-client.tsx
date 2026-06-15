@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 
 const primary = "hsl(22 55% 54%)";
 const muted   = "hsl(30 10% 62%)";
@@ -263,8 +264,8 @@ function RoleCard({ role }: { role: Role }) {
             </span>
           </div>
         </div>
-        <a
-          href={`mailto:jobs@cascrow.com?subject=Application: ${encodeURIComponent(role.title)}`}
+        <Link
+          href={`/careers/apply?role=${encodeURIComponent(role.title)}`}
           className="rounded-full px-5 py-2 text-sm font-medium shrink-0 transition-opacity hover:opacity-80"
           style={{
             background: "linear-gradient(135deg, hsl(22 65% 58%) 0%, hsl(28 75% 68%) 100%)",
@@ -272,7 +273,7 @@ function RoleCard({ role }: { role: Role }) {
           }}
         >
           Apply
-        </a>
+        </Link>
       </div>
 
       <p className="text-sm leading-relaxed" style={{ color: muted }}>

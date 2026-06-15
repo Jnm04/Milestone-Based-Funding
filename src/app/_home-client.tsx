@@ -783,7 +783,7 @@ function Footer() {
           <div>
             <div className="mb-4" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, textTransform: "uppercase" as const, letterSpacing: "0.12em", color: "hsl(30 10% 62%)" }}>Product</div>
             <ul className="space-y-2 text-sm">
-              {[{ href: "/guide", label: "Guide" },{ href: "/security", label: "Security" },{ href: "#agents", label: "For Agents" },{ href: "/mcp-manifest.json", label: "MCP Manifest" },{ href: "/api-docs", label: "API Docs" }].map(l => (
+              {[{ href: "/guide", label: "Guide" },{ href: "/security", label: "Security" },{ href: "/careers", label: "Careers" },{ href: "#agents", label: "For Agents" },{ href: "/mcp-manifest.json", label: "MCP Manifest" },{ href: "/api-docs", label: "API Docs" }].map(l => (
                 <li key={l.href}><Link href={l.href} className="transition-colors hover:text-foreground" style={{ color: "hsl(30 10% 62%)" }}>{l.label}</Link></li>
               ))}
             </ul>

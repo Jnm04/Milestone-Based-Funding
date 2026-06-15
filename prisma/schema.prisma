@@ -1328,3 +1328,36 @@ model ModelWeight {
   updatedAt    DateTime @updatedAt
   createdAt    DateTime @default(now())
 }
+
+
+// ── Job Applications ──────────────────────────────────────────────────────────
+
+model JobApplication {
+  id             String   @id @default(cuid())
+  createdAt      DateTime @default(now())
+
+  firstName      String
+  lastName       String
+  email          String
+  gender         String
+
+  role           String
+  hearAbout      String
+  referred       Boolean  @default(false)
+  referredBy     String?
+
+  university     String
+  fieldOfStudy   String
+  semester       Int
+  gpa            String
+
+  cvUrl          String
+  referencesUrl  String?
+  transcriptUrl  String?
+  coverLetterUrl String?
+
+  status         String   @default("NEW")
+
+  @@index([createdAt])
+  @@index([role])
+}
