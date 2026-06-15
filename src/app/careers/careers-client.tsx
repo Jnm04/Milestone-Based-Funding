@@ -28,7 +28,7 @@ export const roles: Role[] = [
     type: "Equity",
     duration: "Ongoing",
     summary: "Build and ship features across cascrow's web platform (Next.js) and mobile app (React Native). You'll touch everything from UI to API routes to blockchain integrations.",
-    tags: ["typescript", "react", "next.js", "react native", "expo", "mobile", "frontend", "backend"],
+    tags: ["typescript", "react", "next.js", "react native", "expo", "mobile", "frontend", "backend", "python"],
     responsibilities: [
       "Develop and improve frontend features in Next.js (App Router) and TypeScript",
       "Build out the React Native / Expo mobile app from its current scaffold",
@@ -36,10 +36,14 @@ export const roles: Role[] = [
       "Improve UI consistency and fix rough edges across the platform",
     ],
     requirements: [
+      "Fluent in English, written and spoken",
       "Strong TypeScript and React skills",
       "Experience with Next.js, App Router preferred",
-      "React Native or Expo experience is a plus",
-      "Comfortable in a small team where things move fast",
+      "Solid Git workflow and comfortable with the standard developer toolchain",
+      "Actively uses AI tools (Claude, GitHub Copilot, or similar) in daily work",
+      "Bonus: React Native or Expo experience",
+      "Bonus: Python for scripting and data work",
+      "Bonus: German is a plus",
     ],
   },
   {
@@ -47,7 +51,7 @@ export const roles: Role[] = [
     type: "Equity",
     duration: "Ongoing",
     summary: "Own and evolve the MilestoneFundEscrow contract on the XRPL EVM Sidechain. Real funds go through this code, so security and reliability come first.",
-    tags: ["solidity", "hardhat", "evm", "blockchain", "smart contracts", "security", "xrpl"],
+    tags: ["solidity", "hardhat", "evm", "blockchain", "smart contracts", "security", "xrpl", "python"],
     responsibilities: [
       "Maintain and extend our Solidity escrow contract (Hardhat)",
       "Write tests and run internal security reviews",
@@ -55,10 +59,14 @@ export const roles: Role[] = [
       "Keep up with XRPL EVM updates and coordinate with the community",
     ],
     requirements: [
+      "Fluent in English, written and spoken",
       "Solid Solidity experience and EVM fundamentals",
       "Familiarity with Hardhat and testing frameworks (Mocha/Chai or Foundry)",
       "Security mindset with experience in reentrancy, integer overflow, and access control",
+      "Uses AI tools (Claude, Copilot) actively in development",
+      "Bonus: Python for scripting and test automation",
       "Bonus: experience with XRPL or non-Ethereum EVMs",
+      "Bonus: German is a plus",
     ],
   },
   {
@@ -75,11 +83,14 @@ export const roles: Role[] = [
       "Jump in wherever the company needs you most",
     ],
     requirements: [
+      "Fluent in English, written and spoken",
       "Studying business, entrepreneurship, computer science, or something related",
-      "Clear communicator in writing and on calls, in English",
       "Self-starter who figures things out without being told what to do",
+      "Proficient in MS Office (Word, Excel, PowerPoint)",
+      "Comfortable using AI tools like Claude or Copilot to work faster",
       "Genuine interest in AI agents, blockchain, or programmable finance",
       "Bonus: you have tried to build something yourself before",
+      "Bonus: German is a plus",
     ],
   },
   {
@@ -95,10 +106,14 @@ export const roles: Role[] = [
       "Work closely with developers to hand off specs that are actually usable",
     ],
     requirements: [
+      "Fluent in English, written and spoken",
       "Proficient in Figma",
       "Strong eye for dark-mode and minimal UI",
-      "Basic understanding of React or Tailwind is a plus but not required",
+      "Comfortable using AI tools for design research, copy, and ideation",
+      "Proficient in MS Office",
       "Portfolio with UI work, ideally dashboards or fintech/crypto products",
+      "Bonus: basic understanding of React or Tailwind",
+      "Bonus: German is a plus",
     ],
   },
   {
@@ -115,11 +130,14 @@ export const roles: Role[] = [
       "Track growth, engagement, and sentiment and report back weekly",
     ],
     requirements: [
+      "Fluent in English, written and spoken",
       "Already active in at least one AI or crypto community on Discord, Telegram, or X",
-      "Strong written English since you will be the voice of cascrow in public",
       "Organized enough to manage multiple channels at once",
+      "Comfortable using AI tools (Claude, ChatGPT) for drafting and research",
+      "Proficient in MS Office for reporting and slides",
       "Genuine interest in AI agents or decentralized finance",
       "Bonus: you already have a following or network in the space",
+      "Bonus: German is a plus",
     ],
   },
   {
@@ -136,10 +154,13 @@ export const roles: Role[] = [
       "Track what is working and report on it",
     ],
     requirements: [
-      "Strong written English. German is a plus.",
+      "Fluent in English, written and spoken",
       "You understand what we are building and care about it",
+      "Comfortable using AI tools (Claude, Copilot, ChatGPT) for research, drafts, and ideation",
+      "Proficient in MS Office",
       "Some experience with social media or content marketing",
       "Comfortable looking at analytics and drawing conclusions from them",
+      "Bonus: German is a plus",
     ],
   },
   {
@@ -155,10 +176,14 @@ export const roles: Role[] = [
       "Build a regression test suite so new features do not break old ones",
     ],
     requirements: [
+      "Fluent in English, written and spoken",
       "You enjoy breaking things on purpose",
       "Basic JavaScript or TypeScript to write Playwright tests",
       "Comfortable with web apps and browser dev tools",
+      "Proficient in MS Office for bug documentation and reports",
+      "Familiar with AI tools and how to use them to speed up testing workflows",
       "Bonus: experience testing crypto or fintech products",
+      "Bonus: German is a plus",
     ],
   },
   {
@@ -174,10 +199,13 @@ export const roles: Role[] = [
       "Build simple dashboards to track model performance over time",
     ],
     requirements: [
+      "Fluent in English, written and spoken",
       "Python proficiency: data analysis, pandas, visualization",
+      "Hands-on experience with AI tools (Claude, ChatGPT, Copilot) in research or development",
       "Familiarity with LLMs and prompt engineering",
       "Studying computer science, data science, or something related",
       "Bonus: experience with model evaluation or benchmarking",
+      "Bonus: German is a plus",
     ],
   },
   {
@@ -193,10 +221,13 @@ export const roles: Role[] = [
       "Support partnership negotiations and prepare materials for calls",
     ],
     requirements: [
-      "Excellent written English",
+      "Fluent in English, written and spoken",
+      "Proficient in MS Office (Word, Excel, PowerPoint)",
+      "Comfortable using AI tools (Claude, Copilot) for research and drafting outreach",
       "Interest in AI agents, blockchain, or B2B SaaS",
       "Organized and persistent. Outreach is a numbers game.",
       "Bonus: existing network in crypto or AI startup communities",
+      "Bonus: German is a plus",
     ],
   },
 ];
